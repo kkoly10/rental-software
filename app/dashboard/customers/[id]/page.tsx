@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { getCustomerDetail } from "@/lib/data/customer-detail";
 
-export default function CustomerDetailPage() {
+export default async function CustomerDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const customer = await getCustomerDetail(id);
+
   return (
     <DashboardShell
       title="Customer Detail"
@@ -12,23 +20,26 @@ export default function CustomerDetailPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Customer profile</div>
-              <h2 style={{ margin: "6px 0 0" }}>Ashley Johnson</h2>
+              <h2 style={{ margin: "6px 0 0" }}>{customer.name}</h2>
             </div>
           </div>
+
           <div className="list">
             <div className="order-card">
               <strong>Contact</strong>
-              <div className="muted">ashley@example.com · (540) 555-0102</div>
+              <div className="muted">
+                {customer.email || "No email"} · {customer.phone || "No phone"}
+              </div>
             </div>
+
             <div className="order-card">
               <strong>Saved address</strong>
-              <div className="muted">Stafford, VA 22554 · Backyard birthday setup</div>
+              <div className="muted">{customer.addressLabel}</div>
             </div>
+
             <div className="order-card">
               <strong>Notes</strong>
-              <div className="muted">
-                Repeat customer. Prefers early setup window and text reminders.
-              </div>
+              <div className="muted">{customer.notes || "No notes yet."}</div>
             </div>
           </div>
         </section>
@@ -40,11 +51,15 @@ export default function CustomerDetailPage() {
               <h2 style={{ margin: "6px 0 0" }}>Recent orders</h2>
             </div>
           </div>
+
           <div className="list">
-            <div className="order-card">Johnson Birthday Setup · Confirmed · $245</div>
-            <div className="order-card">Neighborhood Cookout · Completed · $190</div>
-            <div className="order-card">Church Family Day Referral · Inquiry</div>
+            {customer.orders.map((order) => (
+              <div key={order} className="order-card">
+                {order}
+              </div>
+            ))}
           </div>
+
           <div style={{ marginTop: 16 }}>
             <Link href="/dashboard/orders" className="secondary-btn">
               View all orders
