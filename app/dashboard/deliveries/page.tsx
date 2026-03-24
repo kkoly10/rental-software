@@ -1,25 +1,11 @@
+import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getDeliveryBoardData } from "@/lib/data/delivery-board";
 
-const columns = [
-  {
-    title: "Assigned",
-    items: [
-      ["Johnson Birthday", "Castle Bouncer", "9:00 AM"],
-      ["School Field Day", "Water Slide", "10:30 AM"]
-    ]
-  },
-  {
-    title: "Out for Delivery",
-    items: [["Church Event", "Obstacle Course", "In Transit"]]
-  },
-  {
-    title: "Completed",
-    items: [["Backyard Party", "Combo Unit", "Setup Done"]]
-  }
-] as const;
+export default async function DeliveriesPage() {
+  const board = await getDeliveryBoardData();
 
-export default function DeliveriesPage() {
   return (
     <DashboardShell
       title="Delivery Board"
@@ -34,31 +20,107 @@ export default function DeliveriesPage() {
             </div>
             <StatusBadge label="Live" tone="success" />
           </div>
+
           <div className="board-columns">
-            {columns.map((column) => (
-              <div key={column.title} className="column">
-                <h3>{column.title}</h3>
-                <div className="list">
-                  {column.items.map(([customer, item, time]) => (
-                    <div key={customer} className="delivery-card">
-                      <strong>{customer}</strong>
-                      <div className="muted">{item}</div>
-                      <div className="muted">{time}</div>
+            <div className="column">
+              <h3>Assigned</h3>
+              <div className="list">
+                {board.assigned.length ? (
+                  board.assigned.map((route) => (
+                    <div key={route.id} className="delivery-card">
+                      <strong>{route.name}</strong>
+                      <div className="muted">{route.date}</div>
+                      <div className="muted">{route.stops} stops</div>
+                      <div style={{ marginTop: 10 }}>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}`}
+                          className="ghost-btn"
+                        >
+                          Open route
+                        </Link>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <div className="delivery-card">No assigned routes</div>
+                )}
               </div>
-            ))}
+            </div>
+
+            <div className="column">
+              <h3>Out for Delivery</h3>
+              <div className="list">
+                {board.inProgress.length ? (
+                  board.inProgress.map((route) => (
+                    <div key={route.id} className="delivery-card">
+                      <strong>{route.name}</strong>
+                      <div className="muted">{route.date}</div>
+                      <div className="muted">{route.stops} stops</div>
+                      <div style={{ marginTop: 10 }}>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}`}
+                          className="ghost-btn"
+                        >
+                          Open route
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="delivery-card">No active routes</div>
+                )}
+              </div>
+            </div>
+
+            <div className="column">
+              <h3>Completed</h3>
+              <div className="list">
+                {board.completed.length ? (
+                  board.completed.map((route) => (
+                    <div key={route.id} className="delivery-card">
+                      <strong>{route.name}</strong>
+                      <div className="muted">{route.date}</div>
+                      <div className="muted">{route.stops} stops</div>
+                      <div style={{ marginTop: 10 }}>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}`}
+                          className="ghost-btn"
+                        >
+                          Open route
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="delivery-card">No completed routes</div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
+
         <aside className="map-card">
           <div className="kicker">Route detail</div>
-          <h2 style={{ marginTop: 8 }}>Crew A overview</h2>
+          <h2 style={{ marginTop: 8 }}>
+            {board.primaryRoute ? board.primaryRoute.name : "No route selected"}
+          </h2>
           <div className="list">
-            <div className="order-card">Truck 1 · 3 stops · 1 pickup later</div>
-            <div className="order-card">Next stop: Johnson Birthday · Stafford</div>
-            <div className="order-card">Checklist: blower, tarp, stakes, cords</div>
-            <div className="order-card">Future map and signature tools go here</div>
+            <div className="order-card">
+              {board.primaryRoute
+                ? `${board.primaryRoute.date} · ${board.primaryRoute.status}`
+                : "Create a route to begin dispatching"}
+            </div>
+            <div className="order-card">
+              {board.primaryRoute
+                ? `${board.primaryRoute.stops} stops on this route`
+                : "Stop and crew data will appear here"}
+            </div>
+            <div className="order-card">
+              Delivery detail pages are now linked from each route card.
+            </div>
+            <div className="order-card">
+              Future map, proof, and signature tools go here.
+            </div>
           </div>
         </aside>
       </div>
