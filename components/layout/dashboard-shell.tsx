@@ -1,13 +1,17 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
+"use client";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/inventory", label: "Public Catalog" },
-  { href: "/checkout", label: "Checkout" },
-  { href: "/dashboard/deliveries", label: "Deliveries" },
-  { href: "/crew/today", label: "Crew Mobile" },
-];
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
+
+function isNavItemActive(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    return pathname === href;
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function DashboardShell({
   title,
@@ -18,22 +22,26 @@ export function DashboardShell({
   description: string;
   children: ReactNode;
 }) {
+  const pathname = usePathname();
+
   return (
     <div className="sidebar-layout">
       <aside className="sidebar">
         <div className="logo" style={{ color: "white", marginBottom: 20 }}>
           RentalOS Admin
         </div>
-        {navItems.map((item) => (
+
+        {dashboardNavItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={item.href === "/dashboard" ? "active" : undefined}
+            className={isNavItemActive(pathname, item.href) ? "active" : undefined}
           >
             {item.label}
           </Link>
         ))}
       </aside>
+
       <main className="main-shell">
         <div className="section-header">
           <div>
@@ -42,6 +50,7 @@ export function DashboardShell({
             <div className="muted">{description}</div>
           </div>
         </div>
+
         {children}
       </main>
     </div>
