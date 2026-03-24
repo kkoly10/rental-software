@@ -1,7 +1,9 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { mockOrders } from "@/lib/mock-data";
+import { getCustomers } from "@/lib/data/customers";
 
-export default function CustomersPage() {
+export default async function CustomersPage() {
+  const customers = await getCustomers();
+
   return (
     <DashboardShell
       title="Customers"
@@ -14,12 +16,16 @@ export default function CustomersPage() {
             <h2 style={{ margin: "6px 0 0" }}>Recent customers</h2>
           </div>
         </div>
+
         <div className="list">
-          {mockOrders.map((order) => (
-            <article key={order.id} className="order-card">
-              <strong>{order.customer}</strong>
-              <div className="muted">Latest booking: {order.item}</div>
-              <div className="muted">Event date: {order.date}</div>
+          {customers.map((customer) => (
+            <article key={customer.id} className="order-card">
+              <strong>{customer.name}</strong>
+              <div className="muted">{customer.email || "No email on file"}</div>
+              <div className="muted">{customer.phone || "No phone on file"}</div>
+              <div className="muted">
+                Latest booking: {customer.latestBooking} · {customer.latestDate}
+              </div>
             </article>
           ))}
         </div>
