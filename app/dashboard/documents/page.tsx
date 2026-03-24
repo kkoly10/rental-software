@@ -1,24 +1,9 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { getDocuments } from "@/lib/data/documents";
 
-const docs = [
-  {
-    name: "Johnson Birthday Setup",
-    agreement: "Rental agreement signed",
-    waiver: "Safety waiver signed",
-  },
-  {
-    name: "Church Spring Event",
-    agreement: "Agreement pending",
-    waiver: "Waiver pending",
-  },
-  {
-    name: "School Field Day",
-    agreement: "Rental agreement signed",
-    waiver: "Safety waiver signed",
-  },
-];
+export default async function DocumentsPage() {
+  const documents = await getDocuments();
 
-export default function DocumentsPage() {
   return (
     <DashboardShell
       title="Documents"
@@ -31,12 +16,13 @@ export default function DocumentsPage() {
             <h2 style={{ margin: "6px 0 0" }}>Order paperwork</h2>
           </div>
         </div>
+
         <div className="list">
-          {docs.map((doc) => (
-            <article key={doc.name} className="order-card">
-              <strong>{doc.name}</strong>
-              <div className="muted">{doc.agreement}</div>
-              <div className="muted">{doc.waiver}</div>
+          {documents.map((document) => (
+            <article key={document.id} className="order-card">
+              <strong>{document.name}</strong>
+              <div className="muted">{document.agreement}</div>
+              <div className="muted">{document.waiver}</div>
             </article>
           ))}
         </div>
