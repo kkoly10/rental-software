@@ -1,7 +1,9 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { mockOrders } from "@/lib/mock-data";
+import { getPayments } from "@/lib/data/payments";
 
-export default function PaymentsPage() {
+export default async function PaymentsPage() {
+  const payments = await getPayments();
+
   return (
     <DashboardShell
       title="Payments"
@@ -14,14 +16,17 @@ export default function PaymentsPage() {
             <h2 style={{ margin: "6px 0 0" }}>Recent payment activity</h2>
           </div>
         </div>
+
         <div className="list">
-          {mockOrders.map((order, index) => (
-            <article key={order.id} className="order-card">
+          {payments.map((payment) => (
+            <article key={payment.id} className="order-card">
               <div className="order-row">
-                <strong>{order.customer}</strong>
-                <strong>{index === 0 ? "$75 deposit paid" : index === 1 ? "$0 unpaid" : "$170 due later"}</strong>
+                <strong>{payment.customer}</strong>
+                <strong>{payment.label}</strong>
               </div>
-              <div className="muted">{order.item} · {order.date}</div>
+              <div className="muted">
+                {payment.item} · {payment.date}
+              </div>
             </article>
           ))}
         </div>
