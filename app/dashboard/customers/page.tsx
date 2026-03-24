@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getCustomers } from "@/lib/data/customers";
 
@@ -25,6 +26,14 @@ export default async function CustomersPage() {
               <div className="muted">{customer.phone || "No phone on file"}</div>
               <div className="muted">
                 Latest booking: {customer.latestBooking} · {customer.latestDate}
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Link
+                  href={`/dashboard/customers/${customer.id}`}
+                  className="ghost-btn"
+                >
+                  Open customer
+                </Link>
               </div>
             </article>
           ))}
