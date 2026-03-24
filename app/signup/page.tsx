@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignupForm } from "@/components/auth/signup-form";
 
 export default function SignupPage() {
   return (
@@ -9,18 +10,18 @@ export default function SignupPage() {
             <div>
               <div className="kicker">Create account</div>
               <h1 style={{ margin: "6px 0 8px" }}>Sign Up</h1>
-              <div className="muted">Create your operator account and start setting up your rental business.</div>
+              <div className="muted">
+                Create your operator account and start setting up your rental business.
+              </div>
             </div>
           </div>
-          <div className="list">
-            <div className="order-card">Full name field</div>
-            <div className="order-card">Business email field</div>
-            <div className="order-card">Password and confirm password fields</div>
-            <div className="order-card">Business name and phone field</div>
-          </div>
+
+          <SignupForm />
+
           <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
-            <button className="primary-btn">Create Account</button>
-            <Link href="/login" className="secondary-btn">Back to Login</Link>
+            <Link href="/login" className="secondary-btn">
+              Back to Login
+            </Link>
           </div>
         </section>
       </div>
