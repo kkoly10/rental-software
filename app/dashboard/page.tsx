@@ -1,18 +1,37 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getDashboardSummary } from "@/lib/data/dashboard";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const summary = await getDashboardSummary();
+
   return (
     <DashboardShell
       title="Operator Dashboard"
       description="Daily overview for bookings, deliveries, payments, and tasks."
     >
       <div className="stats-row">
-        <StatCard label="Today's bookings" value="8" meta="2 awaiting deposit" />
-        <StatCard label="Upcoming deliveries" value="11" meta="Next route starts 8:00 AM" />
-        <StatCard label="Week revenue" value="$3,420" meta="Inflatables only" />
-        <StatCard label="Balances due" value="$910" meta="3 open orders" />
+        <StatCard
+          label="Today's bookings"
+          value={String(summary.todayBookings)}
+          meta="Live order pipeline"
+        />
+        <StatCard
+          label="Upcoming deliveries"
+          value={String(summary.upcomingDeliveries)}
+          meta="Route-ready bookings"
+        />
+        <StatCard
+          label="Active products"
+          value={String(summary.activeProducts)}
+          meta="Catalog items online"
+        />
+        <StatCard
+          label="Payment items"
+          value={String(summary.paymentItems)}
+          meta="Recent money activity"
+        />
       </div>
 
       <div className="dashboard-grid">
@@ -23,28 +42,22 @@ export default function DashboardPage() {
               <h2 style={{ margin: "6px 0 0" }}>Recent orders</h2>
             </div>
           </div>
+
           <div className="list">
-            <div className="order-card">
-              <div className="order-row">
-                <strong>Johnson Birthday Setup</strong>
-                <StatusBadge label="Confirmed" tone="success" />
+            {summary.recentOrders.map((order) => (
+              <div key={order.id} className="order-card">
+                <div className="order-row">
+                  <strong>{order.customer}</strong>
+                  <StatusBadge
+                    label={order.status}
+                    tone={order.tone as "default" | "success" | "warning"}
+                  />
+                </div>
+                <div className="muted">
+                  {order.item} · {order.date} · {order.total}
+                </div>
               </div>
-              <div className="muted">Castle Bouncer · Delivery 9:00 AM · Stafford</div>
-            </div>
-            <div className="order-card">
-              <div className="order-row">
-                <strong>Church Spring Event</strong>
-                <StatusBadge label="Awaiting Deposit" tone="warning" />
-              </div>
-              <div className="muted">Obstacle Course · Tentative hold · Fredericksburg</div>
-            </div>
-            <div className="order-card">
-              <div className="order-row">
-                <strong>School Field Day</strong>
-                <StatusBadge label="Scheduled" />
-              </div>
-              <div className="muted">Water slide + add-ons · Pickup tomorrow</div>
-            </div>
+            ))}
           </div>
         </section>
 
@@ -55,11 +68,12 @@ export default function DashboardPage() {
               <h2 style={{ margin: "6px 0 0" }}>Tasks</h2>
             </div>
           </div>
+
           <div className="list">
-            <div className="order-card">Confirm one unsigned waiver</div>
-            <div className="order-card">Assign crew for Saturday route</div>
-            <div className="order-card">Review maintenance hold on Tropical Combo</div>
-            <div className="order-card">Follow up on one unpaid balance</div>
+            <div className="order-card">Confirm pending waivers</div>
+            <div className="order-card">Review unpaid balances</div>
+            <div className="order-card">Assign delivery crews</div>
+            <div className="order-card">Check maintenance queue</div>
           </div>
         </aside>
       </div>
