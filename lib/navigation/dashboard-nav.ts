@@ -1,0 +1,15 @@
+export const dashboardNavItems = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/orders", label: "Orders" },
+  { href: "/dashboard/calendar", label: "Calendar" },
+  { href: "/dashboard/products", label: "Products" },
+  { href: "/dashboard/customers", label: "Customers" },
+  { href: "/dashboard/payments", label: "Payments" },
+  { href: "/dashboard/documents", label: "Documents" },
+  { href: "/dashboard/deliveries", label: "Deliveries" },
+  { href: "/dashboard/maintenance", label: "Maintenance" },
+  { href: "/dashboard/service-areas", label: "Service Areas" },
+  { href: "/dashboard/website", label: "Website" },
+  { href: "/dashboard/settings", label: "Settings" },
+  { href: "/crew/today", label: "Crew Mobile" },
+] as const;
