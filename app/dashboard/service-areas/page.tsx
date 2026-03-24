@@ -1,24 +1,9 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { getServiceAreas } from "@/lib/data/service-areas";
 
-const areas = [
-  {
-    name: "Stafford 22554",
-    fee: "$20",
-    minimum: "$125 minimum",
-  },
-  {
-    name: "Fredericksburg 22401",
-    fee: "$30",
-    minimum: "$150 minimum",
-  },
-  {
-    name: "Northern Virginia zone",
-    fee: "$55",
-    minimum: "$250 minimum",
-  },
-];
+export default async function ServiceAreasPage() {
+  const areas = await getServiceAreas();
 
-export default function ServiceAreasPage() {
   return (
     <DashboardShell
       title="Service Areas"
@@ -31,9 +16,10 @@ export default function ServiceAreasPage() {
             <h2 style={{ margin: "6px 0 0" }}>Configured service areas</h2>
           </div>
         </div>
+
         <div className="list">
           {areas.map((area) => (
-            <article key={area.name} className="order-card">
+            <article key={area.id} className="order-card">
               <strong>{area.name}</strong>
               <div className="muted">Delivery fee: {area.fee}</div>
               <div className="muted">{area.minimum}</div>
