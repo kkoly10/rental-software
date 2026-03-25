@@ -20,6 +20,11 @@ export default async function ProductDetailPage({
   if (date) checkoutParams.set("date", date);
   if (zip) checkoutParams.set("zip", zip);
 
+  const galleryImages =
+    product.galleryImages && product.galleryImages.length > 0
+      ? product.galleryImages
+      : ["", "", "", ""];
+
   return (
     <>
       <PublicHeader />
@@ -33,12 +38,34 @@ export default async function ProductDetailPage({
 
           <div className="storefront-detail-shell">
             <section className="panel storefront-gallery">
-              <div className="storefront-gallery-main" />
+              <div
+                className="storefront-gallery-main"
+                style={
+                  product.imageUrl
+                    ? {
+                        backgroundImage: `url(${product.imageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              />
               <div className="storefront-thumb-grid">
-                <div className="storefront-thumb" />
-                <div className="storefront-thumb" />
-                <div className="storefront-thumb" />
-                <div className="storefront-thumb" />
+                {galleryImages.slice(0, 4).map((image, index) => (
+                  <div
+                    key={`${image}-${index}`}
+                    className="storefront-thumb"
+                    style={
+                      image
+                        ? {
+                            backgroundImage: `url(${image})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
               </div>
             </section>
 
@@ -79,7 +106,9 @@ export default async function ProductDetailPage({
             <div className="storefront-detail-grid">
               <div className="panel">
                 <div className="kicker">What to expect</div>
-                <h2 style={{ margin: "8px 0 10px" }}>Delivered like a real service, not just a product</h2>
+                <h2 style={{ margin: "8px 0 10px" }}>
+                  Delivered like a real service, not just a product
+                </h2>
                 <div className="list">
                   <div className="order-card">
                     <strong>Professional setup</strong>
