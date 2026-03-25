@@ -16,6 +16,8 @@ const fallbackProducts: Record<string, CatalogDetail> = {
       "Includes: blower, stakes, and safety overview",
       "Turnaround and cleaning buffers enabled",
     ],
+    imageUrl: "",
+    galleryImages: [],
   },
   "mega-splash-water-slide": {
     id: "prod_mega_splash",
@@ -30,6 +32,8 @@ const fallbackProducts: Record<string, CatalogDetail> = {
       "Includes: blower, stakes, and safety overview",
       "Turnaround and cleaning buffers enabled",
     ],
+    imageUrl: "",
+    galleryImages: [],
   },
   "tropical-combo": {
     id: "prod_tropical_combo",
@@ -44,6 +48,8 @@ const fallbackProducts: Record<string, CatalogDetail> = {
       "Includes: blower, anchors, and safety overview",
       "Best for mixed-age family events",
     ],
+    imageUrl: "",
+    galleryImages: [],
   },
 };
 
@@ -55,7 +61,9 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, short_description, description, categories(name), product_attributes(attribute_key, attribute_value)")
+    .select(
+      "id, name, slug, base_price, short_description, description, categories(name), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order)"
+    )
     .eq("slug", slug)
     .maybeSingle();
 
@@ -63,25 +71,56 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     return fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"];
   }
 
-  const category = (data as Record<string, unknown>).categories as { name: string } | null;
-  const attributes = ((data as Record<string, unknown>).product_attributes as { attribute_key: string; attribute_value: string }[] | null) ?? [];
+  const category = (data as Record<string, unknown>).categories as
+    | { name: string }
+    | null;
 
-  const highlights = attributes.length > 0
-    ? attributes.map((a) => `${a.attribute_key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}: ${a.attribute_value}`)
-    : [
-        "Setup area: grass preferred, flat and clear",
-        "Power: dedicated outlet or generator",
-        "Includes: blower, anchors, and safety overview",
-        "Turnaround and cleaning buffers enabled",
-      ];
+  const attributes =
+    ((data as Record<string, unknown>).product_attributes as
+      | { attribute_key: string; attribute_value: string }[]
+      | null) ?? [];
+
+  const images =
+    ((data as Record<string, unknown>).product_images as
+      | { image_url: string; is_primary?: boolean; sort_order?: number }[]
+      | null) ?? [];
+
+  const sortedImages = [...images].sort((a, b) => {
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
+
+  const highlights =
+    attributes.length > 0
+      ? attributes.map(
+          (a) =>
+            `${a.attribute_key
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c: string) => c.toUpperCase())}: ${a.attribute_value}`
+        )
+      : [
+          "Setup area: grass preferred, flat and clear",
+          "Power: dedicated outlet or generator",
+          "Includes: blower, anchors, and safety overview",
+          "Turnaround and cleaning buffers enabled",
+        ];
 
   return {
     id: data.id,
     name: data.name ?? "Unnamed Product",
     slug: data.slug ?? slug,
     category: category?.name ?? "Inflatable",
-    price: typeof data.base_price === "number" ? `$${data.base_price}/day` : "$0/day",
-    description: data.description ?? data.short_description ?? "Inflatable rental product ready for booking.",
+    price:
+      typeof data.base_price === "number"
+        ? `$${data.base_price}/day`
+        : "$0/day",
+    description:
+      data.description ??
+      data.short_description ??
+      "Inflatable rental product ready for booking.",
     highlights,
+    imageUrl: sortedImages[0]?.image_url ?? "",
+    galleryImages: sortedImages.map((image) => image.image_url).filter(Boolean),
   };
 }
