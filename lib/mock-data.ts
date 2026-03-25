@@ -1,4 +1,6 @@
-export const mockOrders = [
+import type { OrderSummary, ProductSummary } from "@/lib/types";
+
+export const mockOrders: OrderSummary[] = [
   {
     id: "ord_1001",
     customer: "Johnson Birthday Setup",
@@ -26,9 +28,9 @@ export const mockOrders = [
     status: "Scheduled",
     tone: "default",
   },
-] as const;
+];
 
-export const mockProducts = [
+export const mockProducts: ProductSummary[] = [
   {
     id: "prod_castle_bouncer",
     name: "Castle Bouncer",
@@ -53,4 +55,4 @@ export const mockProducts = [
     status: "Maintenance",
     tone: "warning",
   },
-] as const;
+];

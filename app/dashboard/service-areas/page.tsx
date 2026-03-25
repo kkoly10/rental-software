@@ -17,15 +17,26 @@ export default async function ServiceAreasPage() {
           </div>
         </div>
 
-        <div className="list">
-          {areas.map((area) => (
-            <article key={area.id} className="order-card">
-              <strong>{area.name}</strong>
-              <div className="muted">Delivery fee: {area.fee}</div>
-              <div className="muted">{area.minimum}</div>
-            </article>
-          ))}
-        </div>
+        {areas.length === 0 ? (
+          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
+            <strong>No service areas configured</strong>
+            <div className="muted" style={{ marginTop: 8 }}>
+              Service areas are created during onboarding. You can add more by configuring ZIP-based coverage rules.
+            </div>
+          </div>
+        ) : (
+          <div className="list">
+            {areas.map((area) => (
+              <article key={area.id} className="order-card">
+                <div className="order-row">
+                  <strong>{area.name}</strong>
+                  <strong>{area.fee}</strong>
+                </div>
+                <div className="muted">{area.minimum}</div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </DashboardShell>
   );

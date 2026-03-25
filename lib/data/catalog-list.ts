@@ -1,7 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { CatalogProduct } from "@/lib/types";
 
-const fallbackCatalog = [
+const fallbackCatalog: CatalogProduct[] = [
   {
     id: "prod_castle_bouncer",
     name: "Castle Bouncer",
@@ -29,20 +30,22 @@ const fallbackCatalog = [
     description: "Balanced combo unit for families that want variety without full obstacle size.",
     status: "Limited",
   },
-] as const;
+];
 
-export async function getCatalogList() {
+export async function getCatalogList(): Promise<CatalogProduct[]> {
   if (!hasSupabaseEnv()) {
     return fallbackCatalog;
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, short_description, is_active")
+    .select("id, name, slug, base_price, short_description, is_active, categories(name)")
+    .eq("visibility", "public")
+    .eq("is_active", true)
     .order("name", { ascending: true });
 
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     return fallbackCatalog;
   }
 
@@ -50,14 +53,16 @@ export async function getCatalogList() {
     id: product.id,
     name: product.name ?? "Unnamed Product",
     slug: product.slug ?? "product",
-    category: "Inflatable",
+    category: (product as Record<string, unknown>).categories
+      ? ((product as Record<string, unknown>).categories as { name: string })?.name ?? "Inflatable"
+      : "Inflatable",
     price: typeof product.base_price === "number" ? `$${product.base_price}/day` : "$0/day",
     description: product.short_description ?? "Inflatable rental product ready for public booking.",
     status: product.is_active ? "Available" : "Hidden",
   }));
 }
 
-export async function getFeaturedCatalogList() {
+export async function getFeaturedCatalogList(): Promise<CatalogProduct[]> {
   const products = await getCatalogList();
   return products.slice(0, 4);
 }

@@ -1,13 +1,14 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { CustomerDetail } from "@/lib/types";
 
-const fallbackCustomerDetail = {
+const fallbackCustomerDetail: CustomerDetail = {
   id: "cust_1001",
   name: "Ashley Johnson",
   email: "ashley@example.com",
   phone: "(540) 555-0102",
   notes: "Repeat customer. Prefers early setup window and text reminders.",
-  addressLabel: "Stafford, VA 22554 · Backyard birthday setup",
+  addressLabel: "123 Oak Lane, Stafford, VA 22554",
   orders: [
     "Johnson Birthday Setup · Confirmed · $245",
     "Neighborhood Cookout · Completed · $190",
@@ -15,27 +16,29 @@ const fallbackCustomerDetail = {
   ],
 };
 
-export async function getCustomerDetail(customerId: string) {
+export async function getCustomerDetail(customerId: string): Promise<CustomerDetail> {
   if (!hasSupabaseEnv()) {
-    return {
-      ...fallbackCustomerDetail,
-      id: customerId,
-    };
+    return { ...fallbackCustomerDetail, id: customerId };
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("customers")
-    .select("id, first_name, last_name, email, phone, notes")
+    .select(`
+      id, first_name, last_name, email, phone, notes,
+      customer_addresses(line1, city, state, postal_code, is_default_delivery),
+      orders(id, order_number, order_status, total_amount, event_date)
+    `)
     .eq("id", customerId)
     .maybeSingle();
 
   if (error || !data) {
-    return {
-      ...fallbackCustomerDetail,
-      id: customerId,
-    };
+    return { ...fallbackCustomerDetail, id: customerId };
   }
+
+  const addresses = ((data as Record<string, unknown>).customer_addresses as { line1: string; city: string; state: string; postal_code: string }[] | null) ?? [];
+  const orders = ((data as Record<string, unknown>).orders as { id: string; order_number: string; order_status: string; total_amount: number; event_date: string }[] | null) ?? [];
+  const defaultAddr = addresses[0];
 
   return {
     id: data.id,
@@ -43,7 +46,14 @@ export async function getCustomerDetail(customerId: string) {
     email: data.email ?? "",
     phone: data.phone ?? "",
     notes: data.notes ?? "",
-    addressLabel: "Saved addresses coming from live customer data next",
-    orders: ["Order history coming from live data next"],
+    addressLabel: defaultAddr
+      ? `${defaultAddr.line1}, ${defaultAddr.city}, ${defaultAddr.state} ${defaultAddr.postal_code}`
+      : "No saved address",
+    orders: orders.length > 0
+      ? orders.map((o) => {
+          const status = (o.order_status ?? "inquiry").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+          return `${o.order_number} · ${status} · $${o.total_amount ?? 0}`;
+        })
+      : ["No orders yet"],
   };
 }

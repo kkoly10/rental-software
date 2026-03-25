@@ -14,7 +14,7 @@ export default async function HomePage() {
           <div className="container">
             <div className="hero-panel">
               <div>
-                <div className="kicker" style={{ color: "white" }}>
+                <div className="kicker" style={{ color: "rgba(255,255,255,.8)" }}>
                   Inflatable rental software
                 </div>
                 <h1>Book fun faster. Run operations from one place.</h1>
@@ -42,19 +42,19 @@ export default async function HomePage() {
               </div>
 
               <div className="surface-card" style={{ padding: 22 }}>
-                <div className="kicker">Launch stack</div>
+                <div className="kicker">Why operators choose RentalOS</div>
                 <div className="list" style={{ marginTop: 10 }}>
                   <div className="order-card">
-                    Live availability and conflict blocking
+                    Live availability and date conflict blocking
                   </div>
                   <div className="order-card">
-                    Deposits, waivers, and checkout flow
+                    Deposits, waivers, and end-to-end checkout
                   </div>
                   <div className="order-card">
-                    Delivery board with stop statuses
+                    Delivery board with crew dispatch and stop tracking
                   </div>
                   <div className="order-card">
-                    Future-ready for party and trailer modes
+                    Extensible for party rental and trailer verticals
                   </div>
                 </div>
               </div>
@@ -89,6 +89,17 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        <footer className="footer">
+          <div className="container" style={{ textAlign: "center" }}>
+            <div className="muted">
+              RentalOS &middot; Inflatable-first rental software &middot;{" "}
+              <Link href="/login" style={{ color: "var(--primary)" }}>
+                Operator Login
+              </Link>
+            </div>
+          </div>
+        </footer>
       </main>
     </>
   );

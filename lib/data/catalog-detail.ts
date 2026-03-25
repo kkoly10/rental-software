@@ -1,7 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { CatalogDetail } from "@/lib/types";
 
-const fallbackProducts = {
+const fallbackProducts: Record<string, CatalogDetail> = {
   "castle-bouncer": {
     id: "prod_castle_bouncer",
     name: "Castle Bouncer",
@@ -44,36 +45,43 @@ const fallbackProducts = {
       "Best for mixed-age family events",
     ],
   },
-} as const;
+};
 
-export async function getCatalogDetail(slug: string) {
+export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   if (!hasSupabaseEnv()) {
-    return fallbackProducts[slug as keyof typeof fallbackProducts] ?? fallbackProducts["mega-splash-water-slide"];
+    return fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"];
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, short_description, description")
+    .select("id, name, slug, base_price, short_description, description, categories(name), product_attributes(attribute_key, attribute_value)")
     .eq("slug", slug)
     .maybeSingle();
 
   if (error || !data) {
-    return fallbackProducts[slug as keyof typeof fallbackProducts] ?? fallbackProducts["mega-splash-water-slide"];
+    return fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"];
   }
+
+  const category = (data as Record<string, unknown>).categories as { name: string } | null;
+  const attributes = ((data as Record<string, unknown>).product_attributes as { attribute_key: string; attribute_value: string }[] | null) ?? [];
+
+  const highlights = attributes.length > 0
+    ? attributes.map((a) => `${a.attribute_key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}: ${a.attribute_value}`)
+    : [
+        "Setup area: grass preferred, flat and clear",
+        "Power: dedicated outlet or generator",
+        "Includes: blower, anchors, and safety overview",
+        "Turnaround and cleaning buffers enabled",
+      ];
 
   return {
     id: data.id,
     name: data.name ?? "Unnamed Product",
     slug: data.slug ?? slug,
-    category: "Inflatable",
+    category: category?.name ?? "Inflatable",
     price: typeof data.base_price === "number" ? `$${data.base_price}/day` : "$0/day",
     description: data.description ?? data.short_description ?? "Inflatable rental product ready for booking.",
-    highlights: [
-      "Setup area: grass preferred, flat and clear",
-      "Power: dedicated outlet or generator",
-      "Includes: blower, anchors, and safety overview",
-      "Turnaround and cleaning buffers enabled",
-    ],
+    highlights,
   };
 }
