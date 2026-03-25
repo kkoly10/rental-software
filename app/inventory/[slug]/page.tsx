@@ -17,31 +17,63 @@ export default async function ProductDetailPage({
       <main className="page">
         <div className="container two-col">
           <section className="panel">
-            <div
-              className="product-media"
-              style={{ height: 320, borderRadius: 18 }}
-            />
-            <div
-              className="grid"
-              style={{ gridTemplateColumns: "repeat(4, 1fr)", marginTop: 14 }}
-            >
-              <div
-                className="product-media"
-                style={{ height: 80, borderRadius: 12 }}
-              />
-              <div
-                className="product-media"
-                style={{ height: 80, borderRadius: 12 }}
-              />
-              <div
-                className="product-media"
-                style={{ height: 80, borderRadius: 12 }}
-              />
-              <div
-                className="product-media"
-                style={{ height: 80, borderRadius: 12 }}
-              />
-            </div>
+            {product.images.length > 0 ? (
+              <>
+                <div
+                  className="product-media"
+                  style={{
+                    height: 320,
+                    borderRadius: 18,
+                    backgroundImage: `url(${product.images[0].url})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                  role="img"
+                  aria-label={product.images[0].alt || product.name}
+                />
+                {product.images.length > 1 && (
+                  <div
+                    className="grid"
+                    style={{ gridTemplateColumns: "repeat(4, 1fr)", marginTop: 14 }}
+                  >
+                    {product.images.slice(1, 5).map((img, i) => (
+                      <div
+                        key={i}
+                        className="product-media"
+                        style={{
+                          height: 80,
+                          borderRadius: 12,
+                          backgroundImage: `url(${img.url})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }}
+                        role="img"
+                        aria-label={img.alt || `${product.name} photo ${i + 2}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div
+                  className="product-media"
+                  style={{ height: 320, borderRadius: 18 }}
+                />
+                <div
+                  className="grid"
+                  style={{ gridTemplateColumns: "repeat(4, 1fr)", marginTop: 14 }}
+                >
+                  {[1, 2, 3, 4].map((n) => (
+                    <div
+                      key={n}
+                      className="product-media"
+                      style={{ height: 80, borderRadius: 12 }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </section>
 
           <aside className="panel">

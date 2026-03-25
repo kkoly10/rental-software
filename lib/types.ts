@@ -8,6 +8,7 @@ export type CatalogProduct = {
   price: string;
   description: string;
   status: string;
+  imageUrl: string | null;
 };
 
 export type OrderSummary = {
@@ -117,4 +118,5 @@ export type CatalogDetail = {
   price: string;
   description: string;
   highlights: string[];
+  images: { url: string; alt: string }[];
 };

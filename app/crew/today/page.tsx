@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { getRoutes } from "@/lib/data/routes";
-import { getRouteDetail } from "@/lib/data/route-detail";
+import { getRouteDetail, getRouteStops } from "@/lib/data/route-detail";
+import { StopActionButtons } from "@/components/crew/stop-actions";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default async function CrewTodayPage() {
   const routes = await getRoutes();
   const activeRoute = routes.find((r) => r.status === "in_progress") ?? routes[0];
   const routeDetail = activeRoute ? await getRouteDetail(activeRoute.id) : null;
+  const stops = activeRoute ? await getRouteStops(activeRoute.id) : [];
 
   return (
     <main className="page">
@@ -41,19 +44,20 @@ export default async function CrewTodayPage() {
 
                 <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>Stop sequence</h2>
                 <div className="list">
-                  {routeDetail.stops.map((stop, i) => (
-                    <div key={i} className="mobile-card">
-                      <div>{stop}</div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        <button className="secondary-btn" style={{ fontSize: 12, padding: "6px 12px" }}>
-                          Navigate
-                        </button>
-                        <button className="secondary-btn" style={{ fontSize: 12, padding: "6px 12px" }}>
-                          Call
-                        </button>
-                        <button className="primary-btn" style={{ fontSize: 12, padding: "6px 12px" }}>
-                          Mark Complete
-                        </button>
+                  {stops.map((stop) => (
+                    <div key={stop.id} className="mobile-card">
+                      <div className="order-row">
+                        <div>
+                          <strong>{stop.sequence}. {stop.label}</strong>
+                          <div className="muted">{stop.time} · {stop.type}</div>
+                        </div>
+                        <StatusBadge
+                          label={stop.status.replace(/_/g, " ")}
+                          tone={stop.status === "completed" ? "success" : stop.status === "en_route" ? "warning" : "default"}
+                        />
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <StopActionButtons stopId={stop.id} currentStatus={stop.status} />
                       </div>
                     </div>
                   ))}
@@ -62,8 +66,8 @@ export default async function CrewTodayPage() {
                 <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>Checklist</h2>
                 <div className="list">
                   <div className="mobile-card">Blower, tarp, stakes, extension cord</div>
-                  <div className="mobile-card">Upload setup photo</div>
-                  <div className="mobile-card">Collect customer signature</div>
+                  <div className="mobile-card">Upload setup photo (coming soon)</div>
+                  <div className="mobile-card">Collect customer signature (coming soon)</div>
                 </div>
               </>
             ) : (

@@ -11,6 +11,7 @@ export function CatalogGrid({
     price: string;
     description: string;
     status: string;
+    imageUrl?: string | null;
   }>;
 }) {
   return (
@@ -24,6 +25,7 @@ export function CatalogGrid({
           category={product.category}
           description={product.description}
           status={product.status}
+          imageUrl={product.imageUrl}
         />
       ))}
     </div>

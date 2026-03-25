@@ -1,9 +1,19 @@
+import Link from "next/link";
 import { PublicHeader } from "@/components/layout/public-header";
 import { CatalogGrid } from "@/components/public/catalog-grid";
-import { getCatalogList } from "@/lib/data/catalog-list";
+import { getCatalogList, getPublicCategories } from "@/lib/data/catalog-list";
 
-export default async function InventoryPage() {
-  const products = await getCatalogList();
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const params = await searchParams;
+  const activeCategory = params.category ?? "";
+  const [products, categories] = await Promise.all([
+    getCatalogList(activeCategory || undefined),
+    getPublicCategories(),
+  ]);
 
   return (
     <>
@@ -14,28 +24,40 @@ export default async function InventoryPage() {
             <div>
               <div className="kicker">Catalog</div>
               <h1 style={{ margin: "6px 0 8px" }}>Browse inflatables</h1>
-              <div className="muted">Filter by date, ZIP, and category.</div>
+              <div className="muted">Filter by category to find the perfect rental.</div>
             </div>
           </div>
 
           <div className="filters">
-            <input defaultValue="May 24, 2026" aria-label="Date" />
-            <input defaultValue="22554" aria-label="ZIP code" />
-            <select defaultValue="All categories" aria-label="Category">
-              <option>All categories</option>
-              <option>Bounce houses</option>
-              <option>Water slides</option>
-              <option>Combos</option>
-              <option>Add-ons</option>
-            </select>
-            <select defaultValue="Available only" aria-label="Availability">
-              <option>Available only</option>
-              <option>Include maintenance</option>
-            </select>
-            <button className="primary-btn">Apply Filters</button>
+            <Link
+              href="/inventory"
+              className={activeCategory ? "secondary-btn" : "primary-btn"}
+              style={{ textDecoration: "none" }}
+            >
+              All
+            </Link>
+            {categories.map((cat) => (
+              <Link
+                key={cat.slug}
+                href={`/inventory?category=${cat.slug}`}
+                className={activeCategory === cat.slug ? "primary-btn" : "secondary-btn"}
+                style={{ textDecoration: "none" }}
+              >
+                {cat.name}
+              </Link>
+            ))}
           </div>
 
-          <CatalogGrid products={products} />
+          {products.length === 0 ? (
+            <div className="panel" style={{ textAlign: "center", padding: 32, marginTop: 16 }}>
+              <strong>No products found</strong>
+              <div className="muted" style={{ marginTop: 8 }}>
+                Try a different category or <Link href="/inventory">view all</Link>.
+              </div>
+            </div>
+          ) : (
+            <CatalogGrid products={products} />
+          )}
         </div>
       </main>
     </>

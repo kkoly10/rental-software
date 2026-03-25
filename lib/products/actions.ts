@@ -72,6 +72,93 @@ export async function createProduct(
   redirect("/dashboard/products");
 }
 
+export async function addProductImage(
+  _prevState: ProductActionState,
+  formData: FormData
+): Promise<ProductActionState> {
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
+  const altText = String(formData.get("alt_text") ?? "").trim();
+  const isPrimary = formData.get("is_primary") === "on";
+
+  if (!productId || !imageUrl) {
+    return { ok: false, message: "Product ID and image URL are required." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: image would be added." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+
+  // Verify product belongs to org
+  const { data: product } = await supabase
+    .from("products")
+    .select("id")
+    .eq("id", productId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  if (!product) return { ok: false, message: "Product not found." };
+
+  // If setting as primary, unset existing primary
+  if (isPrimary) {
+    await supabase
+      .from("product_images")
+      .update({ is_primary: false })
+      .eq("product_id", productId);
+  }
+
+  const { data: maxSort } = await supabase
+    .from("product_images")
+    .select("sort_order")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase.from("product_images").insert({
+    product_id: productId,
+    image_url: imageUrl,
+    alt_text: altText || null,
+    is_primary: isPrimary,
+    sort_order: (maxSort?.sort_order ?? -1) + 1,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath(`/dashboard/products/${productId}`);
+  return { ok: true, message: "Image added." };
+}
+
+export async function removeProductImage(
+  _prevState: ProductActionState,
+  formData: FormData
+): Promise<ProductActionState> {
+  const imageId = String(formData.get("image_id") ?? "").trim();
+  if (!imageId) return { ok: false, message: "Image ID required." };
+  if (!hasSupabaseEnv()) return { ok: true, message: "Demo mode: image would be removed." };
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("id", imageId);
+
+  if (error) return { ok: false, message: error.message };
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/dashboard/products");
+  return { ok: true, message: "Image removed." };
+}
+
 export async function updateProduct(
   _prevState: ProductActionState,
   formData: FormData

@@ -54,6 +54,7 @@ export async function getProductById(productId: string) {
           visibility: "public" as const,
           requiresDelivery: true,
           pricingModel: "flat_day" as const,
+          images: [] as { id: string; url: string; alt: string; isPrimary: boolean }[],
         }
       : null;
   }
@@ -61,13 +62,19 @@ export async function getProductById(productId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name), product_images(id, image_url, alt_text, sort_order, is_primary)")
     .eq("id", productId)
     .maybeSingle();
 
   if (error || !data) return null;
 
   const category = (data as Record<string, unknown>).categories as { id: string; name: string } | null;
+  const rawImages = ((data as Record<string, unknown>).product_images as { id: string; image_url: string; alt_text: string | null; sort_order: number; is_primary: boolean }[] | null) ?? [];
+  const images = [...rawImages].sort((a, b) => {
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    return a.sort_order - b.sort_order;
+  });
 
   return {
     id: data.id,
@@ -83,6 +90,7 @@ export async function getProductById(productId: string) {
     visibility: data.visibility ?? "public",
     requiresDelivery: data.requires_delivery ?? true,
     pricingModel: data.pricing_model ?? "flat_day",
+    images: images.map((img) => ({ id: img.id, url: img.image_url, alt: img.alt_text ?? "", isPrimary: img.is_primary })),
   };
 }
 
