@@ -9,7 +9,15 @@ const initialState = {
   message: "",
 };
 
-export function CheckoutForm({ productSlug }: { productSlug?: string }) {
+export function CheckoutForm({
+  productSlug,
+  initialDate,
+  initialZip,
+}: {
+  productSlug?: string;
+  initialDate?: string;
+  initialZip?: string;
+}) {
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
     initialState
@@ -18,11 +26,16 @@ export function CheckoutForm({ productSlug }: { productSlug?: string }) {
   if (state.ok && state.message) {
     return (
       <div style={{ marginTop: 16 }}>
-        <div className="order-card" style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}>
+        <div
+          className="order-card"
+          style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}
+        >
           <strong>Booking submitted!</strong>
-          <div className="muted" style={{ marginTop: 8 }}>{state.message}</div>
+          <div className="muted" style={{ marginTop: 8 }}>
+            {state.message}
+          </div>
         </div>
-        <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+        <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Link href="/inventory" className="primary-btn">
             Browse more rentals
           </Link>
@@ -36,7 +49,10 @@ export function CheckoutForm({ productSlug }: { productSlug?: string }) {
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
-      {productSlug && <input type="hidden" name="product_slug" value={productSlug} />}
+      {productSlug ? (
+        <input type="hidden" name="product_slug" value={productSlug} />
+      ) : null}
+
       <div className="grid grid-3">
         <label className="order-card">
           <strong>First name</strong>
@@ -87,6 +103,7 @@ export function CheckoutForm({ productSlug }: { productSlug?: string }) {
         <input
           name="event_date"
           type="date"
+          defaultValue={initialDate}
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
@@ -105,17 +122,36 @@ export function CheckoutForm({ productSlug }: { productSlug?: string }) {
       <div className="grid grid-3">
         <label className="order-card">
           <strong>City</strong>
-          <input name="city" type="text" placeholder="City" required style={{ marginTop: 10, width: "100%" }} />
+          <input
+            name="city"
+            type="text"
+            placeholder="City"
+            required
+            style={{ marginTop: 10, width: "100%" }}
+          />
         </label>
 
         <label className="order-card">
           <strong>State</strong>
-          <input name="state" type="text" placeholder="VA" required style={{ marginTop: 10, width: "100%" }} />
+          <input
+            name="state"
+            type="text"
+            placeholder="VA"
+            required
+            style={{ marginTop: 10, width: "100%" }}
+          />
         </label>
 
         <label className="order-card">
           <strong>ZIP code</strong>
-          <input name="postal_code" type="text" placeholder="22554" required style={{ marginTop: 10, width: "100%" }} />
+          <input
+            name="postal_code"
+            type="text"
+            placeholder="22554"
+            required
+            defaultValue={initialZip}
+            style={{ marginTop: 10, width: "100%" }}
+          />
         </label>
       </div>
 
@@ -125,8 +161,8 @@ export function CheckoutForm({ productSlug }: { productSlug?: string }) {
         </div>
       ) : null}
 
-      <div style={{ display: "flex", gap: 12 }}>
-        <button className="primary-btn" type="submit" disabled={pending}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <button className="primary-btn storefront-search-btn" type="submit" disabled={pending}>
           {pending ? "Creating Order..." : "Place Booking"}
         </button>
       </div>
