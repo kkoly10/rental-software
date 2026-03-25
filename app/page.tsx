@@ -61,7 +61,10 @@ export default async function HomePage() {
                       />
                     </label>
 
-                    <button type="submit" className="primary-btn storefront-search-btn">
+                    <button
+                      type="submit"
+                      className="primary-btn storefront-search-btn"
+                    >
                       Find Available Rentals
                     </button>
                   </div>
@@ -75,9 +78,12 @@ export default async function HomePage() {
 
                 <div className="public-hero-card">
                   <div className="kicker">Popular for birthdays</div>
-                  <h3 style={{ margin: "8px 0 6px" }}>Water slides and bounce houses</h3>
+                  <h3 style={{ margin: "8px 0 6px" }}>
+                    Water slides and bounce houses
+                  </h3>
                   <div className="muted">
-                    Delivery, setup, safety review, and later pickup handled by our team.
+                    Delivery, setup, safety review, and later pickup handled by
+                    our team.
                   </div>
 
                   <div className="price-row">
@@ -123,6 +129,7 @@ export default async function HomePage() {
                   category={product.category}
                   description={product.description}
                   status={product.status}
+                  imageUrl={product.imageUrl}
                 />
               ))}
             </div>
