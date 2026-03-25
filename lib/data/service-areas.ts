@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { ServiceAreaSummary } from "@/lib/types";
 
 const fallbackAreas: ServiceAreaSummary[] = [
@@ -13,10 +14,14 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
     return fallbackAreas;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return fallbackAreas;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("service_areas")
     .select("id, label, zip_code, delivery_fee, minimum_order_amount, is_active")
+    .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
     .order("label", { ascending: true });
 

@@ -35,7 +35,8 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       deposit_due_amount, balance_due_amount,
       customers(first_name, last_name, email, phone),
       order_items(item_name_snapshot, line_total),
-      documents(document_type, document_status)
+      documents(document_type, document_status),
+      customer_addresses(line1, city, state, postal_code)
     `)
     .eq("id", orderId)
     .maybeSingle();
@@ -47,6 +48,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const customer = (data as Record<string, unknown>).customers as { first_name: string; last_name: string; email: string; phone: string } | null;
   const items = ((data as Record<string, unknown>).order_items as { item_name_snapshot: string; line_total: number }[] | null) ?? [];
   const docs = ((data as Record<string, unknown>).documents as { document_type: string; document_status: string }[] | null) ?? [];
+  const address = (data as Record<string, unknown>).customer_addresses as { line1: string; city: string; state: string; postal_code: string } | null;
   const status = (data.order_status ?? "inquiry").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 
   return {
@@ -60,7 +62,9 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       ? new Date(data.event_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       : "TBD",
     items: items.length > 0 ? items.map((i) => i.item_name_snapshot ?? "Item") : ["No items added"],
-    deliveryLabel: "Delivery details from order address",
+    deliveryLabel: address
+      ? `${address.line1}, ${address.city}, ${address.state} ${address.postal_code}`
+      : "No delivery address on file",
     documents: docs.length > 0
       ? docs.map((d) => `${(d.document_type ?? "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}: ${(d.document_status ?? "pending").replace(/\b\w/g, (c: string) => c.toUpperCase())}`)
       : ["No documents"],

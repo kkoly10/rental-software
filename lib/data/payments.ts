@@ -1,6 +1,7 @@
 import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { PaymentSummary } from "@/lib/types";
 
 const fallbackPayments: PaymentSummary[] = mockOrders.map((order, index) => ({
@@ -18,10 +19,14 @@ export async function getPayments(): Promise<PaymentSummary[]> {
     return fallbackPayments;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return fallbackPayments;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("payments")
-    .select("id, payment_type, payment_status, amount, paid_at, order_id, orders(order_number, customers(first_name, last_name))")
+    .select("id, payment_type, payment_status, amount, paid_at, order_id, orders!inner(organization_id, order_number, customers(first_name, last_name))")
+    .eq("orders.organization_id", ctx.organizationId)
     .order("paid_at", { ascending: false, nullsFirst: false })
     .limit(50);
 

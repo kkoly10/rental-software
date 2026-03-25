@@ -1,6 +1,7 @@
 import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { CustomerSummary } from "@/lib/types";
 
 const fallbackCustomers: CustomerSummary[] = mockOrders.map((order) => ({
@@ -17,10 +18,14 @@ export async function getCustomers(): Promise<CustomerSummary[]> {
     return fallbackCustomers;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return fallbackCustomers;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("customers")
     .select("id, first_name, last_name, email, phone, created_at, orders(order_number, event_date, order_status)")
+    .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false })
     .limit(50);
 

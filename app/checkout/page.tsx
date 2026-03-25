@@ -1,11 +1,13 @@
 import { PublicHeader } from "@/components/layout/public-header";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 
-export default function CheckoutPage({
+export default async function CheckoutPage({
   searchParams,
 }: {
   searchParams: Promise<{ product?: string }>;
 }) {
+  const { product } = await searchParams;
+
   return (
     <>
       <PublicHeader />
@@ -19,7 +21,7 @@ export default function CheckoutPage({
               A deposit is required to confirm your reservation.
             </div>
 
-            <CheckoutForm />
+            <CheckoutForm productSlug={product} />
           </section>
 
           <aside className="panel">

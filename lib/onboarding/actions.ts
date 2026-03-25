@@ -42,6 +42,19 @@ export async function completeOnboarding(
     return { ok: false, message: "You must be signed in to create an organization." };
   }
 
+  // Check if user already has an active membership (prevent duplicate onboarding)
+  const { data: existingMembership } = await supabase
+    .from("organization_memberships")
+    .select("id")
+    .eq("profile_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  if (existingMembership) {
+    redirect("/dashboard");
+  }
+
   // Create organization
   const slug = slugify(businessName);
   const { data: org, error: orgError } = await supabase
@@ -63,12 +76,16 @@ export async function completeOnboarding(
   }
 
   // Create membership
-  await supabase.from("organization_memberships").insert({
+  const { error: membershipError } = await supabase.from("organization_memberships").insert({
     organization_id: org.id,
     profile_id: user.id,
     role: "owner",
     status: "active",
   });
+
+  if (membershipError) {
+    return { ok: false, message: membershipError.message };
+  }
 
   // Seed a default service area if zip provided
   if (zipCode) {

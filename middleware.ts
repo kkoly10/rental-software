@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect dashboard routes
+  // Protect dashboard and crew routes — require auth
   if (
     !user &&
     (request.nextUrl.pathname.startsWith("/dashboard") ||
@@ -53,6 +53,27 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // For authenticated dashboard users, check if they have an org membership.
+  // If not, redirect to onboarding (unless they're already there).
+  if (
+    user &&
+    request.nextUrl.pathname.startsWith("/dashboard")
+  ) {
+    const { data: membership } = await supabase
+      .from("organization_memberships")
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    if (!membership) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

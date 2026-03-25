@@ -8,7 +8,7 @@ Web-first rental software purpose-built for inflatable rental businesses, with a
 - Homepage with featured inventory and search bar
 - Catalog browse with category filters
 - Product detail pages with specs and availability badges
-- Checkout flow that creates customers, addresses, and orders
+- Checkout flow that creates customers, addresses, and orders with product linking
 - Mobile-responsive layout
 
 ### Operator dashboard
@@ -21,27 +21,35 @@ Web-first rental software purpose-built for inflatable rental businesses, with a
 - **Delivery board** — kanban-style route management (assigned → in progress → completed)
 - **Route detail** — stop sequence, crew assignment, vehicle info
 - **Calendar** — upcoming events from order pipeline
-- **Maintenance** — asset readiness queue
+- **Maintenance** — asset readiness queue (informational; CRUD not yet wired)
 - **Service areas** — ZIP-based coverage with delivery fees and minimums
-- **Settings** — business profile and team access structure
-- **Website** — homepage and catalog presentation controls
+- **Settings** — business profile and team access structure (informational; forms not yet wired)
+- **Website** — homepage and catalog presentation controls (informational; forms not yet wired)
 
 ### Crew mobile workspace
 - Mobile-optimized route view for delivery crews
-- Stop sequence with navigate, call, and mark-complete actions
+- Stop sequence with navigate, call, and mark-complete buttons (UI only; actions not yet wired to backend)
 - Setup checklist and photo/signature placeholders
 
 ### Auth and onboarding
 - Email/password signup and login with Supabase Auth
-- Middleware-protected dashboard routes
-- Cookie-based SSR session handling
+- Middleware-protected dashboard routes with onboarding redirect
+- Cookie-based SSR session handling via @supabase/ssr
 - Onboarding flow that creates organization, membership, service area, and starter categories
+- Duplicate onboarding prevention
+- Sign out from dashboard sidebar
+
+### Multi-tenancy and security
+- Organization scoping via authenticated user's membership (not "first org in DB")
+- Row-Level Security policies on all tenant-scoped tables
+- Public storefront access for anonymous visitors (catalog, checkout)
+- Helper function `get_user_org_ids()` for RLS policy evaluation
 
 ## Tech stack
 
 - **Next.js** (App Router, Server Components, Server Actions)
 - **TypeScript** (strict mode)
-- **Supabase** (PostgreSQL, Auth, Row-Level Security ready)
+- **Supabase** (PostgreSQL, Auth, Row-Level Security)
 - **@supabase/ssr** (cookie-based auth for SSR)
 - **Vercel** deployment target
 - **Custom CSS** (clean blue/white SaaS design system)
@@ -76,23 +84,22 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Supabase setup
 
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Run the initial schema migration:
-   ```sql
-   -- Run the contents of supabase/migrations/20260324_120000_initial_schema.sql
+2. Run the migrations in order via the SQL Editor:
    ```
-3. Run the auth profile sync trigger:
-   ```sql
-   -- Run the contents of supabase/migrations/20260324_121500_auth_profile_sync.sql
+   supabase/migrations/20260324_120000_initial_schema.sql   — Full schema (19 tables)
+   supabase/migrations/20260324_121500_auth_profile_sync.sql — Profile auto-creation trigger
+   supabase/migrations/20260325_010000_rls_policies.sql      — Row-Level Security policies
    ```
-4. Copy your project URL and anon key to `.env.local`
-5. Sign up through the app, complete onboarding, then start creating products and orders
+3. Copy your project URL and anon key to `.env.local`
+4. Sign up through the app, complete onboarding, then start creating products and orders
 
 ### Migrations
 
 | File | Purpose |
 |---|---|
-| `20260324_120000_initial_schema.sql` | Full schema with all tables and indexes |
+| `20260324_120000_initial_schema.sql` | Full schema with all 19 tables and indexes |
 | `20260324_121500_auth_profile_sync.sql` | Trigger to auto-create profile rows on signup |
+| `20260325_010000_rls_policies.sql` | Row-Level Security policies for multi-tenant isolation |
 
 ## Order status flow
 
@@ -117,7 +124,7 @@ app/                          # Next.js App Router pages
   inventory/                  # Public catalog
   checkout/                   # Public booking flow
   login/ signup/ onboarding/  # Auth and setup
-  dashboard/                  # Operator dashboard (13 sections)
+  dashboard/                  # Operator dashboard (13+ sections)
   crew/today/                 # Mobile crew workspace
 components/
   layout/                     # PublicHeader, DashboardShell
@@ -130,7 +137,7 @@ components/
   onboarding/                 # OnboardingForm
 lib/
   data/                       # Server-side data fetchers with Supabase + fallbacks
-  auth/                       # Auth server actions
+  auth/                       # Auth server actions + org-context resolver
   checkout/                   # Checkout server action
   products/                   # Product CRUD server actions
   orders/                     # Order creation server action
@@ -138,21 +145,42 @@ lib/
   supabase/                   # Client and server Supabase clients
 supabase/
   schema.sql                  # Reference schema
-  migrations/                 # Incremental SQL migrations
-middleware.ts                 # Auth session refresh + route protection
+  migrations/                 # Incremental SQL migrations (3 files)
+middleware.ts                 # Auth session refresh + route protection + onboarding redirect
 ```
 
-## What still depends on external services
+## What is complete vs. scaffolded
 
-| Feature | Dependency | Status |
-|---|---|---|
-| Live data persistence | Supabase project | Scaffolded, works with env vars |
-| User authentication | Supabase Auth | Fully wired with SSR cookies |
-| File uploads (images) | Supabase Storage | Schema ready, upload UI not yet built |
-| Payment processing | Stripe (future) | Deposit amounts tracked in DB |
-| E-signatures | Third-party (future) | Document status tracked, signing UI not built |
-| Email notifications | SendGrid/Resend (future) | Not integrated |
-| Map/routing | Google Maps (future) | Placeholder in delivery board |
+### Complete (fully functional)
+- Auth: signup, login, logout, session management
+- Onboarding: org creation, membership, service area seeding, category seeding
+- Products: create, edit, list, detail, category linkage, visibility, pricing
+- Orders: create (dashboard + public checkout), list, detail with financials
+- Customers: list, detail with order history and addresses
+- Checkout: full flow creating customer, address, order, and order items
+- Delivery board: kanban view with route detail
+- Route detail: stop sequence with crew/vehicle display
+- Crew mobile: route view with stop list
+- Payments: list view from payment records
+- Documents: list view grouped by order
+- Service areas: list view
+- Calendar: upcoming events from orders
+- RLS policies: all tables protected
+- Multi-tenant org scoping: all actions and data fetchers use authenticated user's org
+- Demo mode: full app works with mock data when env vars are missing
+
+### Scaffolded (UI present, backend integration deferred)
+- Maintenance: hardcoded records, not yet reading from `maintenance_records` table
+- Settings page: informational cards, no editable forms
+- Website page: informational cards, no editable forms
+- Crew stop actions: Navigate/Call/Mark Complete buttons are UI-only
+- Product images: schema and image placeholder ready, no upload UI
+- Payment processing: deposit amounts calculated, no Stripe integration
+- E-signatures: document status tracked, no signing UI
+- Email notifications: not integrated
+- Map/routing: placeholder in delivery board
+- Search/filtering: filter UI on catalog page, not wired to query params
+- Pagination: all queries use `.limit(50)`, no cursor-based pagination
 
 ## Expansion roadmap
 

@@ -1,6 +1,7 @@
 import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { OrderSummary } from "@/lib/types";
 
 function formatStatus(status: string): string {
@@ -19,10 +20,14 @@ export async function getOrders(): Promise<OrderSummary[]> {
     return mockOrders;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return mockOrders;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("orders")
     .select("id, order_number, order_status, event_date, total_amount, customers(first_name, last_name), order_items(item_name_snapshot)")
+    .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false })
     .limit(50);
 
