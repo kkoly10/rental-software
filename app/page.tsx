@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/layout/public-header";
+import { ProductCard } from "@/components/public/product-card";
+import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 
-const featured = [
-  ["Castle Bouncer", "$165/day"],
-  ["Mega Splash Slide", "$279/day"],
-  ["Jungle Obstacle", "$345/day"],
-  ["Party Generator", "$60/day"],
-] as const;
+export default async function HomePage() {
+  const featured = await getFeaturedCatalogList();
 
-export default function HomePage() {
   return (
     <>
       <PublicHeader />
@@ -17,7 +14,9 @@ export default function HomePage() {
           <div className="container">
             <div className="hero-panel">
               <div>
-                <div className="kicker" style={{ color: "white" }}>Inflatable rental software</div>
+                <div className="kicker" style={{ color: "white" }}>
+                  Inflatable rental software
+                </div>
                 <h1>Book fun faster. Run operations from one place.</h1>
                 <p>
                   Web-first rental software for inflatable companies today,
@@ -32,16 +31,31 @@ export default function HomePage() {
                     <option>Obstacle Courses</option>
                     <option>Add-ons</option>
                   </select>
-                  <Link href="/inventory" className="primary-btn" style={{ textAlign: "center" }}>Find Rentals</Link>
+                  <Link
+                    href="/inventory"
+                    className="primary-btn"
+                    style={{ textAlign: "center" }}
+                  >
+                    Find Rentals
+                  </Link>
                 </div>
               </div>
+
               <div className="surface-card" style={{ padding: 22 }}>
                 <div className="kicker">Launch stack</div>
                 <div className="list" style={{ marginTop: 10 }}>
-                  <div className="order-card">Live availability and conflict blocking</div>
-                  <div className="order-card">Deposits, waivers, and checkout flow</div>
-                  <div className="order-card">Delivery board with stop statuses</div>
-                  <div className="order-card">Future-ready for party and trailer modes</div>
+                  <div className="order-card">
+                    Live availability and conflict blocking
+                  </div>
+                  <div className="order-card">
+                    Deposits, waivers, and checkout flow
+                  </div>
+                  <div className="order-card">
+                    Delivery board with stop statuses
+                  </div>
+                  <div className="order-card">
+                    Future-ready for party and trailer modes
+                  </div>
                 </div>
               </div>
             </div>
@@ -55,21 +69,22 @@ export default function HomePage() {
                 <div className="kicker">Featured inventory</div>
                 <h2>Popular rentals</h2>
               </div>
-              <Link href="/inventory" className="ghost-btn">Browse all</Link>
+              <Link href="/inventory" className="ghost-btn">
+                Browse all
+              </Link>
             </div>
+
             <div className="grid grid-4">
-              {featured.map(([name, price]) => (
-                <article key={name} className="product-card">
-                  <div className="product-media" />
-                  <div className="product-copy">
-                    <div className="kicker">Inflatable</div>
-                    <h3 style={{ margin: "8px 0 0" }}>{name}</h3>
-                    <div className="price-row">
-                      <span className="muted">{price}</span>
-                      <Link href="/inventory/mega-splash-water-slide" className="secondary-btn">View</Link>
-                    </div>
-                  </div>
-                </article>
+              {featured.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  name={product.name}
+                  slug={product.slug}
+                  price={product.price}
+                  category={product.category}
+                  description={product.description}
+                  status={product.status}
+                />
               ))}
             </div>
           </div>
