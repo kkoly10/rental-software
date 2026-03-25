@@ -24,12 +24,17 @@ export async function getProducts(): Promise<ProductSummary[]> {
   }
 
   return data.map((product) => {
-    const category = (product as Record<string, unknown>).categories as { name: string } | null;
+    const category = (product as Record<string, unknown>).categories as {
+      name: string;
+    } | null;
     return {
       id: product.id,
       name: product.name ?? "Unnamed",
       category: category?.name ?? "Inflatable",
-      price: typeof product.base_price === "number" ? `$${product.base_price}/day` : "$0/day",
+      price:
+        typeof product.base_price === "number"
+          ? `$${product.base_price}/day`
+          : "$0/day",
       status: product.is_active ? "Active" : "Hidden",
       tone: (product.is_active ? "success" : "default") as ProductSummary["tone"],
     };
@@ -58,16 +63,23 @@ export async function getProductById(productId: string) {
       : null;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return null;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
     .select("*, categories(id, name)")
     .eq("id", productId)
+    .eq("organization_id", ctx.organizationId)
     .maybeSingle();
 
   if (error || !data) return null;
 
-  const category = (data as Record<string, unknown>).categories as { id: string; name: string } | null;
+  const category = (data as Record<string, unknown>).categories as {
+    id: string;
+    name: string;
+  } | null;
 
   return {
     id: data.id,
@@ -78,7 +90,10 @@ export async function getProductById(productId: string) {
     shortDescription: data.short_description ?? "",
     description: data.description ?? "",
     basePrice: typeof data.base_price === "number" ? data.base_price : 0,
-    securityDeposit: typeof data.security_deposit_amount === "number" ? data.security_deposit_amount : 0,
+    securityDeposit:
+      typeof data.security_deposit_amount === "number"
+        ? data.security_deposit_amount
+        : 0,
     isActive: data.is_active ?? true,
     visibility: data.visibility ?? "public",
     requiresDelivery: data.requires_delivery ?? true,
