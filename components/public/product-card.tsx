@@ -8,6 +8,7 @@ export function ProductCard({
   category,
   description,
   status,
+  imageUrl,
 }: {
   name: string;
   slug: string;
@@ -15,6 +16,7 @@ export function ProductCard({
   category: string;
   description: string;
   status: string;
+  imageUrl?: string;
 }) {
   const tone =
     status === "Available"
@@ -25,7 +27,18 @@ export function ProductCard({
 
   return (
     <article className="product-card">
-      <div className="product-media" />
+      <div
+        className="product-media"
+        style={
+          imageUrl
+            ? {
+                backgroundImage: `url(${imageUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : undefined
+        }
+      />
       <div className="product-copy">
         <div className="price-row" style={{ marginTop: 0 }}>
           <div className="kicker">{category}</div>
