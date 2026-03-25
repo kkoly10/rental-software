@@ -37,7 +37,8 @@ export async function getOrganizationSettings() {
       supabase
         .from("profiles")
         .select("email, phone")
-        .eq("id", ctx.userId),
+        .eq("id", ctx.userId)
+        .maybeSingle(),
       supabase
         .from("service_areas")
         .select("label, city, state")
