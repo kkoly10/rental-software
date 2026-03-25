@@ -26,10 +26,13 @@ export default async function CustomerDetailPage({
 
           <div className="list">
             <div className="order-card">
-              <strong>Contact</strong>
-              <div className="muted">
-                {customer.email || "No email"} · {customer.phone || "No phone"}
-              </div>
+              <strong>Email</strong>
+              <div className="muted">{customer.email || "No email on file"}</div>
+            </div>
+
+            <div className="order-card">
+              <strong>Phone</strong>
+              <div className="muted">{customer.phone || "No phone on file"}</div>
             </div>
 
             <div className="order-card">
@@ -48,21 +51,30 @@ export default async function CustomerDetailPage({
           <div className="section-header">
             <div>
               <div className="kicker">Booking history</div>
-              <h2 style={{ margin: "6px 0 0" }}>Recent orders</h2>
+              <h2 style={{ margin: "6px 0 0" }}>Orders</h2>
             </div>
           </div>
 
-          <div className="list">
-            {customer.orders.map((order) => (
-              <div key={order} className="order-card">
-                {order}
-              </div>
-            ))}
-          </div>
+          {customer.orders.length === 0 ? (
+            <div className="order-card" style={{ textAlign: "center", padding: 24 }}>
+              <div className="muted">No orders yet for this customer.</div>
+            </div>
+          ) : (
+            <div className="list">
+              {customer.orders.map((order, i) => (
+                <div key={i} className="order-card">
+                  {order}
+                </div>
+              ))}
+            </div>
+          )}
 
-          <div style={{ marginTop: 16 }}>
-            <Link href="/dashboard/orders" className="secondary-btn">
-              View all orders
+          <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+            <Link href="/dashboard/customers" className="secondary-btn">
+              All customers
+            </Link>
+            <Link href="/dashboard/orders" className="ghost-btn">
+              View orders
             </Link>
           </div>
         </aside>

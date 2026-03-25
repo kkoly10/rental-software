@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/env";
+import { redirect } from "next/navigation";
 
 export type AuthActionState = {
   ok: boolean;
@@ -15,7 +16,7 @@ export async function signInWithPassword(
   if (!hasSupabaseEnv()) {
     return {
       ok: false,
-      message: "Supabase environment variables are missing.",
+      message: "Supabase environment variables are missing. Add them to .env.local to enable auth.",
     };
   }
 
@@ -23,26 +24,18 @@ export async function signInWithPassword(
   const password = String(formData.get("password") ?? "").trim();
 
   if (!email || !password) {
-    return {
-      ok: false,
-      message: "Email and password are required.",
-    };
+    return { ok: false, message: "Email and password are required." };
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return {
-      ok: false,
-      message: error.message,
-    };
+    return { ok: false, message: error.message };
   }
 
-  return {
-    ok: true,
-    message: "Signed in successfully.",
-  };
+  const redirectTo = String(formData.get("redirect") ?? "/dashboard");
+  redirect(redirectTo);
 }
 
 export async function signUpWithPassword(
@@ -52,7 +45,7 @@ export async function signUpWithPassword(
   if (!hasSupabaseEnv()) {
     return {
       ok: false,
-      message: "Supabase environment variables are missing.",
+      message: "Supabase environment variables are missing. Add them to .env.local to enable auth.",
     };
   }
 
@@ -62,33 +55,41 @@ export async function signUpWithPassword(
   const phone = String(formData.get("phone") ?? "").trim();
 
   if (!email || !password) {
-    return {
-      ok: false,
-      message: "Email and password are required.",
-    };
+    return { ok: false, message: "Email and password are required." };
   }
 
-  const supabase = createSupabaseServerClient();
+  if (password.length < 6) {
+    return { ok: false, message: "Password must be at least 6 characters." };
+  }
+
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: {
-        full_name: fullName,
-        phone,
-      },
+      data: { full_name: fullName, phone },
     },
   });
 
   if (error) {
-    return {
-      ok: false,
-      message: error.message,
-    };
+    return { ok: false, message: error.message };
   }
 
-  return {
-    ok: true,
-    message: "Account created. Check your email for confirmation if enabled.",
-  };
+  redirect("/onboarding");
+}
+
+export async function signOut(): Promise<void> {
+  if (!hasSupabaseEnv()) return;
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}
+
+export async function getCurrentUser() {
+  if (!hasSupabaseEnv()) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
 }

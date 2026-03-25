@@ -6,10 +6,7 @@ import type { ReactNode } from "react";
 import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
 
 function isNavItemActive(pathname: string, href: string) {
-  if (href === "/dashboard") {
-    return pathname === href;
-  }
-
+  if (href === "/dashboard") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -27,9 +24,9 @@ export function DashboardShell({
   return (
     <div className="sidebar-layout">
       <aside className="sidebar">
-        <div className="logo" style={{ color: "white", marginBottom: 20 }}>
-          RentalOS Admin
-        </div>
+        <Link href="/dashboard" className="logo" style={{ color: "white", marginBottom: 20, display: "block" }}>
+          RentalOS
+        </Link>
 
         {dashboardNavItems.map((item) => (
           <Link
@@ -40,6 +37,32 @@ export function DashboardShell({
             {item.label}
           </Link>
         ))}
+
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.12)" }}>
+          <Link href="/" style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, opacity: 0.7 }}>
+            Public Site
+          </Link>
+          <button
+            type="button"
+            style={{
+              background: "rgba(255,255,255,.08)",
+              color: "rgba(255,255,255,.7)",
+              border: "none",
+              borderRadius: 12,
+              padding: "12px 14px",
+              width: "100%",
+              textAlign: "left",
+              cursor: "pointer",
+              font: "inherit",
+            }}
+            onClick={async () => {
+              const { signOut } = await import("@/lib/auth/actions");
+              await signOut();
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
       </aside>
 
       <main className="main-shell">
@@ -50,7 +73,6 @@ export function DashboardShell({
             <div className="muted">{description}</div>
           </div>
         </div>
-
         {children}
       </main>
     </div>

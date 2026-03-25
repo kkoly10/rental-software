@@ -9,10 +9,8 @@ export function PublicHeader() {
         </Link>
         <nav className="nav-links">
           <Link href="/inventory">Inventory</Link>
-          <Link href="/checkout">Checkout</Link>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/dashboard/deliveries">Deliveries</Link>
-          <Link href="/crew/today">Crew</Link>
+          <Link href="/checkout">Book Now</Link>
+          <Link href="/login">Login</Link>
         </nav>
       </div>
     </header>

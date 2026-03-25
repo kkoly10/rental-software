@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getDocuments } from "@/lib/data/documents";
 
 export default async function DocumentsPage() {
@@ -17,15 +19,39 @@ export default async function DocumentsPage() {
           </div>
         </div>
 
-        <div className="list">
-          {documents.map((document) => (
-            <article key={document.id} className="order-card">
-              <strong>{document.name}</strong>
-              <div className="muted">{document.agreement}</div>
-              <div className="muted">{document.waiver}</div>
-            </article>
-          ))}
-        </div>
+        {documents.length === 0 ? (
+          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
+            <strong>No documents yet</strong>
+            <div className="muted" style={{ marginTop: 8 }}>
+              Rental agreements and safety waivers will appear here as orders are created.
+            </div>
+          </div>
+        ) : (
+          <div className="list">
+            {documents.map((document) => (
+              <article key={document.id} className="order-card">
+                <div className="order-row">
+                  <strong>{document.name}</strong>
+                  {document.orderId && (
+                    <Link href={`/dashboard/orders/${document.orderId}`} className="ghost-btn">
+                      View order
+                    </Link>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  <StatusBadge
+                    label={document.agreement}
+                    tone={document.agreement.toLowerCase().includes("signed") ? "success" : "warning"}
+                  />
+                  <StatusBadge
+                    label={document.waiver}
+                    tone={document.waiver.toLowerCase().includes("signed") ? "success" : "warning"}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </DashboardShell>
   );

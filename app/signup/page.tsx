@@ -22,6 +22,9 @@ export default function SignupPage() {
             <Link href="/login" className="secondary-btn">
               Back to Login
             </Link>
+            <Link href="/" className="ghost-btn">
+              Back to Home
+            </Link>
           </div>
         </section>
       </div>

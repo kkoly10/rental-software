@@ -17,37 +17,46 @@ export default async function ProductsPage() {
             <div className="kicker">Catalog management</div>
             <h2 style={{ margin: "6px 0 0" }}>Product inventory</h2>
           </div>
-
           <Link href="/dashboard/products/new" className="primary-btn">
             Add product
           </Link>
         </div>
 
-        <div className="list">
-          {products.map((product) => (
-            <article key={product.id} className="order-card">
-              <div className="order-row">
-                <div>
-                  <strong>{product.name}</strong>
-                  <div className="muted">{product.category}</div>
-                </div>
-
-                <StatusBadge
-                  label={product.status}
-                  tone={product.tone as "default" | "success" | "warning"}
-                />
-              </div>
-
-              <div className="price-row">
-                <span className="muted">{product.price}</span>
-
-                <Link href={`/dashboard/products/${product.id}`} className="ghost-btn">
-                  Edit product
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
+        {products.length === 0 ? (
+          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
+            <strong>No products yet</strong>
+            <div className="muted" style={{ marginTop: 8 }}>
+              Add your first inflatable product to start building your catalog.
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Link href="/dashboard/products/new" className="primary-btn">
+                Add your first product
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="list">
+            {products.map((product) => (
+              <Link key={product.id} href={`/dashboard/products/${product.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <article className="order-card">
+                  <div className="order-row">
+                    <div>
+                      <strong>{product.name}</strong>
+                      <div className="muted">{product.category}</div>
+                    </div>
+                    <StatusBadge
+                      label={product.status}
+                      tone={product.tone as "default" | "success" | "warning"}
+                    />
+                  </div>
+                  <div className="price-row">
+                    <span className="muted">{product.price}</span>
+                  </div>
+                </article>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </DashboardShell>
   );
