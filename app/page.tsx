@@ -1,60 +1,90 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
+import { TrustBar } from "@/components/public/trust-bar";
+import { CategoryGrid } from "@/components/public/category-grid";
+import { HowItWorks } from "@/components/public/how-it-works";
+import { ServiceAreaSection } from "@/components/public/service-area-section";
+import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
 export default async function HomePage() {
-  const featured = await getFeaturedCatalogList();
+  const [featured, settings] = await Promise.all([
+    getFeaturedCatalogList(),
+    getOrganizationSettings(),
+  ]);
 
   return (
     <>
       <PublicHeader />
+
       <main>
-        <section className="hero">
+        <section className="section public-hero">
           <div className="container">
-            <div className="hero-panel">
-              <div>
-                <div className="kicker" style={{ color: "rgba(255,255,255,.8)" }}>
-                  Inflatable rental software
+            <div className="public-hero-shell">
+              <div className="public-hero-copy">
+                <div className="kicker public-kicker">
+                  Clean, delivered inflatable rentals
                 </div>
-                <h1>Book fun faster. Run operations from one place.</h1>
+                <h1>Epic Parties Delivered.</h1>
                 <p>
-                  Web-first rental software for inflatable companies today,
-                  built to expand into party rental and trailer workflows later.
+                  {settings.websiteMessage} Serving {settings.serviceAreaLabel}.
+                  Browse bounce houses, water slides, and packages with a fast
+                  reservation flow built for real family events.
                 </p>
-                <div className="search-bar">
-                  <input defaultValue="May 24, 2026" aria-label="Date" />
-                  <input defaultValue="22554" aria-label="ZIP code" />
-                  <select defaultValue="Inflatables" aria-label="Category">
-                    <option>Inflatables</option>
-                    <option>Water Slides</option>
-                    <option>Obstacle Courses</option>
-                    <option>Add-ons</option>
-                  </select>
-                  <Link
-                    href="/inventory"
-                    className="primary-btn"
-                    style={{ textAlign: "center" }}
-                  >
-                    Find Rentals
-                  </Link>
-                </div>
+
+                <form action="/inventory" className="storefront-search-card">
+                  <div className="storefront-search-grid">
+                    <label className="storefront-field">
+                      <span>Event Date</span>
+                      <input name="date" type="date" />
+                    </label>
+
+                    <label className="storefront-field">
+                      <span>Start Time</span>
+                      <input name="start" type="time" />
+                    </label>
+
+                    <label className="storefront-field">
+                      <span>End Time</span>
+                      <input name="end" type="time" />
+                    </label>
+
+                    <label className="storefront-field">
+                      <span>Delivery ZIP</span>
+                      <input
+                        name="zip"
+                        type="text"
+                        placeholder="22554"
+                        inputMode="numeric"
+                      />
+                    </label>
+
+                    <button type="submit" className="primary-btn storefront-search-btn">
+                      Find Available Rentals
+                    </button>
+                  </div>
+                </form>
               </div>
 
-              <div className="surface-card" style={{ padding: 22 }}>
-                <div className="kicker">Why operators choose RentalOS</div>
-                <div className="list" style={{ marginTop: 10 }}>
-                  <div className="order-card">
-                    Live availability and date conflict blocking
+              <div className="public-hero-visual">
+                <div className="public-hero-badge">
+                  Fully insured • Cleaned between rentals
+                </div>
+
+                <div className="public-hero-card">
+                  <div className="kicker">Popular for birthdays</div>
+                  <h3 style={{ margin: "8px 0 6px" }}>Water slides and bounce houses</h3>
+                  <div className="muted">
+                    Delivery, setup, safety review, and later pickup handled by our team.
                   </div>
-                  <div className="order-card">
-                    Deposits, waivers, and end-to-end checkout
-                  </div>
-                  <div className="order-card">
-                    Delivery board with crew dispatch and stop tracking
-                  </div>
-                  <div className="order-card">
-                    Extensible for party rental and trailer verticals
+
+                  <div className="price-row">
+                    <strong>Reserve your date fast</strong>
+                    <Link href="/inventory" className="secondary-btn">
+                      Browse Catalog
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -62,13 +92,22 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="section">
+        <TrustBar />
+
+        <CategoryGrid />
+
+        <section className="section storefront-section-soft">
           <div className="container">
             <div className="section-header">
               <div>
                 <div className="kicker">Featured inventory</div>
                 <h2>Popular rentals</h2>
+                <div className="muted">
+                  Start with the units families book most often for birthdays,
+                  school events, and backyard celebrations.
+                </div>
               </div>
+
               <Link href="/inventory" className="ghost-btn">
                 Browse all
               </Link>
@@ -90,16 +129,15 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <footer className="footer">
-          <div className="container" style={{ textAlign: "center" }}>
-            <div className="muted">
-              RentalOS &middot; Inflatable-first rental software &middot;{" "}
-              <Link href="/login" style={{ color: "var(--primary)" }}>
-                Operator Login
-              </Link>
-            </div>
-          </div>
-        </footer>
+        <div id="how-it-works">
+          <HowItWorks />
+        </div>
+
+        <div id="service-area">
+          <ServiceAreaSection />
+        </div>
+
+        <PublicFooter />
       </main>
     </>
   );
