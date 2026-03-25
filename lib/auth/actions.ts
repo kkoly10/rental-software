@@ -34,6 +34,22 @@ export async function signInWithPassword(
     return { ok: false, message: error.message };
   }
 
+  // Check if user has an org — if not, send to onboarding
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: membership } = await supabase
+      .from("organization_memberships")
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    if (!membership) {
+      redirect("/onboarding");
+    }
+  }
+
   const redirectTo = String(formData.get("redirect") ?? "/dashboard");
   redirect(redirectTo);
 }

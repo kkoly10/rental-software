@@ -2,6 +2,7 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 
 export type CheckoutActionState = {
   ok: boolean;
@@ -41,25 +42,19 @@ export async function createCheckoutOrder(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-
-  // Find the first org
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!org) {
+  // Public checkout uses public org context (single-tenant MVP)
+  const orgId = await getPublicOrgId();
+  if (!orgId) {
     return { ok: false, message: "No organization found. An operator must complete onboarding first." };
   }
+
+  const supabase = await createSupabaseServerClient();
 
   // Create customer
   const { data: customer, error: customerError } = await supabase
     .from("customers")
     .insert({
-      organization_id: org.id,
+      organization_id: orgId,
       first_name: firstName,
       last_name: lastName,
       email,
@@ -94,15 +89,18 @@ export async function createCheckoutOrder(
   // Look up product for pricing
   let subtotal = 225;
   let productId: string | null = null;
+  let productName = "Rental booking";
   if (productSlug) {
     const { data: product } = await supabase
       .from("products")
-      .select("id, base_price")
+      .select("id, name, base_price")
       .eq("slug", productSlug)
+      .eq("organization_id", orgId)
       .maybeSingle();
     if (product) {
       subtotal = typeof product.base_price === "number" ? product.base_price : 225;
       productId = product.id;
+      productName = product.name ?? productSlug;
     }
   }
 
@@ -113,36 +111,41 @@ export async function createCheckoutOrder(
 
   const orderNumber = createOrderNumber();
 
-  const { error: orderError } = await supabase.from("orders").insert({
-    organization_id: org.id,
-    customer_id: customer.id,
-    order_number: orderNumber,
-    order_status: "awaiting_deposit",
-    event_date: eventDate || null,
-    delivery_address_id: address.id,
-    subtotal_amount: subtotal,
-    delivery_fee_amount: deliveryFee,
-    total_amount: total,
-    deposit_due_amount: deposit,
-    balance_due_amount: balance,
-    source_channel: "website",
-  });
+  // Create order and get the real inserted UUID back
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      organization_id: orgId,
+      customer_id: customer.id,
+      order_number: orderNumber,
+      order_status: "awaiting_deposit",
+      event_date: eventDate || null,
+      delivery_address_id: address.id,
+      subtotal_amount: subtotal,
+      delivery_fee_amount: deliveryFee,
+      total_amount: total,
+      deposit_due_amount: deposit,
+      balance_due_amount: balance,
+      source_channel: "website",
+    })
+    .select("id")
+    .single();
 
-  if (orderError) {
-    return { ok: false, message: orderError.message };
+  if (orderError || !order) {
+    return { ok: false, message: orderError?.message ?? "Unable to create order." };
   }
 
-  // Create order item if product found
+  // Create order item using the REAL order UUID
   if (productId) {
     await supabase.from("order_items").insert({
-      order_id: orderNumber, // Will need to look up the order
+      order_id: order.id,
       product_id: productId,
       line_type: "rental",
       quantity: 1,
       unit_price: subtotal,
       line_total: subtotal,
-      item_name_snapshot: productSlug,
-    }).then(() => {});
+      item_name_snapshot: productName,
+    });
   }
 
   return {

@@ -2,6 +2,7 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import { redirect } from "next/navigation";
 
 export type ProductActionState = {
@@ -37,23 +38,16 @@ export async function createProduct(
     return { ok: true, message: `Demo mode: "${name}" would be created. Add Supabase env vars to save live products.` };
   }
 
-  const supabase = await createSupabaseServerClient();
-
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!org) {
-    return { ok: false, message: "No organization found. Complete onboarding first." };
+  const ctx = await getOrgContext();
+  if (!ctx) {
+    return { ok: false, message: "You must be signed in with an organization to create products." };
   }
 
+  const supabase = await createSupabaseServerClient();
   const slug = slugify(name);
 
   const { error } = await supabase.from("products").insert({
-    organization_id: org.id,
+    organization_id: ctx.organizationId,
     category_id: categoryId || null,
     name,
     slug,
@@ -101,6 +95,11 @@ export async function updateProduct(
     return { ok: true, message: `Demo mode: "${name}" would be updated.` };
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) {
+    return { ok: false, message: "You must be signed in with an organization to update products." };
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -117,7 +116,8 @@ export async function updateProduct(
       is_active: isActive,
       visibility,
     })
-    .eq("id", productId);
+    .eq("id", productId)
+    .eq("organization_id", ctx.organizationId);
 
   if (error) {
     return { ok: false, message: error.message };

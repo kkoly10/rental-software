@@ -2,6 +2,7 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import { redirect } from "next/navigation";
 
 export type OrderActionState = {
@@ -37,18 +38,13 @@ export async function createOrder(
     return { ok: true, message: `Demo mode: Order ${orderNumber} would be created.` };
   }
 
-  const supabase = await createSupabaseServerClient();
-
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!org) {
-    return { ok: false, message: "No organization found. Complete onboarding first." };
+  // Use authenticated user's org membership
+  const ctx = await getOrgContext();
+  if (!ctx) {
+    return { ok: false, message: "You must be signed in with an organization to create orders." };
   }
+
+  const supabase = await createSupabaseServerClient();
 
   // Upsert customer by email or create new
   let customerId: string;
@@ -56,7 +52,7 @@ export async function createOrder(
     const { data: existing } = await supabase
       .from("customers")
       .select("id")
-      .eq("organization_id", org.id)
+      .eq("organization_id", ctx.organizationId)
       .eq("email", email)
       .maybeSingle();
 
@@ -65,7 +61,7 @@ export async function createOrder(
     } else {
       const { data: newCust, error: custErr } = await supabase
         .from("customers")
-        .insert({ organization_id: org.id, first_name: firstName, last_name: lastName, email, phone })
+        .insert({ organization_id: ctx.organizationId, first_name: firstName, last_name: lastName, email, phone })
         .select("id")
         .single();
       if (custErr || !newCust) return { ok: false, message: custErr?.message ?? "Failed to create customer." };
@@ -74,7 +70,7 @@ export async function createOrder(
   } else {
     const { data: newCust, error: custErr } = await supabase
       .from("customers")
-      .insert({ organization_id: org.id, first_name: firstName, last_name: lastName, phone })
+      .insert({ organization_id: ctx.organizationId, first_name: firstName, last_name: lastName, phone })
       .select("id")
       .single();
     if (custErr || !newCust) return { ok: false, message: custErr?.message ?? "Failed to create customer." };
@@ -86,7 +82,7 @@ export async function createOrder(
   const orderNumber = createOrderNumber();
 
   const { error: orderError } = await supabase.from("orders").insert({
-    organization_id: org.id,
+    organization_id: ctx.organizationId,
     customer_id: customerId,
     order_number: orderNumber,
     order_status: orderStatus,
@@ -115,11 +111,17 @@ export async function updateOrderStatus(
     return { ok: true, message: "Demo mode: Status would be updated." };
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) {
+    return { ok: false, message: "Not authenticated." };
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("orders")
     .update({ order_status: newStatus })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .eq("organization_id", ctx.organizationId);
 
   if (error) {
     return { ok: false, message: error.message };

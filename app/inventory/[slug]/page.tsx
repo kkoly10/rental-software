@@ -67,7 +67,7 @@ export default async function ProductDetailPage({
             </div>
 
             <div className="price-row" style={{ marginTop: 18 }}>
-              <Link href="/checkout" className="primary-btn">
+              <Link href={`/checkout?product=${product.slug}`} className="primary-btn">
                 Reserve Now
               </Link>
               <Link href="/inventory" className="secondary-btn">

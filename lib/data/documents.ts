@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { DocumentSummary } from "@/lib/types";
 
 const fallbackDocuments: DocumentSummary[] = [
@@ -13,10 +14,14 @@ export async function getDocuments(): Promise<DocumentSummary[]> {
     return fallbackDocuments;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return fallbackDocuments;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("documents")
     .select("id, order_id, document_type, document_status, orders(order_number, customers(first_name, last_name))")
+    .eq("organization_id", ctx.organizationId)
     .order("id", { ascending: false })
     .limit(50);
 

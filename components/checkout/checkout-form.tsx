@@ -9,7 +9,7 @@ const initialState = {
   message: "",
 };
 
-export function CheckoutForm() {
+export function CheckoutForm({ productSlug }: { productSlug?: string }) {
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
     initialState
@@ -36,6 +36,7 @@ export function CheckoutForm() {
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
+      {productSlug && <input type="hidden" name="product_slug" value={productSlug} />}
       <div className="grid grid-3">
         <label className="order-card">
           <strong>First name</strong>

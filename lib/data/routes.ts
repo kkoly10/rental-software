@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { RouteSummary } from "@/lib/types";
 
 const fallbackRoutes: RouteSummary[] = [
@@ -12,10 +13,14 @@ export async function getRoutes(): Promise<RouteSummary[]> {
     return fallbackRoutes;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return fallbackRoutes;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("routes")
     .select("id, name, route_date, route_status, route_stops(id)")
+    .eq("organization_id", ctx.organizationId)
     .order("route_date", { ascending: false })
     .limit(50);
 

@@ -1,6 +1,7 @@
 import { mockProducts } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { ProductSummary } from "@/lib/types";
 
 export async function getProducts(): Promise<ProductSummary[]> {
@@ -8,10 +9,14 @@ export async function getProducts(): Promise<ProductSummary[]> {
     return mockProducts;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return mockProducts;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
     .select("id, name, slug, base_price, is_active, categories(name)")
+    .eq("organization_id", ctx.organizationId)
     .order("name", { ascending: true });
 
   if (error || !data || data.length === 0) {
@@ -92,12 +97,20 @@ export async function getCategories() {
     ];
   }
 
+  const ctx = await getOrgContext();
+
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("categories")
     .select("id, name, slug")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
+
+  if (ctx) {
+    query = query.eq("organization_id", ctx.organizationId);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) {
     return [];
