@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 import type { CustomerDetail } from "@/lib/types";
 
 const fallbackCustomerDetail: CustomerDetail = {
@@ -16,8 +17,15 @@ const fallbackCustomerDetail: CustomerDetail = {
   ],
 };
 
-export async function getCustomerDetail(customerId: string): Promise<CustomerDetail> {
+export async function getCustomerDetail(
+  customerId: string
+): Promise<CustomerDetail> {
   if (!hasSupabaseEnv()) {
+    return { ...fallbackCustomerDetail, id: customerId };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) {
     return { ...fallbackCustomerDetail, id: customerId };
   }
 
@@ -30,30 +38,56 @@ export async function getCustomerDetail(customerId: string): Promise<CustomerDet
       orders(id, order_number, order_status, total_amount, event_date)
     `)
     .eq("id", customerId)
+    .eq("organization_id", ctx.organizationId)
     .maybeSingle();
 
   if (error || !data) {
     return { ...fallbackCustomerDetail, id: customerId };
   }
 
-  const addresses = ((data as Record<string, unknown>).customer_addresses as { line1: string; city: string; state: string; postal_code: string }[] | null) ?? [];
-  const orders = ((data as Record<string, unknown>).orders as { id: string; order_number: string; order_status: string; total_amount: number; event_date: string }[] | null) ?? [];
-  const defaultAddr = addresses[0];
+  const addresses =
+    ((data as Record<string, unknown>).customer_addresses as
+      | {
+          line1: string;
+          city: string;
+          state: string;
+          postal_code: string;
+          is_default_delivery?: boolean;
+        }[]
+      | null) ?? [];
+
+  const orders =
+    ((data as Record<string, unknown>).orders as
+      | {
+          id: string;
+          order_number: string;
+          order_status: string;
+          total_amount: number;
+          event_date: string;
+        }[]
+      | null) ?? [];
+
+  const defaultAddr =
+    addresses.find((a) => a.is_default_delivery) ?? addresses[0];
 
   return {
     id: data.id,
-    name: `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "Customer",
+    name:
+      `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "Customer",
     email: data.email ?? "",
     phone: data.phone ?? "",
     notes: data.notes ?? "",
     addressLabel: defaultAddr
       ? `${defaultAddr.line1}, ${defaultAddr.city}, ${defaultAddr.state} ${defaultAddr.postal_code}`
       : "No saved address",
-    orders: orders.length > 0
-      ? orders.map((o) => {
-          const status = (o.order_status ?? "inquiry").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
-          return `${o.order_number} · ${status} · $${o.total_amount ?? 0}`;
-        })
-      : ["No orders yet"],
+    orders:
+      orders.length > 0
+        ? orders.map((o) => {
+            const status = (o.order_status ?? "inquiry")
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c: string) => c.toUpperCase());
+            return `${o.order_number} · ${status} · $${o.total_amount ?? 0}`;
+          })
+        : ["No orders yet"],
   };
 }
