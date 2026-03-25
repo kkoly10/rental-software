@@ -37,8 +37,7 @@ export async function getOrganizationSettings() {
       supabase
         .from("profiles")
         .select("email, phone")
-        .eq("id", ctx.profileId)
-        .maybeSingle(),
+        .eq("id", ctx.userId),
       supabase
         .from("service_areas")
         .select("label, city, state")
@@ -50,7 +49,11 @@ export async function getOrganizationSettings() {
   const areaLabel =
     serviceAreas && serviceAreas.length > 0
       ? serviceAreas
-          .map((area) => area.label || [area.city, area.state].filter(Boolean).join(", "))
+          .map(
+            (area) =>
+              area.label ||
+              [area.city, area.state].filter(Boolean).join(", ")
+          )
           .filter(Boolean)
           .join(" • ")
       : fallbackSettings.serviceAreaLabel;
