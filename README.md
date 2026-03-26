@@ -5,30 +5,31 @@ Web-first rental software purpose-built for inflatable rental businesses, with a
 ## What's included
 
 ### Public booking website
-- Homepage with featured inventory and search bar
-- Catalog browse with category filters
-- Product detail pages with specs and availability badges
-- Checkout flow that creates customers, addresses, and orders with product linking
+- Homepage with trust bar, category grid, featured inventory, how-it-works, service area, and footer
+- Catalog browse with date/ZIP/category filter form and context pills
+- Product detail pages with image gallery, specs, "What to expect" section, and availability badges
+- Checkout flow with summary card, date/ZIP continuity, and order creation
 - Mobile-responsive layout
 
 ### Operator dashboard
 - Daily overview with stats, recent orders, and quick actions
-- **Orders** — full pipeline with statuses (inquiry → confirmed → delivered → completed)
-- **Products** — CRUD with category, pricing, deposit, visibility, and delivery settings
+- **Orders** — full pipeline with statuses (inquiry → confirmed → delivered → completed), inline payment recording and document generation
+- **Products** — CRUD with category, pricing, deposit, visibility, delivery settings, and image upload management
 - **Customers** — list with contact details, addresses, and order history
-- **Payments** — deposit/balance tracking per order
-- **Documents** — rental agreement and safety waiver status tracking
+- **Payments** — deposit/balance tracking with manual payment recording (cash, check, card, Venmo, Zelle); auto-confirms orders when fully paid
+- **Documents** — rental agreement and safety waiver management with mark-sent/mark-signed actions and generate-from-order flow
 - **Delivery board** — kanban-style route management (assigned → in progress → completed)
 - **Route detail** — stop sequence, crew assignment, vehicle info
 - **Calendar** — upcoming events from order pipeline
-- **Maintenance** — asset readiness queue (informational; CRUD not yet wired)
+- **Maintenance** — asset readiness queue with real data fetching from maintenance_records table
 - **Service areas** — ZIP-based coverage with delivery fees and minimums
-- **Settings** — business profile and team access structure (informational; forms not yet wired)
-- **Website** — homepage and catalog presentation controls (informational; forms not yet wired)
+- **Settings** — editable business profile (name, email, phone, timezone) with live org data sidebar
+- **Website** — editable homepage messaging, service area text, and booking presentation with featured inventory preview
 
 ### Crew mobile workspace
 - Mobile-optimized route view for delivery crews
-- Stop sequence with navigate, call, and mark-complete buttons (UI only; actions not yet wired to backend)
+- Stop sequence with real status actions (mark en route → mark delivered → mark complete)
+- Auto-completes route when all stops are done
 - Setup checklist and photo/signature placeholders
 
 ### Auth and onboarding
@@ -42,6 +43,7 @@ Web-first rental software purpose-built for inflatable rental businesses, with a
 ### Multi-tenancy and security
 - Organization scoping via authenticated user's membership (not "first org in DB")
 - Row-Level Security policies on all tenant-scoped tables
+- Tightened anonymous checkout policies scoped to public org
 - Public storefront access for anonymous visitors (catalog, checkout)
 - Helper function `get_user_org_ids()` for RLS policy evaluation
 
@@ -49,7 +51,7 @@ Web-first rental software purpose-built for inflatable rental businesses, with a
 
 - **Next.js** (App Router, Server Components, Server Actions)
 - **TypeScript** (strict mode)
-- **Supabase** (PostgreSQL, Auth, Row-Level Security)
+- **Supabase** (PostgreSQL, Auth, Row-Level Security, Storage for product images)
 - **@supabase/ssr** (cookie-based auth for SSR)
 - **Vercel** deployment target
 - **Custom CSS** (clean blue/white SaaS design system)
@@ -78,6 +80,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | For live data | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | For live data | Your Supabase anonymous/public key |
+| `NEXT_PUBLIC_SUPABASE_PRODUCT_IMAGES_BUCKET` | Optional | Storage bucket name for product images (defaults to `product-images`) |
 
 **Without these variables**, the app runs in demo mode with fallback mock data. All pages render correctly, all navigation works, and forms show validation — but data is not persisted.
 
@@ -86,9 +89,13 @@ Open [http://localhost:3000](http://localhost:3000).
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
 2. Run the migrations in order via the SQL Editor:
    ```
-   supabase/migrations/20260324_120000_initial_schema.sql   — Full schema (19 tables)
-   supabase/migrations/20260324_121500_auth_profile_sync.sql — Profile auto-creation trigger
-   supabase/migrations/20260325_010000_rls_policies.sql      — Row-Level Security policies
+   supabase/migrations/20260324_120000_initial_schema.sql                — Full schema (19 tables)
+   supabase/migrations/20260324_121500_auth_profile_sync.sql             — Profile auto-creation trigger
+   supabase/migrations/20260325_010000_rls_policies.sql                  — Row-Level Security policies
+   supabase/migrations/20260325_013000_tighten_public_checkout_rls.sql   — Tightened anonymous checkout policies
+   supabase/migrations/20260325_020000_product_image_storage.sql         — Product image storage bucket + policies
+   supabase/migrations/20260325_023000_fix_onboarding_organization_rls.sql — Fix onboarding organization bootstrap
+   supabase/migrations/20260325_030000_org_settings_payment_method.sql   — Org settings JSONB + payment method columns
    ```
 3. Copy your project URL and anon key to `.env.local`
 4. Sign up through the app, complete onboarding, then start creating products and orders
@@ -100,6 +107,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `20260324_120000_initial_schema.sql` | Full schema with all 19 tables and indexes |
 | `20260324_121500_auth_profile_sync.sql` | Trigger to auto-create profile rows on signup |
 | `20260325_010000_rls_policies.sql` | Row-Level Security policies for multi-tenant isolation |
+| `20260325_013000_tighten_public_checkout_rls.sql` | Tightened anonymous checkout policies scoped to public org |
+| `20260325_020000_product_image_storage.sql` | Product image storage bucket and storage policies |
+| `20260325_023000_fix_onboarding_organization_rls.sql` | Fix onboarding so first-time users can create organizations |
+| `20260325_030000_org_settings_payment_method.sql` | Adds settings JSONB to organizations, payment_method/reference_note to payments |
 
 ## Order status flow
 
@@ -120,32 +131,40 @@ out_for_delivery → delivered → pickup_pending → completed
 
 ```
 app/                          # Next.js App Router pages
-  page.tsx                    # Public homepage
-  inventory/                  # Public catalog
-  checkout/                   # Public booking flow
+  page.tsx                    # Public homepage with trust bar, categories, featured
+  inventory/                  # Public catalog with date/ZIP/category filtering
+  checkout/                   # Public booking flow with summary card
   login/ signup/ onboarding/  # Auth and setup
   dashboard/                  # Operator dashboard (13+ sections)
   crew/today/                 # Mobile crew workspace
 components/
   layout/                     # PublicHeader, DashboardShell
   ui/                         # StatCard, StatusBadge
-  public/                     # ProductCard, CatalogGrid
+  public/                     # ProductCard, CatalogGrid, CatalogFilterForm, TrustBar, etc.
   auth/                       # LoginForm, SignupForm
-  checkout/                   # CheckoutForm
-  products/                   # ProductForm (create/edit)
+  checkout/                   # CheckoutForm, CheckoutSummaryCard
+  products/                   # ProductForm, ProductImageManager (upload-based)
   orders/                     # NewOrderForm
+  payments/                   # RecordPaymentForm
+  documents/                  # DocumentStatusButton, CreateDocumentsButton
+  crew/                       # StopActionButtons
+  settings/                   # BusinessProfileForm, WebsiteSettingsForm
   onboarding/                 # OnboardingForm
 lib/
   data/                       # Server-side data fetchers with Supabase + fallbacks
   auth/                       # Auth server actions + org-context resolver
   checkout/                   # Checkout server action
-  products/                   # Product CRUD server actions
+  products/                   # Product CRUD + image upload server actions
   orders/                     # Order creation server action
+  payments/                   # Manual payment recording server action
+  documents/                  # Document status + generation server actions
+  crew/                       # Stop status update server action
+  settings/                   # Business profile + website settings server actions
   onboarding/                 # Onboarding server action
   supabase/                   # Client and server Supabase clients
 supabase/
   schema.sql                  # Reference schema
-  migrations/                 # Incremental SQL migrations (3 files)
+  migrations/                 # Incremental SQL migrations (7 files)
 middleware.ts                 # Auth session refresh + route protection + onboarding redirect
 ```
 
@@ -155,31 +174,31 @@ middleware.ts                 # Auth session refresh + route protection + onboar
 - Auth: signup, login, logout, session management
 - Onboarding: org creation, membership, service area seeding, category seeding
 - Products: create, edit, list, detail, category linkage, visibility, pricing
+- Product images: upload via Supabase Storage, gallery display on catalog/detail pages
 - Orders: create (dashboard + public checkout), list, detail with financials
 - Customers: list, detail with order history and addresses
-- Checkout: full flow creating customer, address, order, and order items
+- Checkout: full flow with date/ZIP continuity, summary card, customer/address/order creation
+- Payments: manual recording (cash, check, card, Venmo, Zelle), auto-confirm on full payment
+- Documents: generate agreements/waivers per order, mark sent/signed with timestamps
 - Delivery board: kanban view with route detail
 - Route detail: stop sequence with crew/vehicle display
-- Crew mobile: route view with stop list
-- Payments: list view from payment records
-- Documents: list view grouped by order
+- Crew mobile: route view with real stop status actions (en route → delivered → complete)
+- Settings: editable business profile (name, email, phone, timezone)
+- Website: editable homepage messaging, service area text, booking message
+- Public storefront: homepage with trust bar, category grid, how-it-works, service area, footer
+- Catalog filtering: date/ZIP/category filter form with context pills
 - Service areas: list view
 - Calendar: upcoming events from orders
-- RLS policies: all tables protected
+- Maintenance: list view with real data from maintenance_records table
+- RLS policies: all tables protected with tightened checkout and onboarding policies
 - Multi-tenant org scoping: all actions and data fetchers use authenticated user's org
 - Demo mode: full app works with mock data when env vars are missing
 
 ### Scaffolded (UI present, backend integration deferred)
-- Maintenance: hardcoded records, not yet reading from `maintenance_records` table
-- Settings page: informational cards, no editable forms
-- Website page: informational cards, no editable forms
-- Crew stop actions: Navigate/Call/Mark Complete buttons are UI-only
-- Product images: schema and image placeholder ready, no upload UI
-- Payment processing: deposit amounts calculated, no Stripe integration
-- E-signatures: document status tracked, no signing UI
+- Stripe integration: manual payments supported, automated payment processing deferred
+- E-signatures: document status tracked, no signing UI (mark sent/signed is manual)
 - Email notifications: not integrated
 - Map/routing: placeholder in delivery board
-- Search/filtering: filter UI on catalog page, not wired to query params
 - Pagination: all queries use `.limit(50)`, no cursor-based pagination
 
 ## Expansion roadmap

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getOrderDetail } from "@/lib/data/order-detail";
+import { RecordPaymentForm } from "@/components/payments/record-payment-form";
+import { CreateDocumentsButton } from "@/components/documents/document-actions";
 
 function statusTone(status: string): "default" | "success" | "warning" {
   const lower = status.toLowerCase();
@@ -17,6 +19,8 @@ export default async function OrderDetailPage({
 }) {
   const { id } = await params;
   const order = await getOrderDetail(id);
+
+  const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
   return (
     <DashboardShell
@@ -57,8 +61,11 @@ export default async function OrderDetailPage({
             </div>
 
             <div className="order-card">
-              <strong>Documents</strong>
-              <div className="muted">{order.documents.join(" · ")}</div>
+              <div className="order-row">
+                <strong>Documents</strong>
+                {!hasDocuments && <CreateDocumentsButton orderId={id} />}
+              </div>
+              <div className="muted" style={{ marginTop: 4 }}>{order.documents.join(" · ")}</div>
             </div>
 
             {order.notes && (
@@ -67,6 +74,11 @@ export default async function OrderDetailPage({
                 <div className="muted">{order.notes}</div>
               </div>
             )}
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <div className="kicker" style={{ marginBottom: 6 }}>Record a payment</div>
+            <RecordPaymentForm orderId={id} />
           </div>
         </section>
 

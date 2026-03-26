@@ -51,3 +51,80 @@ export async function getDocuments(): Promise<DocumentSummary[]> {
     ...entry,
   }));
 }
+
+// Detailed version with individual document IDs for action buttons
+export type DetailedDocument = {
+  id: string;
+  orderId: string;
+  customerName: string;
+  agreementId: string | null;
+  agreementStatus: string;
+  agreementLabel: string;
+  waiverId: string | null;
+  waiverStatus: string;
+  waiverLabel: string;
+};
+
+const fallbackDetailed: DetailedDocument[] = [
+  { id: "d1", orderId: "ord_1001", customerName: "Johnson Birthday Setup", agreementId: "doc_a1", agreementStatus: "signed", agreementLabel: "Agreement: Signed", waiverId: "doc_w1", waiverStatus: "signed", waiverLabel: "Waiver: Signed" },
+  { id: "d2", orderId: "ord_1002", customerName: "Church Spring Event", agreementId: "doc_a2", agreementStatus: "pending", agreementLabel: "Agreement: Pending", waiverId: "doc_w2", waiverStatus: "pending", waiverLabel: "Waiver: Pending" },
+];
+
+export async function getDocumentsDetailed(): Promise<DetailedDocument[]> {
+  if (!hasSupabaseEnv()) {
+    return fallbackDetailed;
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return fallbackDetailed;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, order_id, document_type, document_status, orders(order_number, customers(first_name, last_name))")
+    .eq("organization_id", ctx.organizationId)
+    .order("id", { ascending: false })
+    .limit(100);
+
+  if (error || !data || data.length === 0) {
+    return fallbackDetailed;
+  }
+
+  const byOrder = new Map<string, DetailedDocument>();
+  for (const doc of data) {
+    const order = (doc as Record<string, unknown>).orders as { order_number: string; customers: { first_name: string; last_name: string } | null } | null;
+    const orderId = doc.order_id ?? "";
+    const customer = order?.customers;
+    const name = customer ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() : order?.order_number ?? "Document";
+
+    if (!byOrder.has(orderId)) {
+      byOrder.set(orderId, {
+        id: orderId,
+        orderId,
+        customerName: name,
+        agreementId: null,
+        agreementStatus: "none",
+        agreementLabel: "No agreement",
+        waiverId: null,
+        waiverStatus: "none",
+        waiverLabel: "No waiver",
+      });
+    }
+    const entry = byOrder.get(orderId)!;
+    const status = doc.document_status ?? "pending";
+    const statusLabel = status.replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+    if (doc.document_type === "rental_agreement") {
+      entry.agreementId = doc.id;
+      entry.agreementStatus = status;
+      entry.agreementLabel = `Agreement: ${statusLabel}`;
+    }
+    if (doc.document_type === "safety_waiver") {
+      entry.waiverId = doc.id;
+      entry.waiverStatus = status;
+      entry.waiverLabel = `Waiver: ${statusLabel}`;
+    }
+  }
+
+  return Array.from(byOrder.values());
+}
