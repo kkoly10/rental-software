@@ -2,15 +2,23 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDeliveryBoardData } from "@/lib/data/delivery-board";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function DeliveriesPage() {
   const board = await getDeliveryBoardData();
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/deliveries"];
 
   return (
     <DashboardShell
       title="Delivery Board"
       description="Track routes, stop status, and crew progress."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <div className="delivery-board">
         <section className="panel">
           <div className="section-header">

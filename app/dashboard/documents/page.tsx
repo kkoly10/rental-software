@@ -3,15 +3,23 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDocumentsDetailed } from "@/lib/data/documents";
 import { DocumentStatusButton } from "@/components/documents/document-actions";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function DocumentsPage() {
   const documents = await getDocumentsDetailed();
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/documents"];
 
   return (
     <DashboardShell
       title="Documents"
       description="Track rental agreements, safety waivers, and manage signing status."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <section className="panel">
         <div className="section-header">
           <div>

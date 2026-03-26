@@ -2,18 +2,26 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { WebsiteSettingsForm } from "@/components/settings/website-settings-form";
 import { getWebsiteAdminData } from "@/lib/data/website-admin";
 import { getOrgSettings } from "@/lib/data/settings";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function WebsitePage() {
   const [data, editableSettings] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
   ]);
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/website"];
 
   return (
     <DashboardShell
       title="Website"
       description="Manage homepage messaging, highlighted inventory, and storefront presentation."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">

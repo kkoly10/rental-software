@@ -2,15 +2,23 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getProducts } from "@/lib/data/products";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function ProductsPage() {
   const products = await getProducts();
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/products"];
 
   return (
     <DashboardShell
       title="Products"
       description="Manage public catalog items, pricing, categories, and rental readiness."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <section className="panel">
         <div className="section-header">
           <div>
