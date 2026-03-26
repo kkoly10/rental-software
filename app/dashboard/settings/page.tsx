@@ -2,18 +2,26 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { BusinessProfileForm } from "@/components/settings/business-profile-form";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getOrgSettings } from "@/lib/data/settings";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function SettingsPage() {
   const [orgSettings, editableSettings] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
   ]);
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/settings"];
 
   return (
     <DashboardShell
       title="Settings"
       description="Manage business preferences, support details, and booking defaults."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">

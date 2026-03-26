@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
+import { CopilotLauncher } from "@/components/copilot/copilot-launcher";
 
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -33,6 +34,7 @@ export function DashboardShell({
             key={item.href}
             href={item.href}
             className={isNavItemActive(pathname, item.href) ? "active" : undefined}
+            data-tour={item.tourId}
           >
             {item.label}
           </Link>
@@ -75,6 +77,8 @@ export function DashboardShell({
         </div>
         {children}
       </main>
+
+      <CopilotLauncher currentRoute={pathname} />
     </div>
   );
 }

@@ -3,37 +3,79 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDashboardSummary } from "@/lib/data/dashboard";
+import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { computeChecklist } from "@/lib/guidance/checklist";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { DashboardGuidance } from "@/components/guidance/dashboard-guidance";
+import { SetupChecklistCard } from "@/components/guidance/setup-checklist-card";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function DashboardPage() {
-  const summary = await getDashboardSummary();
+  const [summary, snapshot, guidanceState] = await Promise.all([
+    getDashboardSummary(),
+    getGuidanceSnapshot(),
+    getGuidanceState(),
+  ]);
+
+  const checklist = computeChecklist(snapshot);
+  const helpConfig = pageHelpMap["/dashboard"];
 
   return (
     <DashboardShell
       title="Operator Dashboard"
       description="Daily overview for bookings, deliveries, payments, and tasks."
     >
-      <div className="stats-row">
-        <StatCard
-          label="Today's bookings"
-          value={String(summary.todayBookings)}
-          meta="Live order pipeline"
+      <DashboardGuidance guidanceState={guidanceState} />
+
+      {helpConfig && (
+        <ContextHelpBanner
+          config={helpConfig}
+          dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false}
         />
-        <StatCard
-          label="Upcoming deliveries"
-          value={String(summary.upcomingDeliveries)}
-          meta="Route-ready bookings"
-        />
-        <StatCard
-          label="Active products"
-          value={String(summary.activeProducts)}
-          meta="Catalog items online"
-        />
-        <StatCard
-          label="Payment items"
-          value={String(summary.paymentItems)}
-          meta="Recent money activity"
-        />
+      )}
+
+      <div data-tour="dashboard-overview">
+        <div className="stats-row">
+          <StatCard
+            label="Today's bookings"
+            value={String(summary.todayBookings)}
+            meta="Live order pipeline"
+          />
+          <StatCard
+            label="Upcoming deliveries"
+            value={String(summary.upcomingDeliveries)}
+            meta="Route-ready bookings"
+          />
+          <StatCard
+            label="Active products"
+            value={String(summary.activeProducts)}
+            meta="Catalog items online"
+          />
+          <StatCard
+            label="Payment items"
+            value={String(summary.paymentItems)}
+            meta="Recent money activity"
+          />
+        </div>
       </div>
+
+      {!guidanceState.dismissedChecklist && (
+        <div style={{ marginTop: 18 }}>
+          <SetupChecklistCard
+            items={checklist.items.map((i) => ({
+              id: i.id,
+              title: i.title,
+              description: i.description,
+              href: i.href,
+              order: i.order,
+              completed: i.completed,
+            }))}
+            completed={checklist.completed}
+            total={checklist.total}
+          />
+        </div>
+      )}
 
       <div className="dashboard-grid">
         <section className="panel">
@@ -94,9 +136,9 @@ export default async function DashboardPage() {
               <strong>Delivery board</strong>
               <div className="muted">Route management and crew dispatch</div>
             </Link>
-            <Link href="/dashboard/payments" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
-              <strong>Payment activity</strong>
-              <div className="muted">Deposits, balances, and refunds</div>
+            <Link href="/dashboard/help" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
+              <strong>Help Center</strong>
+              <div className="muted">Guides and articles for every feature</div>
             </Link>
           </div>
         </aside>

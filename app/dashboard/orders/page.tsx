@@ -2,15 +2,23 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getOrders } from "@/lib/data/orders";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function OrdersPage() {
   const orders = await getOrders();
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/orders"];
 
   return (
     <DashboardShell
       title="Orders"
       description="Track inquiries, confirmed bookings, payments, and delivery readiness."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <section className="panel">
         <div className="section-header">
           <div>

@@ -4,15 +4,23 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { getPayments } from "@/lib/data/payments";
 import { getOrders } from "@/lib/data/orders";
 import { RecordPaymentForm } from "@/components/payments/record-payment-form";
+import { getGuidanceState } from "@/lib/guidance/actions";
+import { pageHelpMap } from "@/lib/help/page-help";
+import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function PaymentsPage() {
   const [payments, orders] = await Promise.all([getPayments(), getOrders()]);
+  const guidanceState = await getGuidanceState();
+  const helpConfig = pageHelpMap["/dashboard/payments"];
 
   return (
     <DashboardShell
       title="Payments"
       description="Record deposits, track balances, and review payment activity."
     >
+      {helpConfig && (
+        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+      )}
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">
