@@ -2,19 +2,12 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { redirect } from "@/lib/navigation";
 
 export type OnboardingActionState = {
   ok: boolean;
   message: string;
 };
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 export async function completeOnboarding(
   _prevState: OnboardingActionState,
@@ -31,18 +24,26 @@ export async function completeOnboarding(
   }
 
   if (!hasSupabaseEnv()) {
-    return { ok: true, message: `Demo mode: "${businessName}" would be created. Add Supabase env vars to enable.` };
+    return {
+      ok: true,
+      message: `Demo mode: "${businessName}" would be created. Add Supabase env vars to enable.`,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
 
-  // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
-    return { ok: false, message: "You must be signed in to create an organization." };
+    return {
+      ok: false,
+      message: "You must be signed in to create an organization.",
+    };
   }
 
-  // Check if user already has an active membership (prevent duplicate onboarding)
+  // Keep this fast redirect for already-onboarded users
   const { data: existingMembership } = await supabase
     .from("organization_memberships")
     .select("id")
@@ -55,67 +56,34 @@ export async function completeOnboarding(
     redirect("/dashboard");
   }
 
-  // Create organization
-  const slug = slugify(businessName);
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({
-      name: businessName,
-      slug,
-      business_type: "inflatable",
-      timezone,
-    })
-    .select("id")
-    .single();
-
-  if (orgError || !org) {
-    if (orgError?.code === "23505") {
-      return { ok: false, message: "An organization with that name already exists." };
-    }
-    return { ok: false, message: orgError?.message ?? "Failed to create organization." };
-  }
-
-  // Create membership
-  const { error: membershipError } = await supabase.from("organization_memberships").insert({
-    organization_id: org.id,
-    profile_id: user.id,
-    role: "owner",
-    status: "active",
+  const { data, error } = await supabase.rpc("bootstrap_organization", {
+    p_business_name: businessName,
+    p_timezone: timezone,
+    p_zip_code: zipCode || null,
+    p_delivery_fee: Number.isFinite(deliveryFee) ? deliveryFee : 25,
+    p_minimum_order: Number.isFinite(minimumOrder) ? minimumOrder : 100,
   });
 
-  if (membershipError) {
-    return { ok: false, message: membershipError.message };
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        ok: false,
+        message: "An organization with that name already exists.",
+      };
+    }
+
+    return {
+      ok: false,
+      message: error.message || "Failed to complete onboarding.",
+    };
   }
 
-  // Seed a default service area if zip provided
-  if (zipCode) {
-    await supabase.from("service_areas").insert({
-      organization_id: org.id,
-      label: "Primary",
-      zip_code: zipCode,
-      delivery_fee: deliveryFee,
-      minimum_order_amount: minimumOrder,
-      is_active: true,
-    });
+  if (!data) {
+    return {
+      ok: false,
+      message: "Organization creation returned no result.",
+    };
   }
-
-  // Seed starter categories
-  const starterCategories = [
-    { name: "Bounce Houses", slug: "bounce-houses", sort_order: 1 },
-    { name: "Water Slides", slug: "water-slides", sort_order: 2 },
-    { name: "Combo Units", slug: "combos", sort_order: 3 },
-    { name: "Obstacle Courses", slug: "obstacle-courses", sort_order: 4 },
-    { name: "Add-ons", slug: "add-ons", sort_order: 5 },
-  ];
-
-  await supabase.from("categories").insert(
-    starterCategories.map((cat) => ({
-      organization_id: org.id,
-      ...cat,
-      vertical: "inflatable",
-      is_active: true,
-    }))
-  );
 
   redirect("/dashboard");
 }
