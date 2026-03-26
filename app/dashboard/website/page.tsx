@@ -1,8 +1,13 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { WebsiteSettingsForm } from "@/components/settings/website-settings-form";
 import { getWebsiteAdminData } from "@/lib/data/website-admin";
+import { getOrgSettings } from "@/lib/data/settings";
 
 export default async function WebsitePage() {
-  const data = await getWebsiteAdminData();
+  const [data, editableSettings] = await Promise.all([
+    getWebsiteAdminData(),
+    getOrgSettings(),
+  ]);
 
   return (
     <DashboardShell
@@ -14,32 +19,17 @@ export default async function WebsitePage() {
           <div className="section-header">
             <div>
               <div className="kicker">Public site</div>
-              <h2 style={{ margin: "6px 0 0" }}>Storefront controls</h2>
+              <h2 style={{ margin: "6px 0 0" }}>Website controls</h2>
             </div>
           </div>
 
-          <div className="list">
-            <article className="order-card">
-              <strong>Homepage message</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                {data.settings.websiteMessage}
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>Service area presentation</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                {data.settings.serviceAreaLabel}
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>Public booking state</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                {data.settings.publicBookingLabel}
-              </div>
-            </article>
-          </div>
+          <WebsiteSettingsForm
+            defaults={{
+              heroMessage: editableSettings.heroMessage || data.settings.websiteMessage,
+              serviceAreaText: editableSettings.serviceAreaText || data.settings.serviceAreaLabel,
+              bookingMessage: editableSettings.bookingMessage || "",
+            }}
+          />
         </section>
 
         <aside className="panel">

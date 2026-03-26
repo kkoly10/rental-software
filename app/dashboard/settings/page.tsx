@@ -1,8 +1,13 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { BusinessProfileForm } from "@/components/settings/business-profile-form";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getOrgSettings } from "@/lib/data/settings";
 
 export default async function SettingsPage() {
-  const settings = await getOrganizationSettings();
+  const [orgSettings, editableSettings] = await Promise.all([
+    getOrganizationSettings(),
+    getOrgSettings(),
+  ]);
 
   return (
     <DashboardShell
@@ -14,71 +19,59 @@ export default async function SettingsPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Business settings</div>
-              <h2 style={{ margin: "6px 0 0" }}>Workspace configuration</h2>
+              <h2 style={{ margin: "6px 0 0" }}>Business profile</h2>
+            </div>
+          </div>
+
+          <BusinessProfileForm
+            defaults={{
+              name: editableSettings.name || orgSettings.businessName,
+              supportEmail: editableSettings.supportEmail || orgSettings.supportEmail,
+              phone: editableSettings.phone || orgSettings.phone,
+              timezone: editableSettings.timezone || orgSettings.timezone,
+            }}
+          />
+        </section>
+
+        <aside className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Current snapshot</div>
+              <h2 style={{ margin: "6px 0 0" }}>Active configuration</h2>
             </div>
           </div>
 
           <div className="list">
             <article className="order-card">
-              <strong>Business profile</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                {settings.businessName}
-              </div>
-              <div className="muted">{settings.supportEmail}</div>
-              <div className="muted">{settings.phone}</div>
-            </article>
-
-            <article className="order-card">
               <strong>Regional defaults</strong>
               <div className="muted" style={{ marginTop: 6 }}>
-                Timezone: {settings.timezone}
+                Timezone: {orgSettings.timezone}
               </div>
-              <div className="muted">Currency: {settings.currency}</div>
+              <div className="muted">Currency: {orgSettings.currency}</div>
               <div className="muted">
-                Service areas: {settings.serviceAreaLabel}
+                Service areas: {orgSettings.serviceAreaLabel}
               </div>
             </article>
 
             <article className="order-card">
               <strong>Booking defaults</strong>
               <div className="muted" style={{ marginTop: 6 }}>
-                {settings.depositPolicy}
+                {orgSettings.depositPolicy}
               </div>
-              <div className="muted">{settings.publicBookingLabel}</div>
+              <div className="muted">{orgSettings.publicBookingLabel}</div>
             </article>
           </div>
-        </section>
 
-        <aside className="panel">
-          <div className="section-header">
+          <div className="section-header" style={{ marginTop: 18 }}>
             <div>
-              <div className="kicker">Storefront snapshot</div>
-              <h2 style={{ margin: "6px 0 0" }}>Public site messaging</h2>
+              <div className="kicker">Coming soon</div>
             </div>
           </div>
-
           <div className="list">
-            <article className="order-card">
-              <strong>Homepage message</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                {settings.websiteMessage}
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>Featured inventory</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                {settings.featuredInventoryLabel}
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>Operator note</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                This page is now reading real organization-aware data with
-                fallback values when live data is unavailable.
-              </div>
-            </article>
+            <div className="order-card">
+              <strong>Team access</strong>
+              <div className="muted">Owner, admin, dispatcher, crew, and viewer roles.</div>
+            </div>
           </div>
         </aside>
       </div>
