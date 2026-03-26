@@ -2,7 +2,7 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { redirect } from "@/lib/navigation";
+import { redirect } from "next/navigation";
 
 export type OnboardingActionState = {
   ok: boolean;
