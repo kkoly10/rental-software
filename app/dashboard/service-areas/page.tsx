@@ -1,8 +1,9 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { getServiceAreas } from "@/lib/data/service-areas";
+import { getServiceAreaAdminRecords } from "@/lib/data/service-areas-admin";
+import { ServiceAreaManager } from "@/components/service-areas/service-area-manager";
 
 export default async function ServiceAreasPage() {
-  const areas = await getServiceAreas();
+  const areas = await getServiceAreaAdminRecords();
 
   return (
     <DashboardShell
@@ -21,27 +22,7 @@ export default async function ServiceAreasPage() {
           </div>
         </div>
 
-        {areas.length === 0 ? (
-          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-            <strong>No service areas configured</strong>
-            <div className="muted" style={{ marginTop: 8 }}>
-              Service areas are created during onboarding. You can expand coverage
-              by adding more ZIP-based or regional delivery rules later.
-            </div>
-          </div>
-        ) : (
-          <div className="list">
-            {areas.map((area) => (
-              <article key={area.id} className="order-card">
-                <div className="order-row">
-                  <strong>{area.name}</strong>
-                  <strong>{area.fee}</strong>
-                </div>
-                <div className="muted">{area.minimum}</div>
-              </article>
-            ))}
-          </div>
-        )}
+        <ServiceAreaManager areas={areas} />
       </section>
     </DashboardShell>
   );
