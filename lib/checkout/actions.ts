@@ -10,6 +10,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
 import { checkProductAvailability } from "@/lib/availability/check";
 import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
+import { logAppError, logAppEvent } from "@/lib/observability/server";
 
 export type CheckoutActionState = {
   ok: boolean;
@@ -73,12 +74,26 @@ export async function createCheckoutOrder(
     ]);
 
     if (!clientLimit.allowed || !emailLimit.allowed) {
+      await logAppEvent({
+        source: "checkout.website",
+        action: "rate_limited",
+        status: "warning",
+        metadata: { email },
+      });
+
       return {
         ok: false,
         message: "Too many checkout attempts. Please wait a bit and try again.",
       };
     }
-  } catch {
+  } catch (error) {
+    await logAppError({
+      source: "checkout.website",
+      message: "Checkout rate limit check failed",
+      stack: error instanceof Error ? error.stack : undefined,
+      context: { email },
+    });
+
     return {
       ok: false,
       message: "Unable to process checkout right now. Please try again shortly.",
@@ -96,6 +111,12 @@ export async function createCheckoutOrder(
 
   const orgId = await getPublicOrgId();
   if (!orgId) {
+    await logAppError({
+      source: "checkout.website",
+      message: "Public checkout missing organization context",
+      context: { email },
+    });
+
     return {
       ok: false,
       message:
@@ -113,6 +134,14 @@ export async function createCheckoutOrder(
   });
 
   if (!serviceArea) {
+    await logAppEvent({
+      organizationId: orgId,
+      source: "checkout.website",
+      action: "service_area_not_found",
+      status: "warning",
+      metadata: { postalCode, city, state },
+    });
+
     return {
       ok: false,
       message:
@@ -141,6 +170,18 @@ export async function createCheckoutOrder(
   }
 
   if (subtotal < serviceArea.minimumOrderAmount) {
+    await logAppEvent({
+      organizationId: orgId,
+      source: "checkout.website",
+      action: "minimum_order_blocked",
+      status: "warning",
+      metadata: {
+        subtotal,
+        minimumOrderAmount: serviceArea.minimumOrderAmount,
+        serviceAreaId: serviceArea.id,
+      },
+    });
+
     return {
       ok: false,
       message: `This service area requires a minimum order of $${serviceArea.minimumOrderAmount.toFixed(
@@ -157,6 +198,17 @@ export async function createCheckoutOrder(
     });
 
     if (!availability.available) {
+      await logAppEvent({
+        organizationId: orgId,
+        source: "checkout.website",
+        action: "availability_blocked",
+        status: "warning",
+        metadata: {
+          productId,
+          eventDate,
+        },
+      });
+
       return {
         ok: false,
         message:
@@ -189,6 +241,13 @@ export async function createCheckoutOrder(
       .eq("organization_id", orgId);
 
     if (updateCustomerError) {
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout.website",
+        message: "Failed to update existing customer during checkout",
+        context: { customerId, reason: updateCustomerError.message },
+      });
+
       return {
         ok: false,
         message: updateCustomerError.message,
@@ -208,6 +267,13 @@ export async function createCheckoutOrder(
       .single();
 
     if (customerError || !customer) {
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout.website",
+        message: "Failed to create customer during checkout",
+        context: { reason: customerError?.message, email },
+      });
+
       return {
         ok: false,
         message: customerError?.message ?? "Unable to create customer.",
@@ -232,6 +298,13 @@ export async function createCheckoutOrder(
     .single();
 
   if (addressError || !address) {
+    await logAppError({
+      organizationId: orgId,
+      source: "checkout.website",
+      message: "Failed to create address during checkout",
+      context: { reason: addressError?.message, customerId },
+    });
+
     return {
       ok: false,
       message: addressError?.message ?? "Unable to create address.",
@@ -265,6 +338,13 @@ export async function createCheckoutOrder(
     .single();
 
   if (orderError || !order) {
+    await logAppError({
+      organizationId: orgId,
+      source: "checkout.website",
+      message: "Failed to create order during checkout",
+      context: { reason: orderError?.message, customerId, orderNumber },
+    });
+
     return {
       ok: false,
       message: orderError?.message ?? "Unable to create order.",
@@ -284,6 +364,14 @@ export async function createCheckoutOrder(
 
     if (itemError) {
       await supabase.from("orders").delete().eq("id", order.id);
+
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout.website",
+        message: "Failed to create order item during checkout",
+        context: { reason: itemError.message, orderId: order.id, productId },
+      });
+
       return {
         ok: false,
         message: itemError.message,
@@ -301,6 +389,19 @@ export async function createCheckoutOrder(
 
     if (!reserveResult.ok) {
       await supabase.from("orders").delete().eq("id", order.id);
+
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout.website",
+        message: "Failed to reserve availability block during checkout",
+        context: {
+          reason: reserveResult.message,
+          orderId: order.id,
+          productId,
+          eventDate,
+        },
+      });
+
       return {
         ok: false,
         message:
@@ -309,6 +410,20 @@ export async function createCheckoutOrder(
       };
     }
   }
+
+  await logAppEvent({
+    organizationId: orgId,
+    source: "checkout.website",
+    action: "order_created",
+    status: "success",
+    metadata: {
+      orderId: order.id,
+      orderNumber,
+      productId,
+      serviceAreaId: serviceArea.id,
+      eventDate,
+    },
+  });
 
   return {
     ok: true,
