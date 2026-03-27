@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-images";
 import type { CatalogProduct } from "@/lib/types";
 
 const fallbackCatalog: CatalogProduct[] = [
@@ -9,9 +10,10 @@ const fallbackCatalog: CatalogProduct[] = [
     slug: "castle-bouncer",
     category: "Bounce House",
     price: "$165/day",
-    description: "Classic inflatable for backyard birthdays and neighborhood events.",
+    description:
+      "Classic inflatable for backyard birthdays and neighborhood events.",
     status: "Available",
-    imageUrl: "",
+    imageUrl: getStorefrontFallbackImage("castle-bouncer", "Bounce House"),
   },
   {
     id: "prod_mega_splash",
@@ -19,9 +21,13 @@ const fallbackCatalog: CatalogProduct[] = [
     slug: "mega-splash-water-slide",
     category: "Water Slide",
     price: "$279/day",
-    description: "Premium slide with delivery-first setup workflow and deposit support.",
+    description:
+      "Premium slide with delivery-first setup workflow and deposit support.",
     status: "Available",
-    imageUrl: "",
+    imageUrl: getStorefrontFallbackImage(
+      "mega-splash-water-slide",
+      "Water Slide"
+    ),
   },
   {
     id: "prod_tropical_combo",
@@ -29,9 +35,10 @@ const fallbackCatalog: CatalogProduct[] = [
     slug: "tropical-combo",
     category: "Combo Unit",
     price: "$235/day",
-    description: "Balanced combo unit for families that want variety without full obstacle size.",
+    description:
+      "Balanced combo unit for families that want variety without full obstacle size.",
     status: "Limited",
-    imageUrl: "",
+    imageUrl: getStorefrontFallbackImage("tropical-combo", "Combo Unit"),
   },
 ];
 
@@ -78,12 +85,14 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
     });
 
+    const resolvedCategory =
+      category && !category.deleted_at ? category.name : "Inflatable";
+
     return {
       id: product.id,
       name: product.name ?? "Unnamed Product",
       slug: product.slug ?? "product",
-      category:
-        category && !category.deleted_at ? category.name : "Inflatable",
+      category: resolvedCategory,
       price:
         typeof product.base_price === "number"
           ? `$${product.base_price}/day`
@@ -92,7 +101,9 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
         product.short_description ??
         "Inflatable rental product ready for public booking.",
       status: product.is_active ? "Available" : "Hidden",
-      imageUrl: sortedImages[0]?.image_url ?? "",
+      imageUrl:
+        sortedImages[0]?.image_url ??
+        getStorefrontFallbackImage(product.slug ?? undefined, resolvedCategory),
     };
   });
 }
