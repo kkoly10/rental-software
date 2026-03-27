@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { renderSafeRichText } from "@/lib/rendering/safe-rich-text";
 
 export type CopilotMessage = {
   role: "user" | "assistant";
@@ -31,25 +32,16 @@ export function CopilotMessageList({ messages }: { messages: CopilotMessage[] })
       {messages.map((msg, i) => (
         <div
           key={i}
-          className={`copilot-msg ${msg.role === "user" ? "copilot-msg-user" : "copilot-msg-assistant"}`}
+          className={`copilot-msg ${
+            msg.role === "user" ? "copilot-msg-user" : "copilot-msg-assistant"
+          }`}
         >
-          <div
-            className="copilot-msg-content"
-            dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }}
-          />
+          <div className="copilot-msg-content">
+            {renderSafeRichText(msg.content)}
+          </div>
         </div>
       ))}
       <div ref={bottomRef} />
     </div>
   );
-}
-
-function formatMessage(text: string): string {
-  return text
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    // Links: [text](url)
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:var(--primary)">$1</a>')
-    // Line breaks
-    .replace(/\n/g, "<br/>");
 }
