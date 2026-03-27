@@ -2,9 +2,18 @@ import type { Metadata } from "next";
 
 function normalizeBaseUrl(value?: string | null) {
   if (!value) return "http://localhost:3000";
+
   const trimmed = value.trim();
   if (!trimmed) return "http://localhost:3000";
-  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+
+  const withProtocol =
+    trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`;
+
+  return withProtocol.endsWith("/")
+    ? withProtocol.slice(0, -1)
+    : withProtocol;
 }
 
 export function getSiteBaseUrl() {
@@ -12,7 +21,8 @@ export function getSiteBaseUrl() {
     process.env.NEXT_PUBLIC_SITE_URL ??
       process.env.NEXT_PUBLIC_APP_URL ??
       process.env.SITE_URL ??
-      process.env.VERCEL_PROJECT_PRODUCTION_URL
+      process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+      process.env.VERCEL_URL
   );
 }
 
@@ -29,6 +39,7 @@ export function buildPageMetadata(options: {
   noIndex?: boolean;
 }) {
   const canonical = getCanonicalUrl(options.path ?? "/");
+
   const metadata: Metadata = {
     title: options.title,
     description: options.description,
