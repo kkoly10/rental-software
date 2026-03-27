@@ -37,13 +37,11 @@ export default async function HomePage() {
             <div className="public-hero-shell">
               <div className="public-hero-copy">
                 <div className="kicker public-kicker">
-                  Clean, delivered inflatable rentals
+                  Clean, fun, and stress-free rentals for any event
                 </div>
-                <h1>Epic Parties Delivered.</h1>
+                <h1>Epic Parties<br />Delivered!</h1>
                 <p>
                   {settings.websiteMessage} Serving {settings.serviceAreaLabel}.
-                  Browse bounce houses, water slides, and packages with a fast
-                  reservation flow built for real family events.
                 </p>
 
                 <form action="/inventory" className="storefront-search-card">
@@ -84,27 +82,12 @@ export default async function HomePage() {
               </div>
 
               <div className="public-hero-visual">
-                <div className="public-hero-badge">
-                  Fully insured • Cleaned between rentals
-                </div>
-
-                <div className="public-hero-card">
-                  <div className="kicker">Popular for birthdays</div>
-                  <h3 style={{ margin: "8px 0 6px" }}>
-                    Water slides and bounce houses
-                  </h3>
-                  <div className="muted">
-                    Delivery, setup, safety review, and later pickup handled by
-                    our team.
-                  </div>
-
-                  <div className="price-row">
-                    <strong>Reserve your date fast</strong>
-                    <Link href="/inventory" className="secondary-btn">
-                      Browse Catalog
-                    </Link>
-                  </div>
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1000&h=800&fit=crop&auto=format"
+                  alt="Kids enjoying inflatable bounce house party rentals"
+                  className="public-hero-photo"
+                />
               </div>
             </div>
           </div>
@@ -118,8 +101,8 @@ export default async function HomePage() {
           <div className="container">
             <div className="section-header">
               <div>
-                <div className="kicker">Featured inventory</div>
-                <h2>Popular rentals</h2>
+                <div className="kicker">Explore by rentals</div>
+                <h2>Popular Rentals</h2>
                 <div className="muted">
                   Start with the units families book most often for birthdays,
                   school events, and backyard celebrations.
