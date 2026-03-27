@@ -7,6 +7,9 @@ import { checkoutOrderSchema } from "@/lib/validation/checkout";
 import { createOrderNumber } from "@/lib/orders/order-number";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
+import { checkProductAvailability } from "@/lib/availability/check";
+import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 
 export type CheckoutActionState = {
   ok: boolean;
@@ -34,7 +37,8 @@ export async function createCheckoutOrder(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Please review your checkout details.",
+      message:
+        parsed.error.issues[0]?.message ?? "Please review your checkout details.",
     };
   }
 
@@ -94,11 +98,73 @@ export async function createCheckoutOrder(
   if (!orgId) {
     return {
       ok: false,
-      message: "No organization found. An operator must complete onboarding first.",
+      message:
+        "No organization found. An operator must complete onboarding first.",
     };
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const serviceArea = await resolveServiceAreaForAddress({
+    organizationId: orgId,
+    postalCode,
+    city,
+    state,
+  });
+
+  if (!serviceArea) {
+    return {
+      ok: false,
+      message:
+        "We do not currently serve that delivery area. Please enter a ZIP code within a configured service area.",
+    };
+  }
+
+  let subtotal = 225;
+  let productId: string | null = null;
+  let productName = "Rental booking";
+
+  if (productSlug) {
+    const { data: product } = await supabase
+      .from("products")
+      .select("id, name, base_price")
+      .eq("slug", productSlug)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+
+    if (product) {
+      subtotal =
+        typeof product.base_price === "number" ? Number(product.base_price) : 225;
+      productId = product.id;
+      productName = product.name ?? productSlug;
+    }
+  }
+
+  if (subtotal < serviceArea.minimumOrderAmount) {
+    return {
+      ok: false,
+      message: `This service area requires a minimum order of $${serviceArea.minimumOrderAmount.toFixed(
+        2
+      )}.`,
+    };
+  }
+
+  if (productId && eventDate) {
+    const availability = await checkProductAvailability({
+      organizationId: orgId,
+      productId,
+      eventDate,
+    });
+
+    if (!availability.available) {
+      return {
+        ok: false,
+        message:
+          availability.reason ??
+          "This rental is not available for the selected date.",
+      };
+    }
+  }
 
   let customerId: string;
   const { data: existingCustomer } = await supabase
@@ -172,29 +238,7 @@ export async function createCheckoutOrder(
     };
   }
 
-  let subtotal = 225;
-  let productId: string | null = null;
-  let productName = "Rental booking";
-
-  if (productSlug) {
-    const { data: product } = await supabase
-      .from("products")
-      .select("id, name, base_price")
-      .eq("slug", productSlug)
-      .eq("organization_id", orgId)
-      .maybeSingle();
-
-    if (product) {
-      subtotal =
-        typeof product.base_price === "number"
-          ? Number(product.base_price)
-          : 225;
-      productId = product.id;
-      productName = product.name ?? productSlug;
-    }
-  }
-
-  const deliveryFee = 20;
+  const deliveryFee = serviceArea.deliveryFee;
   const total = Number((subtotal + deliveryFee).toFixed(2));
   const deposit = Number((total * 0.3).toFixed(2));
   const balance = Number((total - deposit).toFixed(2));
@@ -215,6 +259,7 @@ export async function createCheckoutOrder(
       deposit_due_amount: deposit,
       balance_due_amount: balance,
       source_channel: "website",
+      notes: `Service area: ${serviceArea.label}`,
     })
     .select("id")
     .single();
@@ -238,9 +283,29 @@ export async function createCheckoutOrder(
     });
 
     if (itemError) {
+      await supabase.from("orders").delete().eq("id", order.id);
       return {
         ok: false,
         message: itemError.message,
+      };
+    }
+  }
+
+  if (productId && eventDate) {
+    const reserveResult = await reserveProductAvailabilityBlock({
+      organizationId: orgId,
+      productId,
+      orderId: order.id,
+      eventDate,
+    });
+
+    if (!reserveResult.ok) {
+      await supabase.from("orders").delete().eq("id", order.id);
+      return {
+        ok: false,
+        message:
+          reserveResult.message ??
+          "Unable to reserve availability for the selected date.",
       };
     }
   }
