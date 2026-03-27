@@ -1,5 +1,9 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getStorefrontFallbackGallery,
+  getStorefrontFallbackImage,
+} from "@/lib/media/storefront-fallback-images";
 import type { CatalogDetail } from "@/lib/types";
 
 const fallbackProducts: Record<string, CatalogDetail> = {
@@ -17,8 +21,11 @@ const fallbackProducts: Record<string, CatalogDetail> = {
       "Includes: blower, stakes, and safety overview",
       "Turnaround and cleaning buffers enabled",
     ],
-    imageUrl: "",
-    galleryImages: [],
+    imageUrl: getStorefrontFallbackImage("castle-bouncer", "Bounce House"),
+    galleryImages: getStorefrontFallbackGallery(
+      "castle-bouncer",
+      "Bounce House"
+    ),
   },
   "mega-splash-water-slide": {
     id: "prod_mega_splash",
@@ -34,8 +41,14 @@ const fallbackProducts: Record<string, CatalogDetail> = {
       "Includes: blower, stakes, and safety overview",
       "Turnaround and cleaning buffers enabled",
     ],
-    imageUrl: "",
-    galleryImages: [],
+    imageUrl: getStorefrontFallbackImage(
+      "mega-splash-water-slide",
+      "Water Slide"
+    ),
+    galleryImages: getStorefrontFallbackGallery(
+      "mega-splash-water-slide",
+      "Water Slide"
+    ),
   },
   "tropical-combo": {
     id: "prod_tropical_combo",
@@ -51,14 +64,19 @@ const fallbackProducts: Record<string, CatalogDetail> = {
       "Includes: blower, anchors, and safety overview",
       "Best for mixed-age family events",
     ],
-    imageUrl: "",
-    galleryImages: [],
+    imageUrl: getStorefrontFallbackImage("tropical-combo", "Combo Unit"),
+    galleryImages: getStorefrontFallbackGallery(
+      "tropical-combo",
+      "Combo Unit"
+    ),
   },
 };
 
 export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   if (!hasSupabaseEnv()) {
-    return fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"];
+    return (
+      fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -72,7 +90,9 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     .maybeSingle();
 
   if (error || !data) {
-    return fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"];
+    return (
+      fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
+    );
   }
 
   const category = (data as Record<string, unknown>).categories as
@@ -123,12 +143,23 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
           "Turnaround and cleaning buffers enabled",
         ];
 
+  const resolvedCategory =
+    category && !category.deleted_at ? category.name : "Inflatable";
+
+  const fallbackImage = getStorefrontFallbackImage(
+    data.slug ?? slug,
+    resolvedCategory
+  );
+  const fallbackGallery = getStorefrontFallbackGallery(
+    data.slug ?? slug,
+    resolvedCategory
+  );
+
   return {
     id: data.id,
     name: data.name ?? "Unnamed Product",
     slug: data.slug ?? slug,
-    category:
-      category && !category.deleted_at ? category.name : "Inflatable",
+    category: resolvedCategory,
     price:
       typeof data.base_price === "number"
         ? `$${data.base_price}/day`
@@ -138,7 +169,10 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
       data.short_description ??
       "Inflatable rental product ready for booking.",
     highlights,
-    imageUrl: sortedImages[0]?.image_url ?? "",
-    galleryImages: sortedImages.map((image) => image.image_url).filter(Boolean),
+    imageUrl: sortedImages[0]?.image_url ?? fallbackImage,
+    galleryImages:
+      sortedImages.length > 0
+        ? sortedImages.map((image) => image.image_url).filter(Boolean)
+        : fallbackGallery,
   };
 }
