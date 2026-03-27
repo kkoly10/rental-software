@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { CatalogGrid } from "@/components/public/catalog-grid";
 import { CatalogFilterForm } from "@/components/public/catalog-filter-form";
 import { getCatalogList } from "@/lib/data/catalog-list";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 
 function normalizeCategory(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, "-");
@@ -14,6 +17,16 @@ function formatCategoryLabel(value?: string) {
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getOrganizationSettings();
+
+  return buildPageMetadata({
+    title: `${settings.businessName} Inventory`,
+    description: `Browse bounce houses, water slides, and party rentals from ${settings.businessName}. Serving ${settings.serviceAreaLabel}.`,
+    path: "/inventory",
+  });
 }
 
 export default async function InventoryPage({
@@ -44,7 +57,9 @@ export default async function InventoryPage({
             <div className="section-header">
               <div>
                 <div className="kicker">Catalog</div>
-                <h1 style={{ margin: "6px 0 8px" }}>Browse inflatables by event type</h1>
+                <h1 style={{ margin: "6px 0 8px" }}>
+                  Browse inflatables by event type
+                </h1>
                 <div className="muted">
                   Search by date, delivery ZIP, and category to narrow down the
                   best fits for your party.
@@ -52,10 +67,14 @@ export default async function InventoryPage({
 
                 <div className="storefront-context-pills">
                   {params.date ? (
-                    <span className="storefront-context-pill">Date: {params.date}</span>
+                    <span className="storefront-context-pill">
+                      Date: {params.date}
+                    </span>
                   ) : null}
                   {params.zip ? (
-                    <span className="storefront-context-pill">ZIP: {params.zip}</span>
+                    <span className="storefront-context-pill">
+                      ZIP: {params.zip}
+                    </span>
                   ) : null}
                   {params.category ? (
                     <span className="storefront-context-pill">
@@ -89,7 +108,9 @@ export default async function InventoryPage({
             ) : (
               <div className="panel storefront-empty-state">
                 <div className="kicker">No direct matches</div>
-                <h2 style={{ margin: "8px 0 10px" }}>Try broadening your filters</h2>
+                <h2 style={{ margin: "8px 0 10px" }}>
+                  Try broadening your filters
+                </h2>
                 <div className="muted">
                   We could not find rentals that matched the current category
                   and availability filters. Adjust the date, ZIP, or category
