@@ -35,15 +35,26 @@ export default async function HomePage() {
         <section className="section public-hero">
           <div className="container">
             <div className="public-hero-shell">
+              <div className="public-hero-visual">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=1800"
+                  alt="Woman playing in a colorful inflatable park slide"
+                  className="public-hero-photo"
+                />
+              </div>
+
               <div className="public-hero-copy">
                 <div className="kicker public-kicker">
                   Clean, fun, and stress-free rentals for any event
                 </div>
+
                 <h1>
                   Epic Parties
                   <br />
                   Delivered!
                 </h1>
+
                 <p>
                   {settings.websiteMessage} Serving {settings.serviceAreaLabel}.
                 </p>
@@ -83,15 +94,6 @@ export default async function HomePage() {
                     </button>
                   </div>
                 </form>
-              </div>
-
-              <div className="public-hero-visual">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=1800"
-                  alt="Woman playing in a colorful inflatable park slide"
-                  className="public-hero-photo"
-                />
               </div>
             </div>
           </div>
