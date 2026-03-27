@@ -24,8 +24,11 @@ export async function getCustomers(): Promise<CustomerSummary[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("customers")
-    .select("id, first_name, last_name, email, phone, created_at, orders(order_number, event_date, order_status)")
+    .select(
+      "id, first_name, last_name, email, phone, created_at, orders(order_number, event_date, order_status)"
+    )
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -34,16 +37,26 @@ export async function getCustomers(): Promise<CustomerSummary[]> {
   }
 
   return data.map((customer) => {
-    const orders = ((customer as Record<string, unknown>).orders as { order_number: string; event_date: string; order_status: string }[] | null) ?? [];
+    const orders =
+      ((customer as Record<string, unknown>).orders as
+        | { order_number: string; event_date: string; order_status: string }[]
+        | null) ?? [];
     const latest = orders[0];
+
     return {
       id: customer.id,
-      name: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Customer",
+      name:
+        `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() ||
+        "Customer",
       email: customer.email ?? "",
       phone: customer.phone ?? "",
       latestBooking: latest?.order_number ?? "No bookings",
       latestDate: latest?.event_date
-        ? new Date(latest.event_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        ? new Date(latest.event_date + "T00:00:00").toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
         : "N/A",
     };
   });
