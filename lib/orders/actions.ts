@@ -11,11 +11,24 @@ import {
 import { createOrderNumber } from "@/lib/orders/order-number";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { checkProductAvailability } from "@/lib/availability/check";
+import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 
 export type OrderActionState = {
   ok: boolean;
   message: string;
 };
+
+function shouldReserveAvailability(status: string) {
+  return [
+    "awaiting_deposit",
+    "confirmed",
+    "scheduled",
+    "out_for_delivery",
+    "delivered",
+    "completed",
+  ].includes(status);
+}
 
 export async function createOrder(
   _prevState: OrderActionState,
@@ -28,6 +41,8 @@ export async function createOrder(
     phone: String(formData.get("phone") ?? ""),
     eventDate: String(formData.get("event_date") ?? ""),
     orderStatus: String(formData.get("order_status") ?? "inquiry"),
+    productId: String(formData.get("product_id") ?? ""),
+    serviceAreaId: String(formData.get("service_area_id") ?? ""),
     subtotal: String(formData.get("subtotal") ?? "0"),
     deliveryFee: String(formData.get("delivery_fee") ?? "0"),
     depositAmount: String(formData.get("deposit_amount") ?? "0"),
@@ -37,7 +52,8 @@ export async function createOrder(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Please review the order details.",
+      message:
+        parsed.error.issues[0]?.message ?? "Please review the order details.",
     };
   }
 
@@ -94,6 +110,8 @@ export async function createOrder(
     phone,
     eventDate,
     orderStatus,
+    productId,
+    serviceAreaId,
     subtotal,
     deliveryFee,
     depositAmount,
@@ -101,6 +119,92 @@ export async function createOrder(
   } = parsed.data;
 
   const supabase = await createSupabaseServerClient();
+
+  let resolvedSubtotal = subtotal;
+  let resolvedDeliveryFee = deliveryFee;
+  let resolvedNotes = notes ?? "";
+  let productNameSnapshot = "Rental booking";
+
+  if (productId) {
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id, name, base_price")
+      .eq("id", productId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (productError || !product) {
+      return {
+        ok: false,
+        message: "Selected product could not be found.",
+      };
+    }
+
+    productNameSnapshot = product.name ?? productNameSnapshot;
+
+    if (subtotal <= 0) {
+      resolvedSubtotal =
+        typeof product.base_price === "number" ? Number(product.base_price) : 0;
+    }
+
+    if (eventDate && shouldReserveAvailability(orderStatus)) {
+      const availability = await checkProductAvailability({
+        organizationId: ctx.organizationId,
+        productId: product.id,
+        eventDate,
+      });
+
+      if (!availability.available) {
+        return {
+          ok: false,
+          message:
+            availability.reason ??
+            "This rental is not available for the selected date.",
+        };
+      }
+    }
+  }
+
+  if (serviceAreaId) {
+    const { data: serviceArea, error: serviceAreaError } = await supabase
+      .from("service_areas")
+      .select("id, label, delivery_fee, minimum_order_amount")
+      .eq("id", serviceAreaId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (serviceAreaError || !serviceArea) {
+      return {
+        ok: false,
+        message: "Selected service area could not be found.",
+      };
+    }
+
+    resolvedDeliveryFee =
+      typeof serviceArea.delivery_fee === "number"
+        ? Number(serviceArea.delivery_fee)
+        : 0;
+
+    const minimumOrderAmount =
+      typeof serviceArea.minimum_order_amount === "number"
+        ? Number(serviceArea.minimum_order_amount)
+        : 0;
+
+    if (resolvedSubtotal < minimumOrderAmount) {
+      return {
+        ok: false,
+        message: `This service area requires a minimum order of $${minimumOrderAmount.toFixed(
+          2
+        )}.`,
+      };
+    }
+
+    resolvedNotes = [resolvedNotes, `Service area: ${serviceArea.label ?? "Service Area"}`]
+      .filter(Boolean)
+      .join("\n");
+  }
 
   let customerId: string;
 
@@ -110,6 +214,7 @@ export async function createOrder(
       .select("id")
       .eq("organization_id", ctx.organizationId)
       .eq("email", email)
+      .is("deleted_at", null)
       .limit(1)
       .maybeSingle();
 
@@ -124,7 +229,8 @@ export async function createOrder(
           phone: phone ?? null,
         })
         .eq("id", customerId)
-        .eq("organization_id", ctx.organizationId);
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null);
 
       if (updateCustomerError) {
         return { ok: false, message: updateCustomerError.message };
@@ -173,27 +279,73 @@ export async function createOrder(
     customerId = newCust.id;
   }
 
-  const total = Number((subtotal + deliveryFee).toFixed(2));
+  const total = Number((resolvedSubtotal + resolvedDeliveryFee).toFixed(2));
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
 
-  const { error: orderError } = await supabase.from("orders").insert({
-    organization_id: ctx.organizationId,
-    customer_id: customerId,
-    order_number: orderNumber,
-    order_status: orderStatus,
-    event_date: eventDate ?? null,
-    subtotal_amount: subtotal,
-    delivery_fee_amount: deliveryFee,
-    total_amount: total,
-    deposit_due_amount: depositAmount,
-    balance_due_amount: balance,
-    notes: notes ?? null,
-    source_channel: "dashboard",
-  });
+  const { data: createdOrder, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      organization_id: ctx.organizationId,
+      customer_id: customerId,
+      order_number: orderNumber,
+      order_status: orderStatus,
+      event_date: eventDate ?? null,
+      subtotal_amount: resolvedSubtotal,
+      delivery_fee_amount: resolvedDeliveryFee,
+      total_amount: total,
+      deposit_due_amount: depositAmount,
+      balance_due_amount: balance,
+      notes: resolvedNotes || null,
+      source_channel: "dashboard",
+    })
+    .select("id")
+    .single();
 
-  if (orderError) {
-    return { ok: false, message: orderError.message };
+  if (orderError || !createdOrder) {
+    return {
+      ok: false,
+      message: orderError?.message ?? "Unable to create order.",
+    };
+  }
+
+  if (productId) {
+    const { error: itemError } = await supabase.from("order_items").insert({
+      order_id: createdOrder.id,
+      product_id: productId,
+      line_type: "rental",
+      quantity: 1,
+      unit_price: resolvedSubtotal,
+      line_total: resolvedSubtotal,
+      item_name_snapshot: productNameSnapshot,
+    });
+
+    if (itemError) {
+      await supabase.from("orders").delete().eq("id", createdOrder.id);
+      return {
+        ok: false,
+        message: itemError.message,
+      };
+    }
+  }
+
+  if (productId && eventDate && shouldReserveAvailability(orderStatus)) {
+    const reserveResult = await reserveProductAvailabilityBlock({
+      organizationId: ctx.organizationId,
+      productId,
+      orderId: createdOrder.id,
+      eventDate,
+    });
+
+    if (!reserveResult.ok) {
+      await supabase.from("orders").delete().eq("id", createdOrder.id);
+      return {
+        ok: false,
+        message:
+          reserveResult.message ??
+          "Unable to reserve availability for the selected date.",
+      };
+    }
   }
 
   redirect("/dashboard/orders");
@@ -215,7 +367,8 @@ export async function updateOrderStatus(
   if (!parsed.success) {
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid order update request.",
+      message:
+        parsed.error.issues[0]?.message ?? "Invalid order update request.",
     };
   }
 
