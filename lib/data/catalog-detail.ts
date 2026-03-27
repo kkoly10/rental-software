@@ -9,7 +9,8 @@ const fallbackProducts: Record<string, CatalogDetail> = {
     slug: "castle-bouncer",
     category: "Bounce House",
     price: "$165/day",
-    description: "Classic inflatable for backyard birthdays and neighborhood events.",
+    description:
+      "Classic inflatable for backyard birthdays and neighborhood events.",
     highlights: [
       "Setup area: grass preferred, flat and clear",
       "Power: dedicated outlet or generator",
@@ -25,7 +26,8 @@ const fallbackProducts: Record<string, CatalogDetail> = {
     slug: "mega-splash-water-slide",
     category: "Water Slide",
     price: "$279/day",
-    description: "Premium slide with delivery-first setup workflow and deposit support.",
+    description:
+      "Premium slide with delivery-first setup workflow and deposit support.",
     highlights: [
       "Setup area: grass preferred, flat and clear",
       "Power: dedicated outlet or generator",
@@ -41,7 +43,8 @@ const fallbackProducts: Record<string, CatalogDetail> = {
     slug: "tropical-combo",
     category: "Combo Unit",
     price: "$235/day",
-    description: "Balanced combo unit for families that want variety without full obstacle size.",
+    description:
+      "Balanced combo unit for families that want variety without full obstacle size.",
     highlights: [
       "Setup area: flat surface with clearance",
       "Power: one dedicated outlet",
@@ -62,9 +65,10 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, short_description, description, categories(name), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order)"
+      "id, name, slug, base_price, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
     .eq("slug", slug)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) {
@@ -72,28 +76,41 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   }
 
   const category = (data as Record<string, unknown>).categories as
-    | { name: string }
+    | { name: string; deleted_at?: string | null }
     | null;
 
   const attributes =
     ((data as Record<string, unknown>).product_attributes as
-      | { attribute_key: string; attribute_value: string }[]
+      | {
+          attribute_key: string;
+          attribute_value: string;
+          deleted_at?: string | null;
+        }[]
       | null) ?? [];
+
+  const activeAttributes = attributes.filter((attribute) => !attribute.deleted_at);
 
   const images =
     ((data as Record<string, unknown>).product_images as
-      | { image_url: string; is_primary?: boolean; sort_order?: number }[]
+      | {
+          image_url: string;
+          is_primary?: boolean;
+          sort_order?: number;
+          deleted_at?: string | null;
+        }[]
       | null) ?? [];
 
-  const sortedImages = [...images].sort((a, b) => {
+  const activeImages = images.filter((image) => !image.deleted_at);
+
+  const sortedImages = [...activeImages].sort((a, b) => {
     if (a.is_primary && !b.is_primary) return -1;
     if (!a.is_primary && b.is_primary) return 1;
     return (a.sort_order ?? 0) - (b.sort_order ?? 0);
   });
 
   const highlights =
-    attributes.length > 0
-      ? attributes.map(
+    activeAttributes.length > 0
+      ? activeAttributes.map(
           (a) =>
             `${a.attribute_key
               .replace(/_/g, " ")
@@ -110,7 +127,8 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     id: data.id,
     name: data.name ?? "Unnamed Product",
     slug: data.slug ?? slug,
-    category: category?.name ?? "Inflatable",
+    category:
+      category && !category.deleted_at ? category.name : "Inflatable",
     price:
       typeof data.base_price === "number"
         ? `$${data.base_price}/day`
