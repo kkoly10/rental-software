@@ -3,14 +3,16 @@ export function StatusBadge({
   tone = "default",
 }: {
   label: string;
-  tone?: "default" | "success" | "warning";
+  tone?: "default" | "success" | "warning" | "danger";
 }) {
   const className =
     tone === "success"
       ? "badge success"
       : tone === "warning"
-        ? "badge warning"
-        : "badge";
+      ? "badge warning"
+      : tone === "danger"
+      ? "badge warning"
+      : "badge";
 
   return <span className={className}>{label}</span>;
 }
