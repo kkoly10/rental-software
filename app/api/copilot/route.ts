@@ -18,6 +18,7 @@ import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
 import { getCopilotAccessContext } from "@/lib/security/copilot-access";
 import { getRequestClientKey } from "@/lib/security/request-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { logAppError, logAppEvent } from "@/lib/observability/server";
 
 export const runtime = "nodejs";
 
@@ -60,11 +61,27 @@ function extractProviderText(payload: any): string | null {
 
 export async function POST(request: NextRequest) {
   if (!isAllowedRequestOrigin(request)) {
+    await logAppError({
+      source: "copilot.route",
+      message: "Rejected invalid request origin",
+      route: request.nextUrl.pathname,
+      context: {
+        origin: request.headers.get("origin"),
+        referer: request.headers.get("referer"),
+      },
+    });
+
     return jsonResponse({ error: "Invalid request origin." }, { status: 403 });
   }
 
   const access = await getCopilotAccessContext();
   if (!access) {
+    await logAppError({
+      source: "copilot.route",
+      message: "Rejected unauthenticated Copilot access",
+      route: request.nextUrl.pathname,
+    });
+
     return jsonResponse(
       { error: "You must be signed in to use Copilot." },
       { status: 401 }
@@ -75,11 +92,30 @@ export async function POST(request: NextRequest) {
   try {
     requestBody = await request.json();
   } catch {
+    await logAppError({
+      organizationId: access.organizationId,
+      userId: access.userId,
+      source: "copilot.route",
+      message: "Invalid Copilot JSON payload",
+      route: request.nextUrl.pathname,
+    });
+
     return jsonResponse({ error: "Invalid JSON payload." }, { status: 400 });
   }
 
   const parsed = copilotRequestSchema.safeParse(requestBody);
   if (!parsed.success) {
+    await logAppError({
+      organizationId: access.organizationId,
+      userId: access.userId,
+      source: "copilot.route",
+      message: "Invalid Copilot request payload",
+      route: request.nextUrl.pathname,
+      context: {
+        issue: parsed.error.issues[0]?.message,
+      },
+    });
+
     return jsonResponse(
       { error: parsed.error.issues[0]?.message ?? "Invalid request." },
       { status: 400 }
@@ -106,11 +142,35 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (!userLimit.allowed || !clientLimit.allowed) {
+      await logAppEvent({
+        organizationId: access.organizationId,
+        userId: access.userId,
+        source: "copilot.route",
+        action: "rate_limited",
+        status: "warning",
+        route,
+        metadata: {
+          retryAfterSeconds: Math.max(
+            userLimit.retryAfterSeconds,
+            clientLimit.retryAfterSeconds
+          ),
+        },
+      });
+
       return rateLimitResponse(
         Math.max(userLimit.retryAfterSeconds, clientLimit.retryAfterSeconds)
       );
     }
-  } catch {
+  } catch (error) {
+    await logAppError({
+      organizationId: access.organizationId,
+      userId: access.userId,
+      source: "copilot.route",
+      message: "Copilot rate limiting unavailable",
+      route,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return jsonResponse(
       { error: "Copilot rate limiting is temporarily unavailable." },
       { status: 503 }
@@ -135,6 +195,18 @@ export async function POST(request: NextRequest) {
       articleSummaries
     );
 
+    await logAppEvent({
+      organizationId: access.organizationId,
+      userId: access.userId,
+      source: "copilot.route",
+      action: "response_generated",
+      status: "success",
+      route,
+      metadata: {
+        provider: "openai",
+      },
+    });
+
     return jsonResponse({ response: aiResponse });
   }
 
@@ -148,8 +220,32 @@ export async function POST(request: NextRequest) {
       articleSummaries
     );
 
+    await logAppEvent({
+      organizationId: access.organizationId,
+      userId: access.userId,
+      source: "copilot.route",
+      action: "response_generated",
+      status: "success",
+      route,
+      metadata: {
+        provider: "anthropic",
+      },
+    });
+
     return jsonResponse({ response: aiResponse });
   }
+
+  await logAppEvent({
+    organizationId: access.organizationId,
+    userId: access.userId,
+    source: "copilot.route",
+    action: "response_generated",
+    status: "success",
+    route,
+    metadata: {
+      provider: "local",
+    },
+  });
 
   return jsonResponse({
     response: generateLocalResponse(message, route, snapshot),
