@@ -9,6 +9,14 @@ import {
   uuidSchema,
 } from "@/lib/validation/common";
 
+const optionalUuidSchema = z
+  .string()
+  .trim()
+  .uuid("Invalid identifier.")
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => value || undefined);
+
 export const orderStatusSchema = z.enum([
   "inquiry",
   "quote_sent",
@@ -29,6 +37,8 @@ export const createOrderSchema = z
     phone: optionalPhoneSchema,
     eventDate: optionalDateSchema,
     orderStatus: orderStatusSchema.default("inquiry"),
+    productId: optionalUuidSchema,
+    serviceAreaId: optionalUuidSchema,
     subtotal: moneySchema("Subtotal"),
     deliveryFee: moneySchema("Delivery fee"),
     depositAmount: moneySchema("Deposit amount"),
