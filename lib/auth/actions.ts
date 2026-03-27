@@ -13,6 +13,7 @@ import {
 } from "@/lib/validation/auth";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { logAppError, logAppEvent } from "@/lib/observability/server";
 
 export type AuthActionState = {
   ok: boolean;
@@ -106,9 +107,23 @@ export async function signInWithPassword(
     });
 
     if (rateLimitFailure) {
+      await logAppEvent({
+        source: "auth.signin",
+        action: "rate_limited",
+        status: "warning",
+        metadata: { email: parsed.data.email },
+      });
+
       return rateLimitFailure;
     }
-  } catch {
+  } catch (error) {
+    await logAppError({
+      source: "auth.signin",
+      message: "Sign-in rate limit check failed",
+      stack: error instanceof Error ? error.stack : undefined,
+      context: { email: parsed.data.email },
+    });
+
     return {
       ok: false,
       message: "Unable to process sign-in right now. Please try again shortly.",
@@ -124,6 +139,13 @@ export async function signInWithPassword(
   });
 
   if (error) {
+    await logAppEvent({
+      source: "auth.signin",
+      action: "failed",
+      status: "warning",
+      metadata: { email, reason: error.message },
+    });
+
     return { ok: false, message: error.message };
   }
 
@@ -132,6 +154,12 @@ export async function signInWithPassword(
   } = await supabase.auth.getUser();
 
   if (!user) {
+    await logAppError({
+      source: "auth.signin",
+      message: "User missing after successful sign-in attempt",
+      context: { email },
+    });
+
     return {
       ok: false,
       message: "Unable to load your account after sign-in. Please try again.",
@@ -140,6 +168,15 @@ export async function signInWithPassword(
 
   if (!user.email_confirmed_at) {
     await supabase.auth.signOut();
+
+    await logAppEvent({
+      userId: user.id,
+      source: "auth.signin",
+      action: "blocked_unverified",
+      status: "warning",
+      metadata: { email },
+    });
+
     return {
       ok: false,
       message: "Please verify your email before signing in.",
@@ -148,11 +185,19 @@ export async function signInWithPassword(
 
   const { data: membership } = await supabase
     .from("organization_memberships")
-    .select("id")
+    .select("id, organization_id")
     .eq("profile_id", user.id)
     .eq("status", "active")
     .limit(1)
     .maybeSingle();
+
+  await logAppEvent({
+    organizationId: membership?.organization_id ?? null,
+    userId: user.id,
+    source: "auth.signin",
+    action: "success",
+    status: "success",
+  });
 
   if (!membership) {
     redirect("/onboarding");
@@ -191,9 +236,23 @@ export async function signUpWithPassword(
     });
 
     if (rateLimitFailure) {
+      await logAppEvent({
+        source: "auth.signup",
+        action: "rate_limited",
+        status: "warning",
+        metadata: { email: parsed.data.email },
+      });
+
       return rateLimitFailure;
     }
-  } catch {
+  } catch (error) {
+    await logAppError({
+      source: "auth.signup",
+      message: "Signup rate limit check failed",
+      stack: error instanceof Error ? error.stack : undefined,
+      context: { email: parsed.data.email },
+    });
+
     return {
       ok: false,
       message: "Unable to process signup right now. Please try again shortly.",
@@ -217,8 +276,22 @@ export async function signUpWithPassword(
   });
 
   if (error) {
+    await logAppEvent({
+      source: "auth.signup",
+      action: "failed",
+      status: "warning",
+      metadata: { email, reason: error.message },
+    });
+
     return { ok: false, message: error.message };
   }
+
+  await logAppEvent({
+    source: "auth.signup",
+    action: "created",
+    status: "success",
+    metadata: { email },
+  });
 
   await supabase.auth.signOut();
   redirect("/auth/verify-email");
@@ -251,9 +324,23 @@ export async function requestPasswordReset(
     });
 
     if (rateLimitFailure) {
+      await logAppEvent({
+        source: "auth.password_reset",
+        action: "rate_limited",
+        status: "warning",
+        metadata: { email: parsed.data.email },
+      });
+
       return rateLimitFailure;
     }
-  } catch {
+  } catch (error) {
+    await logAppError({
+      source: "auth.password_reset",
+      message: "Password reset rate limit check failed",
+      stack: error instanceof Error ? error.stack : undefined,
+      context: { email: parsed.data.email },
+    });
+
     return {
       ok: false,
       message:
@@ -269,8 +356,22 @@ export async function requestPasswordReset(
   });
 
   if (error) {
+    await logAppEvent({
+      source: "auth.password_reset",
+      action: "failed",
+      status: "warning",
+      metadata: { email: parsed.data.email, reason: error.message },
+    });
+
     return { ok: false, message: error.message };
   }
+
+  await logAppEvent({
+    source: "auth.password_reset",
+    action: "requested",
+    status: "success",
+    metadata: { email: parsed.data.email },
+  });
 
   return {
     ok: true,
@@ -318,8 +419,23 @@ export async function resetPassword(
   });
 
   if (error) {
+    await logAppEvent({
+      userId: user.id,
+      source: "auth.password_reset",
+      action: "failed_complete",
+      status: "warning",
+      metadata: { reason: error.message },
+    });
+
     return { ok: false, message: error.message };
   }
+
+  await logAppEvent({
+    userId: user.id,
+    source: "auth.password_reset",
+    action: "completed",
+    status: "success",
+  });
 
   await supabase.auth.signOut();
   redirect("/login?reset=success");
