@@ -27,10 +27,11 @@ export async function resolveServiceAreaForAddress(options: {
   const { data, error } = await supabase
     .from("service_areas")
     .select(
-      "id, label, zip_code, city, state, delivery_fee, minimum_order_amount, is_active, postal_codes"
+      "id, label, zip_code, city, state, delivery_fee, minimum_order_amount, is_active, postal_codes, deleted_at"
     )
     .eq("organization_id", options.organizationId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .is("deleted_at", null);
 
   if (error || !data || data.length === 0) {
     return null;
@@ -42,9 +43,10 @@ export async function resolveServiceAreaForAddress(options: {
       ? area.postal_codes.map((value) => normalizePostalCode(String(value)))
       : [];
 
-    return Boolean(normalizedPostalCode) && (
-      primaryPostal === normalizedPostalCode ||
-      alternatePostals.includes(normalizedPostalCode)
+    return (
+      Boolean(normalizedPostalCode) &&
+      (primaryPostal === normalizedPostalCode ||
+        alternatePostals.includes(normalizedPostalCode))
     );
   });
 
@@ -56,7 +58,12 @@ export async function resolveServiceAreaForAddress(options: {
     const areaCity = normalizeCity(area.city);
     const areaState = normalizeState(area.state);
 
-    return Boolean(normalizedCity) && Boolean(normalizedState) && areaCity === normalizedCity && areaState === normalizedState;
+    return (
+      Boolean(normalizedCity) &&
+      Boolean(normalizedState) &&
+      areaCity === normalizedCity &&
+      areaState === normalizedState
+    );
   });
 
   if (cityStateMatch) {
