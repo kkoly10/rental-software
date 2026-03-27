@@ -16,9 +16,15 @@ export function PublicHeader() {
         </nav>
 
         <div className="public-nav-right">
-          <div className="public-status-pill">Choose date &amp; ZIP</div>
-          <Link href="/inventory" className="secondary-btn">
-            Browse Rentals
+          <Link href="/login" className="ghost-btn" style={{ fontSize: 14 }}>
+            Rentals Login
+          </Link>
+          <Link
+            href="/inventory"
+            className="primary-btn"
+            style={{ background: "#f97316", minHeight: 42 }}
+          >
+            Book Now
           </Link>
         </div>
       </div>
