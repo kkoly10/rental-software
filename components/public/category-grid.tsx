@@ -6,28 +6,28 @@ const categories = [
     startingPrice: "Starting $149",
     href: "/inventory?category=bounce-houses",
     image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=380&fit=crop&auto=format",
+      "https://unsplash.com/photos/a-red-inflatable-castle-bounce-house-on-a-grassy-lawn-a_hMEPZUmOM/download?force=true&w=1200",
   },
   {
     title: "Water Slides",
     startingPrice: "Starting $199",
     href: "/inventory?category=water-slides",
     image:
-      "https://images.unsplash.com/photo-1529156069898-dc8d2ed57fb2?w=600&h=380&fit=crop&auto=format",
+      "https://unsplash.com/photos/an-aerial-view-of-an-inflatable-water-slide-zD1vrOiZbHY/download?force=true&w=1200",
   },
   {
     title: "Obstacle Courses",
     startingPrice: "Starting $249",
     href: "/inventory?category=obstacle-courses",
     image:
-      "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=600&h=380&fit=crop&auto=format",
+      "https://unsplash.com/photos/a-woman-is-playing-in-an-inflatable-park--IYY9bkSCAg/download?force=true&w=1200",
   },
   {
     title: "Party Packages",
     startingPrice: "Starting $299",
     href: "/inventory?category=packages",
     image:
-      "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&h=380&fit=crop&auto=format",
+      "https://unsplash.com/photos/a-decorated-event-space-with-tables-and-balloons-Cfz5r15fKdU/download?force=true&w=1200",
   },
 ] as const;
 
@@ -58,7 +58,9 @@ export function CategoryGrid() {
               />
               <div className="category-photo-body">
                 <h3>{category.title}</h3>
-                <p className="category-starting-price">{category.startingPrice}</p>
+                <p className="category-starting-price">
+                  {category.startingPrice}
+                </p>
               </div>
             </Link>
           ))}
