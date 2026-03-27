@@ -11,6 +11,8 @@ import {
   signInSchema,
   signUpSchema,
 } from "@/lib/validation/auth";
+import { getActionClientKey } from "@/lib/security/action-client";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export type AuthActionState = {
   ok: boolean;
@@ -24,6 +26,55 @@ function getValidationMessage(error: ZodError) {
 function safeRedirectPath(value?: string) {
   if (!value) return "/dashboard";
   return value.startsWith("/") ? value : "/dashboard";
+}
+
+async function checkAuthRateLimit(options: {
+  scope: "signin" | "signup" | "password-reset";
+  email: string;
+}) {
+  const clientKey = await getActionClientKey();
+
+  const limits = {
+    signin: {
+      client: { limit: 10, windowSeconds: 900 },
+      email: { limit: 8, windowSeconds: 900 },
+      message: "Too many sign-in attempts. Please wait a few minutes and try again.",
+    },
+    signup: {
+      client: { limit: 5, windowSeconds: 3600 },
+      email: { limit: 3, windowSeconds: 3600 },
+      message: "Too many signup attempts. Please wait before trying again.",
+    },
+    "password-reset": {
+      client: { limit: 5, windowSeconds: 3600 },
+      email: { limit: 3, windowSeconds: 3600 },
+      message: "Too many password reset attempts. Please wait before trying again.",
+    },
+  }[options.scope];
+
+  const [clientLimit, emailLimit] = await Promise.all([
+    enforceRateLimit({
+      scope: `auth:${options.scope}:client`,
+      actor: clientKey,
+      limit: limits.client.limit,
+      windowSeconds: limits.client.windowSeconds,
+    }),
+    enforceRateLimit({
+      scope: `auth:${options.scope}:email`,
+      actor: options.email,
+      limit: limits.email.limit,
+      windowSeconds: limits.email.windowSeconds,
+    }),
+  ]);
+
+  if (!clientLimit.allowed || !emailLimit.allowed) {
+    return {
+      ok: false,
+      message: limits.message,
+    } satisfies AuthActionState;
+  }
+
+  return null;
 }
 
 export async function signInWithPassword(
@@ -46,6 +97,22 @@ export async function signInWithPassword(
 
   if (!parsed.success) {
     return { ok: false, message: getValidationMessage(parsed.error) };
+  }
+
+  try {
+    const rateLimitFailure = await checkAuthRateLimit({
+      scope: "signin",
+      email: parsed.data.email,
+    });
+
+    if (rateLimitFailure) {
+      return rateLimitFailure;
+    }
+  } catch {
+    return {
+      ok: false,
+      message: "Unable to process sign-in right now. Please try again shortly.",
+    };
   }
 
   const { email, password, redirect: requestedRedirect } = parsed.data;
@@ -117,6 +184,22 @@ export async function signUpWithPassword(
     return { ok: false, message: getValidationMessage(parsed.error) };
   }
 
+  try {
+    const rateLimitFailure = await checkAuthRateLimit({
+      scope: "signup",
+      email: parsed.data.email,
+    });
+
+    if (rateLimitFailure) {
+      return rateLimitFailure;
+    }
+  } catch {
+    return {
+      ok: false,
+      message: "Unable to process signup right now. Please try again shortly.",
+    };
+  }
+
   const { email, password, fullName, phone } = parsed.data;
   const siteUrl = await getSiteUrl();
   const supabase = await createSupabaseServerClient();
@@ -159,6 +242,23 @@ export async function requestPasswordReset(
 
   if (!parsed.success) {
     return { ok: false, message: getValidationMessage(parsed.error) };
+  }
+
+  try {
+    const rateLimitFailure = await checkAuthRateLimit({
+      scope: "password-reset",
+      email: parsed.data.email,
+    });
+
+    if (rateLimitFailure) {
+      return rateLimitFailure;
+    }
+  } catch {
+    return {
+      ok: false,
+      message:
+        "Unable to process password reset right now. Please try again shortly.",
+    };
   }
 
   const siteUrl = await getSiteUrl();
