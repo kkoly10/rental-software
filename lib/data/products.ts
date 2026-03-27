@@ -15,8 +15,9 @@ export async function getProducts(): Promise<ProductSummary[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, is_active, categories(name)")
+    .select("id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at)")
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .order("name", { ascending: true });
 
   if (error || !data || data.length === 0) {
@@ -24,13 +25,15 @@ export async function getProducts(): Promise<ProductSummary[]> {
   }
 
   return data.map((product) => {
-    const category = (product as Record<string, unknown>).categories as {
-      name: string;
-    } | null;
+    const category = (product as Record<string, unknown>).categories as
+      | { name: string; deleted_at?: string | null }
+      | null;
+
     return {
       id: product.id,
       name: product.name ?? "Unnamed",
-      category: category?.name ?? "Inflatable",
+      category:
+        category && !category.deleted_at ? category.name : "Inflatable",
       price:
         typeof product.base_price === "number"
           ? `$${product.base_price}/day`
@@ -69,24 +72,24 @@ export async function getProductById(productId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name, deleted_at)")
     .eq("id", productId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) return null;
 
-  const category = (data as Record<string, unknown>).categories as {
-    id: string;
-    name: string;
-  } | null;
+  const category = (data as Record<string, unknown>).categories as
+    | { id: string; name: string; deleted_at?: string | null }
+    | null;
 
   return {
     id: data.id,
     name: data.name ?? "",
     slug: data.slug ?? "",
-    category: category?.name ?? "Inflatable",
-    categoryId: category?.id ?? "",
+    category: category && !category.deleted_at ? category.name : "Inflatable",
+    categoryId: category && !category.deleted_at ? category.id : "",
     shortDescription: data.short_description ?? "",
     description: data.description ?? "",
     basePrice: typeof data.base_price === "number" ? data.base_price : 0,
@@ -119,6 +122,7 @@ export async function getCategories() {
     .from("categories")
     .select("id, name, slug")
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (ctx) {
