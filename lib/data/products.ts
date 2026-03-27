@@ -2,35 +2,84 @@ import { mockProducts } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { paginateItems, type PaginatedResult, normalizeQuery } from "@/lib/listing/pagination";
 import type { ProductSummary } from "@/lib/types";
 
-export async function getProducts(): Promise<ProductSummary[]> {
+function matchesProductQuery(product: ProductSummary, query: string) {
+  if (!query) return true;
+
+  const haystack = [
+    product.name,
+    product.category,
+    product.price,
+    product.status,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(query.toLowerCase());
+}
+
+export async function getProductsPage(options?: {
+  page?: string | number | null;
+  query?: string | null;
+  pageSize?: number;
+}): Promise<PaginatedResult<ProductSummary>> {
+  const query = normalizeQuery(options?.query);
+
   if (!hasSupabaseEnv()) {
-    return mockProducts;
+    const filtered = mockProducts.filter((product) =>
+      matchesProductQuery(product, query)
+    );
+    return paginateItems(filtered, {
+      page: options?.page,
+      pageSize: options?.pageSize ?? 20,
+      query,
+    });
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return mockProducts;
+  if (!ctx) {
+    const filtered = mockProducts.filter((product) =>
+      matchesProductQuery(product, query)
+    );
+    return paginateItems(filtered, {
+      page: options?.page,
+      pageSize: options?.pageSize ?? 20,
+      query,
+    });
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, is_active, categories(name)")
+    .select("id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at)")
     .eq("organization_id", ctx.organizationId)
-    .order("name", { ascending: true });
+    .is("deleted_at", null)
+    .order("name", { ascending: true })
+    .limit(500);
 
   if (error || !data || data.length === 0) {
-    return mockProducts;
+    const filtered = mockProducts.filter((product) =>
+      matchesProductQuery(product, query)
+    );
+    return paginateItems(filtered, {
+      page: options?.page,
+      pageSize: options?.pageSize ?? 20,
+      query,
+    });
   }
 
-  return data.map((product) => {
-    const category = (product as Record<string, unknown>).categories as {
-      name: string;
-    } | null;
+  const mapped: ProductSummary[] = data.map((product) => {
+    const category = (product as Record<string, unknown>).categories as
+      | { name?: string | null; deleted_at?: string | null }
+      | null;
+
     return {
       id: product.id,
       name: product.name ?? "Unnamed",
-      category: category?.name ?? "Inflatable",
+      category:
+        category && !category.deleted_at ? category.name ?? "Inflatable" : "Inflatable",
       price:
         typeof product.base_price === "number"
           ? `$${product.base_price}/day`
@@ -39,6 +88,21 @@ export async function getProducts(): Promise<ProductSummary[]> {
       tone: (product.is_active ? "success" : "default") as ProductSummary["tone"],
     };
   });
+
+  const filtered = mapped.filter((product) =>
+    matchesProductQuery(product, query)
+  );
+
+  return paginateItems(filtered, {
+    page: options?.page,
+    pageSize: options?.pageSize ?? 20,
+    query,
+  });
+}
+
+export async function getProducts(): Promise<ProductSummary[]> {
+  const result = await getProductsPage();
+  return result.items;
 }
 
 export async function getProductById(productId: string) {
@@ -69,24 +133,24 @@ export async function getProductById(productId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name, deleted_at)")
     .eq("id", productId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) return null;
 
-  const category = (data as Record<string, unknown>).categories as {
-    id: string;
-    name: string;
-  } | null;
+  const category = (data as Record<string, unknown>).categories as
+    | { id: string; name: string; deleted_at?: string | null }
+    | null;
 
   return {
     id: data.id,
     name: data.name ?? "",
     slug: data.slug ?? "",
-    category: category?.name ?? "Inflatable",
-    categoryId: category?.id ?? "",
+    category: category && !category.deleted_at ? category.name : "Inflatable",
+    categoryId: category && !category.deleted_at ? category.id : "",
     shortDescription: data.short_description ?? "",
     description: data.description ?? "",
     basePrice: typeof data.base_price === "number" ? data.base_price : 0,
@@ -119,6 +183,7 @@ export async function getCategories() {
     .from("categories")
     .select("id, name, slug")
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (ctx) {

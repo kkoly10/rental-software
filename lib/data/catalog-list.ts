@@ -44,10 +44,11 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, short_description, is_active, categories(name), product_images(image_url, is_primary, sort_order)"
+      "id, name, slug, base_price, short_description, is_active, deleted_at, categories(name, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
     .eq("visibility", "public")
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("name", { ascending: true });
 
   if (error || !data || data.length === 0) {
@@ -56,15 +57,22 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
 
   return data.map((product) => {
     const category = (product as Record<string, unknown>).categories as
-      | { name: string }
+      | { name: string; deleted_at?: string | null }
       | null;
 
     const images =
       ((product as Record<string, unknown>).product_images as
-        | { image_url: string; is_primary?: boolean; sort_order?: number }[]
+        | {
+            image_url: string;
+            is_primary?: boolean;
+            sort_order?: number;
+            deleted_at?: string | null;
+          }[]
         | null) ?? [];
 
-    const sortedImages = [...images].sort((a, b) => {
+    const activeImages = images.filter((image) => !image.deleted_at);
+
+    const sortedImages = [...activeImages].sort((a, b) => {
       if (a.is_primary && !b.is_primary) return -1;
       if (!a.is_primary && b.is_primary) return 1;
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
@@ -74,7 +82,8 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
       id: product.id,
       name: product.name ?? "Unnamed Product",
       slug: product.slug ?? "product",
-      category: category?.name ?? "Inflatable",
+      category:
+        category && !category.deleted_at ? category.name : "Inflatable",
       price:
         typeof product.base_price === "number"
           ? `$${product.base_price}/day`

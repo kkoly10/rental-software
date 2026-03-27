@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CheckoutSummaryCard } from "@/components/checkout/checkout-summary-card";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 
 function formatProductName(value?: string) {
   if (!value) return undefined;
@@ -9,6 +12,26 @@ function formatProductName(value?: string) {
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ product?: string; date?: string; zip?: string }>;
+}): Promise<Metadata> {
+  const { product } = await searchParams;
+  const settings = await getOrganizationSettings();
+  const productName = formatProductName(product);
+
+  return buildPageMetadata({
+    title: productName
+      ? `${productName} Checkout | ${settings.businessName}`
+      : `Checkout | ${settings.businessName}`,
+    description: productName
+      ? `Complete your booking request for ${productName} with ${settings.businessName}.`
+      : `Complete your inflatable rental booking request with ${settings.businessName}.`,
+    path: "/checkout",
+  });
 }
 
 export default async function CheckoutPage({

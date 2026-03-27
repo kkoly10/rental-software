@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { CopilotMessageList, type CopilotMessage } from "./copilot-message-list";
 import { CopilotInput } from "./copilot-input";
 import { CopilotSuggestedPrompts } from "./copilot-suggested-prompts";
 import { getSuggestedPrompts } from "@/lib/copilot/suggested-prompts";
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return "Something went wrong. Please try again.";
+}
 
 export function CopilotPanel({
   currentRoute,
@@ -19,7 +27,10 @@ export function CopilotPanel({
 
   const sendMessage = useCallback(
     async (content: string) => {
-      const userMsg: CopilotMessage = { role: "user", content };
+      const trimmed = content.trim();
+      if (!trimmed) return;
+
+      const userMsg: CopilotMessage = { role: "user", content: trimmed };
       setMessages((prev) => [...prev, userMsg]);
       setLoading(true);
 
@@ -27,18 +38,35 @@ export function CopilotPanel({
         const res = await fetch("/api/copilot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, route: currentRoute }),
+          body: JSON.stringify({ message: trimmed, route: currentRoute }),
         });
-        const data = await res.json();
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          throw new Error(
+            typeof data?.error === "string"
+              ? data.error
+              : "Copilot could not process your request."
+          );
+        }
+
         const assistantMsg: CopilotMessage = {
           role: "assistant",
-          content: data.response ?? "Sorry, I couldn't process that request.",
+          content:
+            typeof data?.response === "string"
+              ? data.response
+              : "Sorry, I couldn't process that request.",
         };
+
         setMessages((prev) => [...prev, assistantMsg]);
-      } catch {
+      } catch (error) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "Something went wrong. Please try again." },
+          {
+            role: "assistant",
+            content: getErrorMessage(error),
+          },
         ]);
       } finally {
         setLoading(false);
@@ -52,7 +80,9 @@ export function CopilotPanel({
       <div className="copilot-panel-header">
         <div>
           <strong style={{ fontSize: 14 }}>Operator Copilot</strong>
-          <div className="muted" style={{ fontSize: 12 }}>Read-only assistant</div>
+          <div className="muted" style={{ fontSize: 12 }}>
+            Read-only assistant
+          </div>
         </div>
         <button
           onClick={onClose}
@@ -72,7 +102,10 @@ export function CopilotPanel({
       <CopilotInput onSend={sendMessage} disabled={loading} />
 
       {loading && (
-        <div className="muted" style={{ textAlign: "center", padding: "6px 0", fontSize: 12 }}>
+        <div
+          className="muted"
+          style={{ textAlign: "center", padding: "6px 0", fontSize: 12 }}
+        >
           Thinking...
         </div>
       )}

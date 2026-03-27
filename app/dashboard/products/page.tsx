@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getProducts } from "@/lib/data/products";
+import { getProductsPage } from "@/lib/data/products";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { ListSearchForm } from "@/components/dashboard/list-search-form";
+import { ListPagination } from "@/components/dashboard/list-pagination";
 
-export default async function ProductsPage() {
-  const products = await getProducts();
-  const guidanceState = await getGuidanceState();
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const [productsPage, guidanceState] = await Promise.all([
+    getProductsPage({ query: params.q, page: params.page }),
+    getGuidanceState(),
+  ]);
   const helpConfig = pageHelpMap["/dashboard/products"];
 
   return (
@@ -17,53 +26,83 @@ export default async function ProductsPage() {
       description="Manage public catalog items, pricing, categories, and rental readiness."
     >
       {helpConfig && (
-        <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
+        <ContextHelpBanner
+          config={helpConfig}
+          dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false}
+        />
       )}
+
       <section className="panel">
         <div className="section-header">
           <div>
             <div className="kicker">Catalog management</div>
             <h2 style={{ margin: "6px 0 0" }}>Product inventory</h2>
+            <div className="muted" style={{ marginTop: 8 }}>
+              {productsPage.totalItems} matching product
+              {productsPage.totalItems === 1 ? "" : "s"} found
+            </div>
           </div>
           <Link href="/dashboard/products/new" className="primary-btn">
             Add product
           </Link>
         </div>
 
-        {products.length === 0 ? (
+        <ListSearchForm
+          placeholder="Search by name, category, status, or price"
+          initialQuery={productsPage.query}
+        />
+
+        {productsPage.items.length === 0 ? (
           <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-            <strong>No products yet</strong>
+            <strong>No products found</strong>
             <div className="muted" style={{ marginTop: 8 }}>
-              Add your first inflatable product to start building your catalog.
+              {productsPage.query
+                ? "Try a different search term."
+                : "Add your first inflatable product to start building your catalog."}
             </div>
-            <div style={{ marginTop: 12 }}>
-              <Link href="/dashboard/products/new" className="primary-btn">
-                Add your first product
-              </Link>
-            </div>
+            {!productsPage.query ? (
+              <div style={{ marginTop: 12 }}>
+                <Link href="/dashboard/products/new" className="primary-btn">
+                  Add your first product
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : (
-          <div className="list">
-            {products.map((product) => (
-              <Link key={product.id} href={`/dashboard/products/${product.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <article className="order-card">
-                  <div className="order-row">
-                    <div>
-                      <strong>{product.name}</strong>
-                      <div className="muted">{product.category}</div>
+          <>
+            <div className="list">
+              {productsPage.items.map((product) => (
+                <Link
+                  key={product.id}
+                  href={`/dashboard/products/${product.id}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  <article className="order-card">
+                    <div className="order-row">
+                      <div>
+                        <strong>{product.name}</strong>
+                        <div className="muted">{product.category}</div>
+                      </div>
+                      <StatusBadge
+                        label={product.status}
+                        tone={product.tone as "default" | "success" | "warning" | "danger"}
+                      />
                     </div>
-                    <StatusBadge
-                      label={product.status}
-                      tone={product.tone as "default" | "success" | "warning"}
-                    />
-                  </div>
-                  <div className="price-row">
-                    <span className="muted">{product.price}</span>
-                  </div>
-                </article>
-              </Link>
-            ))}
-          </div>
+                    <div className="price-row">
+                      <span className="muted">{product.price}</span>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+
+            <ListPagination
+              pathname="/dashboard/products"
+              page={productsPage.page}
+              totalPages={productsPage.totalPages}
+              query={productsPage.query}
+            />
+          </>
         )}
       </section>
     </DashboardShell>

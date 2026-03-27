@@ -1,6 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function isProtectedPath(pathname: string) {
+  return (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/crew") ||
+    pathname.startsWith("/onboarding")
+  );
+}
+
+function isAuthEntryPath(pathname: string) {
+  return (
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password"
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -28,39 +44,66 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  const pathname = request.nextUrl.pathname;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect dashboard and crew routes — require auth
-  if (
-    !user &&
-    (request.nextUrl.pathname.startsWith("/dashboard") ||
-      request.nextUrl.pathname.startsWith("/crew"))
-  ) {
+  if (!user && isProtectedPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
-  // Redirect logged-in users from login/signup to dashboard
+  const isConfirmed = Boolean(user?.email_confirmed_at);
+
   if (
     user &&
-    (request.nextUrl.pathname === "/login" ||
-      request.nextUrl.pathname === "/signup")
+    !isConfirmed &&
+    (pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/crew") ||
+      pathname.startsWith("/onboarding"))
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/auth/verify-email";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
-  // For authenticated dashboard users, check if they have an org membership.
-  // If not, redirect to onboarding (unless they're already there).
-  if (
-    user &&
-    request.nextUrl.pathname.startsWith("/dashboard")
-  ) {
+  if (user && isAuthEntryPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = isConfirmed ? "/dashboard" : "/auth/verify-email";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && pathname === "/auth/verify-email" && isConfirmed) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && pathname === "/onboarding" && isConfirmed) {
+    const { data: membership } = await supabase
+      .from("organization_memberships")
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    if (membership) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (user && pathname.startsWith("/dashboard") && isConfirmed) {
     const { data: membership } = await supabase
       .from("organization_memberships")
       .select("id")
@@ -72,6 +115,7 @@ export async function middleware(request: NextRequest) {
     if (!membership) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
+      url.search = "";
       return NextResponse.redirect(url);
     }
   }

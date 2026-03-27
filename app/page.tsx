@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
 import { TrustBar } from "@/components/public/trust-bar";
@@ -8,6 +9,17 @@ import { ServiceAreaSection } from "@/components/public/service-area-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getOrganizationSettings();
+
+  return buildPageMetadata({
+    title: `${settings.businessName} Inflatable Rentals`,
+    description: `${settings.websiteMessage} Serving ${settings.serviceAreaLabel}. Book bounce houses, water slides, and party rentals online.`,
+    path: "/",
+  });
+}
 
 export default async function HomePage() {
   const [featured, settings] = await Promise.all([
