@@ -2,7 +2,11 @@ import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-import { paginateItems, type PaginatedResult, normalizeQuery } from "@/lib/listing/pagination";
+import {
+  paginateItems,
+  type PaginatedResult,
+  normalizeQuery,
+} from "@/lib/listing/pagination";
 import type { OrderSummary } from "@/lib/types";
 
 function formatStatus(status: string): string {
@@ -10,7 +14,11 @@ function formatStatus(status: string): string {
 }
 
 function statusTone(status: string): OrderSummary["tone"] {
-  if (status === "confirmed" || status === "completed" || status === "delivered") {
+  if (
+    status === "confirmed" ||
+    status === "completed" ||
+    status === "delivered"
+  ) {
     return "success";
   }
   if (status === "awaiting_deposit" || status === "quote_sent") {
@@ -47,7 +55,9 @@ export async function getOrdersPage(options?: {
   const query = normalizeQuery(options?.query);
 
   if (!hasSupabaseEnv()) {
-    const filtered = mockOrders.filter((order) => matchesOrderQuery(order, query));
+    const filtered = mockOrders.filter((order) =>
+      matchesOrderQuery(order, query)
+    );
     return paginateItems(filtered, {
       page: options?.page,
       pageSize: options?.pageSize ?? 20,
@@ -57,7 +67,9 @@ export async function getOrdersPage(options?: {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    const filtered = mockOrders.filter((order) => matchesOrderQuery(order, query));
+    const filtered = mockOrders.filter((order) =>
+      matchesOrderQuery(order, query)
+    );
     return paginateItems(filtered, {
       page: options?.page,
       pageSize: options?.pageSize ?? 20,
@@ -76,7 +88,9 @@ export async function getOrdersPage(options?: {
     .limit(500);
 
   if (error || !data || data.length === 0) {
-    const filtered = mockOrders.filter((order) => matchesOrderQuery(order, query));
+    const filtered = mockOrders.filter((order) =>
+      matchesOrderQuery(order, query)
+    );
     return paginateItems(filtered, {
       page: options?.page,
       pageSize: options?.pageSize ?? 20,
@@ -86,7 +100,11 @@ export async function getOrdersPage(options?: {
 
   const mapped: OrderSummary[] = data.map((order) => {
     const customer = (order as Record<string, unknown>).customers as
-      | { first_name?: string | null; last_name?: string | null; deleted_at?: string | null }
+      | {
+          first_name?: string | null;
+          last_name?: string | null;
+          deleted_at?: string | null;
+        }
       | null;
     const items =
       ((order as Record<string, unknown>).order_items as
@@ -101,7 +119,7 @@ export async function getOrdersPage(options?: {
 
     return {
       id: order.id,
-      customer: customerLabel || order.order_number ?? "Order",
+      customer: customerLabel || (order.order_number ?? "Order"),
       item:
         items.length > 0
           ? items.map((i) => i.item_name_snapshot).filter(Boolean).join(", ")
