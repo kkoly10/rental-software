@@ -1,8 +1,30 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const [product, settings] = await Promise.all([
+    getCatalogDetail(slug),
+    getOrganizationSettings(),
+  ]);
+
+  return buildPageMetadata({
+    title: `${product.name} | ${settings.businessName}`,
+    description: product.description,
+    path: `/inventory/${product.slug}`,
+    image: product.imageUrl || undefined,
+  });
+}
 
 export default async function ProductDetailPage({
   params,
@@ -32,7 +54,9 @@ export default async function ProductDetailPage({
       <main className="page">
         <div className="container">
           <div className="storefront-context-pills" style={{ marginBottom: 18 }}>
-            {date ? <span className="storefront-context-pill">Date: {date}</span> : null}
+            {date ? (
+              <span className="storefront-context-pill">Date: {date}</span>
+            ) : null}
             {zip ? <span className="storefront-context-pill">ZIP: {zip}</span> : null}
           </div>
 
@@ -92,7 +116,10 @@ export default async function ProductDetailPage({
               </div>
 
               <div className="price-row" style={{ marginTop: 20 }}>
-                <Link href={`/checkout?${checkoutParams.toString()}`} className="primary-btn">
+                <Link
+                  href={`/checkout?${checkoutParams.toString()}`}
+                  className="primary-btn"
+                >
                   Reserve Now
                 </Link>
                 <Link href="/inventory" className="secondary-btn">
@@ -140,8 +167,12 @@ export default async function ProductDetailPage({
                 <div className="list">
                   <div className="order-card">Backyard birthdays</div>
                   <div className="order-card">School or church family days</div>
-                  <div className="order-card">Weekend neighborhood celebrations</div>
-                  <div className="order-card">Add-ons and package bundles available</div>
+                  <div className="order-card">
+                    Weekend neighborhood celebrations
+                  </div>
+                  <div className="order-card">
+                    Add-ons and package bundles available
+                  </div>
                 </div>
               </div>
             </div>
