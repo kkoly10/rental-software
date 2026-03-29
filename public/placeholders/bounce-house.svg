@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="700" rx="36" fill="url(#bg)"/>
+  <circle cx="120" cy="120" r="60" fill="#2563eb" opacity="0.15"/>
+  <circle cx="1050" cy="120" r="48" fill="#f97316" opacity="0.16"/>
+
+  <rect x="90" y="70" width="260" height="48" rx="24" fill="rgba(255,255,255,0.85)"/>
+  <text x="220" y="102" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#1d4ed8">BOUNCE HOUSE</text>
+
+  <rect x="180" y="250" width="840" height="280" rx="36" fill="url(#body)"/>
+  <rect x="240" y="190" width="120" height="340" rx="30" fill="#fb923c"/>
+  <rect x="840" y="190" width="120" height="340" rx="30" fill="#3b82f6"/>
+  <rect x="380" y="210" width="440" height="110" rx="28" fill="rgba(255,255,255,0.18)"/>
+
+  <path d="M250 530 Q420 420 600 530 T950 530" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="300" cy="205" r="32" fill="#2563eb"/>
+  <circle cx="900" cy="205" r="32" fill="#f97316"/>
+  <circle cx="300" cy="205" r="14" fill="white" opacity="0.75"/>
+  <circle cx="900" cy="205" r="14" fill="white" opacity="0.75"/>
+
+  <text x="600" y="395" text-anchor="middle" font-size="112">🏰</text>
+  <text x="600" y="625" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#1d4ed8">RENTALOS PLACEHOLDER MEDIA</text>
+</svg>
