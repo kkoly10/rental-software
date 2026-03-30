@@ -6,28 +6,28 @@ const categories = [
     startingPrice: "Starting $149",
     href: "/inventory?category=bounce-houses",
     image:
-      "https://unsplash.com/photos/a-red-inflatable-castle-bounce-house-on-a-grassy-lawn-a_hMEPZUmOM/download?force=true&w=1200",
+      "https://images.unsplash.com/photo-1573666474068-12fd45e6a4f7?auto=format&fit=crop&w=800&q=80",
   },
   {
     title: "Water Slides",
     startingPrice: "Starting $199",
     href: "/inventory?category=water-slides",
     image:
-      "https://unsplash.com/photos/an-aerial-view-of-an-inflatable-water-slide-zD1vrOiZbHY/download?force=true&w=1200",
+      "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=80",
   },
   {
     title: "Obstacle Courses",
     startingPrice: "Starting $249",
     href: "/inventory?category=obstacle-courses",
     image:
-      "https://unsplash.com/photos/a-woman-is-playing-in-an-inflatable-park--IYY9bkSCAg/download?force=true&w=1200",
+      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=80",
   },
   {
     title: "Party Packages",
     startingPrice: "Starting $299",
     href: "/inventory?category=packages",
     image:
-      "https://unsplash.com/photos/a-decorated-event-space-with-tables-and-balloons-Cfz5r15fKdU/download?force=true&w=1200",
+      "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80",
   },
 ] as const;
 
@@ -52,10 +52,14 @@ export function CategoryGrid() {
               href={category.href}
               className="category-photo-card"
             >
-              <div
-                className="category-photo-img"
-                style={{ backgroundImage: `url(${category.image})` }}
-              />
+              <div className="category-photo-img">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={category.image}
+                  alt={category.title}
+                  className="category-photo-img-el"
+                />
+              </div>
               <div className="category-photo-body">
                 <h3>{category.title}</h3>
                 <p className="category-starting-price">
