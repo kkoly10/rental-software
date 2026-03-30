@@ -180,6 +180,16 @@ export async function createDocumentsForOrder(
   revalidatePath("/dashboard/documents");
   revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);
 
+  // Send documents-ready email to customer (non-blocking)
+  import("@/lib/email/triggers").then(({ triggerDocumentsReadyEmail }) =>
+    triggerDocumentsReadyEmail({
+      organizationId: ctx.organizationId,
+      orderId: parsed.data.orderId,
+      customerId: order.customer_id,
+      documentTypes: ["rental_agreement", "safety_waiver"],
+    }).catch(() => {})
+  );
+
   return {
     ok: true,
     message: "Rental agreement and safety waiver created.",

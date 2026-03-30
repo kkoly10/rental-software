@@ -348,6 +348,19 @@ export async function createOrder(
     }
   }
 
+  // Send new order alert to operator (non-blocking)
+  import("@/lib/email/triggers").then(({ triggerDashboardOrderEmail }) =>
+    triggerDashboardOrderEmail({
+      organizationId: ctx.organizationId,
+      customerName: `${firstName} ${lastName}`,
+      customerEmail: email ?? "",
+      orderNumber,
+      productName: productNameSnapshot,
+      eventDate: eventDate ?? "",
+      total,
+    }).catch(() => {})
+  );
+
   redirect("/dashboard/orders");
 }
 
@@ -408,6 +421,15 @@ export async function updateOrderStatus(
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  // Send status update email to customer (non-blocking)
+  import("@/lib/email/triggers").then(({ triggerOrderStatusEmail }) =>
+    triggerOrderStatusEmail({
+      organizationId: ctx.organizationId,
+      orderId: parsed.data.orderId,
+      newStatus: parsed.data.newStatus,
+    }).catch(() => {})
+  );
 
   return {
     ok: true,

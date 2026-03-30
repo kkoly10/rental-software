@@ -148,6 +148,38 @@ export async function recordPayment(
   revalidatePath("/dashboard/payments");
   revalidatePath(`/dashboard/orders/${orderId}`);
 
+  // Send payment email to customer (non-blocking)
+  import("@/lib/email/triggers").then(async ({ triggerPaymentReceivedEmail }) => {
+    // Fetch customer details for the email
+    const { data: fullOrder } = await supabase
+      .from("orders")
+      .select("order_number, customer_id")
+      .eq("id", orderId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+
+    if (!fullOrder?.customer_id) return;
+
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("first_name, email")
+      .eq("id", fullOrder.customer_id)
+      .maybeSingle();
+
+    if (!customer?.email) return;
+
+    await triggerPaymentReceivedEmail({
+      organizationId: ctx.organizationId,
+      customerFirstName: customer.first_name ?? "there",
+      customerEmail: customer.email,
+      orderNumber: fullOrder.order_number,
+      amount,
+      paymentType,
+      paymentMethod,
+      newBalance,
+    });
+  }).catch(() => {});
+
   return {
     ok: true,
     message:
