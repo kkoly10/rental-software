@@ -12,6 +12,7 @@ export const dashboardNavItems = [
   { href: "/dashboard/website", label: "Website", tourId: "nav-website" },
   { href: "/dashboard/settings", label: "Settings", tourId: undefined },
   { href: "/dashboard/settings/billing", label: "Billing", tourId: undefined },
+  { href: "/dashboard/settings/team", label: "Team", tourId: undefined },
   { href: "/dashboard/help", label: "Help Center", tourId: undefined },
   { href: "/crew/today", label: "Crew Mobile", tourId: undefined },
 ] as const;
