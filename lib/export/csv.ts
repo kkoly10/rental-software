@@ -46,7 +46,7 @@ export async function exportOrders(): Promise<ExportResult> {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "order_number, order_status, event_date, total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount, balance_due_amount, created_at, customers(first_name, last_name, email, phone), order_items(item_name_snapshot, unit_price_snapshot, quantity)"
+      "order_number, order_status, event_date, total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount, balance_due_amount, created_at, customers(first_name, last_name, email, phone), order_items(item_name_snapshot, unit_price, quantity)"
     )
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false })
@@ -110,7 +110,7 @@ export async function exportCustomers(): Promise<ExportResult> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("customers")
-    .select("first_name, last_name, email, phone, address_line1, address_line2, city, state, postal_code, created_at")
+    .select("first_name, last_name, email, phone, notes, created_at")
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
@@ -121,8 +121,7 @@ export async function exportCustomers(): Promise<ExportResult> {
   }
 
   const headers = [
-    "First Name", "Last Name", "Email", "Phone",
-    "Address", "City", "State", "Zip", "Created At",
+    "First Name", "Last Name", "Email", "Phone", "Notes", "Created At",
   ];
 
   const rows = data.map((c) => [
@@ -130,10 +129,7 @@ export async function exportCustomers(): Promise<ExportResult> {
     c.last_name ?? "",
     c.email ?? "",
     c.phone ?? "",
-    [c.address_line1, c.address_line2].filter(Boolean).join(", "),
-    c.city ?? "",
-    c.state ?? "",
-    c.postal_code ?? "",
+    c.notes ?? "",
     c.created_at ?? "",
   ]);
 
@@ -161,7 +157,7 @@ export async function exportPayments(): Promise<ExportResult> {
   const { data, error } = await supabase
     .from("payments")
     .select(
-      "amount, payment_type, payment_method, payment_status, paid_at, notes, orders!inner(organization_id, order_number, customers(first_name, last_name, email))"
+      "amount, payment_type, payment_method, payment_status, paid_at, reference_note, orders!inner(organization_id, order_number, customers(first_name, last_name, email))"
     )
     .eq("orders.organization_id", ctx.organizationId)
     .order("paid_at", { ascending: false, nullsFirst: false })
@@ -190,7 +186,7 @@ export async function exportPayments(): Promise<ExportResult> {
       p.payment_method ?? "",
       p.payment_status ?? "",
       p.paid_at ?? "",
-      p.notes ?? "",
+      p.reference_note ?? "",
     ];
   });
 

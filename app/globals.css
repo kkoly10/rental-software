@@ -332,6 +332,51 @@ img {
   padding: 28px 0 48px;
 }
 
+/* Legal content */
+/* Contact form */
+.contact-form {
+  display: grid;
+  gap: 14px;
+}
+
+.contact-form textarea {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: white;
+  font: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.contact-form textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(30, 93, 207, 0.1);
+}
+
+.legal-content h2 {
+  font-size: 1.15rem;
+  margin: 28px 0 10px;
+  color: var(--text);
+}
+
+.legal-content p {
+  color: var(--text-soft);
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.legal-content ul {
+  color: var(--text-soft);
+  line-height: 1.7;
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+
+.legal-content li {
+  margin-bottom: 6px;
+}
+
 .filters {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

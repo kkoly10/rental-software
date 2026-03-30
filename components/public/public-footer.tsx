@@ -36,6 +36,7 @@ export function PublicFooter() {
                 <a href="#how-it-works" className="muted">How It Works</a>
                 <Link href="/pricing" className="muted">Pricing</Link>
                 <Link href="/order-status" className="muted">Order Status</Link>
+                <Link href="/contact" className="muted">Contact Us</Link>
                 <a href="#service-area" className="muted">Service Area</a>
               </div>
             </div>
@@ -55,8 +56,8 @@ export function PublicFooter() {
               &copy; {year} Bounce Back Rentals. All rights reserved.
             </div>
             <div className="footer-bottom-links">
-              <span className="muted" style={{ fontSize: 12 }}>Privacy</span>
-              <span className="muted" style={{ fontSize: 12 }}>Terms</span>
+              <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
+              <Link href="/terms" className="muted" style={{ fontSize: 12 }}>Terms</Link>
             </div>
           </div>
         </div>

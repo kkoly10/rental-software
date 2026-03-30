@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
@@ -16,6 +17,8 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
+import { JsonLdScript } from "@/components/seo/json-ld-script";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -36,6 +39,15 @@ export default async function HomePage() {
   return (
     <>
       <PublicHeader />
+      <JsonLdScript data={organizationJsonLd(settings)} />
+      <JsonLdScript
+        data={faqJsonLd([
+          { question: "How does the booking process work?", answer: "Customers visit your storefront, pick a date and ZIP code, choose their rentals from your available inventory, and submit a booking request." },
+          { question: "How do deposits and payments work?", answer: "You set your own deposit amounts and payment terms. The system tracks deposits, records payments, and shows remaining balances." },
+          { question: "How do you prevent double-bookings?", answer: "Every confirmed order automatically blocks that product on that date. The availability engine checks for conflicts in real-time." },
+          { question: "What about delivery and setup?", answer: "The platform includes delivery route management with stop-by-stop tracking and a mobile-friendly crew view." },
+        ])}
+      />
 
       <main>
         {/* Hero */}
@@ -52,9 +64,16 @@ export default async function HomePage() {
           <div className="public-hero-overlay" />
 
           <div className="container">
-            <div className="public-hero-copy">
-              <div className="kicker public-kicker">
-                Inflatable rental software for growing businesses
+            <div className="public-hero-shell">
+              <div className="public-hero-visual">
+                <Image
+                  src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=1800"
+                  alt="Colorful inflatable party rental setup"
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="public-hero-photo"
+                />
               </div>
 
               <h1>
