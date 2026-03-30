@@ -14,7 +14,7 @@ export function PublicHeader() {
           <a href="#service-area">Service Area</a>
           <Link href="/pricing">Pricing</Link>
           <Link href="/order-status">Order Status</Link>
-          <Link href="/checkout">Reserve</Link>
+          <Link href="/contact">Contact</Link>
         </nav>
 
         <div className="public-nav-right">
