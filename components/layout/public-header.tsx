@@ -12,6 +12,7 @@ export function PublicHeader() {
           <Link href="/inventory">Catalog</Link>
           <a href="#how-it-works">How It Works</a>
           <a href="#service-area">Service Area</a>
+          <Link href="/pricing">Pricing</Link>
           <Link href="/checkout">Reserve</Link>
         </nav>
 
