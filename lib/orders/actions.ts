@@ -422,6 +422,13 @@ export async function updateOrderStatus(
     return { ok: false, message: error.message };
   }
 
+  // Release availability blocks when order is cancelled (non-blocking)
+  if (parsed.data.newStatus === "cancelled") {
+    import("@/lib/availability/actions").then(({ releaseOrderAvailability }) =>
+      releaseOrderAvailability(ctx.organizationId, parsed.data.orderId).catch(() => {})
+    );
+  }
+
   // Send status update email to customer (non-blocking)
   import("@/lib/email/triggers").then(({ triggerOrderStatusEmail }) =>
     triggerOrderStatusEmail({
