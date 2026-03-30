@@ -105,19 +105,19 @@ export async function getNotifications(): Promise<Notification[]> {
     const [ordersRes, paymentsRes, customersRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, customer_name, status, created_at")
+        .select("id, order_status, created_at, customers(first_name, last_name)")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(10),
       supabase
         .from("payments")
-        .select("id, amount, customer_name, created_at")
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
+        .select("id, amount, paid_at, orders(customers(first_name, last_name))")
+        .gte("paid_at", since)
+        .order("paid_at", { ascending: false })
         .limit(5),
       supabase
         .from("customers")
-        .select("id, name, created_at")
+        .select("id, first_name, last_name, created_at")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(5),
@@ -125,10 +125,14 @@ export async function getNotifications(): Promise<Notification[]> {
 
     if (ordersRes.data) {
       for (const order of ordersRes.data) {
+        const customer = order.customers as { first_name: string | null; last_name: string | null } | null;
+        const customerName = customer
+          ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown";
         const type: NotificationType =
-          order.status === "confirmed"
+          order.order_status === "confirmed"
             ? "order_confirmed"
-            : order.status === "delivered" || order.status === "scheduled"
+            : order.order_status === "delivered" || order.order_status === "scheduled"
               ? "delivery_scheduled"
               : "new_order";
         notifications.push({
@@ -140,7 +144,7 @@ export async function getNotifications(): Promise<Notification[]> {
               : type === "delivery_scheduled"
                 ? "Delivery scheduled"
                 : "New order received",
-          description: `Order #${order.id} — ${order.customer_name || "Unknown"}`,
+          description: `Order #${order.id} — ${customerName}`,
           timestamp: relativeTime(order.created_at),
           read: false,
         });
@@ -149,12 +153,16 @@ export async function getNotifications(): Promise<Notification[]> {
 
     if (paymentsRes.data) {
       for (const payment of paymentsRes.data) {
+        const orderRel = payment.orders as { customers: { first_name: string | null; last_name: string | null } | null } | null;
+        const customerName = orderRel?.customers
+          ? [orderRel.customers.first_name, orderRel.customers.last_name].filter(Boolean).join(" ") || "Unknown"
+          : "Unknown";
         notifications.push({
           id: `payment-${payment.id}`,
           type: "payment_received",
           title: "Payment received",
-          description: `$${Number(payment.amount).toFixed(2)} from ${payment.customer_name || "Unknown"}`,
-          timestamp: relativeTime(payment.created_at),
+          description: `$${Number(payment.amount).toFixed(2)} from ${customerName}`,
+          timestamp: relativeTime(payment.paid_at ?? new Date().toISOString()),
           read: false,
         });
       }
@@ -162,11 +170,12 @@ export async function getNotifications(): Promise<Notification[]> {
 
     if (customersRes.data) {
       for (const customer of customersRes.data) {
+        const customerName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown";
         notifications.push({
           id: `customer-${customer.id}`,
           type: "new_customer",
           title: "New customer signed up",
-          description: `${customer.name || "Unknown"} created an account`,
+          description: `${customerName} created an account`,
           timestamp: relativeTime(customer.created_at),
           read: false,
         });
