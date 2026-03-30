@@ -6,6 +6,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { productJsonLd } from "@/lib/seo/json-ld";
+import { JsonLdScript } from "@/components/seo/json-ld-script";
 
 export async function generateMetadata({
   params,
@@ -47,9 +49,20 @@ export default async function ProductDetailPage({
       ? product.galleryImages
       : ["", "", "", ""];
 
+  const jsonLd = productJsonLd({
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    price: product.price,
+    category: product.category,
+    imageUrl: product.imageUrl,
+    status: "Available",
+  });
+
   return (
     <>
       <PublicHeader />
+      <JsonLdScript data={jsonLd} />
 
       <main className="page">
         <div className="container">
