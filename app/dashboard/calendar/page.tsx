@@ -1,17 +1,25 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { getOrders } from "@/lib/data/orders";
 import { getUpcomingBlocks } from "@/lib/availability/data";
+import { getCalendarEvents } from "@/lib/data/calendar";
 import { BlockDatesForm } from "@/components/availability/block-dates-form";
 import { AvailabilityBlockCard } from "@/components/availability/availability-block-card";
+import { MonthGrid } from "@/components/calendar/month-grid";
 
-export default async function CalendarPage() {
-  const [orders, blocks] = await Promise.all([
-    getOrders(),
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
+  const params = await searchParams;
+  const now = new Date();
+  const year = params.year ? parseInt(params.year, 10) : now.getFullYear();
+  const month = params.month ? parseInt(params.month, 10) : now.getMonth() + 1;
+
+  const [events, blocks] = await Promise.all([
+    getCalendarEvents(year, month),
     getUpcomingBlocks(30),
   ]);
-
-  const upcoming = orders.slice(0, 7);
 
   return (
     <DashboardShell
@@ -24,41 +32,14 @@ export default async function CalendarPage() {
             <div className="section-header">
               <div>
                 <div className="kicker">Schedule view</div>
-                <h2 style={{ margin: "6px 0 0" }}>Upcoming events</h2>
+                <h2 style={{ margin: "6px 0 0" }}>Month calendar</h2>
               </div>
               <Link href="/dashboard/orders/new" className="primary-btn">
                 New booking
               </Link>
             </div>
 
-            {upcoming.length === 0 ? (
-              <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-                <strong>No upcoming events</strong>
-                <div className="muted" style={{ marginTop: 8 }}>
-                  Bookings will appear here as event dates are confirmed.
-                </div>
-              </div>
-            ) : (
-              <div className="list">
-                {upcoming.map((order) => (
-                  <Link key={order.id} href={`/dashboard/orders/${order.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                    <div className="order-card">
-                      <div className="order-row">
-                        <div>
-                          <strong>{order.date}</strong>
-                          <div className="muted">{order.customer}</div>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <strong>{order.total}</strong>
-                          <div className="muted">{order.status}</div>
-                        </div>
-                      </div>
-                      <div className="muted">{order.item}</div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+            <MonthGrid year={year} month={month} events={events} />
           </div>
         </section>
 

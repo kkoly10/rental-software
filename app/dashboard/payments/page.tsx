@@ -9,6 +9,8 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
+import { ExportCsvButton } from "@/components/export/export-csv-button";
+import { exportPayments } from "@/lib/export/csv";
 
 export default async function PaymentsPage({
   searchParams,
@@ -45,6 +47,7 @@ export default async function PaymentsPage({
                 {paymentsPage.totalItems === 1 ? "" : "s"} found
               </div>
             </div>
+            <ExportCsvButton exportAction={exportPayments} label="Export CSV" />
           </div>
 
           <ListSearchForm
