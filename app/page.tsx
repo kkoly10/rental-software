@@ -51,7 +51,18 @@ export default async function HomePage() {
 
       <main>
         {/* Hero */}
-        <section className="section public-hero">
+        <section className="public-hero">
+          <div className="public-hero-visual">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"
+              alt="Colorful inflatable party rental setup"
+              className="public-hero-photo"
+            />
+          </div>
+
+          <div className="public-hero-overlay" />
+
           <div className="container">
             <div className="public-hero-shell">
               <div className="public-hero-visual">
@@ -65,59 +76,53 @@ export default async function HomePage() {
                 />
               </div>
 
-              <div className="public-hero-copy">
-                <div className="kicker public-kicker">
-                  Inflatable rental software for growing businesses
+              <h1>
+                Your Next Party,
+                <br />
+                Booked in Minutes
+              </h1>
+
+              <p>
+                {settings.websiteMessage} Online booking, real-time
+                availability, and automatic invoicing — serving{" "}
+                {settings.serviceAreaLabel}.
+              </p>
+
+              <form action="/inventory" className="storefront-search-card">
+                <div className="storefront-search-grid">
+                  <label className="storefront-field">
+                    <span>Event Date</span>
+                    <input name="date" type="date" />
+                  </label>
+
+                  <label className="storefront-field">
+                    <span>Start Time</span>
+                    <input name="start" type="time" />
+                  </label>
+
+                  <label className="storefront-field">
+                    <span>End Time</span>
+                    <input name="end" type="time" />
+                  </label>
+
+                  <label className="storefront-field">
+                    <span>Delivery ZIP</span>
+                    <input
+                      name="zip"
+                      type="text"
+                      placeholder="22554"
+                      inputMode="numeric"
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="primary-btn storefront-search-btn"
+                  >
+                    Check Availability
+                  </button>
                 </div>
-
-                <h1>
-                  Your Next Party,
-                  <br />
-                  Booked in Minutes
-                </h1>
-
-                <p>
-                  {settings.websiteMessage} Online booking, real-time
-                  availability, and automatic invoicing — serving{" "}
-                  {settings.serviceAreaLabel}.
-                </p>
-
-                <form action="/inventory" className="storefront-search-card">
-                  <div className="storefront-search-grid">
-                    <label className="storefront-field">
-                      <span>Event Date</span>
-                      <input name="date" type="date" />
-                    </label>
-
-                    <label className="storefront-field">
-                      <span>Start Time</span>
-                      <input name="start" type="time" />
-                    </label>
-
-                    <label className="storefront-field">
-                      <span>End Time</span>
-                      <input name="end" type="time" />
-                    </label>
-
-                    <label className="storefront-field">
-                      <span>Delivery ZIP</span>
-                      <input
-                        name="zip"
-                        type="text"
-                        placeholder="22554"
-                        inputMode="numeric"
-                      />
-                    </label>
-
-                    <button
-                      type="submit"
-                      className="primary-btn storefront-search-btn"
-                    >
-                      Check Availability
-                    </button>
-                  </div>
-                </form>
-              </div>
+              </form>
             </div>
           </div>
         </section>

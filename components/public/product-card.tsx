@@ -27,18 +27,16 @@ export function ProductCard({
 
   return (
     <article className="product-card">
-      <div
-        className="product-media"
-        style={
-          imageUrl
-            ? {
-                backgroundImage: `url(${imageUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : undefined
-        }
-      />
+      <div className="product-media">
+        {imageUrl && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={imageUrl}
+            alt={name}
+            className="product-media-img"
+          />
+        )}
+      </div>
       <div className="product-copy">
         <div className="price-row" style={{ marginTop: 0 }}>
           <div className="kicker">{category}</div>
