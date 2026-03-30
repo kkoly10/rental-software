@@ -6,7 +6,7 @@ const categories = [
     startingPrice: "Starting $149",
     href: "/inventory?category=bounce-houses",
     image:
-      "https://images.unsplash.com/photo-1573666474068-12fd45e6a4f7?auto=format&fit=crop&w=800&q=80",
+      "https://cdn.pixabay.com/photo/2018/07/28/00/05/bouncy-castles-3567019_1280.jpg",
   },
   {
     title: "Water Slides",
@@ -20,7 +20,7 @@ const categories = [
     startingPrice: "Starting $249",
     href: "/inventory?category=obstacle-courses",
     image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=80",
+      "https://cdn.pixabay.com/photo/2016/06/14/03/03/inflatable-obstacle-course-1455632_1280.jpg",
   },
   {
     title: "Party Packages",
