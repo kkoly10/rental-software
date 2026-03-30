@@ -4,22 +4,37 @@ import { useState } from "react";
 import { WelcomeModal } from "./welcome-modal";
 import { GuidedTourOverlay } from "./guided-tour-overlay";
 import type { GuidanceState } from "@/lib/guidance/actions";
+import { miniTours } from "@/lib/guidance/tour-config";
 
 export function DashboardGuidance({
   guidanceState,
+  businessName,
 }: {
   guidanceState: GuidanceState;
+  businessName?: string;
 }) {
-  const [tourActive, setTourActive] = useState(false);
+  const [activeTourId, setActiveTourId] = useState<string | null>(null);
   const showWelcome = !guidanceState.hasSeenWelcome;
+
+  const activeTour = activeTourId
+    ? miniTours.find((t) => t.id === activeTourId) ?? null
+    : null;
 
   return (
     <>
       {showWelcome && (
-        <WelcomeModal onStartTour={() => setTourActive(true)} />
+        <WelcomeModal
+          businessName={businessName}
+          miniTours={miniTours}
+          onStartTour={(tourId) => setActiveTourId(tourId)}
+        />
       )}
-      {tourActive && (
-        <GuidedTourOverlay onComplete={() => setTourActive(false)} />
+      {activeTour && (
+        <GuidedTourOverlay
+          steps={activeTour.steps}
+          tourName={activeTour.name}
+          onComplete={() => setActiveTourId(null)}
+        />
       )}
     </>
   );

@@ -10,12 +10,14 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { DashboardGuidance } from "@/components/guidance/dashboard-guidance";
 import { SetupChecklistCard } from "@/components/guidance/setup-checklist-card";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
 export default async function DashboardPage() {
-  const [summary, snapshot, guidanceState] = await Promise.all([
+  const [summary, snapshot, guidanceState, settings] = await Promise.all([
     getDashboardSummary(),
     getGuidanceSnapshot(),
     getGuidanceState(),
+    getOrganizationSettings(),
   ]);
 
   const checklist = computeChecklist(snapshot);
@@ -26,7 +28,7 @@ export default async function DashboardPage() {
       title="Operator Dashboard"
       description="Daily overview for bookings, deliveries, payments, and tasks."
     >
-      <DashboardGuidance guidanceState={guidanceState} />
+      <DashboardGuidance guidanceState={guidanceState} businessName={settings.businessName} />
 
       {helpConfig && (
         <ContextHelpBanner
