@@ -55,7 +55,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
       .limit(5000),
     supabase
       .from("order_items")
-      .select("item_name_snapshot, quantity, unit_price_snapshot, orders!inner(organization_id, order_status)")
+      .select("item_name_snapshot, quantity, unit_price, orders!inner(organization_id, order_status)")
       .eq("orders.organization_id", ctx.organizationId)
       .limit(5000),
   ]);
@@ -122,7 +122,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
   for (const item of items) {
     const name = item.item_name_snapshot ?? "Unknown";
     const qty = typeof item.quantity === "number" ? item.quantity : 1;
-    const price = typeof item.unit_price_snapshot === "number" ? item.unit_price_snapshot : 0;
+    const price = typeof item.unit_price === "number" ? item.unit_price : 0;
     const existing = productMap.get(name) ?? { count: 0, revenue: 0 };
     existing.count += qty;
     existing.revenue += price * qty;
