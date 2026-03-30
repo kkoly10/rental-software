@@ -72,14 +72,18 @@ export default async function SettingsPage() {
 
           <div className="section-header" style={{ marginTop: 18 }}>
             <div>
-              <div className="kicker">Coming soon</div>
+              <div className="kicker">Quick links</div>
             </div>
           </div>
           <div className="list">
-            <div className="order-card">
+            <a href="/dashboard/settings/team" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
               <strong>Team access</strong>
-              <div className="muted">Owner, admin, dispatcher, crew, and viewer roles.</div>
-            </div>
+              <div className="muted">Invite members and manage roles: owner, admin, dispatcher, crew, viewer.</div>
+            </a>
+            <a href="/dashboard/settings/billing" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+              <strong>Billing</strong>
+              <div className="muted">Manage your subscription plan and payment method.</div>
+            </a>
           </div>
         </aside>
       </div>

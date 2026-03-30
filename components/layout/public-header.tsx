@@ -13,6 +13,7 @@ export function PublicHeader() {
           <a href="#how-it-works">How It Works</a>
           <a href="#service-area">Service Area</a>
           <Link href="/pricing">Pricing</Link>
+          <Link href="/order-status">Order Status</Link>
           <Link href="/checkout">Reserve</Link>
         </nav>
 

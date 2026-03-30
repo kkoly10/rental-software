@@ -124,6 +124,14 @@ export default async function OrderDetailPage({
           </div>
 
           <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <a
+              href={`/api/invoices/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="primary-btn"
+            >
+              Download Invoice
+            </a>
             <Link href="/dashboard/orders" className="secondary-btn">
               All orders
             </Link>

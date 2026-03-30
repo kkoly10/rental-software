@@ -425,6 +425,22 @@ export async function createCheckoutOrder(
     },
   });
 
+  // Send order confirmation email (non-blocking)
+  import("@/lib/email/triggers").then(({ triggerOrderConfirmationEmail }) =>
+    triggerOrderConfirmationEmail({
+      organizationId: orgId,
+      customerFirstName: firstName,
+      customerEmail: email,
+      orderNumber,
+      productName,
+      eventDate: eventDate ?? "",
+      subtotal,
+      deliveryFee,
+      total,
+      depositDue: deposit,
+    }).catch(() => {})
+  );
+
   return {
     ok: true,
     message: `Order ${orderNumber} created successfully! A deposit of $${deposit.toFixed(
