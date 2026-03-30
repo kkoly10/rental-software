@@ -6,7 +6,7 @@ const categories = [
     startingPrice: "Starting $149",
     href: "/inventory?category=bounce-houses",
     image:
-      "https://images.unsplash.com/photo-1573666474068-12fd45e6a4f7?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=800&q=80",
   },
   {
     title: "Water Slides",
@@ -20,7 +20,7 @@ const categories = [
     startingPrice: "Starting $249",
     href: "/inventory?category=obstacle-courses",
     image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1633846804415-78105890e73f?auto=format&fit=crop&w=800&q=80",
   },
   {
     title: "Party Packages",
