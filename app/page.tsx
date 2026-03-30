@@ -53,10 +53,12 @@ export default async function HomePage() {
         {/* Hero */}
         <section className="public-hero">
           <div className="public-hero-visual">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"
               alt="Colorful inflatable party rental setup"
+              fill
+              priority
+              sizes="100vw"
               className="public-hero-photo"
             />
           </div>
@@ -64,16 +66,9 @@ export default async function HomePage() {
           <div className="public-hero-overlay" />
 
           <div className="container">
-            <div className="public-hero-shell">
-              <div className="public-hero-visual">
-                <Image
-                  src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=1800"
-                  alt="Colorful inflatable party rental setup"
-                  fill
-                  priority
-                  sizes="100vw"
-                  className="public-hero-photo"
-                />
+            <div className="public-hero-copy">
+              <div className="kicker public-kicker">
+                Inflatable rental software for growing businesses
               </div>
 
               <h1>
