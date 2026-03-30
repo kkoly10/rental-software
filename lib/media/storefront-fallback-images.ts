@@ -2,13 +2,13 @@ type FallbackKey = "bounce" | "water" | "combo" | "obstacle" | "package";
 
 const IMAGE_MAP: Record<FallbackKey, string> = {
   bounce:
-    "https://cdn.pixabay.com/photo/2018/07/28/00/05/bouncy-castles-3567019_1280.jpg",
+    "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=800&q=80",
   water:
     "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=80",
   combo:
-    "https://cdn.pixabay.com/photo/2023/11/03/15/19/girl-8363280_1280.jpg",
+    "https://images.unsplash.com/photo-1633846802535-75fafbcf9043?auto=format&fit=crop&w=800&q=80",
   obstacle:
-    "https://cdn.pixabay.com/photo/2016/06/14/03/03/inflatable-obstacle-course-1455632_1280.jpg",
+    "https://images.unsplash.com/photo-1633846804415-78105890e73f?auto=format&fit=crop&w=800&q=80",
   package:
     "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80",
 };
