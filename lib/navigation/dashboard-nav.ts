@@ -9,6 +9,7 @@ export const dashboardNavItems = [
   { href: "/dashboard/deliveries", label: "Deliveries", tourId: "nav-deliveries" },
   { href: "/dashboard/maintenance", label: "Maintenance", tourId: undefined },
   { href: "/dashboard/service-areas", label: "Service Areas", tourId: undefined },
+  { href: "/dashboard/analytics", label: "Analytics", tourId: undefined },
   { href: "/dashboard/website", label: "Website", tourId: "nav-website" },
   { href: "/dashboard/settings", label: "Settings", tourId: undefined },
   { href: "/dashboard/settings/billing", label: "Billing", tourId: undefined },

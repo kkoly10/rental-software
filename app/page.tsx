@@ -3,8 +3,14 @@ import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
 import { TrustBar } from "@/components/public/trust-bar";
+import { PainSection } from "@/components/public/pain-section";
+import { BenefitsSection } from "@/components/public/benefits-section";
 import { CategoryGrid } from "@/components/public/category-grid";
 import { HowItWorks } from "@/components/public/how-it-works";
+import { FeatureShowcase } from "@/components/public/feature-showcase";
+import { IntegrationsBar } from "@/components/public/integrations-bar";
+import { FaqSection } from "@/components/public/faq-section";
+import { FinalCta } from "@/components/public/final-cta";
 import { ServiceAreaSection } from "@/components/public/service-area-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
@@ -32,6 +38,7 @@ export default async function HomePage() {
       <PublicHeader />
 
       <main>
+        {/* Hero */}
         <section className="section public-hero">
           <div className="container">
             <div className="public-hero-shell">
@@ -39,24 +46,26 @@ export default async function HomePage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=1800"
-                  alt="Woman playing in a colorful inflatable park slide"
+                  alt="Colorful inflatable party rental setup"
                   className="public-hero-photo"
                 />
               </div>
 
               <div className="public-hero-copy">
                 <div className="kicker public-kicker">
-                  Clean, fun, and stress-free rentals for any event
+                  Inflatable rental software for growing businesses
                 </div>
 
                 <h1>
-                  Epic Parties
+                  Your Next Party,
                   <br />
-                  Delivered!
+                  Booked in Minutes
                 </h1>
 
                 <p>
-                  {settings.websiteMessage} Serving {settings.serviceAreaLabel}.
+                  {settings.websiteMessage} Online booking, real-time
+                  availability, and automatic invoicing — serving{" "}
+                  {settings.serviceAreaLabel}.
                 </p>
 
                 <form action="/inventory" className="storefront-search-card">
@@ -90,7 +99,7 @@ export default async function HomePage() {
                       type="submit"
                       className="primary-btn storefront-search-btn"
                     >
-                      Find Available Rentals
+                      Check Availability
                     </button>
                   </div>
                 </form>
@@ -99,10 +108,19 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Trust signals */}
         <TrustBar />
 
+        {/* Pain / before-after */}
+        <PainSection />
+
+        {/* Benefits / value props */}
+        <BenefitsSection />
+
+        {/* Category browsing */}
         <CategoryGrid />
 
+        {/* Popular rentals */}
         <section className="section storefront-section-soft">
           <div className="container">
             <div className="section-header">
@@ -137,13 +155,27 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* How it works */}
         <div id="how-it-works">
           <HowItWorks />
         </div>
 
+        {/* Feature showcase */}
+        <FeatureShowcase />
+
+        {/* Integrations */}
+        <IntegrationsBar />
+
+        {/* Service area */}
         <div id="service-area">
           <ServiceAreaSection />
         </div>
+
+        {/* FAQ */}
+        <FaqSection />
+
+        {/* Final CTA */}
+        <FinalCta />
 
         <PublicFooter />
       </main>

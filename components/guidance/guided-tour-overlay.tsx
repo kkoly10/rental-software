@@ -1,14 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
-import { tourSteps } from "@/lib/guidance/tour-config";
+import type { TourStep } from "@/lib/guidance/tour-config";
 import { markTourCompleted } from "@/lib/guidance/actions";
 
-export function GuidedTourOverlay({ onComplete }: { onComplete: () => void }) {
-  const [step, setStep] = useState(0);
+export function GuidedTourOverlay({
+  steps,
+  tourName,
+  onComplete,
+}: {
+  steps: TourStep[];
+  tourName: string;
+  onComplete: () => void;
+}) {
+  const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [, startTransition] = useTransition();
-  const current = tourSteps[step];
+  const current = steps[stepIndex];
 
   const updatePosition = useCallback(() => {
     if (!current) return;
@@ -38,15 +46,15 @@ export function GuidedTourOverlay({ onComplete }: { onComplete: () => void }) {
   }
 
   function next() {
-    if (step < tourSteps.length - 1) {
-      setStep(step + 1);
+    if (stepIndex < steps.length - 1) {
+      setStepIndex(stepIndex + 1);
     } else {
       finish();
     }
   }
 
   function prev() {
-    if (step > 0) setStep(step - 1);
+    if (stepIndex > 0) setStepIndex(stepIndex - 1);
   }
 
   if (!current) return null;
@@ -72,10 +80,10 @@ export function GuidedTourOverlay({ onComplete }: { onComplete: () => void }) {
       <div className="tour-tooltip" style={tooltipStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span className="kicker" style={{ fontSize: 11 }}>
-            Step {step + 1} of {tourSteps.length}
+            {tourName} — {stepIndex + 1} of {steps.length}
           </span>
           <button className="ghost-btn" onClick={finish} style={{ fontSize: 12, padding: "2px 8px" }}>
-            Skip tour
+            Skip
           </button>
         </div>
         <h3 style={{ margin: "0 0 6px", fontSize: "1.05rem" }}>{current.title}</h3>
@@ -83,13 +91,13 @@ export function GuidedTourOverlay({ onComplete }: { onComplete: () => void }) {
           {current.description}
         </p>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          {step > 0 && (
+          {stepIndex > 0 && (
             <button className="secondary-btn" onClick={prev} style={{ padding: "8px 14px", fontSize: 13 }}>
               Back
             </button>
           )}
           <button className="primary-btn" onClick={next} style={{ padding: "8px 14px", fontSize: 13 }}>
-            {step < tourSteps.length - 1 ? "Next" : "Finish"}
+            {stepIndex < steps.length - 1 ? "Next" : "Finish"}
           </button>
         </div>
       </div>

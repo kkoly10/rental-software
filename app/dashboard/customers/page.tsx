@@ -3,6 +3,8 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getCustomersPage } from "@/lib/data/customers";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
+import { ExportCsvButton } from "@/components/export/export-csv-button";
+import { exportCustomers } from "@/lib/export/csv";
 
 export default async function CustomersPage({
   searchParams,
@@ -30,6 +32,7 @@ export default async function CustomersPage({
               {customersPage.totalItems === 1 ? "" : "s"} found
             </div>
           </div>
+          <ExportCsvButton exportAction={exportCustomers} label="Export CSV" />
         </div>
 
         <ListSearchForm

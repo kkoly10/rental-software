@@ -7,6 +7,8 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
+import { ExportCsvButton } from "@/components/export/export-csv-button";
+import { exportOrders } from "@/lib/export/csv";
 
 export default async function OrdersPage({
   searchParams,
@@ -42,9 +44,12 @@ export default async function OrdersPage({
               {ordersPage.totalItems === 1 ? "" : "s"} found
             </div>
           </div>
-          <Link href="/dashboard/orders/new" className="primary-btn">
-            New order
-          </Link>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <ExportCsvButton exportAction={exportOrders} label="Export CSV" />
+            <Link href="/dashboard/orders/new" className="primary-btn">
+              New order
+            </Link>
+          </div>
         </div>
 
         <ListSearchForm
