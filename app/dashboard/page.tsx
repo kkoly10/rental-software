@@ -2,33 +2,47 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { getDashboardSummary } from "@/lib/data/dashboard";
 import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { computeChecklist } from "@/lib/guidance/checklist";
+import { detectNewMilestone } from "@/lib/guidance/milestones";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { DashboardGuidance } from "@/components/guidance/dashboard-guidance";
 import { SetupChecklistCard } from "@/components/guidance/setup-checklist-card";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { MilestoneCelebration } from "@/components/dashboard/milestone-celebration";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getNotifications } from "@/lib/data/notifications";
 
 export default async function DashboardPage() {
-  const [summary, snapshot, guidanceState, settings] = await Promise.all([
-    getDashboardSummary(),
-    getGuidanceSnapshot(),
-    getGuidanceState(),
-    getOrganizationSettings(),
-  ]);
+  const [summary, snapshot, guidanceState, settings, notifications] =
+    await Promise.all([
+      getDashboardSummary(),
+      getGuidanceSnapshot(),
+      getGuidanceState(),
+      getOrganizationSettings(),
+      getNotifications(),
+    ]);
 
   const checklist = computeChecklist(snapshot);
   const helpConfig = pageHelpMap["/dashboard"];
+  const milestone = detectNewMilestone(
+    snapshot,
+    guidanceState.dismissedMilestones ?? []
+  );
 
   return (
     <DashboardShell
       title="Operator Dashboard"
       description="Daily overview for bookings, deliveries, payments, and tasks."
+      notifications={notifications}
     >
-      <DashboardGuidance guidanceState={guidanceState} businessName={settings.businessName} />
+      <DashboardGuidance
+        guidanceState={guidanceState}
+        businessName={settings.businessName}
+      />
 
       {helpConfig && (
         <ContextHelpBanner
@@ -92,13 +106,21 @@ export default async function DashboardPage() {
           </div>
 
           {summary.recentOrders.length === 0 ? (
-            <div className="order-card" style={{ textAlign: "center", padding: 24 }}>
-              <div className="muted">No recent orders. Create one or wait for a public booking.</div>
-            </div>
+            <EmptyState
+              icon="orders"
+              title="No orders yet"
+              description="When customers book through your storefront or you create a manual order, they'll appear here."
+              actionLabel="Create first order"
+              actionHref="/dashboard/orders/new"
+            />
           ) : (
             <div className="list">
               {summary.recentOrders.map((order) => (
-                <Link key={order.id} href={`/dashboard/orders/${order.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link
+                  key={order.id}
+                  href={`/dashboard/orders/${order.id}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
                   <div className="order-card">
                     <div className="order-row">
                       <strong>{order.customer}</strong>
@@ -121,30 +143,89 @@ export default async function DashboardPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Quick actions</div>
-              <h2 style={{ margin: "6px 0 0" }}>Get started</h2>
+              <h2 style={{ margin: "6px 0 0" }}>Get things done</h2>
             </div>
           </div>
 
           <div className="list">
-            <Link href="/dashboard/orders/new" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              href="/dashboard/orders/new"
+              className="order-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               <strong>Create new order</strong>
-              <div className="muted">Manual booking, quote, or reservation</div>
+              <div className="muted">
+                Manual booking, quote, or reservation
+              </div>
             </Link>
-            <Link href="/dashboard/products/new" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              href="/dashboard/products/new"
+              className="order-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               <strong>Add product</strong>
-              <div className="muted">New inflatable for the public catalog</div>
+              <div className="muted">
+                New inflatable for the public catalog
+              </div>
             </Link>
-            <Link href="/dashboard/deliveries" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              href="/dashboard/deliveries"
+              className="order-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               <strong>Delivery board</strong>
               <div className="muted">Route management and crew dispatch</div>
             </Link>
-            <Link href="/dashboard/help" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              href="/dashboard/analytics"
+              className="order-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <strong>Analytics</strong>
+              <div className="muted">
+                Revenue, orders, and product performance
+              </div>
+            </Link>
+            <Link
+              href="/dashboard/help"
+              className="order-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               <strong>Help Center</strong>
               <div className="muted">Guides and articles for every feature</div>
             </Link>
           </div>
+
+          <div
+            style={{
+              marginTop: 14,
+              padding: "12px 14px",
+              borderRadius: 12,
+              background: "var(--surface-muted)",
+              fontSize: 13,
+              color: "var(--text-soft)",
+              textAlign: "center",
+            }}
+          >
+            Press{" "}
+            <kbd
+              style={{
+                padding: "2px 6px",
+                borderRadius: 5,
+                background: "white",
+                border: "1px solid var(--border)",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              Cmd+K
+            </kbd>{" "}
+            to search anything
+          </div>
         </aside>
       </div>
+
+      {milestone && <MilestoneCelebration milestoneKey={milestone} />}
     </DashboardShell>
   );
 }

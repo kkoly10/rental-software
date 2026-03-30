@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { getProductsPage } from "@/lib/data/products";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
@@ -53,21 +54,20 @@ export default async function ProductsPage({
         />
 
         {productsPage.items.length === 0 ? (
-          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-            <strong>No products found</strong>
-            <div className="muted" style={{ marginTop: 8 }}>
-              {productsPage.query
-                ? "Try a different search term."
-                : "Add your first inflatable product to start building your catalog."}
+          productsPage.query ? (
+            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
+              <strong>No products found</strong>
+              <div className="muted" style={{ marginTop: 8 }}>Try a different search term.</div>
             </div>
-            {!productsPage.query ? (
-              <div style={{ marginTop: 12 }}>
-                <Link href="/dashboard/products/new" className="primary-btn">
-                  Add your first product
-                </Link>
-              </div>
-            ) : null}
-          </div>
+          ) : (
+            <EmptyState
+              icon="products"
+              title="No products yet"
+              description="Add your first inflatable product to start building your catalog."
+              actionLabel="Add first product"
+              actionHref="/dashboard/products/new"
+            />
+          )
         ) : (
           <>
             <div className="list">
