@@ -5,6 +5,10 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
 import { CopilotLauncher } from "@/components/copilot/copilot-launcher";
+import { NotificationCenter } from "@/components/dashboard/notification-center";
+import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
+import { CommandPalette } from "@/components/dashboard/command-palette";
+import type { Notification } from "@/lib/data/notifications";
 
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -15,10 +19,12 @@ export function DashboardShell({
   title,
   description,
   children,
+  notifications = [],
 }: {
   title: string;
   description: string;
   children: ReactNode;
+  notifications?: Notification[];
 }) {
   const pathname = usePathname();
 
@@ -68,16 +74,19 @@ export function DashboardShell({
       </aside>
 
       <main className="main-shell">
+        <Breadcrumbs />
         <div className="section-header">
           <div>
             <div className="kicker">Inflatable-first platform</div>
             <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>
             <div className="muted">{description}</div>
           </div>
+          <NotificationCenter initialNotifications={notifications} />
         </div>
         {children}
       </main>
 
+      <CommandPalette />
       <CopilotLauncher currentRoute={pathname} />
     </div>
   );

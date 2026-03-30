@@ -16,6 +16,7 @@ export type GuidanceState = {
   hasCompletedTour: boolean;
   dismissedHelp: Record<string, boolean>;
   dismissedChecklist: boolean;
+  dismissedMilestones: string[];
   tourVersion: string;
 };
 
@@ -24,6 +25,7 @@ const defaultState: GuidanceState = {
   hasCompletedTour: false,
   dismissedHelp: {},
   dismissedChecklist: false,
+  dismissedMilestones: [],
   tourVersion: "v1",
 };
 
@@ -45,6 +47,7 @@ export async function getGuidanceState(): Promise<GuidanceState> {
     hasCompletedTour: data.has_completed_tour ?? false,
     dismissedHelp: (data.dismissed_help as Record<string, boolean>) ?? {},
     dismissedChecklist: data.dismissed_checklist ?? false,
+    dismissedMilestones: (data.dismissed_milestones as string[]) ?? [],
     tourVersion: data.tour_version ?? "v1",
   };
 }
@@ -98,5 +101,12 @@ export async function dismissChecklist() {
 
 export async function resetTour() {
   await upsertGuidance({ has_completed_tour: false });
+  revalidatePath("/dashboard");
+}
+
+export async function dismissMilestone(key: string) {
+  const state = await getGuidanceState();
+  const milestones = [...state.dismissedMilestones, key];
+  await upsertGuidance({ dismissed_milestones: milestones });
   revalidatePath("/dashboard");
 }

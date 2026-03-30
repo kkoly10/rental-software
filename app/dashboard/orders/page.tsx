@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { getOrdersPage } from "@/lib/data/orders";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
@@ -58,14 +59,20 @@ export default async function OrdersPage({
         />
 
         {ordersPage.items.length === 0 ? (
-          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-            <strong>No orders found</strong>
-            <div className="muted" style={{ marginTop: 8 }}>
-              {ordersPage.query
-                ? "Try a different search term."
-                : "Create your first order from the dashboard or receive one through the public booking flow."}
+          ordersPage.query ? (
+            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
+              <strong>No orders found</strong>
+              <div className="muted" style={{ marginTop: 8 }}>Try a different search term.</div>
             </div>
-          </div>
+          ) : (
+            <EmptyState
+              icon="orders"
+              title="No orders yet"
+              description="Create your first order from the dashboard or receive one through the public booking flow."
+              actionLabel="Create order"
+              actionHref="/dashboard/orders/new"
+            />
+          )
         ) : (
           <>
             <div className="list">

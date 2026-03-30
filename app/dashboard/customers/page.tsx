@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { getCustomersPage } from "@/lib/data/customers";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
@@ -41,14 +42,20 @@ export default async function CustomersPage({
         />
 
         {customersPage.items.length === 0 ? (
-          <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-            <strong>No customers found</strong>
-            <div className="muted" style={{ marginTop: 8 }}>
-              {customersPage.query
-                ? "Try a different search term."
-                : "Customers are created automatically when orders come in through checkout or the dashboard."}
+          customersPage.query ? (
+            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
+              <strong>No customers found</strong>
+              <div className="muted" style={{ marginTop: 8 }}>Try a different search term.</div>
             </div>
-          </div>
+          ) : (
+            <EmptyState
+              icon="customers"
+              title="No customers yet"
+              description="Customers are created automatically when orders come in through checkout or the dashboard."
+              actionLabel="Create an order"
+              actionHref="/dashboard/orders/new"
+            />
+          )
         ) : (
           <>
             <div className="list">
