@@ -46,19 +46,35 @@ export const pageHelpMap: Record<string, PageHelpConfig> = {
     key: "deliveries",
     title: "Plan routes and dispatch crew",
     description:
-      "Organize deliveries by date and route. Assign crew members and track setup, pickup, and completion status.",
+      "Organize deliveries by date and route. View stops on an interactive map, track progress with the timeline, and dispatch crew in real time.",
+    primaryAction: { label: "Learn about route planning", href: "/dashboard/help/visual-route-planner" },
   },
   "/dashboard/website": {
     key: "website",
     title: "Customize your public storefront",
     description:
-      "Set your hero message, manage featured inventory, and control how your booking site looks to customers.",
+      "Set your hero message, upload your logo, choose brand colors and fonts, and let the AI Copilot write content for you.",
     primaryAction: { label: "View storefront", href: "/" },
+    secondaryAction: { label: "Brand guide", href: "/dashboard/help/brand-customization" },
+  },
+  "/dashboard/pricing": {
+    key: "pricing",
+    title: "Dynamic pricing rules",
+    description:
+      "Create automated price adjustments for weekends, holidays, peak season, early bird discounts, and more. Use the preview calculator to test rules.",
+    primaryAction: { label: "Learn more", href: "/dashboard/help/dynamic-pricing" },
   },
   "/dashboard/settings": {
     key: "settings",
     title: "Business profile and configuration",
     description:
-      "Update your business name, contact information, timezone, and operational preferences.",
+      "Update your business name, contact information, timezone, SMS notification settings, and operational preferences.",
+  },
+  "/dashboard/service-areas": {
+    key: "service-areas",
+    title: "Delivery coverage and zones",
+    description:
+      "Define ZIP-based delivery zones with fees and minimum orders. Your coverage areas appear on an interactive map on both the dashboard and public storefront.",
+    primaryAction: { label: "Learn more", href: "/dashboard/help/service-area-map" },
   },
 };

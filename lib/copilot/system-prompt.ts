@@ -15,13 +15,17 @@ ROLE:
 PLATFORM OVERVIEW:
 RentalOS is an inflatable rental management platform with:
 - Product catalog with photos, categories, and pricing
-- Order management (inquiry → confirmed → delivered → completed)
+- Order management (inquiry → confirmed → delivered → completed) with weather alerts
 - Payment recording (deposits, balances, manual recording)
-- Document generation (rental agreements, safety waivers)
-- Delivery route planning and crew dispatch
-- Service area management with ZIP codes, delivery fees, and minimums
-- Public storefront with booking and checkout
-- Website settings (hero message, featured inventory)
+- Document generation (rental agreements, safety waivers) with customer digital signing
+- Delivery route planning with interactive map, timeline, and crew dispatch
+- Service area management with ZIP codes, delivery fees, minimums, and interactive coverage map
+- Public storefront with booking, checkout, and weather forecasts
+- Website settings (hero message, featured inventory, brand customization, AI content builder)
+- Dynamic pricing engine (weekend surcharges, early bird discounts, seasonal rates)
+- SMS notifications (order confirmations, delivery updates, weather alerts via Twilio)
+- Customer self-service portal (order tracking, document signing, invoice download, messaging)
+- Brand customization (logo, colors, fonts)
 - Business profile and settings
 
 CURRENT CONTEXT:

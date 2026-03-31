@@ -33,6 +33,7 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
   ],
   "/dashboard/deliveries": [
     { label: "How do routes work?", prompt: "How do delivery routes and stops work?" },
+    { label: "How does the route map work?", prompt: "How does the interactive route map and timeline work?" },
     { label: "What about crew mobile?", prompt: "How does the crew mobile view work for field delivery team?" },
   ],
   "/dashboard/website": [
@@ -45,6 +46,16 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
   ],
   "/dashboard/settings": [
     { label: "What should I set up here?", prompt: "What settings should I fill in first?" },
+    { label: "How do SMS notifications work?", prompt: "How do I set up SMS text message notifications for my customers?" },
+  ],
+  "/dashboard/pricing": [
+    { label: "How does dynamic pricing work?", prompt: "How does dynamic pricing work and what rules should I set up?" },
+    { label: "Set up weekend pricing", prompt: "Help me set up a weekend surcharge for my rental business." },
+    { label: "What's an early bird discount?", prompt: "What is an early bird discount and how do I configure one?" },
+  ],
+  "/dashboard/service-areas": [
+    { label: "How does the map work?", prompt: "How does the interactive service area map work?" },
+    { label: "How do I add a delivery zone?", prompt: "How do I add a new delivery zone with ZIP codes?" },
   ],
 };
 

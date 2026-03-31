@@ -139,7 +139,55 @@ export const bookingTour: MiniTour = {
   ],
 };
 
-export const miniTours: MiniTour[] = [dashboardTour, productTour, bookingTour];
+export const advancedFeaturesTour: MiniTour = {
+  id: "advanced",
+  name: "Explore Advanced Features",
+  description: "Discover dynamic pricing, delivery maps, weather alerts, and more.",
+  steps: [
+    {
+      id: "nav-pricing",
+      route: "/dashboard",
+      targetSelector: '[data-tour="nav-pricing"]',
+      title: "Dynamic Pricing",
+      description:
+        "Set up automated price adjustments — weekend surcharges, early bird discounts, seasonal rates. The pricing engine applies rules automatically to every booking.",
+      placement: "right",
+      order: 1,
+    },
+    {
+      id: "nav-deliveries",
+      route: "/dashboard",
+      targetSelector: '[data-tour="nav-deliveries"]',
+      title: "Visual Route Planner",
+      description:
+        "Your delivery board now shows routes on an interactive map with numbered stops, color-coded status markers, and a timeline view. Real-time stats track progress.",
+      placement: "right",
+      order: 2,
+    },
+    {
+      id: "nav-website",
+      route: "/dashboard",
+      targetSelector: '[data-tour="nav-website"]',
+      title: "Brand & AI Content Builder",
+      description:
+        "Upload your logo, choose brand colors and fonts. Use the AI Copilot to write your hero headline, FAQs, and about section — apply changes with one click.",
+      placement: "right",
+      order: 3,
+    },
+    {
+      id: "nav-orders",
+      route: "/dashboard",
+      targetSelector: '[data-tour="nav-orders"]',
+      title: "Weather-Smart Orders",
+      description:
+        "Every order with an event date now shows weather forecasts — temperature, wind, and rain risk. High-risk alerts help you proactively reach out to customers.",
+      placement: "right",
+      order: 4,
+    },
+  ],
+};
+
+export const miniTours: MiniTour[] = [dashboardTour, productTour, bookingTour, advancedFeaturesTour];
 
 // Flat list for backward compatibility
 export const tourSteps: TourStep[] = dashboardTour.steps;
