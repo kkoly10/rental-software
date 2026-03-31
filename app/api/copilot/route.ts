@@ -417,5 +417,45 @@ function generateLocalResponse(
     return "To create an order, go to **Orders** > **Create New Order**. Select a customer, choose an event date, add products, and pick a delivery service area. Orders move from Inquiry → Confirmed → Delivered → Completed.\n\nSee the full guide: [Creating orders](/dashboard/help/creating-orders)";
   }
 
-  return 'I can help you with:\n\n- **Getting set up** — Ask "What should I do next?"\n- **Page explanations** — Ask "Explain this page"\n- **How-to questions** — Ask about orders, payments, products, deliveries, or documents\n- **Troubleshooting** — Ask about specific issues you\'re experiencing\n\nTry one of the suggested prompts below, or ask me a specific question about your rental business platform.';
+  if (q.includes("product") || q.includes("catalog") || q.includes("inflatable") || q.includes("add")) {
+    return "To add a product to your catalog, go to [Products → Add Product](/dashboard/products/new). Enter a name customers would search for, set your daily rental price, add a description with dimensions and age range, and make sure \"Active\" is checked so it shows on your storefront.";
+  }
+
+  if (q.includes("delivery") || q.includes("route") || q.includes("driver") || q.includes("crew")) {
+    return "The [Delivery Board](/dashboard/deliveries) shows all upcoming deliveries grouped by date. You can plan routes, assign crew members, and track delivery status. Each delivery shows the customer address, time window, and order details so your crew knows exactly where to go.";
+  }
+
+  if (q.includes("customer") || q.includes("contact") || q.includes("email") || q.includes("phone")) {
+    return "Customer records are created automatically when you make an order or when someone books through your storefront. View and manage all customers at [Customers](/dashboard/customers). Each record shows their contact info, order history, and lifetime value.";
+  }
+
+  if (q.includes("website") || q.includes("storefront") || q.includes("homepage") || q.includes("hero")) {
+    return "Customize your public storefront at [Website Settings](/dashboard/website). You can edit the hero message, FAQ, about section, testimonials, trust badges, brand colors, and control which sections are visible. Changes appear immediately on your public booking page.";
+  }
+
+  if (q.includes("service area") || q.includes("zip") || q.includes("delivery zone") || q.includes("coverage")) {
+    return "Service areas define where you deliver and the fees for each zone. Set them up at [Service Areas](/dashboard/service-areas). Add ZIP codes, set delivery fees and minimum order amounts, and view coverage on the interactive map.";
+  }
+
+  if (q.includes("price") || q.includes("pricing") || q.includes("surcharge") || q.includes("discount")) {
+    return "Dynamic pricing rules let you automatically adjust prices based on conditions. Go to [Pricing](/dashboard/pricing) to create rules like weekend surcharges, weekday discounts, holiday pricing, or multi-day bundle rates. Rules stack and apply automatically at checkout.";
+  }
+
+  if (q.includes("document") || q.includes("agreement") || q.includes("waiver") || q.includes("sign")) {
+    return "Rental documents (waivers, agreements, terms) can be managed at [Documents](/dashboard/documents). Attach them to orders and customers can sign digitally through the customer portal. Signed documents are stored with timestamps for your records.";
+  }
+
+  if (q.includes("weather") || q.includes("rain") || q.includes("storm") || q.includes("forecast")) {
+    return "Weather alerts appear automatically on orders that have an event date and delivery ZIP code. The system checks the forecast and shows a green/yellow/red indicator so you and your customers can plan ahead for outdoor events.";
+  }
+
+  if (q.includes("analytics") || q.includes("revenue") || q.includes("report") || q.includes("stats")) {
+    return "View your business performance at [Analytics](/dashboard/analytics). Track revenue trends, order volume, popular products, and customer growth. Use the date filters to compare different time periods.";
+  }
+
+  if (q.includes("sms") || q.includes("text") || q.includes("notification") || q.includes("twilio")) {
+    return "SMS notifications keep customers informed automatically. Set up your Twilio credentials and enable notification types at [Settings → SMS Notifications](/dashboard/settings). You can send alerts for order confirmations, delivery updates, payment receipts, and more.";
+  }
+
+  return 'I can help you with:\n\n- **"What should I do next?"** — Get your next setup step\n- **"Explain this page"** — Learn what the current page does\n- **"How do I add a product?"** — Step-by-step for catalog items\n- **"How do deliveries work?"** — Route planning and crew dispatch\n- **"How do I customize my website?"** — Storefront editing guide\n- **"How does pricing work?"** — Dynamic pricing rules\n- **"How do I set up SMS?"** — Text notification setup\n\nAsk me anything about running your rental business!';
 }

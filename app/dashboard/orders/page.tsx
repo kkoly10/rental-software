@@ -11,13 +11,15 @@ import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportOrders } from "@/lib/export/csv";
 import { WeatherBadge } from "@/components/weather/weather-badge";
+import { FirstOrderBanner } from "@/components/orders/first-order-banner";
 
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; first?: string }>;
 }) {
   const params = await searchParams;
+  const showFirstOrderBanner = params.first === "true";
   const [ordersPage, guidanceState] = await Promise.all([
     getOrdersPage({ query: params.q, page: params.page }),
     getGuidanceState(),
@@ -29,6 +31,8 @@ export default async function OrdersPage({
       title="Orders"
       description="Track inquiries, confirmed bookings, payments, and delivery readiness."
     >
+      {showFirstOrderBanner && <FirstOrderBanner />}
+
       {helpConfig && (
         <ContextHelpBanner
           config={helpConfig}

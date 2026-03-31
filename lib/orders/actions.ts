@@ -348,6 +348,14 @@ export async function createOrder(
     }
   }
 
+  // Check if this is the operator's first order
+  const { count: existingOrderCount } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", ctx.organizationId);
+
+  const isFirstOrder = (existingOrderCount ?? 0) <= 1;
+
   // Send new order alert to operator (non-blocking)
   import("@/lib/email/triggers").then(({ triggerDashboardOrderEmail }) =>
     triggerDashboardOrderEmail({
@@ -361,7 +369,7 @@ export async function createOrder(
     }).catch(() => {})
   );
 
-  redirect("/dashboard/orders");
+  redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
 }
 
 export async function updateOrderStatus(
