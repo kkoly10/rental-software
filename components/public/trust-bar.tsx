@@ -1,4 +1,4 @@
-const trustItems = [
+const defaultTrustItems = [
   {
     svg: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
     bg: "#edf4ff",
@@ -29,24 +29,46 @@ const trustItems = [
   },
 ] as const;
 
-export function TrustBar() {
+const shieldSvg = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
+interface TrustBarProps {
+  customBadges?: { title: string; description: string }[];
+}
+
+export function TrustBar({ customBadges }: TrustBarProps) {
+  const useCustom = customBadges && customBadges.length > 0;
+
   return (
     <section className="trust-bar-section">
       <div className="container">
         <div className="trust-items">
-          {trustItems.map((item) => (
-            <div key={item.title} className="trust-item">
-              <div
-                className="trust-icon"
-                style={{ background: item.bg, color: item.color }}
-                dangerouslySetInnerHTML={{ __html: item.svg }}
-              />
-              <div className="trust-item-text">
-                <strong>{item.title}</strong>
-                <span>{item.description}</span>
-              </div>
-            </div>
-          ))}
+          {useCustom
+            ? customBadges.map((badge) => (
+                <div key={badge.title} className="trust-item">
+                  <div
+                    className="trust-icon"
+                    style={{ background: "#edf4ff", color: "#1e5dcf" }}
+                    dangerouslySetInnerHTML={{ __html: shieldSvg }}
+                  />
+                  <div className="trust-item-text">
+                    <strong>{badge.title}</strong>
+                    <span>{badge.description}</span>
+                  </div>
+                </div>
+              ))
+            : defaultTrustItems.map((item) => (
+                <div key={item.title} className="trust-item">
+                  <div
+                    className="trust-icon"
+                    style={{ background: item.bg, color: item.color }}
+                    dangerouslySetInnerHTML={{ __html: item.svg }}
+                  />
+                  <div className="trust-item-text">
+                    <strong>{item.title}</strong>
+                    <span>{item.description}</span>
+                  </div>
+                </div>
+              ))}
         </div>
       </div>
     </section>

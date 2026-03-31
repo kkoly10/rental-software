@@ -13,10 +13,13 @@ import { IntegrationsBar } from "@/components/public/integrations-bar";
 import { FaqSection } from "@/components/public/faq-section";
 import { FinalCta } from "@/components/public/final-cta";
 import { ServiceAreaSection } from "@/components/public/service-area-section";
+import { TestimonialsSection } from "@/components/public/testimonials-section";
+import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
+import { getContentSettings } from "@/lib/data/content-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
@@ -31,25 +34,34 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+const defaultFaqItems = [
+  { question: "How does the booking process work?", answer: "Customers visit your storefront, pick a date and ZIP code, choose their rentals from your available inventory, and submit a booking request." },
+  { question: "How do deposits and payments work?", answer: "You set your own deposit amounts and payment terms. The system tracks deposits, records payments, and shows remaining balances." },
+  { question: "How do you prevent double-bookings?", answer: "Every confirmed order automatically blocks that product on that date. The availability engine checks for conflicts in real-time." },
+  { question: "What about delivery and setup?", answer: "The platform includes delivery route management with stop-by-stop tracking and a mobile-friendly crew view." },
+];
+
 export default async function HomePage() {
-  const [featured, settings, geoAreas] = await Promise.all([
+  const [featured, settings, geoAreas, contentSettings] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
     getServiceAreasGeo(),
+    getContentSettings(),
   ]);
+
+  const vis = contentSettings.sectionVisibility;
+  const faqItems =
+    contentSettings.customFaq && contentSettings.customFaq.length > 0
+      ? contentSettings.customFaq
+      : defaultFaqItems;
 
   return (
     <>
       <PublicHeader />
       <JsonLdScript data={organizationJsonLd(settings)} />
-      <JsonLdScript
-        data={faqJsonLd([
-          { question: "How does the booking process work?", answer: "Customers visit your storefront, pick a date and ZIP code, choose their rentals from your available inventory, and submit a booking request." },
-          { question: "How do deposits and payments work?", answer: "You set your own deposit amounts and payment terms. The system tracks deposits, records payments, and shows remaining balances." },
-          { question: "How do you prevent double-bookings?", answer: "Every confirmed order automatically blocks that product on that date. The availability engine checks for conflicts in real-time." },
-          { question: "What about delivery and setup?", answer: "The platform includes delivery route management with stop-by-stop tracking and a mobile-friendly crew view." },
-        ])}
-      />
+      {vis.faqSection !== false && (
+        <JsonLdScript data={faqJsonLd(faqItems)} />
+      )}
 
       <main>
         {/* Hero */}
@@ -125,16 +137,18 @@ export default async function HomePage() {
         </section>
 
         {/* Trust signals */}
-        <TrustBar />
+        {vis.trustBar !== false && (
+          <TrustBar customBadges={contentSettings.trustBadges} />
+        )}
 
         {/* Pain / before-after */}
-        <PainSection />
+        {vis.painPoints !== false && <PainSection />}
 
         {/* Benefits / value props */}
-        <BenefitsSection />
+        {vis.benefits !== false && <BenefitsSection />}
 
         {/* Category browsing */}
-        <CategoryGrid />
+        {vis.categoryGrid !== false && <CategoryGrid />}
 
         {/* Popular rentals */}
         <section className="section storefront-section-soft">
@@ -172,23 +186,39 @@ export default async function HomePage() {
         </section>
 
         {/* How it works */}
-        <div id="how-it-works">
-          <HowItWorks />
-        </div>
+        {vis.howItWorks !== false && (
+          <div id="how-it-works">
+            <HowItWorks />
+          </div>
+        )}
 
         {/* Feature showcase */}
-        <FeatureShowcase />
+        {vis.featureShowcase !== false && <FeatureShowcase />}
 
         {/* Integrations */}
-        <IntegrationsBar />
+        {vis.integrationsBar !== false && <IntegrationsBar />}
 
         {/* Service area */}
-        <div id="service-area">
-          <ServiceAreaSection areas={geoAreas} />
-        </div>
+        {vis.serviceAreaMap !== false && (
+          <div id="service-area">
+            <ServiceAreaSection areas={geoAreas} />
+          </div>
+        )}
+
+        {/* About */}
+        {vis.aboutSection !== false && (
+          <AboutSection text={contentSettings.aboutText} />
+        )}
+
+        {/* Testimonials */}
+        {vis.testimonials !== false && (
+          <TestimonialsSection testimonials={contentSettings.testimonials} />
+        )}
 
         {/* FAQ */}
-        <FaqSection />
+        {vis.faqSection !== false && (
+          <FaqSection customFaqs={contentSettings.customFaq} />
+        )}
 
         {/* Final CTA */}
         <FinalCta />

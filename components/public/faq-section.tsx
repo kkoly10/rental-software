@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const faqs = [
+const defaultFaqs = [
   {
     question: "How does the booking process work?",
     answer:
@@ -35,7 +35,12 @@ const faqs = [
   },
 ];
 
-export function FaqSection() {
+interface FaqSectionProps {
+  customFaqs?: { question: string; answer: string }[];
+}
+
+export function FaqSection({ customFaqs }: FaqSectionProps) {
+  const faqs = customFaqs && customFaqs.length > 0 ? customFaqs : defaultFaqs;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
