@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CopilotMessageList, type CopilotMessage } from "./copilot-message-list";
 import { CopilotInput } from "./copilot-input";
 import { CopilotSuggestedPrompts } from "./copilot-suggested-prompts";
@@ -65,7 +65,27 @@ export function CopilotPanel({
   const [messages, setMessages] = useState<CopilotMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
+  const [currentValues, setCurrentValues] = useState<Record<string, string>>({});
   const prompts = getSuggestedPrompts(currentRoute);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchCurrentValues() {
+      try {
+        const res = await fetch("/api/copilot/current-values");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && data) {
+            setCurrentValues(data);
+          }
+        }
+      } catch {
+        // silently ignore – preview will just show "No current value"
+      }
+    }
+    fetchCurrentValues();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleApplyAction = useCallback(async (action: CopilotAction) => {
     const res = await fetch("/api/copilot/action", {
@@ -178,6 +198,7 @@ export function CopilotPanel({
         <CopilotActionPreview
           key={pa.messageIndex}
           action={pa.action}
+          currentValues={currentValues}
           onApply={handleApplyAction}
           onDismiss={() => handleDismissAction(pa.messageIndex)}
         />

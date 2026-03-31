@@ -44,12 +44,24 @@ function formatValue(value: string, field: string): string {
   return value;
 }
 
+function getFaqCount(value: string): number | null {
+  try {
+    const items = JSON.parse(value);
+    if (Array.isArray(items)) return items.length;
+  } catch {
+    // not valid JSON
+  }
+  return null;
+}
+
 export function CopilotActionPreview({
   action,
+  currentValues,
   onApply,
   onDismiss,
 }: {
   action: CopilotAction;
+  currentValues?: Record<string, string>;
   onApply: (action: CopilotAction) => Promise<void>;
   onDismiss: () => void;
 }) {
@@ -61,6 +73,15 @@ export function CopilotActionPreview({
 
   const fieldLabel = getFieldLabel(action);
   const displayValue = formatValue(action.value, action.field);
+
+  const currentRaw = currentValues?.[action.field] ?? "";
+  const currentDisplay = currentRaw
+    ? formatValue(currentRaw, action.field)
+    : "";
+
+  const isFaq = action.field === "custom_faq";
+  const currentFaqCount = isFaq && currentRaw ? getFaqCount(currentRaw) : null;
+  const newFaqCount = isFaq ? getFaqCount(action.value) : null;
 
   async function handleApply() {
     setApplying(true);
@@ -105,9 +126,22 @@ export function CopilotActionPreview({
           {action.preview}
         </div>
       )}
+      {isFaq && currentFaqCount !== null && newFaqCount !== null && (
+        <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 6 }}>
+          {currentFaqCount} FAQ{currentFaqCount !== 1 ? "s" : ""} → {newFaqCount} FAQ{newFaqCount !== 1 ? "s" : ""}
+        </div>
+      )}
       <div className="copilot-action-diff">
-        <div className="copilot-action-diff-new">
-          <div className="copilot-action-diff-label">New value</div>
+        <div className="copilot-action-current">
+          <div className="copilot-action-label">Current</div>
+          {currentDisplay ? (
+            <pre>{currentDisplay}</pre>
+          ) : (
+            <div className="copilot-action-empty">No current value</div>
+          )}
+        </div>
+        <div className="copilot-action-proposed">
+          <div className="copilot-action-label">New</div>
           <pre>{displayValue}</pre>
         </div>
       </div>

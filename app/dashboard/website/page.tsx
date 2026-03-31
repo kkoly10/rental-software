@@ -1,18 +1,25 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { WebsiteSettingsForm } from "@/components/settings/website-settings-form";
 import { BrandSettingsForm } from "@/components/settings/brand-settings-form";
+import { FaqManager } from "@/components/settings/faq-manager";
+import { AboutEditor } from "@/components/settings/about-editor";
+import { TestimonialsManager } from "@/components/settings/testimonials-manager";
+import { TrustBadgesEditor } from "@/components/settings/trust-badges-editor";
+import { SectionVisibilityForm } from "@/components/settings/section-visibility-form";
 import { getWebsiteAdminData } from "@/lib/data/website-admin";
 import { getOrgSettings } from "@/lib/data/settings";
 import { getBrandSettings } from "@/lib/data/brand";
+import { getContentSettings } from "@/lib/data/content-settings";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function WebsitePage() {
-  const [data, editableSettings, brandSettings] = await Promise.all([
+  const [data, editableSettings, brandSettings, contentSettings] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
     getBrandSettings(),
+    getContentSettings(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/website"];
@@ -118,6 +125,67 @@ export default async function WebsitePage() {
               fontFamily: brandSettings.fontFamily,
             }}
           />
+        </section>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Homepage Content</div>
+              <h2 style={{ margin: "6px 0 0" }}>FAQ Manager</h2>
+            </div>
+          </div>
+
+          <FaqManager defaults={contentSettings.customFaq} />
+        </section>
+
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Homepage Content</div>
+              <h2 style={{ margin: "6px 0 0" }}>About Section</h2>
+            </div>
+          </div>
+
+          <AboutEditor defaultValue={contentSettings.aboutText} />
+        </section>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Social Proof</div>
+              <h2 style={{ margin: "6px 0 0" }}>Testimonials</h2>
+            </div>
+          </div>
+
+          <TestimonialsManager defaults={contentSettings.testimonials} />
+        </section>
+
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Social Proof</div>
+              <h2 style={{ margin: "6px 0 0" }}>Trust Badges</h2>
+            </div>
+          </div>
+
+          <TrustBadgesEditor defaults={contentSettings.trustBadges} />
+        </section>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Layout</div>
+              <h2 style={{ margin: "6px 0 0" }}>Section Visibility</h2>
+            </div>
+          </div>
+
+          <SectionVisibilityForm defaults={contentSettings.sectionVisibility} />
         </section>
       </div>
     </DashboardShell>
