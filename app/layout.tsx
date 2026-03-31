@@ -1,6 +1,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { getSiteBaseUrl } from "@/lib/seo/metadata";
+import { getBrandSettings } from "@/lib/data/brand";
+import { BrandStyleInjector } from "@/components/layout/brand-style-injector";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteBaseUrl()),
@@ -31,14 +33,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const brand = await getBrandSettings();
+
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <BrandStyleInjector brand={brand} />
+        {children}
+      </body>
     </html>
   );
 }
