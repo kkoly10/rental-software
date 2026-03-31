@@ -1,15 +1,19 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { BusinessProfileForm } from "@/components/settings/business-profile-form";
+import { SmsSettingsForm } from "@/components/settings/sms-settings-form";
+import { SmsLog } from "@/components/settings/sms-log";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getOrgSettings } from "@/lib/data/settings";
+import { getSmsSettings } from "@/lib/data/sms-settings";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function SettingsPage() {
-  const [orgSettings, editableSettings] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
+    getSmsSettings(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/settings"];
@@ -84,7 +88,35 @@ export default async function SettingsPage() {
               <strong>Billing</strong>
               <div className="muted">Manage your subscription plan and payment method.</div>
             </a>
+            <a href="#sms-notifications" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+              <strong>SMS Notifications</strong>
+              <div className="muted">Configure text message alerts for customers.</div>
+            </a>
           </div>
+        </aside>
+      </div>
+
+      <div className="dashboard-grid" id="sms-notifications" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Notifications</div>
+              <h2 style={{ margin: "6px 0 0" }}>SMS Notifications</h2>
+            </div>
+          </div>
+
+          <SmsSettingsForm defaults={smsSettings} />
+        </section>
+
+        <aside className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Activity</div>
+              <h2 style={{ margin: "6px 0 0" }}>Recent SMS messages</h2>
+            </div>
+          </div>
+
+          <SmsLog />
         </aside>
       </div>
     </DashboardShell>

@@ -16,7 +16,7 @@ export default function OrderStatusPage() {
       <PublicHeader />
 
       <main className="page">
-        <div className="container" style={{ maxWidth: 640 }}>
+        <div className="container" style={{ maxWidth: 680 }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div className="kicker">Customer portal</div>
             <h1 style={{ margin: "8px 0 12px", fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>

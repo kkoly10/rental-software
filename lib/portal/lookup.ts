@@ -16,7 +16,10 @@ export type PortalOrder = {
   total: string;
   depositDue: string;
   balanceDue: string;
-  documents: { type: string; status: string }[];
+  documents: { id: string; type: string; status: string }[];
+  deliveryDate?: string;
+  deliveryTimeWindow?: string;
+  customerName: string;
 };
 
 export type PortalLookupState = {
@@ -55,9 +58,12 @@ export async function lookupOrder(
         depositDue: "$81.00",
         balanceDue: "$189.00",
         documents: [
-          { type: "Rental Agreement", status: "pending" },
-          { type: "Safety Waiver", status: "pending" },
+          { id: "doc-demo-1", type: "Rental Agreement", status: "pending" },
+          { id: "doc-demo-2", type: "Safety Waiver", status: "pending" },
         ],
+        deliveryDate: "Saturday, April 12, 2026",
+        deliveryTimeWindow: "8:00 AM – 10:00 AM",
+        customerName: "Jane Smith",
       },
     };
   }
@@ -103,7 +109,7 @@ export async function lookupOrder(
   // Verify email matches
   const { data: customer } = await supabase
     .from("customers")
-    .select("email")
+    .select("email, first_name, last_name")
     .eq("id", order.customer_id)
     .maybeSingle();
 
@@ -120,7 +126,7 @@ export async function lookupOrder(
   // Fetch documents
   const { data: docs } = await supabase
     .from("documents")
-    .select("document_type, document_status")
+    .select("id, document_type, document_status")
     .eq("order_id", order.id);
 
   const eventDate = order.event_date
@@ -158,9 +164,13 @@ export async function lookupOrder(
       depositDue: formatMoney(Number(order.deposit_due_amount ?? 0)),
       balanceDue: formatMoney(Number(order.balance_due_amount ?? 0)),
       documents: (docs ?? []).map((d) => ({
+        id: d.id,
         type: (d.document_type ?? "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
         status: d.document_status,
       })),
+      deliveryDate: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? eventDate : undefined,
+      deliveryTimeWindow: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? "8:00 AM – 10:00 AM" : undefined,
+      customerName: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Customer",
     },
   };
 }

@@ -8,9 +8,9 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
     <header className="topbar public-topbar">
       <div className="container topbar-inner">
         <Link href="/" className="logo public-logo">
-          {logoUrl ? (
+          {resolvedLogoUrl ? (
             <img
-              src={logoUrl}
+              src={resolvedLogoUrl}
               alt="Logo"
               style={{ maxHeight: 40, width: "auto", display: "block" }}
             />
