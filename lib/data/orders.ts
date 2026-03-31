@@ -81,7 +81,7 @@ export async function getOrdersPage(options?: {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot)"
+      "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses(postal_code)"
     )
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false })
@@ -110,6 +110,9 @@ export async function getOrdersPage(options?: {
       ((order as Record<string, unknown>).order_items as
         | { item_name_snapshot?: string | null }[]
         | null) ?? [];
+    const address = (order as Record<string, unknown>).customer_addresses as
+      | { postal_code?: string | null }
+      | null;
     const status = order.order_status ?? "inquiry";
 
     const customerLabel =
@@ -135,6 +138,8 @@ export async function getOrdersPage(options?: {
         typeof order.total_amount === "number" ? `$${order.total_amount}` : "$0",
       status: formatStatus(status),
       tone: statusTone(status),
+      eventDateRaw: order.event_date ?? undefined,
+      postalCode: address?.postal_code ?? undefined,
     };
   });
 

@@ -1,9 +1,14 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getServiceAreaAdminRecords } from "@/lib/data/service-areas-admin";
+import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { ServiceAreaManager } from "@/components/service-areas/service-area-manager";
+import { ServiceAreaMapPanel } from "@/components/service-areas/service-area-map-panel";
 
 export default async function ServiceAreasPage() {
-  const areas = await getServiceAreaAdminRecords();
+  const [areas, geoAreas] = await Promise.all([
+    getServiceAreaAdminRecords(),
+    getServiceAreasGeo(),
+  ]);
 
   return (
     <DashboardShell
@@ -24,6 +29,8 @@ export default async function ServiceAreasPage() {
 
         <ServiceAreaManager areas={areas} />
       </section>
+
+      <ServiceAreaMapPanel areas={geoAreas} />
     </DashboardShell>
   );
 }

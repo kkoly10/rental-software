@@ -36,6 +36,10 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
     { label: "What about crew mobile?", prompt: "How does the crew mobile view work for field delivery team?" },
   ],
   "/dashboard/website": [
+    { label: "Write a catchy hero headline", prompt: "Write a catchy hero headline for my rental business" },
+    { label: "Generate a safety FAQ", prompt: "Generate a FAQ about bounce house safety" },
+    { label: "Improve my service area description", prompt: "Improve my service area description" },
+    { label: "Create an about section", prompt: "Create an about section for my business" },
     { label: "How do I customize my site?", prompt: "How do I customize my public storefront?" },
     { label: "What do customers see?", prompt: "What does my public storefront look like to customers?" },
   ],

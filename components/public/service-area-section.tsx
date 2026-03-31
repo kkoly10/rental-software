@@ -1,6 +1,21 @@
 import Link from "next/link";
+import { ServiceAreaMap } from "@/components/maps/service-area-map";
 
-export function ServiceAreaSection() {
+type ServiceAreaGeo = {
+  id: string;
+  label: string;
+  zipCode: string;
+  city?: string;
+  state?: string;
+  deliveryFee: number;
+  minimumOrder: number;
+};
+
+type Props = {
+  areas?: ServiceAreaGeo[];
+};
+
+export function ServiceAreaSection({ areas = [] }: Props) {
   return (
     <section className="section">
       <div className="container">
@@ -38,6 +53,13 @@ export function ServiceAreaSection() {
               </div>
             </div>
           </div>
+
+          {areas.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <h3 className="svc-map-heading">Our Delivery Coverage</h3>
+              <ServiceAreaMap areas={areas} height="400px" />
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -19,6 +19,8 @@ export type OrderSummary = {
   total: string;
   status: string;
   tone: StatusTone;
+  eventDateRaw?: string;
+  postalCode?: string;
 };
 
 export type ProductSummary = {
@@ -108,6 +110,32 @@ export type RouteDetail = {
   vehicleLabel: string;
   summaryLabel: string;
   stops: string[];
+};
+
+export type RouteStopEnhanced = {
+  id: string;
+  sequence: number;
+  type: "delivery" | "pickup";
+  status: "assigned" | "en_route" | "in_progress" | "completed";
+  address?: string;
+  customerName?: string;
+  scheduledTime?: string;
+  lat?: number;
+  lng?: number;
+};
+
+export type RouteDetailEnhanced = {
+  id: string;
+  name: string;
+  routeDate: string;
+  routeStatus: string;
+  crewLabel: string;
+  vehicleLabel: string;
+  totalStops: number;
+  completedStops: number;
+  inProgressStops: number;
+  nextDeliveryTime?: string;
+  stops: RouteStopEnhanced[];
 };
 
 export type CatalogDetail = {

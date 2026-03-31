@@ -4,6 +4,12 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { getOrderDetail } from "@/lib/data/order-detail";
 import { RecordPaymentForm } from "@/components/payments/record-payment-form";
 import { CreateDocumentsButton } from "@/components/documents/document-actions";
+import { WeatherAlert } from "@/components/weather/weather-alert";
+
+function extractZip(address: string): string | undefined {
+  const match = address.match(/\b(\d{5})\b/);
+  return match ? match[1] : undefined;
+}
 
 function statusTone(status: string): "default" | "success" | "warning" {
   const lower = status.toLowerCase();
@@ -49,6 +55,11 @@ export default async function OrderDetailPage({
               <strong>Event date</strong>
               <div className="muted">{order.eventDate}</div>
             </div>
+
+            <WeatherAlert
+              eventDate={order.eventDate}
+              zipCode={extractZip(order.deliveryLabel)}
+            />
 
             <div className="order-card">
               <strong>Rental items</strong>

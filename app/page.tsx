@@ -16,6 +16,7 @@ import { ServiceAreaSection } from "@/components/public/service-area-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
@@ -31,9 +32,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [featured, settings] = await Promise.all([
+  const [featured, settings, geoAreas] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
+    getServiceAreasGeo(),
   ]);
 
   return (
@@ -182,7 +184,7 @@ export default async function HomePage() {
 
         {/* Service area */}
         <div id="service-area">
-          <ServiceAreaSection />
+          <ServiceAreaSection areas={geoAreas} />
         </div>
 
         {/* FAQ */}

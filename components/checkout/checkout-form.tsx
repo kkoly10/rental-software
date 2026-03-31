@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { createCheckoutOrder } from "@/lib/checkout/actions";
+import { WeatherBadge } from "@/components/weather/weather-badge";
 
 const initialState = {
   ok: false,
@@ -22,6 +23,8 @@ export function CheckoutForm({
     createCheckoutOrder,
     initialState
   );
+  const [selectedDate, setSelectedDate] = useState(initialDate ?? "");
+  const [enteredZip, setEnteredZip] = useState(initialZip ?? "");
 
   if (state.ok && state.message) {
     return (
@@ -104,8 +107,14 @@ export function CheckoutForm({
           name="event_date"
           type="date"
           defaultValue={initialDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
           style={{ marginTop: 10, width: "100%" }}
         />
+        {selectedDate && enteredZip.length === 5 && (
+          <div style={{ marginTop: 8 }}>
+            <WeatherBadge eventDate={selectedDate} zipCode={enteredZip} />
+          </div>
+        )}
       </label>
 
       <label className="order-card">
@@ -150,6 +159,7 @@ export function CheckoutForm({
             placeholder="22554"
             required
             defaultValue={initialZip}
+            onChange={(e) => setEnteredZip(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>

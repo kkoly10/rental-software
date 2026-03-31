@@ -2,14 +2,19 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDeliveryBoardData } from "@/lib/data/delivery-board";
+import { getRouteDetailEnhanced } from "@/lib/data/route-detail";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { DeliveryStats } from "@/components/deliveries/delivery-stats";
+import { RouteMapWrapper } from "./route-map-wrapper";
 
 export default async function DeliveriesPage() {
   const board = await getDeliveryBoardData();
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
+  const primaryRouteId = board.primaryRoute?.id ?? "route_1";
+  const enhancedRoute = await getRouteDetailEnhanced(primaryRouteId);
 
   return (
     <DashboardShell
@@ -112,23 +117,17 @@ export default async function DeliveriesPage() {
           <h2 style={{ marginTop: 8 }}>
             {board.primaryRoute ? board.primaryRoute.name : "No route selected"}
           </h2>
-          <div className="list">
-            <div className="order-card">
-              {board.primaryRoute
-                ? `${board.primaryRoute.date} · ${board.primaryRoute.status}`
-                : "Create a route to begin dispatching"}
-            </div>
-            <div className="order-card">
-              {board.primaryRoute
-                ? `${board.primaryRoute.stops} stops on this route`
-                : "Stop and crew data will appear here"}
-            </div>
-            <div className="order-card">
-              Delivery detail pages are now linked from each route card.
-            </div>
-            <div className="order-card">
-              Future map, proof, and signature tools go here.
-            </div>
+          <DeliveryStats route={enhancedRoute} />
+          <RouteMapWrapper stops={enhancedRoute.stops} height="320px" />
+          <div className="list" style={{ marginTop: 12 }}>
+            {enhancedRoute.stops.map((stop) => (
+              <div key={stop.id} className="order-card">
+                <strong>#{stop.sequence} {stop.customerName ?? "Stop"}</strong>
+                <div className="muted">
+                  {stop.scheduledTime ?? "TBD"} · {stop.type === "pickup" ? "Pickup" : "Delivery"}
+                </div>
+              </div>
+            ))}
           </div>
         </aside>
       </div>

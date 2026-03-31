@@ -1,15 +1,18 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { WebsiteSettingsForm } from "@/components/settings/website-settings-form";
+import { BrandSettingsForm } from "@/components/settings/brand-settings-form";
 import { getWebsiteAdminData } from "@/lib/data/website-admin";
 import { getOrgSettings } from "@/lib/data/settings";
+import { getBrandSettings } from "@/lib/data/brand";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function WebsitePage() {
-  const [data, editableSettings] = await Promise.all([
+  const [data, editableSettings, brandSettings] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
+    getBrandSettings(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/website"];
@@ -96,6 +99,26 @@ export default async function WebsitePage() {
             )}
           </div>
         </aside>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Storefront</div>
+              <h2 style={{ margin: "6px 0 0" }}>Brand &amp; Appearance</h2>
+            </div>
+          </div>
+
+          <BrandSettingsForm
+            defaults={{
+              logoUrl: brandSettings.logoUrl,
+              primaryColor: brandSettings.primaryColor,
+              accentColor: brandSettings.accentColor,
+              fontFamily: brandSettings.fontFamily,
+            }}
+          />
+        </section>
       </div>
     </DashboardShell>
   );

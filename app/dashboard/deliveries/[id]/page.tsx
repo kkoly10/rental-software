@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { getRouteDetail } from "@/lib/data/route-detail";
+import { getRouteDetailEnhanced } from "@/lib/data/route-detail";
+import { DeliveryStats } from "@/components/deliveries/delivery-stats";
+import { RouteDetailMapWrapper } from "./route-detail-map-wrapper";
+import { RouteDetailTimeline } from "./route-detail-timeline";
 
 export default async function DeliveryDetailPage({
   params,
@@ -8,14 +11,22 @@ export default async function DeliveryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const route = await getRouteDetail(id);
+  const route = await getRouteDetailEnhanced(id);
 
   return (
     <DashboardShell
       title="Route Detail"
       description="Inspect a delivery route, crew assignment, stops, and completion state."
     >
-      <div className="dashboard-grid">
+      {/* Stats bar */}
+      <DeliveryStats route={route} />
+
+      {/* Full-width route map */}
+      <div className="panel" style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
+        <RouteDetailMapWrapper stops={route.stops} height="380px" />
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 16 }}>
         <section className="panel">
           <div className="section-header">
             <div>
@@ -25,6 +36,11 @@ export default async function DeliveryDetailPage({
           </div>
 
           <div className="list">
+            <div className="order-card">
+              <strong>Date</strong>
+              <div className="muted">{route.routeDate}</div>
+            </div>
+
             <div className="order-card">
               <strong>Assigned crew</strong>
               <div className="muted">{route.crewLabel}</div>
@@ -36,8 +52,17 @@ export default async function DeliveryDetailPage({
             </div>
 
             <div className="order-card">
+              <strong>Status</strong>
+              <div className="muted">
+                {route.routeStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+              </div>
+            </div>
+
+            <div className="order-card">
               <strong>Stops</strong>
-              <div className="muted">{route.summaryLabel}</div>
+              <div className="muted">
+                {route.completedStops} of {route.totalStops} completed
+              </div>
             </div>
           </div>
         </section>
@@ -46,17 +71,11 @@ export default async function DeliveryDetailPage({
           <div className="section-header">
             <div>
               <div className="kicker">Stop list</div>
-              <h2 style={{ margin: "6px 0 0" }}>Today's sequence</h2>
+              <h2 style={{ margin: "6px 0 0" }}>Today&apos;s sequence</h2>
             </div>
           </div>
 
-          <div className="list">
-            {route.stops.map((stop) => (
-              <div key={stop} className="order-card">
-                {stop}
-              </div>
-            ))}
-          </div>
+          <RouteDetailTimeline stops={route.stops} />
 
           <div style={{ marginTop: 16 }}>
             <Link href="/crew/today" className="secondary-btn">

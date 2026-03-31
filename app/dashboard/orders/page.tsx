@@ -10,6 +10,7 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportOrders } from "@/lib/export/csv";
+import { WeatherBadge } from "@/components/weather/weather-badge";
 
 export default async function OrdersPage({
   searchParams,
@@ -94,7 +95,19 @@ export default async function OrdersPage({
                       />
                     </div>
                     <div className="price-row">
-                      <span className="muted">{order.date}</span>
+                      <span className="muted">
+                        {order.date}
+                        {order.eventDateRaw && order.postalCode && (
+                          <>
+                            {" "}
+                            <WeatherBadge
+                              eventDate={order.eventDateRaw}
+                              zipCode={order.postalCode}
+                              compact
+                            />
+                          </>
+                        )}
+                      </span>
                       <strong>{order.total}</strong>
                     </div>
                   </article>

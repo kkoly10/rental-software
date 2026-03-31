@@ -1,11 +1,22 @@
 import Link from "next/link";
+import { getBrandSettings } from "@/lib/data/brand";
 
-export function PublicHeader() {
+export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
+  const brand = await getBrandSettings();
+  const resolvedLogoUrl = logoUrl ?? brand.logoUrl;
   return (
     <header className="topbar public-topbar">
       <div className="container topbar-inner">
         <Link href="/" className="logo public-logo">
-          Bounce Back Rentals
+          {resolvedLogoUrl ? (
+            <img
+              src={resolvedLogoUrl}
+              alt="Logo"
+              style={{ maxHeight: 40, width: "auto", display: "block" }}
+            />
+          ) : (
+            "Bounce Back Rentals"
+          )}
         </Link>
 
         <nav className="nav-links public-nav-links">
