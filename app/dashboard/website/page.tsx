@@ -32,6 +32,26 @@ export default async function WebsitePage() {
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
       )}
+
+      <div style={{ marginBottom: 24, padding: "16px 20px", borderRadius: 12, background: "var(--surface-muted)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Your public storefront</div>
+          <div className="muted" style={{ fontSize: 13 }}>
+            Changes you make here update YOUR public storefront — the website your customers see when they visit your booking page.
+          </div>
+        </div>
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="secondary-btn"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+        >
+          Preview Your Storefront
+          <span style={{ fontSize: 13 }}>&#8599;</span>
+        </a>
+      </div>
+
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">

@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
-export function PublicFooter() {
+export async function PublicFooter() {
   const year = new Date().getFullYear();
+  const settings = await getOrganizationSettings();
 
   return (
     <footer className="footer">
@@ -9,13 +11,13 @@ export function PublicFooter() {
         <div className="panel" style={{ padding: 28 }}>
           <div className="footer-grid">
             <div>
-              <div className="kicker" style={{ marginBottom: 10 }}>Bounce Back Rentals</div>
+              <div className="kicker" style={{ marginBottom: 10 }}>{settings.businessName}</div>
               <div className="muted" style={{ lineHeight: 1.65, maxWidth: 260 }}>
                 Clean, safe, professionally delivered inflatable rentals for birthdays, school events, and church gatherings.
               </div>
               <div style={{ marginTop: 16 }}>
                 <div className="muted" style={{ fontSize: 13 }}>
-                  Serving Stafford, Fredericksburg & surrounding areas
+                  Serving {settings.serviceAreaLabel}
                 </div>
               </div>
             </div>
@@ -53,7 +55,7 @@ export function PublicFooter() {
 
           <div className="footer-bottom">
             <div className="muted" style={{ fontSize: 12 }}>
-              &copy; {year} Bounce Back Rentals. All rights reserved.
+              &copy; {year} {settings.businessName}. All rights reserved.
             </div>
             <div className="footer-bottom-links">
               <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
