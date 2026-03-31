@@ -194,6 +194,16 @@ export default async function DashboardPage() {
               <strong>Help Center</strong>
               <div className="muted">Guides and articles for every feature</div>
             </Link>
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="order-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <strong>View my storefront &#8599;</strong>
+              <div className="muted">See what customers see when they visit your site</div>
+            </a>
           </div>
 
           <div

@@ -3,12 +3,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 
 const fallbackSettings = {
-  businessName: "Bounce Back Rentals",
-  supportEmail: "hello@bouncebackrentals.com",
-  phone: "(540) 555-0100",
+  businessName: "My Rental Business",
+  supportEmail: "hello@example.com",
+  phone: "(555) 000-0000",
   timezone: "America/New_York",
   currency: "USD",
-  serviceAreaLabel: "Stafford, Fredericksburg, and nearby ZIPs",
+  serviceAreaLabel: "Your service area",
   depositPolicy: "25% deposit to reserve event date",
   publicBookingLabel: "Public checkout enabled",
   featuredInventoryLabel: "3 highlighted inflatables on homepage",

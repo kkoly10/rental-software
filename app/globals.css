@@ -3293,3 +3293,46 @@ textarea:focus {
 .about-section-text p:last-child {
   margin-bottom: 0;
 }
+
+/* ── Operator Bar ── */
+.operator-bar {
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid #334155;
+}
+
+.operator-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.operator-bar-badge {
+  background: #f97316;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.operator-bar-name {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.operator-bar-link {
+  margin-left: auto;
+  color: #93c5fd;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.operator-bar-link:hover {
+  color: #bfdbfe;
+  text-decoration: underline;
+}
