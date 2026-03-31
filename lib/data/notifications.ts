@@ -125,7 +125,7 @@ export async function getNotifications(): Promise<Notification[]> {
 
     if (ordersRes.data) {
       for (const order of ordersRes.data) {
-        const customer = order.customers as { first_name: string | null; last_name: string | null } | null;
+        const customer = order.customers as unknown as { first_name: string | null; last_name: string | null } | null;
         const customerName = customer
           ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown"
           : "Unknown";
@@ -153,7 +153,7 @@ export async function getNotifications(): Promise<Notification[]> {
 
     if (paymentsRes.data) {
       for (const payment of paymentsRes.data) {
-        const orderRel = payment.orders as { customers: { first_name: string | null; last_name: string | null } | null } | null;
+        const orderRel = payment.orders as unknown as { customers: { first_name: string | null; last_name: string | null } | null } | null;
         const customerName = orderRel?.customers
           ? [orderRel.customers.first_name, orderRel.customers.last_name].filter(Boolean).join(" ") || "Unknown"
           : "Unknown";
