@@ -37,7 +37,7 @@ export function ProductForm({
           name="name"
           type="text"
           defaultValue={product?.name ?? ""}
-          placeholder="e.g. Castle Bouncer"
+          placeholder="e.g., Rainbow Castle Bounce House"
           required
           style={{ marginTop: 10, width: "100%" }}
         />
@@ -68,6 +68,7 @@ export function ProductForm({
             step="0.01"
             min="0"
             defaultValue={product?.basePrice ?? 0}
+            placeholder="e.g., 175"
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -104,7 +105,7 @@ export function ProductForm({
           name="short_description"
           type="text"
           defaultValue={product?.shortDescription ?? ""}
-          placeholder="One-line summary for catalog cards"
+          placeholder="e.g., Perfect for backyard birthdays, fits kids ages 3-12"
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
@@ -114,7 +115,7 @@ export function ProductForm({
         <textarea
           name="description"
           defaultValue={product?.description ?? ""}
-          placeholder="Detailed product info, setup notes, recommended age, etc."
+          placeholder="e.g., 15x15 bounce house with safety netting. Holds up to 8 kids. Includes blower, stakes, and setup."
           rows={4}
           style={{ marginTop: 10, width: "100%", fontFamily: "inherit", border: "1px solid var(--border)", borderRadius: 12, padding: 12 }}
         />
