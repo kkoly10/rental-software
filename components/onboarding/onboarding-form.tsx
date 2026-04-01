@@ -160,44 +160,55 @@ export function OnboardingForm() {
         </label>
       </div>
 
-      {state.message && (
-        <div className={state.ok ? "badge success" : "badge warning"} style={{ padding: "10px 14px" }}>
+      {state.message && !state.ok && (
+        <div className="badge warning" style={{ padding: "10px 14px" }}>
           {state.message}
         </div>
       )}
 
-      {state.ok && state.storefrontUrl && (
+      {state.ok && state.storefrontUrl ? (
         <div
           className="panel"
           style={{
-            padding: "16px 20px",
+            padding: "20px 24px",
             background: "#f0fdf4",
             borderLeft: "4px solid #22c55e",
           }}
         >
-          <strong style={{ color: "#166534" }}>Your rental site is live!</strong>
-          <div style={{ marginTop: 6, fontSize: 14 }}>
+          <strong style={{ fontSize: 16, color: "#166534" }}>Your rental site is live!</strong>
+          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
+            Customers can find you at:
+          </div>
+          <div style={{ marginTop: 6 }}>
             <a
               href={state.storefrontUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontFamily: "monospace", color: "var(--primary)" }}
+              style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 600, color: "var(--primary)" }}
             >
               {state.storefrontUrl} &#8599;
             </a>
           </div>
+          <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>
+            Bookmark this URL or share it with customers. You can change it later from Website settings.
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <a href="/dashboard" className="primary-btn">
+              Go to Dashboard
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            className="primary-btn"
+            type="submit"
+            disabled={pending || slugStatus === "taken" || slugStatus === "invalid"}
+          >
+            {pending ? "Setting up..." : "Create Business & Continue"}
+          </button>
         </div>
       )}
-
-      <div style={{ display: "flex", gap: 12 }}>
-        <button
-          className="primary-btn"
-          type="submit"
-          disabled={pending || slugStatus === "taken" || slugStatus === "invalid"}
-        >
-          {pending ? "Setting up..." : "Create Business & Continue"}
-        </button>
-      </div>
     </form>
   );
 }

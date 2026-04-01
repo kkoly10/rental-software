@@ -118,5 +118,9 @@ export async function completeOnboarding(
       .eq("id", orgId);
   }
 
-  redirect("/dashboard");
+  return {
+    ok: true,
+    message: "Your business is set up!",
+    storefrontUrl: `https://${slugInput}.${getAppDomain()}`,
+  };
 }
