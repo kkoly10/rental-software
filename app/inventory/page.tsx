@@ -5,6 +5,7 @@ import { CatalogGrid } from "@/components/public/catalog-grid";
 import { CatalogFilterForm } from "@/components/public/catalog-filter-form";
 import { getCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 function normalizeCategory(value: string) {
@@ -38,6 +39,8 @@ export default async function InventoryPage({
     category?: string;
   }>;
 }) {
+  await requirePublicOrg();
+
   const params = await searchParams;
   const products = await getCatalogList();
 

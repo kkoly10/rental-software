@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 import { normalizePostalCode } from "@/lib/service-areas/normalize";
 
 export type ServiceAreaGeo = {
@@ -49,7 +49,8 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackGeoAreas;
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  if (!organizationId) return fallbackGeoAreas;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -57,7 +58,7 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
     .select(
       "id, label, zip_code, postal_codes, city, state, delivery_fee, minimum_order_amount, is_active"
     )
-    .eq("organization_id", ctx.organizationId)
+    .eq("organization_id", organizationId)
     .eq("is_active", true)
     .order("label", { ascending: true });
 

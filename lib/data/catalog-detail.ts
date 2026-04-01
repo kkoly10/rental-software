@@ -6,6 +6,7 @@ import {
 } from "@/lib/media/storefront-fallback-images";
 import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 import type { CatalogDetail } from "@/lib/types";
+import { notFound } from "next/navigation";
 
 const fallbackProducts: Record<string, CatalogDetail> = {
   "castle-bouncer": {
@@ -101,9 +102,7 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     .maybeSingle();
 
   if (error || !data) {
-    return (
-      fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
-    );
+    notFound();
   }
 
   const category = (data as Record<string, unknown>).categories as

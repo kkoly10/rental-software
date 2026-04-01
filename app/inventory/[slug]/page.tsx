@@ -5,6 +5,7 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { productJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
@@ -35,6 +36,8 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ date?: string; zip?: string }>;
 }) {
+  await requirePublicOrg();
+
   const { slug } = await params;
   const { date, zip } = await searchParams;
   const product = await getCatalogDetail(slug);

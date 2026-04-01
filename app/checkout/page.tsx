@@ -4,6 +4,7 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CheckoutSummaryCard } from "@/components/checkout/checkout-summary-card";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 function formatProductName(value?: string) {
@@ -39,6 +40,8 @@ export default async function CheckoutPage({
 }: {
   searchParams: Promise<{ product?: string; date?: string; zip?: string }>;
 }) {
+  await requirePublicOrg();
+
   const { product, date, zip } = await searchParams;
   const productName = formatProductName(product);
 

@@ -11,7 +11,8 @@ export default function NotFound() {
             <div className="kicker">404</div>
             <h1 style={{ margin: "8px 0 12px" }}>Page not found</h1>
             <div className="muted" style={{ marginBottom: 20 }}>
-              The page you are looking for does not exist or has been moved.
+              The page or storefront you are looking for does not exist, may have
+              been removed, or the web address is incorrect.
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
               <Link href="/" className="primary-btn">
