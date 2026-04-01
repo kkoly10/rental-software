@@ -129,7 +129,7 @@ export default function TermsPage() {
               <h2>13. Contact</h2>
               <p>
                 For questions about these Terms, contact us at{" "}
-                <strong>legal@korent.io</strong>.
+                <strong>legal@korent.app</strong>.
               </p>
             </div>
           </section>

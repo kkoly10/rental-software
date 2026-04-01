@@ -49,7 +49,7 @@ async function getOrgBranding(
 
   return {
     businessName: org?.name ?? "Korent",
-    supportEmail: org?.support_email ?? "support@korent.io",
+    supportEmail: org?.support_email ?? "support@korent.app",
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   };
 }

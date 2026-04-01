@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${resendKey}`,
         },
         body: JSON.stringify({
-          from: `${org?.name ?? "Korent"} <noreply@korent.io>`,
+          from: `${org?.name ?? "Korent"} <noreply@korent.app>`,
           to: supportEmail,
           reply_to: email,
           subject: `[Customer Message] ${subject} — Order ${orderNumber}`,

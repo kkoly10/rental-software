@@ -3,10 +3,12 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { generateSlug, isSlugAvailable, isValidSlugFormat, getAppDomain } from "@/lib/auth/resolve-org";
 
 export type OnboardingActionState = {
   ok: boolean;
   message: string;
+  storefrontUrl?: string;
 };
 
 export async function completeOnboarding(
@@ -18,15 +20,37 @@ export async function completeOnboarding(
   const zipCode = String(formData.get("zip_code") ?? "").trim();
   const deliveryFee = parseFloat(String(formData.get("delivery_fee") ?? "25"));
   const minimumOrder = parseFloat(String(formData.get("minimum_order") ?? "100"));
+  let slugInput = String(formData.get("slug") ?? "").trim();
 
   if (!businessName) {
     return { ok: false, message: "Business name is required." };
   }
 
+  // Generate slug if not provided
+  if (!slugInput) {
+    slugInput = generateSlug(businessName);
+  }
+
+  if (!isValidSlugFormat(slugInput)) {
+    return {
+      ok: false,
+      message: "URL slug must be 3-63 lowercase letters, numbers, and hyphens.",
+    };
+  }
+
   if (!hasSupabaseEnv()) {
     return {
       ok: true,
-      message: `Demo mode: "${businessName}" would be created. Add Supabase env vars to enable.`,
+      message: `Demo mode: "${businessName}" would be created.`,
+      storefrontUrl: `https://${slugInput}.${getAppDomain()}`,
+    };
+  }
+
+  const available = await isSlugAvailable(slugInput);
+  if (!available) {
+    return {
+      ok: false,
+      message: "That URL slug is already taken or reserved. Please choose a different one.",
     };
   }
 
@@ -83,6 +107,15 @@ export async function completeOnboarding(
       ok: false,
       message: "Organization creation returned no result.",
     };
+  }
+
+  // Update the slug to the user's chosen one (the RPC may have generated a different one)
+  const orgId = typeof data === "string" ? data : (data as any)?.organization_id ?? data;
+  if (orgId) {
+    await supabase
+      .from("organizations")
+      .update({ slug: slugInput })
+      .eq("id", orgId);
   }
 
   redirect("/dashboard");

@@ -123,7 +123,7 @@ export default function PrivacyPage() {
               <h2>10. Contact</h2>
               <p>
                 For privacy-related questions or data requests, contact us at{" "}
-                <strong>privacy@korent.io</strong>.
+                <strong>privacy@korent.app</strong>.
               </p>
             </div>
           </section>
