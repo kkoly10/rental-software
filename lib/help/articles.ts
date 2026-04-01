@@ -564,7 +564,7 @@ SMS notifications require a Twilio account. You'll need to set three environment
     title: "Weather-aware booking alerts",
     section: "Orders",
     summary: "How weather forecasts help you and your customers plan for event day.",
-    body: `RentalOS automatically checks weather forecasts for upcoming event dates and shows risk alerts throughout the platform.
+    body: `Korent automatically checks weather forecasts for upcoming event dates and shows risk alerts throughout the platform.
 
 **Where weather appears:**
 

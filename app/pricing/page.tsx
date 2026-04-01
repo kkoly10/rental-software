@@ -6,7 +6,7 @@ import { PricingGrid } from "@/components/public/pricing-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing — RentalOS",
+  title: "Pricing — Korent",
   description:
     "Simple, transparent pricing for party rental businesses. Start your 14-day free trial today.",
   path: "/pricing",
@@ -79,7 +79,7 @@ export default function PricingPage() {
             <div style={{ marginTop: 40 }}>
               <p className="muted">
                 Have questions? <Link href="/dashboard/help" style={{ color: "var(--primary)", fontWeight: 600 }}>Visit our help center</Link> or
-                email us at support@rentalos.io
+                email us at support@korent.io
               </p>
             </div>
           </div>

@@ -23,7 +23,7 @@ export default async function ResetPasswordPage() {
               <div className="kicker">Update password</div>
               <h1 style={{ margin: "6px 0 8px" }}>Set a new password</h1>
               <div className="muted">
-                Choose a strong new password for your RentalOS operator account.
+                Choose a strong new password for your Korent operator account.
               </div>
             </div>
           </div>

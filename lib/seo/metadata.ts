@@ -50,7 +50,7 @@ export function buildPageMetadata(options: {
       title: options.title,
       description: options.description,
       url: canonical,
-      siteName: "RentalOS",
+      siteName: "Korent",
       type: "website",
       images: options.image ? [{ url: options.image }] : undefined,
     },

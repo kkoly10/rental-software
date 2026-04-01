@@ -29,7 +29,7 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
   ],
   "/dashboard/documents": [
     { label: "How do I generate documents?", prompt: "How do I generate documents for an order?" },
-    { label: "What documents are created?", prompt: "What types of documents does RentalOS create?" },
+    { label: "What documents are created?", prompt: "What types of documents does Korent create?" },
   ],
   "/dashboard/deliveries": [
     { label: "How do routes work?", prompt: "How do delivery routes and stops work?" },

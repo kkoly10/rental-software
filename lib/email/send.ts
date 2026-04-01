@@ -10,7 +10,7 @@ export type EmailPayload = {
   organizationId?: string;
 };
 
-const DEFAULT_FROM = "RentalOS <noreply@rentalos.io>";
+const DEFAULT_FROM = "Korent <noreply@korent.io>";
 
 /**
  * Send a transactional email via Resend.

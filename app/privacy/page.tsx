@@ -4,9 +4,9 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Privacy Policy — RentalOS",
+  title: "Privacy Policy — Korent",
   description:
-    "How RentalOS collects, uses, and protects your personal information.",
+    "How Korent collects, uses, and protects your personal information.",
   path: "/privacy",
 });
 
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
             <div className="legal-content">
               <h2>1. Information We Collect</h2>
               <p>
-                When you use RentalOS (&quot;the Service&quot;), we collect information
+                When you use Korent (&quot;the Service&quot;), we collect information
                 you provide directly:
               </p>
               <ul>
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
               <h2>10. Contact</h2>
               <p>
                 For privacy-related questions or data requests, contact us at{" "}
-                <strong>privacy@rentalos.com</strong>.
+                <strong>privacy@korent.io</strong>.
               </p>
             </div>
           </section>

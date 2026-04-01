@@ -1,4 +1,4 @@
-# RentalOS — Inflatable Rental Software
+# Korent — Inflatable Rental Software
 
 Web-first rental software purpose-built for inflatable rental businesses, with an architecture designed to expand into party rental and trailer rental workflows.
 

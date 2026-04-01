@@ -203,7 +203,7 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
     { align: "center" }
   );
   doc.text(
-    "Powered by RentalOS",
+    "Powered by Korent",
     pageWidth / 2,
     footerY + 14,
     { align: "center" }
