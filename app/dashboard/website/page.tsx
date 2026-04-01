@@ -6,20 +6,23 @@ import { AboutEditor } from "@/components/settings/about-editor";
 import { TestimonialsManager } from "@/components/settings/testimonials-manager";
 import { TrustBadgesEditor } from "@/components/settings/trust-badges-editor";
 import { SectionVisibilityForm } from "@/components/settings/section-visibility-form";
+import { DomainSettingsPanel } from "@/components/settings/domain-settings-panel";
 import { getWebsiteAdminData } from "@/lib/data/website-admin";
 import { getOrgSettings } from "@/lib/data/settings";
 import { getBrandSettings } from "@/lib/data/brand";
 import { getContentSettings } from "@/lib/data/content-settings";
+import { getDomainSettings } from "@/lib/data/domain-settings";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 
 export default async function WebsitePage() {
-  const [data, editableSettings, brandSettings, contentSettings] = await Promise.all([
+  const [data, editableSettings, brandSettings, contentSettings, domainSettings] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
     getBrandSettings(),
     getContentSettings(),
+    getDomainSettings(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/website"];
@@ -126,6 +129,19 @@ export default async function WebsitePage() {
             )}
           </div>
         </aside>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Storefront</div>
+              <h2 style={{ margin: "6px 0 0" }}>Domain &amp; URL</h2>
+            </div>
+          </div>
+
+          <DomainSettingsPanel defaults={domainSettings} />
+        </section>
       </div>
 
       <div className="dashboard-grid" style={{ marginTop: 24 }}>

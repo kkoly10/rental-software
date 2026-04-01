@@ -97,7 +97,7 @@ export async function sendCustomerMessage(
     .eq("id", orgId)
     .maybeSingle();
 
-  const supportEmail = org?.support_email ?? "support@rentalos.io";
+  const supportEmail = org?.support_email ?? "support@korent.app";
 
   // Send notification email to business
   await sendEmail({

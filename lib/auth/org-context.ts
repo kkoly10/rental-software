@@ -2,6 +2,8 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import { resolveOrgFromHostname } from "@/lib/auth/resolve-org";
 
 export type OrgContext = {
   userId: string;
@@ -42,22 +44,15 @@ export async function getOrgContext(): Promise<OrgContext | null> {
 }
 
 /**
- * For public-facing pages (checkout, catalog), resolve org from the first active org.
- * Public visitors are not authenticated, so we use the service-level lookup.
- * In a multi-tenant SaaS with subdomains, this would resolve from the hostname.
- * For MVP single-tenant deployment, first org is acceptable for the public storefront.
+ * Resolve the organization for public-facing pages (storefront, checkout, portal).
+ * Uses hostname-based tenant resolution in production (subdomains and custom domains).
+ * Falls back to first org on localhost / Vercel previews for development.
  */
 export async function getPublicOrgId(): Promise<string | null> {
   if (!hasSupabaseEnv()) return null;
 
-  const supabase = await createSupabaseServerClient();
+  const headersList = await headers();
+  const host = headersList.get("host") ?? headersList.get("x-forwarded-host") ?? "localhost";
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("id")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  return org?.id ?? null;
+  return resolveOrgFromHostname(host);
 }

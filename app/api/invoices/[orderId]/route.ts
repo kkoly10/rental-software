@@ -88,7 +88,7 @@ export async function GET(
   const depositPaid = Number(Math.max(0, totalAmount - balanceDue).toFixed(2));
 
   const invoiceData: InvoiceData = {
-    businessName: org?.name ?? "RentalOS",
+    businessName: org?.name ?? "Korent",
     supportEmail: org?.support_email ?? profile?.email ?? "",
     phone: org?.phone ?? profile?.phone ?? "",
     orderNumber: order.order_number,

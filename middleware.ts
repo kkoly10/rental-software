@@ -17,6 +17,39 @@ function isAuthEntryPath(pathname: string) {
   );
 }
 
+/**
+ * Determine if this hostname is a tenant subdomain or custom domain.
+ * This runs on the edge — no DB access, just string matching.
+ */
+function getTenantHost(hostname: string): string | null {
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
+  const hostWithoutPort = hostname.split(":")[0];
+  const appDomainWithoutPort = appDomain.split(":")[0];
+
+  // Localhost, Vercel preview, or root domain → not a tenant subdomain
+  if (
+    hostWithoutPort === "localhost" ||
+    hostWithoutPort === "127.0.0.1" ||
+    hostWithoutPort.endsWith(".vercel.app") ||
+    hostWithoutPort === appDomainWithoutPort ||
+    hostWithoutPort === `www.${appDomainWithoutPort}`
+  ) {
+    return null;
+  }
+
+  // Subdomain of app domain
+  if (hostWithoutPort.endsWith(`.${appDomainWithoutPort}`)) {
+    const subdomain = hostWithoutPort.slice(
+      0,
+      hostWithoutPort.length - appDomainWithoutPort.length - 1
+    );
+    if (subdomain && subdomain !== "www") return hostname;
+  }
+
+  // Custom domain (anything else that's not the app domain)
+  return hostname;
+}
+
 export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -45,6 +78,33 @@ export async function middleware(request: NextRequest) {
   });
 
   const pathname = request.nextUrl.pathname;
+  const hostname = request.headers.get("host") ?? "localhost";
+
+  // For tenant subdomains/custom domains, set a header so downstream pages
+  // can resolve the org. Only allow public storefront routes — redirect
+  // dashboard/auth paths to the main app domain.
+  const tenantHost = getTenantHost(hostname);
+  if (tenantHost) {
+    // Tenant subdomains should not serve dashboard, auth, or onboarding routes
+    if (
+      isProtectedPath(pathname) ||
+      isAuthEntryPath(pathname) ||
+      pathname === "/auth/verify-email" ||
+      pathname === "/auth/verified"
+    ) {
+      const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
+      const protocol = request.nextUrl.protocol;
+      const url = new URL(pathname, `${protocol}//${appDomain}`);
+      url.search = request.nextUrl.search;
+      return NextResponse.redirect(url);
+    }
+
+    // Set tenant host header for downstream resolution
+    supabaseResponse.headers.set("x-tenant-host", tenantHost);
+    return supabaseResponse;
+  }
+
+  // ── Standard auth flow (root domain / localhost / preview) ──
 
   const {
     data: { user },

@@ -19,7 +19,7 @@ export function getStripe(): Stripe {
 }
 
 /**
- * Subscription plan tiers for RentalOS.
+ * Subscription plan tiers for Korent.
  *
  * Each tier defines limits that are enforced at the application layer.
  * The `stripePriceId` fields must be populated after creating products

@@ -10,7 +10,7 @@ export default function VerifiedPage() {
               <div className="kicker">Email confirmed</div>
               <h1 style={{ margin: "6px 0 8px" }}>Your account is verified</h1>
               <div className="muted">
-                You can now sign in and continue setting up your RentalOS
+                You can now sign in and continue setting up your Korent
                 operator workspace.
               </div>
             </div>

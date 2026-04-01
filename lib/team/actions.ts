@@ -146,12 +146,12 @@ export async function inviteTeamMember(
     .eq("id", ctx.organizationId)
     .maybeSingle();
 
-  const businessName = org?.name ?? "RentalOS";
+  const businessName = org?.name ?? "Korent";
   const inviteUrl = `${siteUrl}/invite/${token}`;
 
   sendEmail({
     to: email,
-    subject: `You're invited to join ${businessName} on RentalOS`,
+    subject: `You're invited to join ${businessName} on Korent`,
     html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">

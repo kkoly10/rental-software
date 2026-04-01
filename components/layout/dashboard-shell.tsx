@@ -32,7 +32,7 @@ export function DashboardShell({
     <div className="sidebar-layout">
       <aside className="sidebar">
         <Link href="/dashboard" className="logo" style={{ color: "white", marginBottom: 20, display: "block" }}>
-          RentalOS
+          Korent
         </Link>
 
         {dashboardNavItems.map((item) => (

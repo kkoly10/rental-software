@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "RentalOS — Inflatable Rental Software";
+export const alt = "Korent — Inflatable Rental Software";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -32,7 +32,7 @@ export default function OgImage() {
             marginBottom: 16,
           }}
         >
-          RentalOS
+          Korent
         </div>
         <div
           style={{

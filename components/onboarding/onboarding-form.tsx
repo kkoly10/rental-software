@@ -1,12 +1,65 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useCallback, useEffect } from "react";
 import { completeOnboarding } from "@/lib/onboarding/actions";
 
-const initialState = { ok: false, message: "" };
+const initialState = { ok: false, message: "", storefrontUrl: "" };
+
+function generateSlugClient(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 63);
+}
+
+function getAppDomain() {
+  return process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
+}
 
 export function OnboardingForm() {
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
+  const appDomain = getAppDomain();
+
+  const [businessName, setBusinessName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+
+  // Auto-generate slug from business name (unless user manually edited)
+  useEffect(() => {
+    if (!slugEdited && businessName) {
+      setSlug(generateSlugClient(businessName));
+    }
+  }, [businessName, slugEdited]);
+
+  const checkSlug = useCallback(async (value: string) => {
+    if (!value || value.length < 3) {
+      setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(value)) {
+      setSlugStatus("invalid");
+      return;
+    }
+    setSlugStatus("checking");
+    try {
+      const res = await fetch(`/api/domains/check-slug?slug=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      setSlugStatus(data.available ? "available" : "taken");
+    } catch {
+      setSlugStatus("idle");
+    }
+  }, []);
+
+  // Check availability when slug changes via auto-generation
+  useEffect(() => {
+    if (slug.length >= 3) {
+      const t = setTimeout(() => checkSlug(slug), 400);
+      return () => clearTimeout(t);
+    }
+  }, [slug, checkSlug]);
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
@@ -17,9 +70,49 @@ export function OnboardingForm() {
           type="text"
           placeholder="e.g. Fun Zone Inflatables"
           required
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
+
+      <div className="order-card">
+        <strong>Storefront URL</strong>
+        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+          This is the web address customers will use to find your rental site.
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10 }}>
+          <input
+            name="slug"
+            type="text"
+            value={slug}
+            onChange={(e) => {
+              const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+              setSlug(v);
+              setSlugEdited(true);
+            }}
+            onBlur={() => checkSlug(slug)}
+            style={{ width: 200, fontFamily: "monospace" }}
+            maxLength={63}
+          />
+          <span className="muted" style={{ fontSize: 14 }}>.{appDomain}</span>
+        </div>
+
+        {slugStatus === "checking" && (
+          <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>Checking...</div>
+        )}
+        {slugStatus === "available" && (
+          <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>&#10003; Available</div>
+        )}
+        {slugStatus === "taken" && (
+          <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>Already taken — try a different one.</div>
+        )}
+        {slugStatus === "invalid" && (
+          <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>
+            Must be 3+ lowercase letters, numbers, and hyphens.
+          </div>
+        )}
+      </div>
 
       <label className="order-card">
         <strong>Timezone</strong>
@@ -67,17 +160,55 @@ export function OnboardingForm() {
         </label>
       </div>
 
-      {state.message && (
-        <div className={state.ok ? "badge success" : "badge warning"} style={{ padding: "10px 14px" }}>
+      {state.message && !state.ok && (
+        <div className="badge warning" style={{ padding: "10px 14px" }}>
           {state.message}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 12 }}>
-        <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Setting up..." : "Create Business & Continue"}
-        </button>
-      </div>
+      {state.ok && state.storefrontUrl ? (
+        <div
+          className="panel"
+          style={{
+            padding: "20px 24px",
+            background: "#f0fdf4",
+            borderLeft: "4px solid #22c55e",
+          }}
+        >
+          <strong style={{ fontSize: 16, color: "#166534" }}>Your rental site is live!</strong>
+          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
+            Customers can find you at:
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <a
+              href={state.storefrontUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 600, color: "var(--primary)" }}
+            >
+              {state.storefrontUrl} &#8599;
+            </a>
+          </div>
+          <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>
+            Bookmark this URL or share it with customers. You can change it later from Website settings.
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <a href="/dashboard" className="primary-btn">
+              Go to Dashboard
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            className="primary-btn"
+            type="submit"
+            disabled={pending || slugStatus === "taken" || slugStatus === "invalid"}
+          >
+            {pending ? "Setting up..." : "Create Business & Continue"}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

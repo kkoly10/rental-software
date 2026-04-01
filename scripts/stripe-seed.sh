@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Creates the RentalOS subscription product + 6 prices in Stripe.
+# Creates the Korent subscription product + 6 prices in Stripe.
 # Usage: STRIPE_SECRET_KEY=sk_test_xxx bash scripts/stripe-seed.sh
 #
 # Run this against your TEST mode key first, then LIVE when ready.
@@ -16,11 +16,11 @@ fi
 API="https://api.stripe.com/v1"
 AUTH="-u ${STRIPE_SECRET_KEY}:"
 
-echo "=== Creating RentalOS product ==="
+echo "=== Creating Korent product ==="
 PRODUCT_ID=$(curl -s $AUTH "$API/products" \
-  -d "name=RentalOS Subscription" \
+  -d "name=Korent Subscription" \
   -d "description=SaaS platform for party rental businesses" \
-  -d "metadata[app]=rentalos" \
+  -d "metadata[app]=korent" \
   | grep -o '"id": "prod_[^"]*"' | head -1 | cut -d'"' -f4)
 
 echo "Product: $PRODUCT_ID"

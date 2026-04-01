@@ -46,7 +46,7 @@ export async function submitContactForm(
   try {
     const { sendEmail } = await import("@/lib/email/send");
     await sendEmail({
-      to: "support@rentalos.com",
+      to: "support@korent.app",
       subject: `Contact form: ${parsed.data.name}`,
       html: `
         <p><strong>From:</strong> ${parsed.data.name} (${parsed.data.email})</p>

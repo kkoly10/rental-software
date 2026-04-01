@@ -48,8 +48,8 @@ async function getOrgBranding(
     .maybeSingle();
 
   return {
-    businessName: org?.name ?? "RentalOS",
-    supportEmail: org?.support_email ?? "support@rentalos.io",
+    businessName: org?.name ?? "Korent",
+    supportEmail: org?.support_email ?? "support@korent.app",
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   };
 }

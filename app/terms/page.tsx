@@ -4,9 +4,9 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Terms of Service — RentalOS",
+  title: "Terms of Service — Korent",
   description:
-    "Terms and conditions governing use of the RentalOS rental management platform.",
+    "Terms and conditions governing use of the Korent rental management platform.",
   path: "/terms",
 });
 
@@ -26,14 +26,14 @@ export default function TermsPage() {
             <div className="legal-content">
               <h2>1. Acceptance of Terms</h2>
               <p>
-                By accessing or using RentalOS (&quot;the Service&quot;), you agree to
+                By accessing or using Korent (&quot;the Service&quot;), you agree to
                 be bound by these Terms of Service. If you do not agree, do not
                 use the Service.
               </p>
 
               <h2>2. Description of Service</h2>
               <p>
-                RentalOS is a software-as-a-service platform that provides rental
+                Korent is a software-as-a-service platform that provides rental
                 business management tools including online booking, order
                 management, payment tracking, availability scheduling, document
                 generation, and customer management.
@@ -89,7 +89,7 @@ export default function TermsPage() {
               <h2>8. Limitation of Liability</h2>
               <p>
                 The Service is provided &quot;as is&quot; without warranties of any kind.
-                RentalOS shall not be liable for any indirect, incidental,
+                Korent shall not be liable for any indirect, incidental,
                 special, or consequential damages arising from your use of the
                 Service. Our total liability shall not exceed the amount you paid
                 for the Service in the 12 months preceding the claim.
@@ -129,7 +129,7 @@ export default function TermsPage() {
               <h2>13. Contact</h2>
               <p>
                 For questions about these Terms, contact us at{" "}
-                <strong>legal@rentalos.com</strong>.
+                <strong>legal@korent.app</strong>.
               </p>
             </div>
           </section>

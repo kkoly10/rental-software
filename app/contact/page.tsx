@@ -5,7 +5,7 @@ import { ContactForm } from "@/components/public/contact-form";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Contact Us — RentalOS",
+  title: "Contact Us — Korent",
   description:
     "Get in touch with us for questions about rentals, bookings, or custom event packages.",
   path: "/contact",

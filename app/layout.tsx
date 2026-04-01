@@ -6,10 +6,10 @@ import { BrandStyleInjector } from "@/components/layout/brand-style-injector";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteBaseUrl()),
-  title: "RentalOS",
+  title: "Korent",
   description:
-    "RentalOS is an inflatable-first rental software platform with a public storefront, operator dashboard, and crew workflow support.",
-  applicationName: "RentalOS",
+    "Korent is an inflatable-first rental software platform with a public storefront, operator dashboard, and crew workflow support.",
+  applicationName: "Korent",
   keywords: [
     "rental software",
     "party rental software",
@@ -18,16 +18,16 @@ export const metadata: Metadata = {
     "equipment rental platform",
   ],
   openGraph: {
-    title: "RentalOS",
+    title: "Korent",
     description:
       "Inflatable-first rental software with storefront, operations dashboard, and crew workflows.",
-    siteName: "RentalOS",
+    siteName: "Korent",
     type: "website",
     url: getSiteBaseUrl(),
   },
   twitter: {
     card: "summary",
-    title: "RentalOS",
+    title: "Korent",
     description:
       "Inflatable-first rental software with storefront, operations dashboard, and crew workflows.",
   },

@@ -399,7 +399,7 @@ function generateLocalResponse(
     if (help) {
       return `**${help.title}**\n\n${help.description}`;
     }
-    return "This is a dashboard page in RentalOS. Use the sidebar to navigate between sections like Orders, Products, Payments, and more.";
+    return "This is a dashboard page in Korent. Use the sidebar to navigate between sections like Orders, Products, Payments, and more.";
   }
 
   const relevantArticles = searchArticles(message);

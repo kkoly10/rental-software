@@ -1,4 +1,4 @@
-# RentalOS UI Blueprint
+# Korent UI Blueprint
 
 ## Design system
 
