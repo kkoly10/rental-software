@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
 import { CopilotLauncher } from "@/components/copilot/copilot-launcher";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import type { Notification } from "@/lib/data/notifications";
+import { fetchUnreadMessageCount } from "@/lib/messages/actions";
 
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -20,13 +21,20 @@ export function DashboardShell({
   description,
   children,
   notifications = [],
+  unreadMessages = 0,
 }: {
   title: string;
   description: string;
   children: ReactNode;
   notifications?: Notification[];
+  unreadMessages?: number;
 }) {
   const pathname = usePathname();
+  const [badgeCount, setBadgeCount] = useState(unreadMessages);
+
+  useEffect(() => {
+    fetchUnreadMessageCount().then(setBadgeCount).catch(() => {});
+  }, [pathname]);
 
   return (
     <div className="sidebar-layout">
@@ -41,8 +49,24 @@ export function DashboardShell({
             href={item.href}
             className={isNavItemActive(pathname, item.href) ? "active" : undefined}
             data-tour={item.tourId}
+            style={item.label === "Messages" ? { display: "flex", alignItems: "center", justifyContent: "space-between" } : undefined}
           >
             {item.label}
+            {item.label === "Messages" && badgeCount > 0 && (
+              <span
+                style={{
+                  background: "#ef4444",
+                  color: "#fff",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "1px 7px",
+                  borderRadius: 999,
+                  lineHeight: "18px",
+                }}
+              >
+                {badgeCount > 9 ? "9+" : badgeCount}
+              </span>
+            )}
           </Link>
         ))}
 

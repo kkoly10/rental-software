@@ -7,6 +7,7 @@ import {
   orderStatusUpdateEmail,
   documentsReadyEmail,
 } from "./templates";
+import { createNotification } from "@/lib/data/notifications";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,15 @@ export async function triggerOrderConfirmationEmail(params: {
     }),
     organizationId: params.organizationId,
   });
+
+  // Persist notification
+  await createNotification(
+    params.organizationId,
+    "new_order",
+    "New order received",
+    `#${params.orderNumber} — ${params.productName} — ${params.customerFirstName}`,
+    "/dashboard/orders"
+  );
 }
 
 // ─── Order created (from dashboard) ─────────────────────────────────────────
@@ -141,6 +151,15 @@ export async function triggerDashboardOrderEmail(params: {
     }),
     organizationId: params.organizationId,
   });
+
+  // Persist notification
+  await createNotification(
+    params.organizationId,
+    "new_order",
+    "New order created",
+    `#${params.orderNumber} — ${params.productName} — ${params.customerName}`,
+    "/dashboard/orders"
+  );
 }
 
 // ─── Payment received ───────────────────────────────────────────────────────
@@ -191,6 +210,15 @@ export async function triggerPaymentReceivedEmail(params: {
       organizationId: params.organizationId,
     });
   }
+
+  // Persist notification
+  await createNotification(
+    params.organizationId,
+    "payment_received",
+    params.paymentType === "refund" ? "Refund processed" : "Payment received",
+    `${formatMoney(params.amount)} for order #${params.orderNumber}`,
+    "/dashboard/payments"
+  );
 }
 
 // ─── Order status update ────────────────────────────────────────────────────
