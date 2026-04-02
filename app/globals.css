@@ -291,6 +291,19 @@ a:focus-visible {
   transform: scale(1.05);
 }
 
+.product-card-unavailable {
+  opacity: 0.6;
+}
+
+.product-card-unavailable:hover {
+  transform: none;
+  box-shadow: var(--shadow);
+}
+
+.product-card-unavailable .product-media-img {
+  filter: grayscale(0.5);
+}
+
 .product-copy {
   padding: 16px;
 }
@@ -334,6 +347,11 @@ a:focus-visible {
 .badge.warning {
   background: #fff4e5;
   color: #a86a08;
+}
+
+.badge.danger {
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .badge.danger {

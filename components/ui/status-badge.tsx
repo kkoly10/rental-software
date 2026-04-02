@@ -11,7 +11,7 @@ export function StatusBadge({
       : tone === "warning"
       ? "badge warning"
       : tone === "danger"
-      ? "badge warning"
+      ? "badge danger"
       : "badge";
 
   return <span className={className}>{label}</span>;

@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { updateBrandSettings } from "@/lib/settings/brand-actions";
+import { updateBrandSettings, type SettingsActionState } from "@/lib/settings/brand-actions";
 import { LogoUpload } from "./logo-upload";
 
-const initialState = { ok: false, message: "" };
+const initialState: SettingsActionState = { ok: false, message: "" };
 
 const FONT_OPTIONS = [
   "System Default",
@@ -148,10 +148,33 @@ export function BrandSettingsForm({
 
       {state.message && (
         <div
-          className={state.ok ? "badge success" : "badge warning"}
+          className={state.ok && !state.contrastWarnings ? "badge success" : "badge warning"}
           style={{ padding: "10px 14px" }}
         >
           {state.message}
+        </div>
+      )}
+
+      {state.contrastWarnings && state.contrastWarnings.length > 0 && (
+        <div
+          style={{
+            padding: "12px 16px",
+            background: "#fff8e6",
+            border: "1px solid #f5a623",
+            borderRadius: 12,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+          role="alert"
+        >
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Contrast warning
+          </strong>
+          {state.contrastWarnings.map((warning) => (
+            <div key={warning} style={{ marginTop: 4 }}>
+              {warning}
+            </div>
+          ))}
         </div>
       )}
 

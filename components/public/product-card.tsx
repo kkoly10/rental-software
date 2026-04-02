@@ -18,15 +18,21 @@ export function ProductCard({
   status: string;
   imageUrl?: string;
 }) {
+  const isUnavailable = status.startsWith("Unavailable");
+
   const tone =
-    status === "Available"
-      ? "success"
-      : status === "Limited"
-        ? "warning"
-        : "default";
+    isUnavailable
+      ? "danger"
+      : status === "Available"
+        ? "success"
+        : status === "Limited"
+          ? "warning"
+          : "default";
 
   return (
-    <article className="product-card">
+    <article
+      className={`product-card${isUnavailable ? " product-card-unavailable" : ""}`}
+    >
       <div className="product-media">
         {imageUrl && (
           /* eslint-disable-next-line @next/next/no-img-element */
