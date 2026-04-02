@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { loadLeaflet } from "@/lib/maps/load-leaflet";
+import { geocodeZipClient } from "@/lib/maps/geocode-client";
+import { escapeHtml } from "@/lib/maps/escape-html";
 
 type ServiceArea = {
   id: string;
@@ -17,88 +20,6 @@ type Props = {
   interactive?: boolean;
   height?: string;
 };
-
-/* ── ZIP-code → approximate lat/lng lookup (client-side, cached) ── */
-const geoCache = new Map<string, { lat: number; lng: number } | null>();
-
-async function clientGeocodeZip(
-  zip: string
-): Promise<{ lat: number; lng: number } | null> {
-  const key = zip.trim().slice(0, 5);
-  if (!/^\d{5}$/.test(key)) return null;
-  if (geoCache.has(key)) return geoCache.get(key) ?? null;
-
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?postalcode=${key}&country=US&format=json&limit=1`,
-      { headers: { "User-Agent": "RentalSoftware/1.0 (service-area-map)" } }
-    );
-    if (!res.ok) {
-      geoCache.set(key, null);
-      return null;
-    }
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
-      geoCache.set(key, null);
-      return null;
-    }
-    const result = {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-    };
-    geoCache.set(key, result);
-    return result;
-  } catch {
-    geoCache.set(key, null);
-    return null;
-  }
-}
-
-/* ── Leaflet CDN loader ── */
-const LEAFLET_CSS =
-  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-const LEAFLET_JS =
-  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-
-let leafletPromise: Promise<void> | null = null;
-
-function loadLeaflet(): Promise<void> {
-  if (leafletPromise) return leafletPromise;
-
-  leafletPromise = new Promise<void>((resolve, reject) => {
-    /* CSS */
-    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = LEAFLET_CSS;
-      document.head.appendChild(link);
-    }
-
-    /* JS */
-    if ((window as any).L) {
-      resolve();
-      return;
-    }
-
-    if (document.querySelector(`script[src="${LEAFLET_JS}"]`)) {
-      const check = setInterval(() => {
-        if ((window as any).L) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 50);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = LEAFLET_JS;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Leaflet"));
-    document.head.appendChild(script);
-  });
-
-  return leafletPromise;
-}
 
 /* ── US center fallback ── */
 const US_CENTER: [number, number] = [39.8283, -98.5795];
@@ -147,16 +68,21 @@ export function ServiceAreaMap({
 
       for (const area of areas) {
         if (!area.zipCode) continue;
-        const geo = await clientGeocodeZip(area.zipCode);
+        const geo = await geocodeZipClient(area.zipCode);
         if (!geo || cancelled) continue;
 
-        const location = [area.city, area.state].filter(Boolean).join(", ");
+        const safeLabel = escapeHtml(area.label);
+        const safeZip = escapeHtml(area.zipCode);
+        const locationParts = [area.city, area.state].filter(Boolean);
+        const safeLocation = locationParts.length > 0
+          ? escapeHtml(locationParts.join(", "))
+          : "";
 
         const popupHtml = `
           <div class="svc-map-popup">
-            <strong>${area.label}</strong>
+            <strong>${safeLabel}</strong>
             <div style="margin-top:4px;font-size:13px;color:#55708f">
-              ${area.zipCode}${location ? ` &mdash; ${location}` : ""}
+              ${safeZip}${safeLocation ? ` &mdash; ${safeLocation}` : ""}
             </div>
             <div style="margin-top:6px;font-size:13px">
               Delivery fee: <strong>$${area.deliveryFee}</strong>
