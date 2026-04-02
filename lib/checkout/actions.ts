@@ -478,6 +478,23 @@ export async function createCheckoutOrder(
     }).catch(() => {})
   );
 
+  // Send order confirmation SMS (non-blocking)
+  if (phone) {
+    import("@/lib/sms/send-notification").then(async ({ sendSmsNotification }) => {
+      const { createSupabaseServerClient: createSB } = await import("@/lib/supabase/server");
+      const sb = await createSB();
+      const { data: org } = await sb
+        .from("organizations")
+        .select("name")
+        .eq("id", orgId)
+        .maybeSingle();
+      await sendSmsNotification("orderConfirmation", phone, {
+        orderNumber,
+        businessName: org?.name ?? "Your rental company",
+      }, orgId);
+    }).catch(() => {});
+  }
+
   // Attempt Stripe Checkout for deposit payment
   if (hasStripeEnv() && deposit > 0) {
     try {

@@ -17,9 +17,10 @@ const settingsMap: Record<TemplateKey, keyof Awaited<ReturnType<typeof getSmsSet
 export async function sendSmsNotification(
   type: TemplateKey,
   customerPhone: string,
-  params: Record<string, string>
+  params: Record<string, string>,
+  organizationId?: string
 ): Promise<void> {
-  const settings = await getSmsSettings();
+  const settings = await getSmsSettings(organizationId);
 
   if (!settings.enabled) {
     return;

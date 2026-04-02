@@ -233,6 +233,53 @@ export async function triggerOrderStatusEmail(params: {
 
   const branding = await getOrgBranding(params.organizationId);
 
+  // Fetch delivery details for scheduled / out_for_delivery statuses
+  let deliveryTimeWindow: string | undefined;
+  let crewName: string | undefined;
+
+  if (params.newStatus === "scheduled" || params.newStatus === "out_for_delivery") {
+    try {
+      const { data: stop } = await supabase
+        .from("route_stops")
+        .select(
+          "scheduled_window_start, scheduled_window_end, routes(name, profiles(full_name))"
+        )
+        .eq("order_id", params.orderId)
+        .limit(1)
+        .maybeSingle();
+
+      if (stop) {
+        const windowStart = stop.scheduled_window_start
+          ? new Date(stop.scheduled_window_start).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          : null;
+        const windowEnd = stop.scheduled_window_end
+          ? new Date(stop.scheduled_window_end).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          : null;
+
+        if (windowStart && windowEnd) {
+          deliveryTimeWindow = `${windowStart} – ${windowEnd}`;
+        } else if (windowStart) {
+          deliveryTimeWindow = `Around ${windowStart}`;
+        }
+
+        const route = (stop as Record<string, unknown>).routes as {
+          name?: string;
+          profiles?: { full_name?: string } | null;
+        } | null;
+
+        crewName = route?.profiles?.full_name || undefined;
+      }
+    } catch {
+      // Graceful fallback — email still sends without delivery details
+    }
+  }
+
   await sendEmail({
     to: customer.email,
     subject: `Order #${order.order_number} — ${params.newStatus.replace(/_/g, " ")} — ${branding.businessName}`,
@@ -243,6 +290,8 @@ export async function triggerOrderStatusEmail(params: {
       newStatus: params.newStatus,
       eventDate: order.event_date ? formatDate(order.event_date) : "TBD",
       supportEmail: branding.supportEmail,
+      deliveryTimeWindow,
+      crewName,
     }),
     replyTo: branding.supportEmail,
     organizationId: params.organizationId,

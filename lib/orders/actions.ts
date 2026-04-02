@@ -446,6 +446,56 @@ export async function updateOrderStatus(
     }).catch(() => {})
   );
 
+  // Send status update SMS to customer (non-blocking)
+  import("@/lib/sms/send-notification").then(async ({ sendSmsNotification }) => {
+    const { data: order } = await supabase
+      .from("orders")
+      .select("order_number, event_date, customer_id")
+      .eq("id", parsed.data.orderId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+
+    if (!order?.customer_id) return;
+
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("phone")
+      .eq("id", order.customer_id)
+      .maybeSingle();
+
+    if (!customer?.phone) return;
+
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name")
+      .eq("id", ctx.organizationId)
+      .maybeSingle();
+
+    const businessName = org?.name ?? "Your rental company";
+    const status = parsed.data.newStatus;
+
+    if (status === "scheduled") {
+      const eventDate = order.event_date ?? "your event date";
+      await sendSmsNotification("deliveryScheduled", customer.phone, {
+        orderNumber: order.order_number,
+        date: eventDate,
+        timeWindow: "See email for details",
+        businessName,
+      });
+    } else if (status === "out_for_delivery") {
+      await sendSmsNotification("deliveryEnRoute", customer.phone, {
+        orderNumber: order.order_number,
+        eta: "shortly",
+        businessName,
+      });
+    } else if (status === "delivered") {
+      await sendSmsNotification("deliveryCompleted", customer.phone, {
+        orderNumber: order.order_number,
+        businessName,
+      });
+    }
+  }).catch(() => {});
+
   return {
     ok: true,
     message: `Order status updated to ${parsed.data.newStatus}.`,

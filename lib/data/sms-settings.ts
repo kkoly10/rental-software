@@ -22,21 +22,23 @@ const defaultSettings: SmsSettings = {
   signature: "",
 };
 
-export async function getSmsSettings(): Promise<SmsSettings> {
+export async function getSmsSettings(organizationId?: string): Promise<SmsSettings> {
   if (!hasSupabaseEnv()) {
     return defaultSettings;
   }
 
-  const ctx = await getOrgContext();
-  if (!ctx) {
-    return defaultSettings;
+  let orgId = organizationId;
+  if (!orgId) {
+    const ctx = await getOrgContext();
+    if (!ctx) return defaultSettings;
+    orgId = ctx.organizationId;
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organizations")
     .select("settings")
-    .eq("id", ctx.organizationId)
+    .eq("id", orgId)
     .maybeSingle();
 
   if (error || !data) {

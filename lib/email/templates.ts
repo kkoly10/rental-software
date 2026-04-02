@@ -230,6 +230,8 @@ export type OrderStatusUpdateData = {
   newStatus: string;
   eventDate: string;
   supportEmail: string;
+  deliveryTimeWindow?: string;
+  crewName?: string;
 };
 
 const statusMessages: Record<string, { heading: string; body: string }> = {
@@ -265,6 +267,19 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
     body: "Your order status has been updated.",
   };
 
+  const rows: [string, string][] = [
+    ["Order", `#${data.orderNumber}`],
+    ["Status", data.newStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())],
+    ["Event date", data.eventDate],
+  ];
+
+  if (data.deliveryTimeWindow) {
+    rows.push(["Delivery window", data.deliveryTimeWindow]);
+  }
+  if (data.crewName) {
+    rows.push(["Crew", data.crewName]);
+  }
+
   return layout(
     data.businessName,
     `
@@ -273,11 +288,7 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
       Hi ${data.customerFirstName}, here's an update on your booking:
     </p>
 
-    ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Status", data.newStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())],
-      ["Event date", data.eventDate],
-    ])}
+    ${detailTable(rows)}
 
     <p style="font-size:14px;margin:16px 0;">${msg.body}</p>
 
