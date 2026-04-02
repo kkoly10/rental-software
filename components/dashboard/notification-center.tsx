@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Notification, NotificationType } from "@/lib/data/notifications";
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/lib/messages/actions";
 
 function NotificationIcon({ type }: { type: NotificationType }) {
   switch (type) {
@@ -45,6 +49,12 @@ function NotificationIcon({ type }: { type: NotificationType }) {
           <line x1="23" y1="11" x2="17" y2="11" />
         </svg>
       );
+    case "new_message":
+      return (
+        <svg className="notif-icon notif-icon-order" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+      );
     case "low_inventory":
       return (
         <svg className="notif-icon notif-icon-inventory" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -80,14 +90,19 @@ export function NotificationCenter({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open, handleClickOutside]);
 
-  function markAllRead() {
+  function handleMarkAllRead() {
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllNotificationsRead().catch(() => {});
   }
 
-  function markRead(id: string) {
+  function handleMarkRead(id: string) {
     setItems((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    // Only persist for real DB notifications (not demo ones)
+    if (!id.startsWith("demo-")) {
+      markNotificationRead(id).catch(() => {});
+    }
   }
 
   return (
@@ -114,7 +129,7 @@ export function NotificationCenter({
             <button
               type="button"
               className="notif-mark-all-btn"
-              onClick={markAllRead}
+              onClick={handleMarkAllRead}
             >
               Mark all as read
             </button>
@@ -131,24 +146,46 @@ export function NotificationCenter({
               <p>You&apos;re all caught up!</p>
             </div>
           ) : (
-            items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`notif-item ${!item.read ? "notif-item-unread" : ""}`}
-                onClick={() => markRead(item.id)}
-              >
-                <div className="notif-item-icon">
-                  <NotificationIcon type={item.type} />
-                </div>
-                <div className="notif-item-content">
-                  <div className="notif-item-title">{item.title}</div>
-                  <div className="notif-item-desc">{item.description}</div>
-                </div>
-                <div className="notif-item-time">{item.timestamp}</div>
-                {!item.read && <span className="notif-item-dot" />}
-              </button>
-            ))
+            items.map((item) => {
+              const inner = (
+                <>
+                  <div className="notif-item-icon">
+                    <NotificationIcon type={item.type} />
+                  </div>
+                  <div className="notif-item-content">
+                    <div className="notif-item-title">{item.title}</div>
+                    <div className="notif-item-desc">{item.description}</div>
+                  </div>
+                  <div className="notif-item-time">{item.timestamp}</div>
+                  {!item.read && <span className="notif-item-dot" />}
+                </>
+              );
+
+              if (item.link) {
+                return (
+                  <a
+                    key={item.id}
+                    href={item.link}
+                    className={`notif-item ${!item.read ? "notif-item-unread" : ""}`}
+                    onClick={() => handleMarkRead(item.id)}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    {inner}
+                  </a>
+                );
+              }
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`notif-item ${!item.read ? "notif-item-unread" : ""}`}
+                  onClick={() => handleMarkRead(item.id)}
+                >
+                  {inner}
+                </button>
+              );
+            })
           )}
         </div>
       </div>

@@ -42,6 +42,47 @@ export async function POST(request: NextRequest) {
 
   const supportEmail = org?.support_email;
 
+  // Look up order and customer for message persistence
+  let orderId: string | null = null;
+  let customerId: string | null = null;
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, customer_id")
+    .eq("organization_id", orgId)
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+
+  if (order) {
+    orderId = order.id;
+    customerId = order.customer_id;
+  }
+
+  // Create notification for the operator (non-blocking)
+  import("@/lib/data/notifications").then(({ createNotification }) =>
+    createNotification(
+      orgId,
+      "new_message",
+      "New customer message",
+      `${subject} — Order #${orderNumber}`,
+      "/dashboard/messages"
+    )
+  ).catch(() => {});
+
+  // Persist the message in the database
+  await supabase.from("messages").insert({
+    organization_id: orgId,
+    order_id: orderId,
+    customer_id: customerId,
+    direction: "inbound",
+    channel: "portal",
+    subject,
+    body: message,
+    sender_name: null,
+    sender_email: email,
+    read: false,
+  });
+
   // Try sending email via Resend if available
   const resendKey = getOptionalEnv("RESEND_API_KEY");
   if (resendKey && supportEmail) {

@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 
 export type NotificationType =
   | "new_order"
@@ -7,7 +8,8 @@ export type NotificationType =
   | "order_confirmed"
   | "delivery_scheduled"
   | "new_customer"
-  | "low_inventory";
+  | "low_inventory"
+  | "new_message";
 
 export interface Notification {
   id: string;
@@ -16,6 +18,7 @@ export interface Notification {
   description: string;
   timestamp: string;
   read: boolean;
+  link?: string;
 }
 
 function relativeTime(dateStr: string): string {
@@ -40,6 +43,7 @@ const demoNotifications: Notification[] = [
     description: "Castle Combo Bounce House — Sarah Mitchell",
     timestamp: "2h ago",
     read: false,
+    link: "/dashboard/orders",
   },
   {
     id: "demo-2",
@@ -48,6 +52,7 @@ const demoNotifications: Notification[] = [
     description: "$425.00 from James Rodriguez",
     timestamp: "3h ago",
     read: false,
+    link: "/dashboard/payments",
   },
   {
     id: "demo-3",
@@ -56,6 +61,7 @@ const demoNotifications: Notification[] = [
     description: "Order #1042 — Saturday 10:00 AM",
     timestamp: "5h ago",
     read: false,
+    link: "/dashboard/deliveries",
   },
   {
     id: "demo-4",
@@ -72,22 +78,7 @@ const demoNotifications: Notification[] = [
     description: "Order #1039 confirmed by customer",
     timestamp: "12h ago",
     read: true,
-  },
-  {
-    id: "demo-6",
-    type: "low_inventory",
-    title: "Low inventory alert",
-    description: "Water Slide Deluxe — only 1 unit available",
-    timestamp: "1d ago",
-    read: true,
-  },
-  {
-    id: "demo-7",
-    type: "payment_received",
-    title: "Payment received",
-    description: "$310.00 from Michael Torres",
-    timestamp: "1d ago",
-    read: true,
+    link: "/dashboard/orders",
   },
 ];
 
@@ -96,109 +87,65 @@ export async function getNotifications(): Promise<Notification[]> {
     return demoNotifications;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return demoNotifications;
+
   try {
     const supabase = await createSupabaseServerClient();
-    const notifications: Notification[] = [];
 
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id, type, title, description, link, read, created_at")
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-    const [ordersRes, paymentsRes, customersRes] = await Promise.all([
-      supabase
-        .from("orders")
-        .select("id, order_status, created_at, customers(first_name, last_name)")
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(10),
-      supabase
-        .from("payments")
-        .select("id, amount, paid_at, orders(customers(first_name, last_name))")
-        .gte("paid_at", since)
-        .order("paid_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("customers")
-        .select("id, first_name, last_name, created_at")
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
-
-    if (ordersRes.data) {
-      for (const order of ordersRes.data) {
-        const customer = order.customers as unknown as { first_name: string | null; last_name: string | null } | null;
-        const customerName = customer
-          ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown"
-          : "Unknown";
-        const type: NotificationType =
-          order.order_status === "confirmed"
-            ? "order_confirmed"
-            : order.order_status === "delivered" || order.order_status === "scheduled"
-              ? "delivery_scheduled"
-              : "new_order";
-        notifications.push({
-          id: `order-${order.id}`,
-          type,
-          title:
-            type === "order_confirmed"
-              ? "Order confirmed"
-              : type === "delivery_scheduled"
-                ? "Delivery scheduled"
-                : "New order received",
-          description: `Order #${order.id} — ${customerName}`,
-          timestamp: relativeTime(order.created_at),
-          read: false,
-        });
-      }
+    if (error || !data || data.length === 0) {
+      return demoNotifications;
     }
 
-    if (paymentsRes.data) {
-      for (const payment of paymentsRes.data) {
-        const orderRel = payment.orders as unknown as { customers: { first_name: string | null; last_name: string | null } | null } | null;
-        const customerName = orderRel?.customers
-          ? [orderRel.customers.first_name, orderRel.customers.last_name].filter(Boolean).join(" ") || "Unknown"
-          : "Unknown";
-        notifications.push({
-          id: `payment-${payment.id}`,
-          type: "payment_received",
-          title: "Payment received",
-          description: `$${Number(payment.amount).toFixed(2)} from ${customerName}`,
-          timestamp: relativeTime(payment.paid_at ?? new Date().toISOString()),
-          read: false,
-        });
-      }
-    }
-
-    if (customersRes.data) {
-      for (const customer of customersRes.data) {
-        const customerName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown";
-        notifications.push({
-          id: `customer-${customer.id}`,
-          type: "new_customer",
-          title: "New customer signed up",
-          description: `${customerName} created an account`,
-          timestamp: relativeTime(customer.created_at),
-          read: false,
-        });
-      }
-    }
-
-    notifications.sort((a, b) => {
-      const parseRelative = (t: string) => {
-        const match = t.match(/^(\d+)([mhdw])/);
-        if (!match) return 0;
-        const val = Number(match[1]);
-        const unit = match[2];
-        if (unit === "m") return val;
-        if (unit === "h") return val * 60;
-        if (unit === "d") return val * 1440;
-        if (unit === "w") return val * 10080;
-        return 0;
-      };
-      return parseRelative(a.timestamp) - parseRelative(b.timestamp);
-    });
-
-    return notifications.length > 0 ? notifications : demoNotifications;
+    return data.map((n) => ({
+      id: n.id,
+      type: n.type as NotificationType,
+      title: n.title,
+      description: n.description ?? "",
+      timestamp: relativeTime(n.created_at),
+      read: n.read,
+      link: n.link ?? undefined,
+    }));
   } catch {
     return demoNotifications;
+  }
+}
+
+/**
+ * Insert a notification into the database. Designed to be called from
+ * server actions / trigger functions. Fails silently.
+ */
+export async function createNotification(
+  organizationId: string,
+  type: NotificationType,
+  title: string,
+  description: string,
+  link?: string
+): Promise<void> {
+  if (!hasSupabaseEnv()) return;
+
+  try {
+    const { createSupabaseServerClient: createSB } = await import(
+      "@/lib/supabase/server"
+    );
+    const supabase = await createSB();
+
+    await supabase.from("notifications").insert({
+      organization_id: organizationId,
+      type,
+      title,
+      description,
+      link: link ?? null,
+      read: false,
+    });
+  } catch {
+    // Non-blocking — notification creation should never break a flow
   }
 }

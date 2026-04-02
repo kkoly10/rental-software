@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getActionClientKey } from "@/lib/security/action-client";
+import { getPublicOrgId } from "@/lib/auth/org-context";
+import { hasSupabaseEnv } from "@/lib/env";
 
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -14,6 +16,23 @@ export type ContactState = {
   ok: boolean;
   message: string;
 };
+
+const PLATFORM_FALLBACK_EMAIL = "support@korent.app";
+
+async function resolveOperatorEmail(orgId: string | null): Promise<string> {
+  if (!orgId || !hasSupabaseEnv()) return PLATFORM_FALLBACK_EMAIL;
+
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("support_email, name")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  return org?.support_email || PLATFORM_FALLBACK_EMAIL;
+}
 
 export async function submitContactForm(
   _prev: ContactState,
@@ -42,12 +61,17 @@ export async function submitContactForm(
     return { ok: false, message: "Too many messages. Please try again later." };
   }
 
-  // Fire-and-forget email to the platform support
+  // Resolve the tenant org so the email goes to the operator, not Korent
+  const orgId = await getPublicOrgId();
+  const operatorEmail = await resolveOperatorEmail(orgId);
+
+  // Send contact form email to the operator (non-blocking)
   try {
     const { sendEmail } = await import("@/lib/email/send");
     await sendEmail({
-      to: "support@korent.app",
+      to: operatorEmail,
       subject: `Contact form: ${parsed.data.name}`,
+      replyTo: parsed.data.email,
       html: `
         <p><strong>From:</strong> ${parsed.data.name} (${parsed.data.email})</p>
         <hr />

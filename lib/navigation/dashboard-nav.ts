@@ -5,6 +5,7 @@ export const dashboardNavItems = [
   { href: "/dashboard/products", label: "Products", tourId: "nav-products" },
   { href: "/dashboard/pricing", label: "Pricing", tourId: "nav-pricing" },
   { href: "/dashboard/customers", label: "Customers", tourId: undefined },
+  { href: "/dashboard/messages", label: "Messages", tourId: undefined },
   { href: "/dashboard/payments", label: "Payments", tourId: "nav-payments" },
   { href: "/dashboard/documents", label: "Documents", tourId: "nav-documents" },
   { href: "/dashboard/deliveries", label: "Deliveries", tourId: "nav-deliveries" },

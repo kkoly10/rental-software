@@ -162,7 +162,7 @@ export async function recordPayment(
 
     const { data: customer } = await supabase
       .from("customers")
-      .select("first_name, email")
+      .select("first_name, email, phone")
       .eq("id", fullOrder.customer_id)
       .maybeSingle();
 
@@ -178,6 +178,21 @@ export async function recordPayment(
       paymentMethod,
       newBalance,
     });
+
+    // Send payment SMS (non-blocking, skip for refunds)
+    if (customer.phone && paymentType !== "refund") {
+      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", ctx.organizationId)
+        .maybeSingle();
+      await sendSmsNotification("paymentReceived", customer.phone, {
+        amount: amount.toFixed(2),
+        orderNumber: fullOrder.order_number,
+        businessName: org?.name ?? "Your rental company",
+      });
+    }
   }).catch(() => {});
 
   return {
