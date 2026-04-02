@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBrandSettings } from "@/lib/data/brand";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { MobileMenuToggle } from "./mobile-menu-toggle";
 
 export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
   const [brand, settings, orgCtx] = await Promise.all([
@@ -31,7 +32,7 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
             {resolvedLogoUrl ? (
               <img
                 src={resolvedLogoUrl}
-                alt="Logo"
+                alt={`${settings.businessName} logo`}
                 style={{ maxHeight: 40, width: "auto", display: "block" }}
               />
             ) : (
@@ -39,10 +40,10 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
             )}
           </Link>
 
-          <nav className="nav-links public-nav-links">
+          <nav className="nav-links public-nav-links public-nav-desktop">
             <Link href="/inventory">Catalog</Link>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#service-area">Service Area</a>
+            <Link href="/#how-it-works">How It Works</Link>
+            <Link href="/#service-area">Service Area</Link>
             <Link href="/pricing">Pricing</Link>
             <Link href="/order-status">Order Status</Link>
             <Link href="/contact">Contact</Link>
@@ -66,6 +67,8 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
               Book Now
             </Link>
           </div>
+
+          <MobileMenuToggle isOperator={isOperator} />
         </div>
       </header>
     </>
