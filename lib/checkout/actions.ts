@@ -11,11 +11,26 @@ import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
 import { checkProductAvailability } from "@/lib/availability/check";
 import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
+import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
+
+export type CheckoutFieldErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  line1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  eventDate?: string;
+};
 
 export type CheckoutActionState = {
   ok: boolean;
   message: string;
   orderNumber?: string;
+  fieldErrors?: CheckoutFieldErrors;
+  stripeUrl?: string;
 };
 
 export async function createCheckoutOrder(
@@ -36,10 +51,32 @@ export async function createCheckoutOrder(
   });
 
   if (!parsed.success) {
+    const fieldErrors: CheckoutFieldErrors = {};
+    const fieldMap: Record<string, keyof CheckoutFieldErrors> = {
+      firstName: "firstName",
+      lastName: "lastName",
+      email: "email",
+      phone: "phone",
+      line1: "line1",
+      city: "city",
+      state: "state",
+      postalCode: "postalCode",
+      eventDate: "eventDate",
+    };
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string" && key in fieldMap) {
+        const mapped = fieldMap[key];
+        if (!fieldErrors[mapped]) {
+          fieldErrors[mapped] = issue.message;
+        }
+      }
+    }
     return {
       ok: false,
       message:
         parsed.error.issues[0]?.message ?? "Please review your checkout details.",
+      fieldErrors,
     };
   }
 
@@ -440,6 +477,57 @@ export async function createCheckoutOrder(
       depositDue: deposit,
     }).catch(() => {})
   );
+
+  // Attempt Stripe Checkout for deposit payment
+  if (hasStripeEnv() && deposit > 0) {
+    try {
+      const stripe = getStripe();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `Deposit — ${productName}`,
+                description: `Order ${orderNumber} deposit`,
+              },
+              unit_amount: Math.round(deposit * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: email,
+        success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&status=paid`,
+        cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}&status=unpaid`,
+        metadata: {
+          organization_id: orgId,
+          order_id: order.id,
+          order_number: orderNumber,
+        },
+      });
+
+      if (session.url) {
+        return {
+          ok: true,
+          message: `Order ${orderNumber} created! Redirecting to payment...`,
+          orderNumber,
+          stripeUrl: session.url,
+        };
+      }
+    } catch (stripeError) {
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout.website",
+        message: "Stripe checkout session creation failed — order still created",
+        stack: stripeError instanceof Error ? stripeError.stack : undefined,
+        context: { orderNumber, deposit },
+      });
+      // Fall through to non-Stripe confirmation
+    }
+  }
 
   return {
     ok: true,

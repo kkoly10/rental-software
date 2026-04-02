@@ -4,6 +4,7 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { CatalogGrid } from "@/components/public/catalog-grid";
 import { CatalogFilterForm } from "@/components/public/catalog-filter-form";
 import { getCatalogList } from "@/lib/data/catalog-list";
+import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -44,11 +45,29 @@ export default async function InventoryPage({
   const params = await searchParams;
   const products = await getCatalogList();
 
-  const filteredProducts = params.category
+  // Filter by category
+  const categoryFiltered = params.category
     ? products.filter(
         (product) => normalizeCategory(product.category) === params.category
       )
     : products;
+
+  // Enrich with real-time availability and ZIP validation
+  const { products: enrichedProducts, zipValid, zipMessage } =
+    await enrichCatalogAvailability(categoryFiltered, params.date, params.zip);
+
+  // Sort: available products first, unavailable last
+  const sortedProducts = [...enrichedProducts].sort((a, b) => {
+    const aUnavailable = a.status.startsWith("Unavailable");
+    const bUnavailable = b.status.startsWith("Unavailable");
+    if (aUnavailable && !bUnavailable) return 1;
+    if (!aUnavailable && bUnavailable) return -1;
+    return 0;
+  });
+
+  const availableCount = sortedProducts.filter(
+    (p) => !p.status.startsWith("Unavailable")
+  ).length;
 
   return (
     <>
@@ -95,19 +114,37 @@ export default async function InventoryPage({
             />
           </section>
 
+          {zipValid === false && zipMessage && (
+            <div
+              className="badge warning"
+              role="alert"
+              style={{
+                padding: "12px 18px",
+                marginBottom: 8,
+                fontSize: 14,
+                display: "block",
+              }}
+            >
+              {zipMessage}
+            </div>
+          )}
+
           <section className="section">
             <div className="section-header">
               <div>
-                <div className="kicker">Available rentals</div>
+                <div className="kicker">
+                  {params.date ? "Availability results" : "Available rentals"}
+                </div>
                 <h2>
-                  {filteredProducts.length} option
-                  {filteredProducts.length === 1 ? "" : "s"} for your event
+                  {params.date
+                    ? `${availableCount} available, ${sortedProducts.length} total for your event`
+                    : `${sortedProducts.length} option${sortedProducts.length === 1 ? "" : "s"} for your event`}
                 </h2>
               </div>
             </div>
 
-            {filteredProducts.length > 0 ? (
-              <CatalogGrid products={filteredProducts} />
+            {sortedProducts.length > 0 ? (
+              <CatalogGrid products={sortedProducts} />
             ) : (
               <div className="panel storefront-empty-state">
                 <div className="kicker">No direct matches</div>

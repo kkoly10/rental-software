@@ -4,10 +4,12 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
+import { checkContrastOnWhite } from "@/lib/utils/contrast";
 
 export type SettingsActionState = {
   ok: boolean;
   message: string;
+  contrastWarnings?: string[];
 };
 
 const ALLOWED_FONTS = [
@@ -54,8 +56,31 @@ export async function updateBrandSettings(
     return { ok: false, message: "Selected font is not in the allowed list." };
   }
 
+  // Check contrast ratios and collect warnings (non-blocking)
+  const contrastWarnings: string[] = [];
+  if (primaryColor) {
+    const primary = checkContrastOnWhite(primaryColor);
+    if (!primary.passesNormalText) {
+      contrastWarnings.push(
+        `Primary color (${primaryColor}) has a ${primary.ratio}:1 contrast ratio against white. WCAG AA requires 4.5:1 for normal text. Consider choosing a darker shade.`
+      );
+    }
+  }
+  if (accentColor) {
+    const accent = checkContrastOnWhite(accentColor);
+    if (!accent.passesLargeText) {
+      contrastWarnings.push(
+        `Accent color (${accentColor}) has a ${accent.ratio}:1 contrast ratio against white. WCAG AA requires 3:1 for large text/buttons. Consider choosing a darker shade.`
+      );
+    }
+  }
+
   if (!hasSupabaseEnv()) {
-    return { ok: true, message: "Demo mode: Brand settings would be updated." };
+    return {
+      ok: true,
+      message: "Demo mode: Brand settings would be updated.",
+      contrastWarnings: contrastWarnings.length > 0 ? contrastWarnings : undefined,
+    };
   }
 
   const ctx = await getOrgContext();
@@ -92,5 +117,11 @@ export async function updateBrandSettings(
 
   revalidatePath("/dashboard/website");
   revalidatePath("/");
-  return { ok: true, message: "Brand settings updated." };
+  return {
+    ok: true,
+    message: contrastWarnings.length > 0
+      ? "Brand settings updated with contrast warnings."
+      : "Brand settings updated.",
+    contrastWarnings: contrastWarnings.length > 0 ? contrastWarnings : undefined,
+  };
 }
