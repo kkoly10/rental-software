@@ -330,3 +330,166 @@ export function documentsReadyEmail(data: DocumentsReadyData): string {
     `
   );
 }
+
+// ─── EVENT REMINDER (day-before, customer-facing) ──────────────────────────
+
+export type EventReminderData = {
+  businessName: string;
+  customerFirstName: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  deliveryTime?: string;
+  deliveryAddress?: string;
+  setupInstructions?: string;
+  supportEmail: string;
+};
+
+export function eventReminderEmail(data: EventReminderData): string {
+  const rows: [string, string][] = [
+    ["Order", `#${data.orderNumber}`],
+    ["Item", data.productName],
+    ["Event date", data.eventDate],
+  ];
+
+  if (data.deliveryTime) rows.push(["Delivery time", data.deliveryTime]);
+  if (data.deliveryAddress) rows.push(["Address", data.deliveryAddress]);
+
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">Your rental is tomorrow!</h1>
+    <p style="color:#55708f;margin:0 0 20px;">
+      Hi ${data.customerFirstName}, just a friendly reminder that your rental is coming up tomorrow.
+    </p>
+
+    ${detailTable(rows)}
+
+    ${data.setupInstructions
+      ? `<div style="background:#f0f6ff;border:1px solid #c4d8f4;border-radius:12px;padding:16px;margin:20px 0;">
+          <strong style="color:#1e5dcf;">Setup Notes</strong>
+          <p style="margin:8px 0 0;font-size:14px;color:#10233f;">${data.setupInstructions}</p>
+        </div>`
+      : ""
+    }
+
+    <p style="font-size:14px;color:#55708f;">
+      Please ensure the setup area is accessible and clear of obstacles. Our crew will handle everything else!
+    </p>
+    <p style="font-size:14px;color:#55708f;">
+      Questions? Contact us at ${data.supportEmail}.
+    </p>
+    `
+  );
+}
+
+// ─── DAILY SCHEDULE DIGEST (operator-facing) ───────────────────────────────
+
+export type DailyScheduleEvent = {
+  orderNumber: string;
+  customerName: string;
+  productName: string;
+  address?: string;
+  time?: string;
+  status: string;
+};
+
+export type DailyScheduleData = {
+  businessName: string;
+  date: string;
+  events: DailyScheduleEvent[];
+  dashboardUrl: string;
+};
+
+export function dailyScheduleEmail(data: DailyScheduleData): string {
+  const eventRows = data.events
+    .map(
+      (e) => `
+      <tr style="border-bottom:1px solid #f0f3f8;">
+        <td style="padding:12px 8px;font-size:14px;font-weight:600;">#${e.orderNumber}</td>
+        <td style="padding:12px 8px;font-size:14px;">${e.customerName}</td>
+        <td style="padding:12px 8px;font-size:14px;">${e.productName}</td>
+        <td style="padding:12px 8px;font-size:14px;color:#55708f;">${e.time ?? "TBD"}</td>
+        <td style="padding:12px 8px;font-size:14px;">
+          <span style="background:#eaf9f4;color:#188862;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;">
+            ${e.status.replace(/_/g, " ")}
+          </span>
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">Today&rsquo;s Schedule</h1>
+    <p style="color:#55708f;margin:0 0 20px;">
+      You have <strong>${data.events.length}</strong> event${data.events.length === 1 ? "" : "s"} on <strong>${data.date}</strong>.
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border:1px solid #dbe6f4;border-radius:12px;overflow:hidden;">
+      <tr style="background:#f4f7fb;">
+        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Order</th>
+        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Customer</th>
+        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Item</th>
+        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Time</th>
+        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Status</th>
+      </tr>
+      ${eventRows}
+    </table>
+
+    ${button("View Deliveries", data.dashboardUrl)}
+    `
+  );
+}
+
+// ─── POST-EVENT FOLLOW-UP (customer-facing) ────────────────────────────────
+
+export type PostEventFollowUpData = {
+  businessName: string;
+  customerFirstName: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  reviewUrl?: string;
+  storefrontUrl: string;
+  supportEmail: string;
+};
+
+export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">How was your event?</h1>
+    <p style="color:#55708f;margin:0 0 20px;">
+      Hi ${data.customerFirstName}, we hope your event on ${data.eventDate} was a blast! Thank you for renting with ${data.businessName}.
+    </p>
+
+    ${detailTable([
+      ["Order", `#${data.orderNumber}`],
+      ["Item", data.productName],
+      ["Event date", data.eventDate],
+    ])}
+
+    ${data.reviewUrl
+      ? `<div style="background:#fff9e6;border:1px solid #fde2a7;border-radius:12px;padding:16px;margin:20px 0;text-align:center;">
+          <strong style="color:#a86a08;">Loved it? Leave us a review!</strong>
+          <p style="margin:12px 0 0;">
+            ${button("Write a Review", data.reviewUrl)}
+          </p>
+        </div>`
+      : ""
+    }
+
+    <div style="text-align:center;margin:24px 0;">
+      <p style="font-size:16px;font-weight:600;margin:0 0 8px;">Planning another event?</p>
+      ${button("Book Again", data.storefrontUrl)}
+    </div>
+
+    <p style="font-size:14px;color:#55708f;">
+      Questions or feedback? Contact us at ${data.supportEmail}.
+    </p>
+    `
+  );
+}
