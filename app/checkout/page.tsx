@@ -6,6 +6,8 @@ import { CheckoutSummaryCard } from "@/components/checkout/checkout-summary-card
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { getCheckoutPricing } from "@/lib/data/checkout-pricing";
+import { hasStripeEnv } from "@/lib/stripe/config";
 
 function formatProductName(value?: string) {
   if (!value) return undefined;
@@ -45,6 +47,9 @@ export default async function CheckoutPage({
   const { product, date, zip } = await searchParams;
   const productName = formatProductName(product);
 
+  const pricing = await getCheckoutPricing(product, zip);
+  const stripeEnabled = hasStripeEnv();
+
   return (
     <>
       <PublicHeader />
@@ -76,7 +81,11 @@ export default async function CheckoutPage({
               />
             </section>
 
-            <CheckoutSummaryCard productName={productName} />
+            <CheckoutSummaryCard
+              productName={productName}
+              pricing={pricing ?? undefined}
+              stripeEnabled={stripeEnabled}
+            />
           </div>
         </div>
       </main>

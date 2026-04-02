@@ -571,6 +571,21 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(30, 93, 207, 0.1);
 }
 
+/* Field-level validation errors */
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(223, 76, 76, 0.1);
+}
+
+.field-error {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--danger);
+  line-height: 1.35;
+}
+
 /* Loading spinner */
 .loading-spinner {
   display: flex;
