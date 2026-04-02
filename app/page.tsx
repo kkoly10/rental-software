@@ -18,6 +18,7 @@ import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -42,6 +43,8 @@ const defaultFaqItems = [
 ];
 
 export default async function HomePage() {
+  await requirePublicOrg();
+
   const [featured, settings, geoAreas, contentSettings] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),

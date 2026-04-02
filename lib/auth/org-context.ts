@@ -56,3 +56,14 @@ export async function getPublicOrgId(): Promise<string | null> {
 
   return resolveOrgFromHostname(host);
 }
+
+/**
+ * Returns true when the request arrived on a tenant subdomain or custom domain
+ * (i.e. the middleware set x-tenant-host) — meaning the visitor expects a
+ * specific storefront.  If getPublicOrgId() returns null while this is true,
+ * the slug/domain doesn't match any organization and the page should 404.
+ */
+export async function isTenantHost(): Promise<boolean> {
+  const headersList = await headers();
+  return !!headersList.get("x-tenant-host");
+}

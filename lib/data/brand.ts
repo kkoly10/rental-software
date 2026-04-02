@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 
 export type BrandSettings = {
   logoUrl: string;
@@ -20,13 +20,14 @@ export async function getBrandSettings(): Promise<BrandSettings> {
   if (!hasSupabaseEnv()) return defaultBrand;
 
   const ctx = await getOrgContext();
-  if (!ctx) return defaultBrand;
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  if (!organizationId) return defaultBrand;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organizations")
     .select("settings")
-    .eq("id", ctx.organizationId)
+    .eq("id", organizationId)
     .maybeSingle();
 
   if (error || !data) return defaultBrand;

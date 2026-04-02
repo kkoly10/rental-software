@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { loadLeaflet } from "@/lib/maps/load-leaflet";
+import { escapeHtml } from "@/lib/maps/escape-html";
 
 export type RouteMapStop = {
   id: string;
@@ -29,48 +31,6 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "#20b486",
 };
 
-/* ── Leaflet CDN loader (shared singleton) ── */
-const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-
-let leafletPromise: Promise<void> | null = null;
-
-function loadLeaflet(): Promise<void> {
-  if (leafletPromise) return leafletPromise;
-
-  leafletPromise = new Promise<void>((resolve, reject) => {
-    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = LEAFLET_CSS;
-      document.head.appendChild(link);
-    }
-
-    if ((window as any).L) {
-      resolve();
-      return;
-    }
-
-    if (document.querySelector(`script[src="${LEAFLET_JS}"]`)) {
-      const check = setInterval(() => {
-        if ((window as any).L) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 50);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = LEAFLET_JS;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Leaflet"));
-    document.head.appendChild(script);
-  });
-
-  return leafletPromise;
-}
-
 /* ── Default center (Virginia area for demo data) ── */
 const DEFAULT_CENTER: [number, number] = [38.35, -77.46];
 const DEFAULT_ZOOM = 10;
@@ -85,6 +45,9 @@ export function RouteMap({
   const mapRef = useRef<any>(null);
 
   const geoStops = stops.filter((s) => s.lat != null && s.lng != null);
+
+  // Stable serialization so the map re-renders when data changes, not just count
+  const geoStopsKey = useMemo(() => JSON.stringify(geoStops), [geoStops]);
 
   useEffect(() => {
     if (geoStops.length === 0) return;
@@ -149,15 +112,19 @@ export function RouteMap({
           stop.type === "pickup" ? "Pickup" : "Delivery";
         const statusLabel = stop.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+        const safeName = escapeHtml(stop.customerName ?? "Stop " + stop.sequence);
+        const safeAddress = stop.address ? escapeHtml(stop.address) : "";
+        const safeTime = stop.scheduledTime ? escapeHtml(stop.scheduledTime) : "";
+
         const popupHtml = `
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.5;min-width:160px">
-            <strong style="font-size:14px">${stop.customerName ?? "Stop " + stop.sequence}</strong>
-            ${stop.address ? `<div style="margin-top:4px;font-size:12px;color:#55708f">${stop.address}</div>` : ""}
+            <strong style="font-size:14px">${safeName}</strong>
+            ${safeAddress ? `<div style="margin-top:4px;font-size:12px;color:#55708f">${safeAddress}</div>` : ""}
             <div style="margin-top:6px;font-size:12px">
               <span style="display:inline-block;padding:2px 8px;border-radius:10px;background:${color}22;color:${color};font-weight:600;font-size:11px">${statusLabel}</span>
               <span style="margin-left:6px;color:#55708f">${typeLabel}</span>
             </div>
-            ${stop.scheduledTime ? `<div style="margin-top:4px;font-size:12px;color:#55708f">Scheduled: ${stop.scheduledTime}</div>` : ""}
+            ${safeTime ? `<div style="margin-top:4px;font-size:12px;color:#55708f">Scheduled: ${safeTime}</div>` : ""}
           </div>
         `;
 
@@ -193,7 +160,7 @@ export function RouteMap({
         mapRef.current = null;
       }
     };
-  }, [geoStops.length, showRoute, interactive]);
+  }, [geoStopsKey, showRoute, interactive]);
 
   if (geoStops.length === 0) {
     return (

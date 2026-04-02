@@ -1,3 +1,5 @@
+import { geocodeZipServer } from "@/lib/maps/geocode-server";
+
 export type WeatherForecast = {
   date: string;
   tempHigh: number;
@@ -107,34 +109,11 @@ export async function getWeatherForecast(
   }
 }
 
-async function geocodeZip(
-  zip: string
-): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zip)}&country=US&format=json&limit=1`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "RentalSoftware/1.0" },
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) return null;
-
-    const results = await res.json();
-    if (!results || results.length === 0) return null;
-
-    return {
-      lat: parseFloat(results[0].lat),
-      lng: parseFloat(results[0].lon),
-    };
-  } catch {
-    return null;
-  }
-}
-
 export async function getWeatherForZip(
   zip: string,
   date: string
 ): Promise<WeatherForecast | null> {
-  const coords = await geocodeZip(zip);
+  const coords = await geocodeZipServer(zip);
   if (!coords) return null;
   return getWeatherForecast(coords.lat, coords.lng, date);
 }

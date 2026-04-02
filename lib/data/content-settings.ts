@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 
 export type ContentSettings = {
   customFaq: { question: string; answer: string }[];
@@ -36,13 +36,14 @@ export async function getContentSettings(): Promise<ContentSettings> {
   if (!hasSupabaseEnv()) return fallbackContent;
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackContent;
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  if (!organizationId) return fallbackContent;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organizations")
     .select("settings")
-    .eq("id", ctx.organizationId)
+    .eq("id", organizationId)
     .maybeSingle();
 
   if (error || !data) return fallbackContent;

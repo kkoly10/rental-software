@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { geocodeZipServer } from "@/lib/maps/geocode-server";
 import type { RouteDetail, RouteDetailEnhanced, RouteStopEnhanced } from "@/lib/types";
 
 export type RouteStopData = {
@@ -221,10 +222,12 @@ export async function getRouteDetailEnhanced(
     return { ...fallbackEnhancedDetail, id: routeId };
   }
 
+  // Join through: route_stops → orders → customers (for name)
+  //              route_stops → orders → customer_addresses (via delivery_address_id, for address + coords)
   const { data: stops } = await supabase
     .from("route_stops")
     .select(
-      "id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, customers(first_name, last_name, address_line1, address_city, address_state, address_postal_code, latitude, longitude))"
+      "id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses(id, line1, city, state, postal_code, latitude, longitude))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true });
@@ -233,30 +236,41 @@ export async function getRouteDetailEnhanced(
     full_name: string;
   } | null;
 
+  // Build stops, then lazily geocode any that have a postal code but no coordinates
+  type AddressToGeocode = { addressId: string; postalCode: string; stopIndex: number };
+  const toGeocode: AddressToGeocode[] = [];
+
   const enhancedStops: RouteStopEnhanced[] = (stops ?? []).map((stop, index) => {
     const order = (stop as Record<string, unknown>).orders as {
       order_number: string;
+      delivery_address_id?: string;
       customers: {
         first_name: string;
         last_name: string;
-        address_line1?: string;
-        address_city?: string;
-        address_state?: string;
-        address_postal_code?: string;
+      } | null;
+      customer_addresses: {
+        id: string;
+        line1?: string;
+        city?: string;
+        state?: string;
+        postal_code?: string;
         latitude?: number;
         longitude?: number;
       } | null;
     } | null;
+
     const customer = order?.customers;
+    const addr = order?.customer_addresses;
+
     const name = customer
       ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
       : order?.order_number ?? "Stop";
 
     const addressParts = [
-      customer?.address_line1,
-      customer?.address_city,
-      customer?.address_state,
-      customer?.address_postal_code,
+      addr?.line1,
+      addr?.city,
+      addr?.state,
+      addr?.postal_code,
     ].filter(Boolean);
 
     const time = stop.scheduled_window_start
@@ -266,6 +280,14 @@ export async function getRouteDetailEnhanced(
         })
       : undefined;
 
+    const lat = addr?.latitude ?? undefined;
+    const lng = addr?.longitude ?? undefined;
+
+    // Queue for geocoding if we have a postal code but no coordinates
+    if (lat == null && lng == null && addr?.postal_code && addr?.id) {
+      toGeocode.push({ addressId: addr.id, postalCode: addr.postal_code, stopIndex: index });
+    }
+
     return {
       id: stop.id,
       sequence: stop.stop_sequence ?? index + 1,
@@ -274,10 +296,24 @@ export async function getRouteDetailEnhanced(
       address: addressParts.length > 0 ? addressParts.join(", ") : undefined,
       customerName: name,
       scheduledTime: time,
-      lat: customer?.latitude ?? undefined,
-      lng: customer?.longitude ?? undefined,
+      lat,
+      lng,
     };
   });
+
+  // Lazily geocode addresses that lack coordinates, then cache the result back
+  for (const item of toGeocode) {
+    const coords = await geocodeZipServer(item.postalCode);
+    if (coords) {
+      enhancedStops[item.stopIndex].lat = coords.lat;
+      enhancedStops[item.stopIndex].lng = coords.lng;
+      // Write coordinates back to the database so we only geocode once per address
+      await supabase
+        .from("customer_addresses")
+        .update({ latitude: coords.lat, longitude: coords.lng })
+        .eq("id", item.addressId);
+    }
+  }
 
   const completedStops = enhancedStops.filter((s) => s.status === "completed").length;
   const inProgressStops = enhancedStops.filter((s) => s.status === "in_progress").length;

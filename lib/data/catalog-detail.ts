@@ -4,7 +4,9 @@ import {
   getStorefrontFallbackGallery,
   getStorefrontFallbackImage,
 } from "@/lib/media/storefront-fallback-images";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 import type { CatalogDetail } from "@/lib/types";
+import { notFound } from "next/navigation";
 
 const fallbackProducts: Record<string, CatalogDetail> = {
   "castle-bouncer": {
@@ -79,20 +81,28 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     );
   }
 
+  // Resolve org: authenticated user context or public tenant hostname
+  const ctx = await getOrgContext();
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  if (!organizationId) {
+    return (
+      fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
+    );
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
     .select(
       "id, name, slug, base_price, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
+    .eq("organization_id", organizationId)
     .eq("slug", slug)
     .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) {
-    return (
-      fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
-    );
+    notFound();
   }
 
   const category = (data as Record<string, unknown>).categories as

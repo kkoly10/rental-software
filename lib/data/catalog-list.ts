@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-images";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 import type { CatalogProduct } from "@/lib/types";
 
 const fallbackCatalog: CatalogProduct[] = [
@@ -47,12 +48,20 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
     return fallbackCatalog;
   }
 
+  // Resolve org: authenticated user context or public tenant hostname
+  const ctx = await getOrgContext();
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  if (!organizationId) {
+    return fallbackCatalog;
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("products")
     .select(
       "id, name, slug, base_price, short_description, is_active, deleted_at, categories(name, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
+    .eq("organization_id", organizationId)
     .eq("visibility", "public")
     .eq("is_active", true)
     .is("deleted_at", null)
