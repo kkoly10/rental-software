@@ -1,37 +1,11 @@
 import Link from "next/link";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 
-const categories = [
-  {
-    title: "Bounce Houses",
-    startingPrice: "Starting $149",
-    href: "/inventory?category=bounce-houses",
-    image:
-      "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    title: "Water Slides",
-    startingPrice: "Starting $199",
-    href: "/inventory?category=water-slides",
-    image:
-      "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    title: "Obstacle Courses",
-    startingPrice: "Starting $249",
-    href: "/inventory?category=obstacle-courses",
-    image:
-      "https://images.unsplash.com/photo-1633846804415-78105890e73f?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    title: "Party Packages",
-    startingPrice: "Starting $299",
-    href: "/inventory?category=packages",
-    image:
-      "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80",
-  },
-] as const;
+export async function CategoryGrid() {
+  const categories = await getCategoryGridItems();
 
-export function CategoryGrid() {
+  if (categories.length === 0) return null;
+
   return (
     <section className="section">
       <div className="container">
@@ -48,23 +22,42 @@ export function CategoryGrid() {
         <div className="category-photo-grid">
           {categories.map((category) => (
             <Link
-              key={category.title}
-              href={category.href}
+              key={category.slug}
+              href={`/inventory?category=${category.slug}`}
               className="category-photo-card"
             >
               <div className="category-photo-img">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={category.image}
-                  alt={category.title}
-                  className="category-photo-img-el"
-                />
+                {category.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={category.imageUrl}
+                    alt={category.name}
+                    className="category-photo-img-el"
+                  />
+                ) : (
+                  <div
+                    className="category-photo-img-el"
+                    style={{
+                      background: "var(--surface-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-soft)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {category.name}
+                  </div>
+                )}
               </div>
               <div className="category-photo-body">
-                <h3>{category.title}</h3>
-                <p className="category-starting-price">
-                  {category.startingPrice}
-                </p>
+                <h3>{category.name}</h3>
+                {category.startingPrice != null && (
+                  <p className="category-starting-price">
+                    Starting ${category.startingPrice}
+                  </p>
+                )}
               </div>
             </Link>
           ))}

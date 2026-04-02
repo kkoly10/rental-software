@@ -829,11 +829,11 @@ textarea:focus {
   grid-column: 1 / -1;
   width: 100%;
   min-height: 54px;
-  background: #f97316;
+  background: var(--accent);
 }
 
 .storefront-search-btn:hover {
-  background: #ea580c;
+  filter: brightness(0.9);
 }
 
 .public-hero-visual {

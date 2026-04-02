@@ -61,7 +61,7 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
             <Link
               href="/inventory"
               className="primary-btn"
-              style={{ background: "#f97316", minHeight: 42 }}
+              style={{ background: "var(--accent)", minHeight: 42 }}
             >
               Book Now
             </Link>

@@ -8,8 +8,14 @@ export type OrgSettings = {
   phone: string;
   timezone: string;
   heroMessage: string;
+  heroHeadline: string;
   serviceAreaText: string;
   bookingMessage: string;
+  heroImageUrl: string;
+  socialFacebook: string;
+  socialInstagram: string;
+  socialTiktok: string;
+  socialGoogleBusiness: string;
 };
 
 const fallbackSettings: OrgSettings = {
@@ -18,8 +24,14 @@ const fallbackSettings: OrgSettings = {
   phone: "",
   timezone: "America/New_York",
   heroMessage: "",
+  heroHeadline: "",
   serviceAreaText: "",
   bookingMessage: "",
+  heroImageUrl: "",
+  socialFacebook: "",
+  socialInstagram: "",
+  socialTiktok: "",
+  socialGoogleBusiness: "",
 };
 
 export async function getOrgSettings(): Promise<OrgSettings> {
@@ -45,7 +57,13 @@ export async function getOrgSettings(): Promise<OrgSettings> {
     phone: data.phone ?? "",
     timezone: data.timezone ?? "America/New_York",
     heroMessage: (settings.hero_message as string) ?? "",
+    heroHeadline: (settings.hero_headline as string) ?? "",
     serviceAreaText: (settings.service_area_text as string) ?? "",
     bookingMessage: (settings.booking_message as string) ?? "",
+    heroImageUrl: (settings.hero_image_url as string) ?? "",
+    socialFacebook: (settings.social_facebook as string) ?? "",
+    socialInstagram: (settings.social_instagram as string) ?? "",
+    socialTiktok: (settings.social_tiktok as string) ?? "",
+    socialGoogleBusiness: (settings.social_google_business as string) ?? "",
   };
 }

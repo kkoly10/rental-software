@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateBrandSettings } from "@/lib/settings/brand-actions";
+import { LogoUpload } from "./logo-upload";
 
 const initialState = { ok: false, message: "" };
 
@@ -33,7 +34,6 @@ export function BrandSettingsForm({
   };
 }) {
   const [state, formAction, pending] = useActionState(updateBrandSettings, initialState);
-  const [logoUrl, setLogoUrl] = useState(defaults.logoUrl);
   const [primaryColor, setPrimaryColor] = useState(defaults.primaryColor);
   const [accentColor, setAccentColor] = useState(defaults.accentColor);
   const [fontFamily, setFontFamily] = useState(defaults.fontFamily);
@@ -51,27 +51,7 @@ export function BrandSettingsForm({
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
       {/* Logo Section */}
-      <div className="brand-form-section">
-        <strong>Logo</strong>
-        <div style={{ marginTop: 8 }}>
-          <input
-            name="brand_logo_url"
-            type="text"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://example.com/logo.png"
-            style={{ width: "100%" }}
-          />
-          <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-            Recommended: 200x60px, PNG or SVG
-          </div>
-        </div>
-        {logoUrl && (
-          <div className="brand-logo-preview">
-            <img src={logoUrl} alt="Logo preview" />
-          </div>
-        )}
-      </div>
+      <LogoUpload currentUrl={defaults.logoUrl} />
 
       {/* Brand Colors Section */}
       <div className="brand-form-section">
