@@ -23,6 +23,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "sharp": "^0.34.5",
     "typescript": "latest"
   }
 }
