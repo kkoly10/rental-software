@@ -1,6 +1,8 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { WebsiteSettingsForm } from "@/components/settings/website-settings-form";
 import { BrandSettingsForm } from "@/components/settings/brand-settings-form";
+import { HeroImageUpload } from "@/components/settings/hero-image-upload";
+import { SocialLinksForm } from "@/components/settings/social-links-form";
 import { FaqManager } from "@/components/settings/faq-manager";
 import { AboutEditor } from "@/components/settings/about-editor";
 import { TestimonialsManager } from "@/components/settings/testimonials-manager";
@@ -66,11 +68,16 @@ export default async function WebsitePage() {
 
           <WebsiteSettingsForm
             defaults={{
+              heroHeadline: editableSettings.heroHeadline || "",
               heroMessage: editableSettings.heroMessage || data.settings.websiteMessage,
               serviceAreaText: editableSettings.serviceAreaText || data.settings.serviceAreaLabel,
               bookingMessage: editableSettings.bookingMessage || "",
             }}
           />
+
+          <div style={{ marginTop: 16 }}>
+            <HeroImageUpload currentUrl={editableSettings.heroImageUrl || ""} />
+          </div>
         </section>
 
         <aside className="panel">
@@ -159,6 +166,26 @@ export default async function WebsitePage() {
               primaryColor: brandSettings.primaryColor,
               accentColor: brandSettings.accentColor,
               fontFamily: brandSettings.fontFamily,
+            }}
+          />
+        </section>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Storefront</div>
+              <h2 style={{ margin: "6px 0 0" }}>Social Media</h2>
+            </div>
+          </div>
+
+          <SocialLinksForm
+            defaults={{
+              facebook: editableSettings.socialFacebook || "",
+              instagram: editableSettings.socialInstagram || "",
+              tiktok: editableSettings.socialTiktok || "",
+              googleBusiness: editableSettings.socialGoogleBusiness || "",
             }}
           />
         </section>

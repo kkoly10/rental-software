@@ -71,8 +71,8 @@ export default async function HomePage() {
         <section className="public-hero">
           <div className="public-hero-visual">
             <Image
-              src="https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"
-              alt="Colorful inflatable party rental setup"
+              src={settings.heroImageUrl || "https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"}
+              alt={`${settings.businessName} — inflatable party rental setup`}
               fill
               priority
               sizes="100vw"
@@ -89,9 +89,7 @@ export default async function HomePage() {
               </div>
 
               <h1>
-                Your Next Party,
-                <br />
-                Booked in Minutes
+                {settings.heroHeadline || "Your Next Party, Booked in Minutes"}
               </h1>
 
               <p>

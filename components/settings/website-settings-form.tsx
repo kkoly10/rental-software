@@ -8,12 +8,26 @@ const initialState = { ok: false, message: "" };
 export function WebsiteSettingsForm({
   defaults,
 }: {
-  defaults: { heroMessage: string; serviceAreaText: string; bookingMessage: string };
+  defaults: { heroMessage: string; heroHeadline: string; serviceAreaText: string; bookingMessage: string };
 }) {
   const [state, formAction, pending] = useActionState(updateWebsiteSettings, initialState);
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
+      <label className="order-card">
+        <strong>Hero headline</strong>
+        <input
+          name="hero_headline"
+          type="text"
+          defaultValue={defaults.heroHeadline}
+          placeholder="Your Next Party, Booked in Minutes"
+          style={{ marginTop: 8, width: "100%" }}
+        />
+        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+          Main headline on your homepage hero. Leave blank for the default.
+        </div>
+      </label>
+
       <label className="order-card">
         <strong>Homepage hero message</strong>
         <textarea

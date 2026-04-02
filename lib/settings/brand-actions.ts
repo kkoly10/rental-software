@@ -37,16 +37,11 @@ export async function updateBrandSettings(
   _prevState: SettingsActionState,
   formData: FormData
 ): Promise<SettingsActionState> {
-  const logoUrl = String(formData.get("brand_logo_url") ?? "").trim();
   const primaryColor = String(formData.get("brand_primary_color") ?? "").trim();
   const accentColor = String(formData.get("brand_accent_color") ?? "").trim();
   const fontFamily = String(formData.get("brand_font_family") ?? "").trim();
 
   // Validate
-  if (logoUrl && !isValidUrl(logoUrl)) {
-    return { ok: false, message: "Invalid logo URL format." };
-  }
-
   if (primaryColor && !isValidHexColor(primaryColor)) {
     return { ok: false, message: "Primary color must be a valid hex color (e.g. #1e5dcf)." };
   }
@@ -84,7 +79,6 @@ export async function updateBrandSettings(
     .update({
       settings: {
         ...existingSettings,
-        brand_logo_url: logoUrl || null,
         brand_primary_color: primaryColor || null,
         brand_accent_color: accentColor || null,
         brand_font_family: fontFamily || null,

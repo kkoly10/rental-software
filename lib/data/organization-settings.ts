@@ -13,6 +13,12 @@ const fallbackSettings = {
   publicBookingLabel: "Public checkout enabled",
   featuredInventoryLabel: "3 highlighted inflatables on homepage",
   websiteMessage: "Epic parties delivered with clean setup and on-time dropoff.",
+  heroHeadline: "",
+  heroImageUrl: "",
+  socialFacebook: "",
+  socialInstagram: "",
+  socialTiktok: "",
+  socialGoogleBusiness: "",
 };
 
 export async function getOrganizationSettings() {
@@ -33,7 +39,7 @@ export async function getOrganizationSettings() {
     await Promise.all([
       supabase
         .from("organizations")
-        .select("name, timezone, default_currency, support_email")
+        .select("name, timezone, default_currency, support_email, phone, settings")
         .eq("id", organizationId)
         .maybeSingle(),
       // Only fetch profile if we have an authenticated user
@@ -64,19 +70,33 @@ export async function getOrganizationSettings() {
           .join(" • ")
       : fallbackSettings.serviceAreaLabel;
 
+  const orgSettings = (organization?.settings as Record<string, unknown>) ?? {};
+
   return {
     businessName: organization?.name ?? fallbackSettings.businessName,
     supportEmail:
-      (organization as Record<string, unknown>)?.support_email as string ??
+      (organization?.support_email as string) ??
       profile?.email ??
       fallbackSettings.supportEmail,
-    phone: profile?.phone ?? fallbackSettings.phone,
+    phone:
+      (organization?.phone as string) ??
+      profile?.phone ??
+      fallbackSettings.phone,
     timezone: organization?.timezone ?? fallbackSettings.timezone,
     currency: organization?.default_currency ?? fallbackSettings.currency,
     serviceAreaLabel: areaLabel,
     depositPolicy: fallbackSettings.depositPolicy,
     publicBookingLabel: fallbackSettings.publicBookingLabel,
     featuredInventoryLabel: fallbackSettings.featuredInventoryLabel,
-    websiteMessage: fallbackSettings.websiteMessage,
+    websiteMessage:
+      (orgSettings.hero_message as string) || fallbackSettings.websiteMessage,
+    heroHeadline:
+      (orgSettings.hero_headline as string) || "",
+    heroImageUrl:
+      (orgSettings.hero_image_url as string) || "",
+    socialFacebook: (orgSettings.social_facebook as string) || "",
+    socialInstagram: (orgSettings.social_instagram as string) || "",
+    socialTiktok: (orgSettings.social_tiktok as string) || "",
+    socialGoogleBusiness: (orgSettings.social_google_business as string) || "",
   };
 }

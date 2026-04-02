@@ -56,6 +56,7 @@ export async function updateWebsiteSettings(
   formData: FormData
 ): Promise<SettingsActionState> {
   const heroMessage = String(formData.get("hero_message") ?? "").trim();
+  const heroHeadline = String(formData.get("hero_headline") ?? "").trim();
   const serviceAreaText = String(formData.get("service_area_text") ?? "").trim();
   const bookingMessage = String(formData.get("booking_message") ?? "").trim();
 
@@ -85,6 +86,7 @@ export async function updateWebsiteSettings(
       settings: {
         ...existingSettings,
         hero_message: heroMessage || null,
+        hero_headline: heroHeadline || null,
         service_area_text: serviceAreaText || null,
         booking_message: bookingMessage || null,
       },
