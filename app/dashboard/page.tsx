@@ -84,8 +84,8 @@ export default async function DashboardPage() {
           />
           <StatCard
             label="Payment items"
-            value={String(summary.paymentItems)}
-            meta="Recent money activity"
+            value={String(summary.recentPaymentsCount)}
+            meta="Last 30 days"
           />
         </div>
       </div>
