@@ -7,6 +7,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getCheckoutPricing } from "@/lib/data/checkout-pricing";
+import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { hasStripeEnv } from "@/lib/stripe/config";
 
 function formatProductName(value?: string) {
@@ -47,8 +48,18 @@ export default async function CheckoutPage({
   const { product, date, zip } = await searchParams;
   const productName = formatProductName(product);
 
-  const pricing = await getCheckoutPricing(product, zip);
+  const [pricing, policies] = await Promise.all([
+    getCheckoutPricing(product, zip),
+    getBookingPolicies(),
+  ]);
   const stripeEnabled = hasStripeEnv();
+
+  // Compute date constraints from booking policies
+  const now = new Date();
+  const minDate = new Date(now.getTime() + policies.bookingLeadTimeHours * 60 * 60 * 1000)
+    .toISOString().slice(0, 10);
+  const maxDate = new Date(now.getTime() + policies.maxAdvanceBookingDays * 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10);
 
   return (
     <>
@@ -78,6 +89,8 @@ export default async function CheckoutPage({
                 productSlug={product}
                 initialDate={date}
                 initialZip={zip}
+                minDate={minDate}
+                maxDate={maxDate}
               />
             </section>
 
@@ -85,6 +98,7 @@ export default async function CheckoutPage({
               productName={productName}
               pricing={pricing ?? undefined}
               stripeEnabled={stripeEnabled}
+              cancellationPolicy={policies.cancellationPolicyText ?? undefined}
             />
           </div>
         </div>

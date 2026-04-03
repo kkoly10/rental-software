@@ -85,7 +85,9 @@ export async function getOrganizationSettings() {
     timezone: organization?.timezone ?? fallbackSettings.timezone,
     currency: organization?.default_currency ?? fallbackSettings.currency,
     serviceAreaLabel: areaLabel,
-    depositPolicy: fallbackSettings.depositPolicy,
+    depositPolicy: typeof orgSettings.deposit_percentage === "number"
+      ? `${orgSettings.deposit_percentage}% deposit to reserve event date`
+      : fallbackSettings.depositPolicy,
     publicBookingLabel: fallbackSettings.publicBookingLabel,
     featuredInventoryLabel: fallbackSettings.featuredInventoryLabel,
     websiteMessage:

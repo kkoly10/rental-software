@@ -12,6 +12,7 @@ import { checkProductAvailability } from "@/lib/availability/check";
 import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
+import { getBookingPolicies } from "@/lib/data/booking-policies";
 
 export type CheckoutFieldErrors = {
   firstName?: string;
@@ -231,6 +232,29 @@ export async function createCheckoutOrder(
     };
   }
 
+  // Enforce booking date policies (lead time and max advance)
+  if (eventDate) {
+    const bookingPolicies = await getBookingPolicies();
+    const eventDateMs = new Date(`${eventDate}T00:00:00Z`).getTime();
+    const nowMs = Date.now();
+    const minDateMs = nowMs + bookingPolicies.bookingLeadTimeHours * 60 * 60 * 1000;
+    const maxDateMs = nowMs + bookingPolicies.maxAdvanceBookingDays * 24 * 60 * 60 * 1000;
+
+    if (eventDateMs < minDateMs) {
+      return {
+        ok: false,
+        message: `Bookings require at least ${bookingPolicies.bookingLeadTimeHours} hours advance notice.`,
+      };
+    }
+
+    if (eventDateMs > maxDateMs) {
+      return {
+        ok: false,
+        message: `Bookings cannot be more than ${bookingPolicies.maxAdvanceBookingDays} days in advance.`,
+      };
+    }
+  }
+
   if (productId && eventDate) {
     const availability = await checkProductAvailability({
       organizationId: orgId,
@@ -356,7 +380,13 @@ export async function createCheckoutOrder(
 
   const deliveryFee = serviceArea.deliveryFee;
   const total = Number((subtotal + deliveryFee).toFixed(2));
-  const deposit = Number((total * 0.3).toFixed(2));
+
+  // Compute deposit from the org's configurable booking policies
+  const policies = await getBookingPolicies();
+  let deposit = Number((total * (policies.depositPercentage / 100)).toFixed(2));
+  if (policies.depositMinimum !== null && deposit < policies.depositMinimum) {
+    deposit = Math.min(policies.depositMinimum, total);
+  }
   const balance = Number((total - deposit).toFixed(2));
   const orderNumber = createOrderNumber();
 
@@ -378,7 +408,7 @@ export async function createCheckoutOrder(
       organization_id: orgId,
       customer_id: customerId,
       order_number: orderNumber,
-      order_status: "awaiting_deposit",
+      order_status: policies.requireDepositToConfirm ? "awaiting_deposit" : "confirmed",
       event_date: eventDate ?? null,
       event_start_time: eventStartTime,
       event_end_time: eventEndTime,
