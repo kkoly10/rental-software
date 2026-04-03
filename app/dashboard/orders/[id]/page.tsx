@@ -53,7 +53,12 @@ export default async function OrderDetailPage({
 
             <div className="order-card">
               <strong>Event date</strong>
-              <div className="muted">{order.eventDate}</div>
+              <div className="muted">
+                {order.eventDate}
+                {order.eventStartTime && order.eventEndTime && (
+                  <> · {order.eventStartTime} – {order.eventEndTime}</>
+                )}
+              </div>
             </div>
 
             <WeatherAlert

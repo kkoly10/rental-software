@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { checkFeatureAccess } from "@/lib/stripe/gate";
+import { getOrderFinancials } from "@/lib/payments/financials";
 
 function escapeCsvField(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -46,7 +47,7 @@ export async function exportOrders(): Promise<ExportResult> {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "order_number, order_status, event_date, total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount, balance_due_amount, created_at, customers(first_name, last_name, email, phone), order_items(item_name_snapshot, unit_price, quantity)"
+      "id, order_number, order_status, event_date, total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount, balance_due_amount, created_at, customers(first_name, last_name, email, phone), order_items(item_name_snapshot, unit_price, quantity)"
     )
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false })
@@ -54,6 +55,22 @@ export async function exportOrders(): Promise<ExportResult> {
 
   if (error || !data) {
     return { ok: false, message: "Failed to fetch orders." };
+  }
+
+  // Compute real balance from payments for each order (source of truth)
+  const financialsMap = new Map<string, number>();
+  const batchSize = 50;
+  for (let i = 0; i < data.length; i += batchSize) {
+    const batch = data.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(async (o) => {
+        const f = await getOrderFinancials(o.id);
+        return [o.id, f?.remainingBalance ?? Number(o.total_amount ?? 0)] as const;
+      })
+    );
+    for (const [id, balance] of results) {
+      financialsMap.set(id, balance);
+    }
   }
 
   const headers = [
@@ -70,6 +87,8 @@ export async function exportOrders(): Promise<ExportResult> {
       | { item_name_snapshot?: string | null; quantity?: number | null }[]
       | null) ?? [];
 
+    const computedBalance = financialsMap.get(o.id) ?? Number(o.total_amount ?? 0);
+
     return [
       o.order_number ?? "",
       o.order_status ?? "",
@@ -81,7 +100,7 @@ export async function exportOrders(): Promise<ExportResult> {
       String(o.subtotal_amount ?? 0),
       String(o.delivery_fee_amount ?? 0),
       String(o.deposit_due_amount ?? 0),
-      String(o.balance_due_amount ?? 0),
+      String(computedBalance),
       String(o.total_amount ?? 0),
       o.created_at ?? "",
     ];

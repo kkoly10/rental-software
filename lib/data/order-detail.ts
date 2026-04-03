@@ -37,7 +37,8 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const { data, error } = await supabase
     .from("orders")
     .select(`
-      id, order_number, order_status, event_date, notes,
+      id, order_number, order_status, event_date,
+      event_start_time, event_end_time, notes,
       subtotal_amount, delivery_fee_amount, total_amount,
       deposit_due_amount, balance_due_amount,
       customers(first_name, last_name, email, phone),
@@ -102,6 +103,18 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
           year: "numeric",
         })
       : "TBD",
+    eventStartTime: data.event_start_time
+      ? new Date(data.event_start_time).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : undefined,
+    eventEndTime: data.event_end_time
+      ? new Date(data.event_end_time).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : undefined,
     items:
       items.length > 0
         ? items.map((i) => i.item_name_snapshot ?? "Item")

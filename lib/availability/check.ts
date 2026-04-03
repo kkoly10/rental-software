@@ -14,8 +14,10 @@ export async function checkProductAvailability(options: {
   organizationId: string;
   productId: string;
   eventDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }): Promise<AvailabilityCheckResult> {
-  const window = getAvailabilityWindowForDate(options.eventDate);
+  const window = getAvailabilityWindowForDate(options.eventDate, options.startTime, options.endTime);
 
   if (!window) {
     return {

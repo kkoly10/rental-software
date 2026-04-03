@@ -40,6 +40,8 @@ export async function createOrder(
     email: String(formData.get("email") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     eventDate: String(formData.get("event_date") ?? ""),
+    startTime: String(formData.get("start_time") ?? ""),
+    endTime: String(formData.get("end_time") ?? ""),
     orderStatus: String(formData.get("order_status") ?? "inquiry"),
     productId: String(formData.get("product_id") ?? ""),
     serviceAreaId: String(formData.get("service_area_id") ?? ""),
@@ -109,6 +111,8 @@ export async function createOrder(
     email,
     phone,
     eventDate,
+    startTime,
+    endTime,
     orderStatus,
     productId,
     serviceAreaId,
@@ -153,6 +157,8 @@ export async function createOrder(
         organizationId: ctx.organizationId,
         productId: product.id,
         eventDate,
+        startTime,
+        endTime,
       });
 
       if (!availability.available) {
@@ -283,6 +289,15 @@ export async function createOrder(
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
 
+  const eventStartTime =
+    eventDate && startTime
+      ? new Date(`${eventDate}T${startTime}:00.000Z`).toISOString()
+      : null;
+  const eventEndTime =
+    eventDate && endTime
+      ? new Date(`${eventDate}T${endTime}:00.000Z`).toISOString()
+      : null;
+
   const { data: createdOrder, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -291,6 +306,8 @@ export async function createOrder(
       order_number: orderNumber,
       order_status: orderStatus,
       event_date: eventDate ?? null,
+      event_start_time: eventStartTime,
+      event_end_time: eventEndTime,
       subtotal_amount: resolvedSubtotal,
       delivery_fee_amount: resolvedDeliveryFee,
       total_amount: total,
@@ -335,6 +352,8 @@ export async function createOrder(
       productId,
       orderId: createdOrder.id,
       eventDate,
+      startTime,
+      endTime,
     });
 
     if (!reserveResult.ok) {

@@ -95,6 +95,7 @@ export async function lookupOrder(
     .from("orders")
     .select(`
       id, order_number, order_status, event_date,
+      event_start_time, event_end_time,
       subtotal_amount, delivery_fee_amount, total_amount,
       deposit_due_amount, balance_due_amount,
       customer_id
@@ -174,7 +175,14 @@ export async function lookupOrder(
         status: d.document_status,
       })),
       deliveryDate: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? eventDate : undefined,
-      deliveryTimeWindow: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? "8:00 AM – 10:00 AM" : undefined,
+      deliveryTimeWindow: (() => {
+        if (!["scheduled", "out_for_delivery", "delivered"].includes(order.order_status)) return undefined;
+        if (order.event_start_time && order.event_end_time) {
+          const fmt = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          return `${fmt(order.event_start_time)} – ${fmt(order.event_end_time)}`;
+        }
+        return "See confirmation email for details";
+      })(),
       customerName: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Customer",
     },
   };

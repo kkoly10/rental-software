@@ -236,6 +236,8 @@ export async function createCheckoutOrder(
       organizationId: orgId,
       productId,
       eventDate,
+      startTime,
+      endTime,
     });
 
     if (!availability.available) {
@@ -444,6 +446,8 @@ export async function createCheckoutOrder(
       productId,
       orderId: order.id,
       eventDate,
+      startTime,
+      endTime,
       source: willUseStripe ? "checkout" : "dashboard",
     });
 

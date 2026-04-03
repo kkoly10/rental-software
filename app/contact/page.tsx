@@ -4,6 +4,7 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { ContactForm } from "@/components/public/contact-form";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -15,6 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ContactPage() {
+  await requirePublicOrg();
   const settings = await getOrganizationSettings();
 
   return (

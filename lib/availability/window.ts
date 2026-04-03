@@ -6,39 +6,46 @@ export type AvailabilityWindow = {
 /**
  * Build an availability window for a given date and optional time range.
  *
- * Currently date-based only: the window spans midnight-to-midnight UTC for the
- * given date. This means two events on the same date (e.g. 9am-12pm and
- * 2pm-6pm) are treated as a conflict even though they don't overlap in time.
+ * When startTime and endTime are provided (HH:MM format), the window is
+ * scoped to those exact hours on the event date. This allows same-day
+ * split bookings (e.g. 9am-12pm and 2pm-6pm on the same bounce house).
  *
- * TODO: Implement time-window overlap detection to support same-day multiple bookings.
- * When startTime / endTime are provided, the window should be
- *   starts_at = eventDate + startTime (with timezone)
- *   ends_at   = eventDate + endTime   (with timezone)
- * and conflict detection in check.ts should compare overlapping TIME windows,
- * not just matching dates. This enables scenarios like morning party 9am-12pm
- * AND afternoon party 2pm-6pm on the same bounce house.
+ * When times are not provided, the window spans midnight-to-midnight UTC
+ * for the given date (full-day block).
  */
 export function getAvailabilityWindowForDate(
   eventDate?: string | null,
-  _startTime?: string | null,
-  _endTime?: string | null
+  startTime?: string | null,
+  endTime?: string | null
 ): AvailabilityWindow | null {
   if (!eventDate) {
     return null;
   }
 
-  const start = new Date(`${eventDate}T00:00:00.000Z`);
-  if (Number.isNaN(start.getTime())) {
+  const dayStart = new Date(`${eventDate}T00:00:00.000Z`);
+  if (Number.isNaN(dayStart.getTime())) {
     return null;
   }
 
-  // TODO: When time-window overlap detection is implemented, use startTime/endTime
-  // instead of full-day window. For now, always use midnight-to-midnight.
-  const end = new Date(start);
+  // When both start and end times are provided, use the exact time window
+  if (startTime && endTime && /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime)) {
+    const start = new Date(`${eventDate}T${startTime}:00.000Z`);
+    const end = new Date(`${eventDate}T${endTime}:00.000Z`);
+
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start) {
+      return {
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+      };
+    }
+  }
+
+  // Fall back to full-day window (midnight to midnight)
+  const end = new Date(dayStart);
   end.setUTCDate(end.getUTCDate() + 1);
 
   return {
-    startsAt: start.toISOString(),
+    startsAt: dayStart.toISOString(),
     endsAt: end.toISOString(),
   };
 }
