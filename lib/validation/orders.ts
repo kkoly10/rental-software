@@ -17,6 +17,16 @@ const optionalUuidSchema = z
   .or(z.literal(""))
   .transform((value) => value || undefined);
 
+// Optional time in HH:MM format (24h)
+const optionalTimeSchema = z
+  .string()
+  .trim()
+  .refine((val) => val === "" || /^\d{2}:\d{2}$/.test(val), {
+    message: "Time must be in HH:MM format.",
+  })
+  .transform((val) => (val === "" ? undefined : val))
+  .optional();
+
 export const orderStatusSchema = z.enum([
   "inquiry",
   "quote_sent",
@@ -36,6 +46,8 @@ export const createOrderSchema = z
     email: optionalEmailSchema,
     phone: optionalPhoneSchema,
     eventDate: optionalDateSchema,
+    startTime: optionalTimeSchema,
+    endTime: optionalTimeSchema,
     orderStatus: orderStatusSchema.default("inquiry"),
     productId: optionalUuidSchema,
     serviceAreaId: optionalUuidSchema,

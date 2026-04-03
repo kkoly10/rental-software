@@ -16,9 +16,11 @@ export async function reserveProductAvailabilityBlock(options: {
   productId: string;
   orderId: string;
   eventDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   source?: "checkout" | "dashboard";
 }) {
-  const window = getAvailabilityWindowForDate(options.eventDate);
+  const window = getAvailabilityWindowForDate(options.eventDate, options.startTime, options.endTime);
   if (!window) {
     return { ok: true } as const;
   }

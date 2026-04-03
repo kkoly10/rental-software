@@ -82,6 +82,8 @@ export type OrderDetail = {
   customerPhone: string;
   status: string;
   eventDate: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
   items: string[];
   deliveryLabel: string;
   documents: string[];

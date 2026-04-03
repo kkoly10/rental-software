@@ -80,6 +80,25 @@ export function NewOrderForm({
           />
         </label>
         <label className="order-card">
+          <strong>Start time</strong>
+          <input
+            name="start_time"
+            type="time"
+            style={{ marginTop: 10, width: "100%" }}
+          />
+        </label>
+        <label className="order-card">
+          <strong>End time</strong>
+          <input
+            name="end_time"
+            type="time"
+            style={{ marginTop: 10, width: "100%" }}
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-3">
+        <label className="order-card">
           <strong>Order status</strong>
           <select
             name="order_status"

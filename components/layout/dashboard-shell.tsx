@@ -10,6 +10,7 @@ import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import type { Notification } from "@/lib/data/notifications";
 import { fetchUnreadMessageCount } from "@/lib/messages/actions";
+import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 import { SubscriptionBanner } from "@/components/settings/subscription-banner";
 
 function isNavItemActive(pathname: string, href: string) {
@@ -23,7 +24,7 @@ export function DashboardShell({
   children,
   notifications = [],
   unreadMessages = 0,
-  subscriptionStatus,
+  subscriptionStatus: initialSubscriptionStatus,
 }: {
   title: string;
   description: string;
@@ -34,9 +35,13 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const [badgeCount, setBadgeCount] = useState(unreadMessages);
+  const [subStatus, setSubStatus] = useState(initialSubscriptionStatus ?? null);
 
   useEffect(() => {
     fetchUnreadMessageCount().then(setBadgeCount).catch(() => {});
+    // Fetch subscription status on every page to ensure the banner shows everywhere,
+    // even on dashboard pages that don't pass the prop from the server.
+    getSubscriptionStatus().then((s) => { if (s) setSubStatus(s); }).catch(() => {});
   }, [pathname]);
 
   return (
@@ -101,7 +106,7 @@ export function DashboardShell({
       </aside>
 
       <main className="main-shell">
-        <SubscriptionBanner status={subscriptionStatus} />
+        <SubscriptionBanner status={subStatus} />
         <Breadcrumbs />
         <div className="section-header">
           <div>
