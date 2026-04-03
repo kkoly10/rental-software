@@ -3,6 +3,15 @@ import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export async function POST(request: NextRequest) {
   let body: { orderNumber: string; email: string; subject: string; message: string };
 
@@ -100,11 +109,11 @@ export async function POST(request: NextRequest) {
           subject: `[Customer Message] ${subject} — Order ${orderNumber}`,
           html: `
             <h2>Customer Message</h2>
-            <p><strong>Order:</strong> ${orderNumber}</p>
-            <p><strong>From:</strong> ${email}</p>
-            <p><strong>Subject:</strong> ${subject}</p>
+            <p><strong>Order:</strong> ${escapeHtml(orderNumber)}</p>
+            <p><strong>From:</strong> ${escapeHtml(email)}</p>
+            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
             <hr />
-            <p>${message.replace(/\n/g, "<br />")}</p>
+            <p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>
           `,
         }),
       });

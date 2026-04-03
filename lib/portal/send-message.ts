@@ -19,6 +19,16 @@ const VALID_SUBJECTS = [
   "Other",
 ];
 
+/** Escape HTML special characters to prevent XSS in email bodies */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export async function sendCustomerMessage(
   _prevState: SendMessageState,
   formData: FormData
@@ -90,6 +100,47 @@ export async function sendCustomerMessage(
     return { ok: false, message: "Unable to verify your identity." };
   }
 
+  // Persist the message in the messages table for the dashboard inbox
+  await supabase.from("messages").insert({
+    organization_id: orgId,
+    order_id: order.id,
+    customer_id: order.customer_id,
+    direction: "inbound",
+    channel: "portal",
+    subject,
+    body,
+    sender_name: null,
+    sender_email: email,
+    read: false,
+  });
+
+  // Log to communication_log for audit trail
+  import("@/lib/communications/log").then(({ logCommunication }) =>
+    logCommunication({
+      organizationId: orgId,
+      orderId: order.id,
+      customerId: order.customer_id,
+      channel: "portal_message",
+      direction: "inbound",
+      recipient: null,
+      subject,
+      bodyPreview: body,
+      status: "sent",
+      metadata: { senderEmail: email },
+    })
+  ).catch(() => {});
+
+  // Create notification for the operator
+  import("@/lib/data/notifications").then(({ createNotification }) =>
+    createNotification(
+      orgId,
+      "new_message",
+      "New customer message",
+      `${subject} — Order #${orderNumber}`,
+      "/dashboard/messages"
+    )
+  ).catch(() => {});
+
   // Fetch the org support email
   const { data: org } = await supabase
     .from("organizations")
@@ -99,17 +150,22 @@ export async function sendCustomerMessage(
 
   const supportEmail = org?.support_email ?? "support@korent.app";
 
-  // Send notification email to business
+  // Send notification email to business — escape all user-provided content
+  const safeBody = escapeHtml(body).replace(/\n/g, "<br />");
+  const safeEmail = escapeHtml(email);
+  const safeOrderNumber = escapeHtml(orderNumber);
+  const safeSubject = escapeHtml(subject);
+
   await sendEmail({
     to: supportEmail,
     subject: `[Customer Portal] ${subject} — Order #${orderNumber}`,
     html: `
       <h2>New message from customer portal</h2>
-      <p><strong>Order:</strong> #${orderNumber}</p>
-      <p><strong>Customer email:</strong> ${email}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>Order:</strong> #${safeOrderNumber}</p>
+      <p><strong>Customer email:</strong> ${safeEmail}</p>
+      <p><strong>Subject:</strong> ${safeSubject}</p>
       <hr />
-      <p>${body.replace(/\n/g, "<br />")}</p>
+      <p>${safeBody}</p>
     `,
     replyTo: email,
     organizationId: orgId,
