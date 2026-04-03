@@ -135,6 +135,11 @@ export async function createProduct(
     return { ok: false, message: error.message };
   }
 
+  // Track setup progress (non-blocking)
+  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
+    markSetupStep(ctx.organizationId, "has_products")
+  ).catch(() => {});
+
   redirect("/dashboard/products");
 }
 

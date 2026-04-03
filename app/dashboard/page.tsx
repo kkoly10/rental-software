@@ -13,6 +13,7 @@ import { DashboardGuidance } from "@/components/guidance/dashboard-guidance";
 import { SetupChecklistCard } from "@/components/guidance/setup-checklist-card";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { MilestoneCelebration } from "@/components/dashboard/milestone-celebration";
+import { SetupProgressBar } from "@/components/dashboard/setup-progress-bar";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getNotifications } from "@/lib/data/notifications";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
@@ -52,6 +53,16 @@ export default async function DashboardPage() {
           config={helpConfig}
           dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false}
         />
+      )}
+
+      {!guidanceState.dismissedChecklist && (
+        <div style={{ marginBottom: 16 }}>
+          <SetupProgressBar
+            completed={checklist.completed}
+            total={checklist.total}
+            allDone={checklist.completed === checklist.total}
+          />
+        </div>
       )}
 
       <div data-tour="dashboard-overview">

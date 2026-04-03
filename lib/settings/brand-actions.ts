@@ -115,6 +115,11 @@ export async function updateBrandSettings(
     return { ok: false, message: error.message };
   }
 
+  // Track setup progress (non-blocking)
+  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
+    markSetupStep(ctx.organizationId, "has_brand")
+  ).catch(() => {});
+
   revalidatePath("/dashboard/website");
   revalidatePath("/");
   return {

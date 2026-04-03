@@ -375,6 +375,11 @@ export async function createOrder(
 
   const isFirstOrder = (existingOrderCount ?? 0) <= 1;
 
+  // Track setup progress (non-blocking)
+  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
+    markSetupStep(ctx.organizationId, "has_first_order")
+  ).catch(() => {});
+
   // Send new order alert to operator (non-blocking)
   import("@/lib/email/triggers").then(({ triggerDashboardOrderEmail }) =>
     triggerDashboardOrderEmail({

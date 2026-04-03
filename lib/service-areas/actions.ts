@@ -119,6 +119,11 @@ export async function createServiceArea(
     return { ok: false, message: error.message };
   }
 
+  // Track setup progress (non-blocking)
+  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
+    markSetupStep(ctx.organizationId, "has_service_area")
+  ).catch(() => {});
+
   revalidatePath("/dashboard/service-areas");
   return { ok: true, message: "Service area created." };
 }

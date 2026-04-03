@@ -519,6 +519,11 @@ export async function createCheckoutOrder(
     },
   });
 
+  // Track setup progress (non-blocking)
+  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
+    markSetupStep(orgId, "has_first_order")
+  ).catch(() => {});
+
   // Send order confirmation email (non-blocking)
   import("@/lib/email/triggers").then(({ triggerOrderConfirmationEmail }) =>
     triggerOrderConfirmationEmail({
