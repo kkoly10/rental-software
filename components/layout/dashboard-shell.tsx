@@ -10,6 +10,7 @@ import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import type { Notification } from "@/lib/data/notifications";
 import { fetchUnreadMessageCount } from "@/lib/messages/actions";
+import { SubscriptionBanner } from "@/components/settings/subscription-banner";
 
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -22,12 +23,14 @@ export function DashboardShell({
   children,
   notifications = [],
   unreadMessages = 0,
+  subscriptionStatus,
 }: {
   title: string;
   description: string;
   children: ReactNode;
   notifications?: Notification[];
   unreadMessages?: number;
+  subscriptionStatus?: string | null;
 }) {
   const pathname = usePathname();
   const [badgeCount, setBadgeCount] = useState(unreadMessages);
@@ -98,6 +101,7 @@ export function DashboardShell({
       </aside>
 
       <main className="main-shell">
+        <SubscriptionBanner status={subscriptionStatus} />
         <Breadcrumbs />
         <div className="section-header">
           <div>

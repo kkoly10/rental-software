@@ -27,6 +27,8 @@ export async function checkProductAvailability(options: {
 
   const supabase = await createSupabaseServerClient();
 
+  const now = new Date().toISOString();
+
   const [{ count: assetCount }, { count: overlappingCount }] = await Promise.all([
     supabase
       .from("assets")
@@ -34,13 +36,15 @@ export async function checkProductAvailability(options: {
       .eq("organization_id", options.organizationId)
       .eq("product_id", options.productId)
       .in("operational_status", ["ready", "available", "active"]),
+    // Count overlapping blocks, excluding any that have already expired
     supabase
       .from("availability_blocks")
       .select("id", { count: "exact", head: true })
       .eq("organization_id", options.organizationId)
       .eq("product_id", options.productId)
       .lt("starts_at", window.endsAt)
-      .gt("ends_at", window.startsAt),
+      .gt("ends_at", window.startsAt)
+      .or(`expires_at.is.null,expires_at.gt.${now}`),
   ]);
 
   const assetCapacity = Math.max(assetCount ?? 0, 1);

@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { getOrderFinancials } from "@/lib/payments/financials";
 
 export type PortalOrder = {
   orderNumber: string;
@@ -150,6 +151,10 @@ export async function lookupOrder(
     cancelled: "Cancelled",
   };
 
+  // Compute financials from the payments table — never trust stored balance_due_amount
+  const financials = await getOrderFinancials(order.id);
+  const remainingBalance = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
+
   return {
     ok: true,
     message: "",
@@ -162,7 +167,7 @@ export async function lookupOrder(
       deliveryFee: formatMoney(Number(order.delivery_fee_amount ?? 0)),
       total: formatMoney(Number(order.total_amount ?? 0)),
       depositDue: formatMoney(Number(order.deposit_due_amount ?? 0)),
-      balanceDue: formatMoney(Number(order.balance_due_amount ?? 0)),
+      balanceDue: formatMoney(remainingBalance),
       documents: (docs ?? []).map((d) => ({
         id: d.id,
         type: (d.document_type ?? "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),

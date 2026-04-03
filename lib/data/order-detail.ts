@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrderFinancials } from "@/lib/payments/financials";
 import type { OrderDetail } from "@/lib/types";
 
 const fallbackOrderDetail: OrderDetail = {
@@ -80,6 +81,11 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
+  // Compute financials from the payments table — never trust stored balance_due_amount
+  const financials = await getOrderFinancials(data.id);
+  const totalPaid = financials?.totalPaid ?? 0;
+  const remainingBalance = financials?.remainingBalance ?? Number(data.total_amount ?? 0);
+
   return {
     id: data.id,
     orderNumber: data.order_number ?? "N/A",
@@ -114,8 +120,8 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
         : ["No documents"],
     subtotal: `$${data.subtotal_amount ?? 0}`,
     deliveryFee: `$${data.delivery_fee_amount ?? 0}`,
-    depositPaid: `$${data.deposit_due_amount ?? 0}`,
-    balanceDue: `$${data.balance_due_amount ?? 0}`,
+    depositPaid: `$${totalPaid.toFixed(2)}`,
+    balanceDue: `$${remainingBalance.toFixed(2)}`,
     total: `$${data.total_amount ?? 0}`,
     notes: data.notes ?? "",
   };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrderFinancials } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
 
 export async function GET(
@@ -82,10 +83,11 @@ export async function GET(
     }
   }
 
-  // Calculate deposit paid (total - balance = paid)
+  // Compute financials from payments table — never trust stored balance_due_amount
+  const financials = await getOrderFinancials(orderId);
   const totalAmount = Number(order.total_amount ?? 0);
-  const balanceDue = Number(order.balance_due_amount ?? 0);
-  const depositPaid = Number(Math.max(0, totalAmount - balanceDue).toFixed(2));
+  const depositPaid = financials?.totalPaid ?? 0;
+  const balanceDue = financials?.remainingBalance ?? totalAmount;
 
   const invoiceData: InvoiceData = {
     businessName: org?.name ?? "Korent",

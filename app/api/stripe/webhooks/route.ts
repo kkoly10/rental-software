@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
         if (session.mode === "subscription" && session.subscription) {
+          // SaaS subscription checkout
           const subscriptionId =
             typeof session.subscription === "string"
               ? session.subscription
@@ -60,6 +62,79 @@ export async function POST(request: NextRequest) {
 
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           await syncSubscription(admin, subscription);
+        } else if (session.mode === "payment" && session.payment_status === "paid") {
+          // Rental order deposit payment — record in the payments table
+          const orderId = session.metadata?.order_id;
+          const orgId = session.metadata?.organization_id;
+
+          if (orderId && orgId) {
+            // Avoid duplicate payment records (idempotency via payment_intent)
+            const paymentIntentId =
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null;
+
+            let alreadyRecorded = false;
+            if (paymentIntentId) {
+              const { count } = await admin
+                .from("payments")
+                .select("id", { count: "exact", head: true })
+                .eq("order_id", orderId)
+                .eq("provider_payment_id", paymentIntentId);
+              alreadyRecorded = (count ?? 0) > 0;
+            }
+
+            if (!alreadyRecorded) {
+              const amountPaid = (session.amount_total ?? 0) / 100;
+
+              await admin.from("payments").insert({
+                order_id: orderId,
+                provider: "stripe",
+                provider_payment_id: paymentIntentId,
+                payment_type: "deposit",
+                payment_status: "paid",
+                amount: amountPaid,
+                paid_at: new Date().toISOString(),
+              });
+
+              // Recompute balance from all payments and sync the cached field
+              const { getOrderFinancialsAdmin } = await import(
+                "@/lib/payments/financials"
+              );
+              const financials = await getOrderFinancialsAdmin(admin, orderId);
+
+              if (financials) {
+                const updates: Record<string, unknown> = {
+                  balance_due_amount: financials.remainingBalance,
+                };
+
+                // Auto-confirm if deposit is fulfilled and order is still awaiting
+                if (financials.depositFulfilled) {
+                  const { data: order } = await admin
+                    .from("orders")
+                    .select("order_status")
+                    .eq("id", orderId)
+                    .maybeSingle();
+
+                  if (order?.order_status === "awaiting_deposit") {
+                    updates.order_status = "confirmed";
+                  }
+                }
+
+                await admin
+                  .from("orders")
+                  .update(updates)
+                  .eq("id", orderId);
+              }
+
+              // Convert temporary availability hold to permanent (remove expiration)
+              await admin
+                .from("availability_blocks")
+                .update({ expires_at: null })
+                .eq("source_order_id", orderId)
+                .eq("block_type", "checkout_hold");
+            }
+          }
         }
         break;
       }
@@ -85,6 +160,18 @@ export async function POST(request: NextRequest) {
               subscription_current_period_end: null,
             })
             .eq("id", orgId);
+        }
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        // Subscription renewal succeeded — ensure status is synced to "active"
+        const successInvoice = event.data.object as Stripe.Invoice;
+        const successSubRef = successInvoice.parent?.subscription_details?.subscription;
+        const successSubId = typeof successSubRef === "string" ? successSubRef : successSubRef?.id;
+        if (successSubId) {
+          const subscription = await stripe.subscriptions.retrieve(successSubId);
+          await syncSubscription(admin, subscription);
         }
         break;
       }

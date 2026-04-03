@@ -126,7 +126,7 @@ export async function removeAvailabilityBlock(
     return { ok: false, message: "Block not found." };
   }
 
-  if (block.source_order_id && block.block_type === "order_hold") {
+  if (block.source_order_id && ["order_hold", "checkout_hold"].includes(block.block_type)) {
     return { ok: false, message: "Cannot remove an order-linked reservation. Cancel the order instead." };
   }
 

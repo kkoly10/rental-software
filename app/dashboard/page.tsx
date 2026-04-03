@@ -15,15 +15,17 @@ import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { MilestoneCelebration } from "@/components/dashboard/milestone-celebration";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getNotifications } from "@/lib/data/notifications";
+import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 
 export default async function DashboardPage() {
-  const [summary, snapshot, guidanceState, settings, notifications] =
+  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus] =
     await Promise.all([
       getDashboardSummary(),
       getGuidanceSnapshot(),
       getGuidanceState(),
       getOrganizationSettings(),
       getNotifications(),
+      getSubscriptionStatus(),
     ]);
 
   const checklist = computeChecklist(snapshot);
@@ -38,6 +40,7 @@ export default async function DashboardPage() {
       title="Operator Dashboard"
       description="Daily overview for bookings, deliveries, payments, and tasks."
       notifications={notifications}
+      subscriptionStatus={subscriptionStatus}
     >
       <DashboardGuidance
         guidanceState={guidanceState}
