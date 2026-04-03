@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getCustomerDetail } from "@/lib/data/customer-detail";
+import { CommunicationList } from "@/components/communications/communication-list";
+import { getCustomerCommunications } from "@/lib/data/communication-history";
 
 export default async function CustomerDetailPage({
   params,
@@ -8,7 +10,10 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const customer = await getCustomerDetail(id);
+  const [customer, communications] = await Promise.all([
+    getCustomerDetail(id),
+    getCustomerCommunications(id),
+  ]);
 
   return (
     <DashboardShell
@@ -78,6 +83,20 @@ export default async function CustomerDetailPage({
             </Link>
           </div>
         </aside>
+      </div>
+
+      {/* Communications history across all orders */}
+      <div className="panel" style={{ marginTop: 16 }}>
+        <div className="section-header">
+          <div>
+            <div className="kicker">History</div>
+            <h2 style={{ margin: "6px 0 0" }}>Communications</h2>
+          </div>
+          <span className="badge default">{communications.length}</span>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <CommunicationList entries={communications} showOrderNumber />
+        </div>
       </div>
     </DashboardShell>
   );

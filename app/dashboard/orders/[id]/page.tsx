@@ -5,6 +5,8 @@ import { getOrderDetail } from "@/lib/data/order-detail";
 import { RecordPaymentForm } from "@/components/payments/record-payment-form";
 import { CreateDocumentsButton } from "@/components/documents/document-actions";
 import { WeatherAlert } from "@/components/weather/weather-alert";
+import { CommunicationList } from "@/components/communications/communication-list";
+import { getOrderCommunications } from "@/lib/data/communication-history";
 
 function extractZip(address: string): string | undefined {
   const match = address.match(/\b(\d{5})\b/);
@@ -24,7 +26,10 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = await getOrderDetail(id);
+  const [order, communications] = await Promise.all([
+    getOrderDetail(id),
+    getOrderCommunications(id),
+  ]);
 
   const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
@@ -156,6 +161,20 @@ export default async function OrderDetailPage({
             </Link>
           </div>
         </aside>
+      </div>
+
+      {/* Communications audit trail */}
+      <div className="panel" style={{ marginTop: 16 }}>
+        <div className="section-header">
+          <div>
+            <div className="kicker">Audit trail</div>
+            <h2 style={{ margin: "6px 0 0" }}>Communications</h2>
+          </div>
+          <span className="badge default">{communications.length}</span>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <CommunicationList entries={communications} />
+        </div>
       </div>
     </DashboardShell>
   );

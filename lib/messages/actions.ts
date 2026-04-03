@@ -107,6 +107,22 @@ export async function sendReply(
     return { ok: false, message: "Failed to save reply." };
   }
 
+  // Log to communication_log for audit trail (non-blocking)
+  import("@/lib/communications/log").then(({ logCommunication }) =>
+    logCommunication({
+      organizationId: ctx.organizationId,
+      orderId: orderId ?? undefined,
+      customerId: customerId ?? undefined,
+      channel: "portal_message",
+      direction: "outbound",
+      recipient: customerEmail,
+      subject: orderNumber ? `Re: Order #${orderNumber}` : "Reply from operator",
+      bodyPreview: body,
+      status: "sent",
+      metadata: { senderName: profile?.full_name ?? "Operator" },
+    })
+  ).catch(() => {});
+
   // Send email to customer (non-blocking)
   import("@/lib/email/triggers")
     .then(async () => {

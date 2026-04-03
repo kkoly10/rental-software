@@ -1,6 +1,7 @@
 import { getSmsSettings } from "@/lib/data/sms-settings";
 import { smsTemplates } from "@/lib/sms/templates";
 import { sendSms } from "@/lib/sms/provider";
+import { logCommunication } from "@/lib/communications/log";
 
 type TemplateKey = keyof typeof smsTemplates;
 
@@ -18,7 +19,8 @@ export async function sendSmsNotification(
   type: TemplateKey,
   customerPhone: string,
   params: Record<string, string>,
-  organizationId?: string
+  organizationId?: string,
+  context?: { orderId?: string; customerId?: string }
 ): Promise<void> {
   const settings = await getSmsSettings(organizationId);
 
@@ -45,5 +47,21 @@ export async function sendSmsNotification(
 
   if (!result.ok) {
     console.error(`[SMS] Failed to send ${type} to ${customerPhone}:`, result.error);
+  }
+
+  // Log to communication_log
+  if (organizationId) {
+    logCommunication({
+      organizationId,
+      orderId: context?.orderId,
+      customerId: context?.customerId,
+      channel: "sms",
+      direction: "outbound",
+      recipient: customerPhone,
+      subject: type,
+      bodyPreview: body,
+      status: result.ok ? "sent" : "failed",
+      metadata: result.ok ? { messageId: result.messageId } : { error: result.error },
+    }).catch(() => {});
   }
 }

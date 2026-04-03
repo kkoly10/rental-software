@@ -100,6 +100,47 @@ export async function sendCustomerMessage(
     return { ok: false, message: "Unable to verify your identity." };
   }
 
+  // Persist the message in the messages table for the dashboard inbox
+  await supabase.from("messages").insert({
+    organization_id: orgId,
+    order_id: order.id,
+    customer_id: order.customer_id,
+    direction: "inbound",
+    channel: "portal",
+    subject,
+    body,
+    sender_name: null,
+    sender_email: email,
+    read: false,
+  });
+
+  // Log to communication_log for audit trail
+  import("@/lib/communications/log").then(({ logCommunication }) =>
+    logCommunication({
+      organizationId: orgId,
+      orderId: order.id,
+      customerId: order.customer_id,
+      channel: "portal_message",
+      direction: "inbound",
+      recipient: null,
+      subject,
+      bodyPreview: body,
+      status: "sent",
+      metadata: { senderEmail: email },
+    })
+  ).catch(() => {});
+
+  // Create notification for the operator
+  import("@/lib/data/notifications").then(({ createNotification }) =>
+    createNotification(
+      orgId,
+      "new_message",
+      "New customer message",
+      `${subject} — Order #${orderNumber}`,
+      "/dashboard/messages"
+    )
+  ).catch(() => {});
+
   // Fetch the org support email
   const { data: org } = await supabase
     .from("organizations")
