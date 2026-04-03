@@ -1,19 +1,23 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { BusinessProfileForm } from "@/components/settings/business-profile-form";
+import { BookingPoliciesForm } from "@/components/settings/booking-policies-form";
 import { SmsSettingsForm } from "@/components/settings/sms-settings-form";
 import { SmsLog } from "@/components/settings/sms-log";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getOrgSettings } from "@/lib/data/settings";
 import { getSmsSettings } from "@/lib/data/sms-settings";
+import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 
 export default async function SettingsPage() {
-  const [orgSettings, editableSettings, smsSettings] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
+    getBookingPolicies(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/settings"];
@@ -26,6 +30,7 @@ export default async function SettingsPage() {
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
       )}
+      <EnvStatusChecklist />
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">
@@ -66,11 +71,17 @@ export default async function SettingsPage() {
             </article>
 
             <article className="order-card">
-              <strong>Booking defaults</strong>
+              <strong>Booking policies</strong>
               <div className="muted" style={{ marginTop: 6 }}>
-                {orgSettings.depositPolicy}
+                Deposit: {bookingPolicies.depositPercentage}%
+                {bookingPolicies.depositMinimum ? ` (min $${bookingPolicies.depositMinimum})` : ""}
               </div>
-              <div className="muted">{orgSettings.publicBookingLabel}</div>
+              <div className="muted">
+                Lead time: {bookingPolicies.bookingLeadTimeHours}h · Max advance: {bookingPolicies.maxAdvanceBookingDays} days
+              </div>
+              <div className="muted">
+                {bookingPolicies.requireDepositToConfirm ? "Deposit required to confirm" : "Auto-confirm on booking"}
+              </div>
             </article>
           </div>
 
@@ -94,6 +105,19 @@ export default async function SettingsPage() {
             </a>
           </div>
         </aside>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Policies</div>
+              <h2 style={{ margin: "6px 0 0" }}>Booking Policies</h2>
+            </div>
+          </div>
+
+          <BookingPoliciesForm defaults={bookingPolicies} />
+        </section>
       </div>
 
       <div className="dashboard-grid" id="sms-notifications" style={{ marginTop: 24 }}>

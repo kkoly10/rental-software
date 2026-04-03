@@ -2,8 +2,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
-
-const DEPOSIT_RATE = 0.3;
+import { getBookingPolicies } from "@/lib/data/booking-policies";
 
 export type CheckoutPricingData = {
   subtotal: number;
@@ -60,7 +59,13 @@ export async function getCheckoutPricing(
 
   const deliveryFee = serviceArea.deliveryFee;
   const total = Number((subtotal + deliveryFee).toFixed(2));
-  const deposit = Number((total * DEPOSIT_RATE).toFixed(2));
+
+  // Compute deposit from the org's configurable booking policies
+  const policies = await getBookingPolicies();
+  let deposit = Number((total * (policies.depositPercentage / 100)).toFixed(2));
+  if (policies.depositMinimum !== null && deposit < policies.depositMinimum) {
+    deposit = policies.depositMinimum;
+  }
 
   return { subtotal, deliveryFee, total, deposit };
 }

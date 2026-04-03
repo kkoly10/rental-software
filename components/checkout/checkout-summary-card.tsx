@@ -11,10 +11,12 @@ export function CheckoutSummaryCard({
   productName,
   pricing,
   stripeEnabled,
+  cancellationPolicy,
 }: {
   productName?: string;
   pricing?: CheckoutPricing;
   stripeEnabled?: boolean;
+  cancellationPolicy?: string;
 }) {
   const hasPricing = pricing && pricing.subtotal > 0;
 
@@ -88,6 +90,14 @@ export function CheckoutSummaryCard({
             We deliver, set up, review safety basics, and return for pickup.
           </div>
         </div>
+        {cancellationPolicy && (
+          <div className="order-card">
+            <strong>Cancellation policy</strong>
+            <div className="muted" style={{ marginTop: 6 }}>
+              {cancellationPolicy}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: 18 }}>

@@ -11,7 +11,7 @@ import { notFound } from "next/navigation";
 const fallbackProducts: Record<string, CatalogDetail> = {
   "castle-bouncer": {
     id: "prod_castle_bouncer",
-    name: "Castle Bouncer",
+    name: "[DEMO] Castle Bouncer",
     slug: "castle-bouncer",
     category: "Bounce House",
     price: "$165/day",
@@ -31,7 +31,7 @@ const fallbackProducts: Record<string, CatalogDetail> = {
   },
   "mega-splash-water-slide": {
     id: "prod_mega_splash",
-    name: "Mega Splash Water Slide",
+    name: "[DEMO] Mega Splash Water Slide",
     slug: "mega-splash-water-slide",
     category: "Water Slide",
     price: "$279/day",
@@ -54,7 +54,7 @@ const fallbackProducts: Record<string, CatalogDetail> = {
   },
   "tropical-combo": {
     id: "prod_tropical_combo",
-    name: "Tropical Combo",
+    name: "[DEMO] Tropical Combo",
     slug: "tropical-combo",
     category: "Combo Unit",
     price: "$235/day",

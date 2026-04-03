@@ -23,10 +23,14 @@ export function CheckoutForm({
   productSlug,
   initialDate,
   initialZip,
+  minDate,
+  maxDate,
 }: {
   productSlug?: string;
   initialDate?: string;
   initialZip?: string;
+  minDate?: string;
+  maxDate?: string;
 }) {
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
@@ -158,6 +162,8 @@ export function CheckoutForm({
           name="event_date"
           type="date"
           defaultValue={initialDate}
+          min={minDate}
+          max={maxDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           aria-invalid={!!errors.eventDate || undefined}
           aria-describedby={errors.eventDate ? "err-event-date" : undefined}
