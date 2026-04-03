@@ -434,13 +434,17 @@ export async function createCheckoutOrder(
     }
   }
 
+  // Use a temporary checkout_hold only when Stripe payment is expected (webhook will convert it).
+  // If Stripe isn't configured, use a permanent hold since there's no webhook to convert it.
+  const willUseStripe = hasStripeEnv() && deposit > 0;
+
   if (productId && eventDate) {
     const reserveResult = await reserveProductAvailabilityBlock({
       organizationId: orgId,
       productId,
       orderId: order.id,
       eventDate,
-      source: "checkout",
+      source: willUseStripe ? "checkout" : "dashboard",
     });
 
     if (!reserveResult.ok) {

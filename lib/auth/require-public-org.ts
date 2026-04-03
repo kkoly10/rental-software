@@ -7,18 +7,26 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * Call from public storefront server-component pages to ensure the tenant exists
  * and their subscription is in good standing.
  *
- * If the visitor is on a tenant subdomain/custom domain that doesn't match
- * any organization, this triggers Next.js's not-found page.
+ * IMPORTANT: Storefront pages (/inventory, /checkout, /order-status, etc.)
+ * should ONLY be accessible on tenant subdomains/custom domains, NOT on the
+ * root marketing domain. On the root domain, these routes 404 to prevent
+ * leaking the first org's data through the dev fallback.
  *
- * If the operator's subscription has been canceled for more than 7 days,
- * the storefront is disabled (shows not-found instead of the operator's site).
- * This prevents freeloading — operators must maintain an active subscription
- * (or be on the free tier) for their public storefront to remain live.
- *
- * On the root domain or localhost this is a no-op (allows fallback/demo content).
+ * Exception: localhost / Vercel previews allow fallback for dev convenience.
  */
 export async function requirePublicOrg(): Promise<void> {
-  if (!(await isTenantHost())) return;
+  const isTenant = await isTenantHost();
+
+  if (!isTenant) {
+    // On the root domain in production, storefront pages should not be accessible.
+    // Only allow fallback on localhost / Vercel previews (dev mode).
+    if (hasSupabaseEnv() && isProductionRootDomain()) {
+      notFound();
+    }
+    // In dev mode (localhost, no Supabase env), allow fallback content
+    return;
+  }
+
   const orgId = await getPublicOrgId();
   if (!orgId) {
     notFound();
@@ -29,17 +37,31 @@ export async function requirePublicOrg(): Promise<void> {
     const supabase = await createSupabaseServerClient();
     const { data: org } = await supabase
       .from("organizations")
-      .select("subscription_status, updated_at")
+      .select("subscription_status, subscription_canceled_at")
       .eq("id", orgId)
       .maybeSingle();
 
     if (org?.subscription_status === "canceled") {
-      // Allow a 7-day grace period after cancellation
-      const updatedAt = org.updated_at ? new Date(org.updated_at) : new Date(0);
-      const daysSinceCanceled = (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+      // Use the dedicated cancellation timestamp, not updated_at which resets on any edit
+      const canceledAt = org.subscription_canceled_at
+        ? new Date(org.subscription_canceled_at)
+        : new Date(0);
+      const daysSinceCanceled =
+        (Date.now() - canceledAt.getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceCanceled > 7) {
         notFound();
       }
     }
   }
+}
+
+/**
+ * Returns true when we're running on the real production root domain
+ * (not localhost, not Vercel preview).
+ */
+function isProductionRootDomain(): boolean {
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+  // If no app domain is configured, we're in dev — allow fallback
+  if (!appDomain || appDomain.includes("localhost")) return false;
+  return true;
 }

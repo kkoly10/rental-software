@@ -152,6 +152,17 @@ export async function recordPayment(
       .eq("organization_id", ctx.organizationId);
   }
 
+  // Convert any temporary checkout_hold to permanent now that payment is recorded.
+  // Without this, the cleanup cron could expire the hold before the Stripe webhook fires,
+  // or for non-Stripe orders where no webhook exists at all.
+  if (paymentType !== "refund") {
+    await supabase
+      .from("availability_blocks")
+      .update({ expires_at: null, block_type: "order_hold" })
+      .eq("source_order_id", orderId)
+      .eq("block_type", "checkout_hold");
+  }
+
   revalidatePath("/dashboard/payments");
   revalidatePath(`/dashboard/orders/${orderId}`);
 

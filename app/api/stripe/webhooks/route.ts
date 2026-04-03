@@ -87,7 +87,10 @@ export async function POST(request: NextRequest) {
             if (!alreadyRecorded) {
               const amountPaid = (session.amount_total ?? 0) / 100;
 
-              await admin.from("payments").insert({
+              // Insert with conflict guard — the unique index on
+              // (order_id, provider_payment_id) prevents double-crediting
+              // even if the app-level dedup check above has a TOCTOU gap.
+              const { error: insertErr } = await admin.from("payments").insert({
                 order_id: orderId,
                 provider: "stripe",
                 provider_payment_id: paymentIntentId,
@@ -96,6 +99,15 @@ export async function POST(request: NextRequest) {
                 amount: amountPaid,
                 paid_at: new Date().toISOString(),
               });
+
+              // If unique constraint violation, this is a duplicate — skip silently
+              if (insertErr?.code === "23505") {
+                break;
+              }
+              if (insertErr) {
+                console.error("Payment insert failed:", insertErr.message);
+                break;
+              }
 
               // Recompute balance from all payments and sync the cached field
               const { getOrderFinancialsAdmin } = await import(
@@ -158,6 +170,7 @@ export async function POST(request: NextRequest) {
               subscription_status: "canceled",
               subscription_plan: null,
               subscription_current_period_end: null,
+              subscription_canceled_at: new Date().toISOString(),
             })
             .eq("id", orgId);
         }
