@@ -31,12 +31,12 @@ export async function getTeamData(): Promise<TeamData> {
   if (!hasSupabaseEnv()) {
     return {
       members: [
-        { id: "demo-1", name: "You (Owner)", email: "owner@example.com", role: "owner", isCurrentUser: true },
-        { id: "demo-2", name: "Sarah K.", email: "sarah@example.com", role: "admin", isCurrentUser: false },
-        { id: "demo-3", name: "Mike D.", email: "mike@example.com", role: "crew", isCurrentUser: false },
+        { id: "demo-1", name: "[DEMO] You (Owner)", email: "demo-owner@example.com", role: "owner", isCurrentUser: true },
+        { id: "demo-2", name: "[DEMO] Sarah K.", email: "demo-sarah@example.com", role: "admin", isCurrentUser: false },
+        { id: "demo-3", name: "[DEMO] Mike D.", email: "demo-mike@example.com", role: "crew", isCurrentUser: false },
       ],
       invites: [
-        { id: "inv-1", email: "newguy@example.com", role: "dispatcher", createdAt: "2026-03-28" },
+        { id: "inv-1", email: "demo-invite@example.com", role: "dispatcher", createdAt: "2026-03-28" },
       ],
       currentUserRole: "owner",
     };

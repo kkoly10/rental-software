@@ -143,7 +143,7 @@ export async function createCheckoutOrder(
   }
 
   if (!hasSupabaseEnv()) {
-    const orderNumber = createOrderNumber();
+    const orderNumber = createOrderNumber("DEMO");
     return {
       ok: true,
       message: `Demo mode: Order ${orderNumber} would be created. Add Supabase env vars to create live orders.`,

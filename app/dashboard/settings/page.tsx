@@ -10,6 +10,7 @@ import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 
 export default async function SettingsPage() {
   const [orgSettings, editableSettings, smsSettings, bookingPolicies] = await Promise.all([
@@ -29,6 +30,7 @@ export default async function SettingsPage() {
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
       )}
+      <EnvStatusChecklist />
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">

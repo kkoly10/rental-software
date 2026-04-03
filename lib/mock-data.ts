@@ -3,8 +3,8 @@ import type { OrderSummary, ProductSummary } from "@/lib/types";
 export const mockOrders: OrderSummary[] = [
   {
     id: "ord_1001",
-    customer: "Johnson Birthday Setup",
-    item: "Castle Bouncer",
+    customer: "[DEMO] Jane Demo",
+    item: "[DEMO] Castle Bouncer",
     date: "May 24, 2026",
     total: "$245",
     status: "Confirmed",
@@ -12,8 +12,8 @@ export const mockOrders: OrderSummary[] = [
   },
   {
     id: "ord_1002",
-    customer: "Church Spring Event",
-    item: "Obstacle Course",
+    customer: "[DEMO] Demo Customer",
+    item: "[DEMO] Obstacle Course",
     date: "May 25, 2026",
     total: "$525",
     status: "Awaiting Deposit",
@@ -21,8 +21,8 @@ export const mockOrders: OrderSummary[] = [
   },
   {
     id: "ord_1003",
-    customer: "School Field Day",
-    item: "Water Slide + Generator",
+    customer: "[DEMO] John Sample",
+    item: "[DEMO] Water Slide + Generator",
     date: "May 26, 2026",
     total: "$640",
     status: "Scheduled",
@@ -33,7 +33,7 @@ export const mockOrders: OrderSummary[] = [
 export const mockProducts: ProductSummary[] = [
   {
     id: "prod_castle_bouncer",
-    name: "Castle Bouncer",
+    name: "[DEMO] Castle Bouncer",
     category: "Bounce House",
     price: "$165/day",
     status: "Active",
@@ -41,7 +41,7 @@ export const mockProducts: ProductSummary[] = [
   },
   {
     id: "prod_mega_splash",
-    name: "Mega Splash Water Slide",
+    name: "[DEMO] Mega Splash Water Slide",
     category: "Water Slide",
     price: "$279/day",
     status: "Active",
@@ -49,7 +49,7 @@ export const mockProducts: ProductSummary[] = [
   },
   {
     id: "prod_tropical_combo",
-    name: "Tropical Combo",
+    name: "[DEMO] Tropical Combo",
     category: "Combo Unit",
     price: "$235/day",
     status: "Maintenance",

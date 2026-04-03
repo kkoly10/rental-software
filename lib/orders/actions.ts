@@ -60,7 +60,7 @@ export async function createOrder(
   }
 
   if (!hasSupabaseEnv()) {
-    const orderNumber = createOrderNumber();
+    const orderNumber = createOrderNumber("DEMO");
     return {
       ok: true,
       message: `Demo mode: Order ${orderNumber} would be created.`,

@@ -4,6 +4,8 @@ import { getSiteBaseUrl } from "@/lib/seo/metadata";
 import { getBrandSettings } from "@/lib/data/brand";
 import { BrandStyleInjector } from "@/components/layout/brand-style-injector";
 import { RegisterSW } from "@/components/pwa/register-sw";
+import { DemoModeBanner } from "@/components/layout/demo-mode-banner";
+import { ProductionEnvGuard } from "@/components/layout/production-env-guard";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -68,7 +70,10 @@ export default async function RootLayout({
       <body>
         <BrandStyleInjector brand={brand} />
         <RegisterSW />
-        {children}
+        <ProductionEnvGuard>
+          <DemoModeBanner />
+          {children}
+        </ProductionEnvGuard>
       </body>
     </html>
   );
