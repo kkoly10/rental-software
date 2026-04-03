@@ -91,6 +91,7 @@ export default async function CheckoutPage({
                 initialZip={zip}
                 minDate={minDate}
                 maxDate={maxDate}
+                cancellationPolicy={policies.cancellationPolicyText ?? undefined}
               />
             </section>
 

@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
   _request: NextRequest,
@@ -18,6 +19,21 @@ export async function GET(
   const ctx = await getOrgContext();
   if (!ctx) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Rate limiting: 10 per 15 min per user
+  const { allowed } = await enforceRateLimit({
+    scope: "api:invoices:user",
+    actor: ctx.userId,
+    limit: 10,
+    windowSeconds: 900,
+  });
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a few minutes before trying again." },
+      { status: 429 }
+    );
   }
 
   const supabase = await createSupabaseServerClient();
