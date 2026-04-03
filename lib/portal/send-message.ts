@@ -19,6 +19,16 @@ const VALID_SUBJECTS = [
   "Other",
 ];
 
+/** Escape HTML special characters to prevent XSS in email bodies */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export async function sendCustomerMessage(
   _prevState: SendMessageState,
   formData: FormData
@@ -99,17 +109,22 @@ export async function sendCustomerMessage(
 
   const supportEmail = org?.support_email ?? "support@korent.app";
 
-  // Send notification email to business
+  // Send notification email to business — escape all user-provided content
+  const safeBody = escapeHtml(body).replace(/\n/g, "<br />");
+  const safeEmail = escapeHtml(email);
+  const safeOrderNumber = escapeHtml(orderNumber);
+  const safeSubject = escapeHtml(subject);
+
   await sendEmail({
     to: supportEmail,
     subject: `[Customer Portal] ${subject} — Order #${orderNumber}`,
     html: `
       <h2>New message from customer portal</h2>
-      <p><strong>Order:</strong> #${orderNumber}</p>
-      <p><strong>Customer email:</strong> ${email}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>Order:</strong> #${safeOrderNumber}</p>
+      <p><strong>Customer email:</strong> ${safeEmail}</p>
+      <p><strong>Subject:</strong> ${safeSubject}</p>
       <hr />
-      <p>${body.replace(/\n/g, "<br />")}</p>
+      <p>${safeBody}</p>
     `,
     replyTo: email,
     organizationId: orgId,

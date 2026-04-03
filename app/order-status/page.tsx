@@ -3,6 +3,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { OrderLookupForm } from "@/components/portal/order-lookup-form";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Check Order Status",
@@ -10,7 +11,8 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/order-status",
 });
 
-export default function OrderStatusPage() {
+export default async function OrderStatusPage() {
+  await requirePublicOrg();
   return (
     <>
       <PublicHeader />

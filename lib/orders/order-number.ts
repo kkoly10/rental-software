@@ -7,6 +7,9 @@ function getDatePart(date: Date) {
   return `${year}${month}${day}`;
 }
 
+// Order numbers use random UUIDs (not sequential counters), making them
+// unguessable. This is intentional — sequential numbers (ORD-001, ORD-002)
+// would let attackers enumerate orders via the customer portal lookup.
 export function createOrderNumber(prefix = "ORD") {
   const suffix = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
   return `${prefix}-${getDatePart(new Date())}-${suffix}`;

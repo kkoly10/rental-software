@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -92,8 +93,13 @@ export async function signDocument(
   }
 
   if (doc.document_status === "signed") {
-    return { ok: true, message: "This document has already been signed." };
+    return { ok: false, message: "This document has already been signed." };
   }
+
+  // Collect audit trail from request headers
+  const hdrs = await headers();
+  const signerIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const signerUserAgent = hdrs.get("user-agent") ?? null;
 
   const { error } = await supabase
     .from("documents")
@@ -101,8 +107,11 @@ export async function signDocument(
       document_status: "signed",
       signed_date: new Date().toISOString(),
       signer_name: signerName,
+      signer_ip: signerIp,
+      signer_user_agent: signerUserAgent,
     })
-    .eq("id", documentId);
+    .eq("id", documentId)
+    .eq("document_status", "pending"); // prevent race condition — only sign if still pending
 
   if (error) {
     return { ok: false, message: "Failed to sign the document. Please try again." };

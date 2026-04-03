@@ -72,12 +72,12 @@ export async function lookupOrder(
   try {
     const clientKey = await getActionClientKey();
     const [clientLimit, emailLimit] = await Promise.all([
-      enforceRateLimit({ scope: "portal:lookup:client", actor: clientKey, limit: 15, windowSeconds: 300 }),
-      enforceRateLimit({ scope: "portal:lookup:email", actor: email, limit: 10, windowSeconds: 300 }),
+      enforceRateLimit({ scope: "portal:lookup:client", actor: clientKey, limit: 10, windowSeconds: 900 }),
+      enforceRateLimit({ scope: "portal:lookup:email", actor: email, limit: 5, windowSeconds: 900 }),
     ]);
 
     if (!clientLimit.allowed || !emailLimit.allowed) {
-      return { ok: false, message: "Too many lookup attempts. Please wait a moment." };
+      return { ok: false, message: "Too many lookup attempts. Please try again in 15 minutes." };
     }
   } catch {
     return { ok: false, message: "Unable to look up orders right now." };
