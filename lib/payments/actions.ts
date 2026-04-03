@@ -7,6 +7,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { recordPaymentSchema } from "@/lib/validation/payments";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { getOrderFinancials } from "@/lib/payments/financials";
 
 export type PaymentActionState = {
   ok: boolean;
@@ -88,9 +89,10 @@ export async function recordPayment(
 
   const supabase = await createSupabaseServerClient();
 
+  // Fetch the order to verify it exists and belongs to this org
   const { data: order } = await supabase
     .from("orders")
-    .select("id, balance_due_amount, order_status")
+    .select("id, order_status, total_amount, deposit_due_amount")
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
@@ -99,7 +101,9 @@ export async function recordPayment(
     return { ok: false, message: "Order not found." };
   }
 
-  const currentBalance = Number(order.balance_due_amount ?? 0);
+  // Compute the current financial state from the payments table (never trust stored balance)
+  const financials = await getOrderFinancials(orderId);
+  const currentBalance = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
 
   if (paymentType !== "refund" && amount > currentBalance) {
     return {
@@ -108,6 +112,7 @@ export async function recordPayment(
     };
   }
 
+  // Insert the payment record — this is the source of truth
   const { error } = await supabase.from("payments").insert({
     order_id: orderId,
     payment_type: paymentType,
@@ -122,10 +127,11 @@ export async function recordPayment(
     return { ok: false, message: error.message };
   }
 
-  const newBalance =
-    paymentType === "refund"
-      ? Number((currentBalance + amount).toFixed(2))
-      : Number(Math.max(0, currentBalance - amount).toFixed(2));
+  // Re-compute balance AFTER the new payment is inserted
+  // balance_due_amount is kept in sync as a cache for queries/reports,
+  // but the computed value from payments is always authoritative.
+  const updatedFinancials = await getOrderFinancials(orderId);
+  const newBalance = updatedFinancials?.remainingBalance ?? 0;
 
   await supabase
     .from("orders")
@@ -133,9 +139,10 @@ export async function recordPayment(
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId);
 
+  // Auto-confirm orders when deposit is fulfilled
   if (
     paymentType !== "refund" &&
-    newBalance === 0 &&
+    updatedFinancials?.depositFulfilled &&
     order.order_status === "awaiting_deposit"
   ) {
     await supabase

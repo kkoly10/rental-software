@@ -3,6 +3,11 @@ import Link from "next/link";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getPublicOrgId } from "@/lib/auth/org-context";
+import { getOrderFinancials } from "@/lib/payments/financials";
+import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Order Confirmed",
@@ -10,13 +15,85 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/order-confirmation",
 });
 
+/**
+ * Determine the real payment status for this order.
+ *
+ * SECURITY: Never trust URL params for payment status. Instead:
+ *  1. If a Stripe session_id is present, verify via the Stripe API
+ *  2. Check the database for actual payment records
+ *  3. If the webhook hasn't fired yet, show "processing" instead of "paid"
+ */
+async function resolvePaymentStatus(
+  orderNumber: string | undefined,
+  sessionId: string | undefined
+): Promise<{ status: "paid" | "processing" | "unpaid"; orderNumber: string | undefined }> {
+  if (!hasSupabaseEnv() || !orderNumber) {
+    return { status: "unpaid", orderNumber };
+  }
+
+  const orgId = await getPublicOrgId();
+  if (!orgId) return { status: "unpaid", orderNumber };
+
+  const supabase = await createSupabaseServerClient();
+
+  // Look up the order in the database
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, order_status, total_amount")
+    .eq("organization_id", orgId)
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+
+  if (!order) return { status: "unpaid", orderNumber };
+
+  // Check actual payment records via the financials utility
+  const financials = await getOrderFinancials(order.id);
+
+  if (financials && financials.totalPaid > 0 && financials.depositFulfilled) {
+    // Database confirms payment was received (webhook has fired)
+    return { status: "paid", orderNumber };
+  }
+
+  // If a Stripe checkout session ID was provided, verify with the Stripe API
+  if (sessionId && hasStripeEnv()) {
+    try {
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      if (session.payment_status === "paid") {
+        // Stripe confirms payment, but our webhook may not have fired yet.
+        // Show "processing" — the webhook will update the DB shortly.
+        if (!financials || financials.totalPaid === 0) {
+          return { status: "processing", orderNumber };
+        }
+        return { status: "paid", orderNumber };
+      }
+    } catch {
+      // Session retrieval failed — fall through to unpaid
+    }
+  }
+
+  // If the order status was already updated by a webhook (e.g. confirmed),
+  // that implies payment was received
+  if (order.order_status === "confirmed") {
+    return { status: "paid", orderNumber };
+  }
+
+  return { status: "unpaid", orderNumber };
+}
+
 export default async function OrderConfirmationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string; status?: string }>;
+  searchParams: Promise<{ order?: string; status?: string; session_id?: string }>;
 }) {
-  const { order, status } = await searchParams;
+  const { order, session_id } = await searchParams;
+
+  // Server-verified payment status — URL params are NOT trusted
+  const { status } = await resolvePaymentStatus(order, session_id);
+
   const isPaid = status === "paid";
+  const isProcessing = status === "processing";
 
   return (
     <>
@@ -30,7 +107,11 @@ export default async function OrderConfirmationPage({
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                background: isPaid ? "var(--accent)" : "var(--primary)",
+                background: isPaid
+                  ? "var(--accent)"
+                  : isProcessing
+                  ? "var(--warning, #e6a817)"
+                  : "var(--primary)",
                 color: "white",
                 display: "inline-flex",
                 alignItems: "center",
@@ -45,10 +126,18 @@ export default async function OrderConfirmationPage({
             </div>
 
             <div className="kicker">
-              {isPaid ? "Payment received" : "Booking submitted"}
+              {isPaid
+                ? "Payment confirmed"
+                : isProcessing
+                ? "Payment processing"
+                : "Booking submitted"}
             </div>
             <h1 style={{ margin: "8px 0 12px" }}>
-              {isPaid ? "You're all set!" : "Thank you for your booking!"}
+              {isPaid
+                ? "You're all set!"
+                : isProcessing
+                ? "Almost there!"
+                : "Thank you for your booking!"}
             </h1>
 
             {order && (
@@ -70,6 +159,8 @@ export default async function OrderConfirmationPage({
             <p className="muted" style={{ maxWidth: 440, margin: "0 auto 24px" }}>
               {isPaid
                 ? "Your deposit has been received. We'll confirm your delivery details and send you an agreement shortly."
+                : isProcessing
+                ? "Your payment is being processed — you'll receive a confirmation email shortly. This usually takes just a moment."
                 : "Your order has been created. The operator will contact you about payment and confirm delivery details."}
             </p>
 

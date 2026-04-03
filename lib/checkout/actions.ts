@@ -47,6 +47,8 @@ export async function createCheckoutOrder(
     state: String(formData.get("state") ?? ""),
     postalCode: String(formData.get("postal_code") ?? ""),
     eventDate: String(formData.get("event_date") ?? ""),
+    startTime: String(formData.get("start_time") ?? ""),
+    endTime: String(formData.get("end_time") ?? ""),
     productSlug: String(formData.get("product_slug") ?? ""),
   });
 
@@ -90,6 +92,8 @@ export async function createCheckoutOrder(
     state,
     postalCode,
     eventDate,
+    startTime,
+    endTime,
     productSlug,
   } = parsed.data;
 
@@ -354,6 +358,18 @@ export async function createCheckoutOrder(
   const balance = Number((total - deposit).toFixed(2));
   const orderNumber = createOrderNumber();
 
+  // Convert event date + time strings to timestamptz for storage.
+  // Times are stored even when availability detection is still date-based,
+  // so they flow through to delivery scheduling and the operator dashboard.
+  const eventStartTime =
+    eventDate && startTime
+      ? new Date(`${eventDate}T${startTime}:00.000Z`).toISOString()
+      : null;
+  const eventEndTime =
+    eventDate && endTime
+      ? new Date(`${eventDate}T${endTime}:00.000Z`).toISOString()
+      : null;
+
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -362,6 +378,8 @@ export async function createCheckoutOrder(
       order_number: orderNumber,
       order_status: "awaiting_deposit",
       event_date: eventDate ?? null,
+      event_start_time: eventStartTime,
+      event_end_time: eventEndTime,
       delivery_address_id: address.id,
       subtotal_amount: subtotal,
       delivery_fee_amount: deliveryFee,
@@ -422,6 +440,7 @@ export async function createCheckoutOrder(
       productId,
       orderId: order.id,
       eventDate,
+      source: "checkout",
     });
 
     if (!reserveResult.ok) {
@@ -517,8 +536,8 @@ export async function createCheckoutOrder(
           },
         ],
         customer_email: email,
-        success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&status=paid`,
-        cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}&status=unpaid`,
+        success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}`,
         metadata: {
           organization_id: orgId,
           order_id: order.id,

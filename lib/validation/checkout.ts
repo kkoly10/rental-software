@@ -9,6 +9,16 @@ import {
   requiredText,
 } from "@/lib/validation/common";
 
+// Optional time in HH:MM format (24h)
+const optionalTimeSchema = z
+  .string()
+  .trim()
+  .refine((val) => val === "" || /^\d{2}:\d{2}$/.test(val), {
+    message: "Time must be in HH:MM format.",
+  })
+  .transform((val) => (val === "" ? undefined : val))
+  .optional();
+
 export const checkoutOrderSchema = z.object({
   firstName: personNameSchema("First name"),
   lastName: personNameSchema("Last name"),
@@ -19,6 +29,8 @@ export const checkoutOrderSchema = z.object({
   state: requiredText("State", 80),
   postalCode: requiredPostalCodeSchema,
   eventDate: optionalDateSchema,
+  startTime: optionalTimeSchema,
+  endTime: optionalTimeSchema,
   productSlug: optionalSlugSchema,
 });
 

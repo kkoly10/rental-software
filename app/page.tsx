@@ -16,9 +16,11 @@ import { ServiceAreaSection } from "@/components/public/service-area-section";
 import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
+import { SaasLanding } from "@/components/marketing/saas-landing";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { isTenantHost } from "@/lib/auth/org-context";
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -43,6 +45,13 @@ const defaultFaqItems = [
 ];
 
 export default async function HomePage() {
+  // Root domain (no tenant resolved) → SaaS marketing page for operators
+  // Tenant subdomains/custom domains → operator's storefront for end customers
+  const isTenant = await isTenantHost();
+  if (!isTenant) {
+    return <SaasLanding />;
+  }
+
   await requirePublicOrg();
 
   const [featured, settings, geoAreas, contentSettings] = await Promise.all([
