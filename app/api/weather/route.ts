@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getWeatherForZip } from "@/lib/weather/api";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const querySchema = z.object({
   zip: z
@@ -22,6 +23,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { error: parsed.error.issues[0].message },
       { status: 400 }
+    );
+  }
+
+  // Rate limiting: 30 per 15 min per IP
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { allowed } = await enforceRateLimit({
+    scope: "api:weather:ip",
+    actor: clientIp,
+    limit: 30,
+    windowSeconds: 900,
+  });
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
     );
   }
 

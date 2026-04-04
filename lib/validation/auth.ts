@@ -40,6 +40,9 @@ export const signUpSchema = z.object({
     .max(72, "Password must be 72 characters or fewer."),
   fullName: optionalNameSchema,
   phone: optionalPhoneSchema,
+  termsAccepted: z
+    .string()
+    .refine((v) => v === "true", "You must accept the Terms of Service and Privacy Policy."),
 });
 
 export const forgotPasswordSchema = z.object({

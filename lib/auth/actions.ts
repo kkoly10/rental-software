@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { ZodError } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -223,6 +224,7 @@ export async function signUpWithPassword(
     password: String(formData.get("password") ?? ""),
     fullName: String(formData.get("full_name") ?? ""),
     phone: String(formData.get("phone") ?? ""),
+    termsAccepted: String(formData.get("terms_accepted") ?? ""),
   });
 
   if (!parsed.success) {
@@ -292,6 +294,24 @@ export async function signUpWithPassword(
     status: "success",
     metadata: { email },
   });
+
+  // Record terms acceptance on the profile (non-blocking — don't block signup if this fails)
+  const hdrs = await headers();
+  const clientIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? hdrs.get("x-real-ip") ?? null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    import("@/lib/supabase/admin").then(async ({ createSupabaseAdminClient }) => {
+      const admin = createSupabaseAdminClient();
+      await admin
+        .from("profiles")
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          terms_version: "2026-03-30",
+          terms_ip: clientIp,
+        })
+        .eq("id", user.id);
+    }).catch(() => {});
+  }
 
   await supabase.auth.signOut();
   redirect("/auth/verify-email");

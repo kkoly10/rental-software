@@ -33,6 +33,29 @@ export function SignupForm() {
         <input name="password" type="password" placeholder="Create password" style={{ marginTop: 10, width: "100%" }} />
       </label>
 
+      <label
+        className="order-card"
+        style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
+      >
+        <input
+          name="terms_accepted"
+          type="checkbox"
+          required
+          value="true"
+          style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
+        />
+        <span style={{ fontSize: 14, lineHeight: 1.5 }}>
+          I agree to the{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600 }}>
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600 }}>
+            Privacy Policy
+          </a>
+        </span>
+      </label>
+
       {state.message ? <div className="muted">{state.message}</div> : null}
 
       <div style={{ display: "flex", gap: 12 }}>

@@ -38,6 +38,14 @@ export async function createCheckoutOrder(
   _prevState: CheckoutActionState,
   formData: FormData
 ): Promise<CheckoutActionState> {
+  const termsAccepted = formData.get("terms_accepted") === "true";
+  if (!termsAccepted) {
+    return {
+      ok: false,
+      message: "You must agree to the rental terms to place a booking.",
+    };
+  }
+
   const parsed = checkoutOrderSchema.safeParse({
     firstName: String(formData.get("first_name") ?? ""),
     lastName: String(formData.get("last_name") ?? ""),
@@ -419,6 +427,7 @@ export async function createCheckoutOrder(
       deposit_due_amount: deposit,
       balance_due_amount: balance,
       source_channel: "website",
+      terms_accepted_at: new Date().toISOString(),
       notes: `Service area: ${serviceArea.label}`,
     })
     .select("id")

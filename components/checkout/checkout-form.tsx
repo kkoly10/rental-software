@@ -25,12 +25,14 @@ export function CheckoutForm({
   initialZip,
   minDate,
   maxDate,
+  cancellationPolicy,
 }: {
   productSlug?: string;
   initialDate?: string;
   initialZip?: string;
   minDate?: string;
   maxDate?: string;
+  cancellationPolicy?: string;
 }) {
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
@@ -260,6 +262,23 @@ export function CheckoutForm({
           <FieldError id="err-postal-code" message={errors.postalCode} />
         </label>
       </div>
+
+      <label
+        style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "12px 0" }}
+      >
+        <input
+          name="terms_accepted"
+          type="checkbox"
+          required
+          value="true"
+          style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
+        />
+        <span style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-soft)" }}>
+          {cancellationPolicy
+            ? `I agree to the rental terms and cancellation policy: "${cancellationPolicy}"`
+            : "I understand that this booking is subject to the rental operator's terms and policies"}
+        </span>
+      </label>
 
       {state.message && !state.ok && !state.fieldErrors ? (
         <div className="badge warning" role="alert" style={{ padding: "10px 14px" }}>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 function escapeHtml(str: string): string {
   return str
@@ -29,6 +30,30 @@ export async function POST(request: NextRequest) {
 
   if (message.length > 2000) {
     return NextResponse.json({ error: "Message too long." }, { status: 400 });
+  }
+
+  // Rate limiting: 5 per 10 min per IP, 3 per 10 min per email
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const [ipLimit, emailLimit] = await Promise.all([
+    enforceRateLimit({
+      scope: "api:portal:send-message:ip",
+      actor: clientIp,
+      limit: 5,
+      windowSeconds: 600,
+    }),
+    enforceRateLimit({
+      scope: "api:portal:send-message:email",
+      actor: email,
+      limit: 3,
+      windowSeconds: 600,
+    }),
+  ]);
+
+  if (!ipLimit.allowed || !emailLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many messages. Please wait a few minutes before trying again." },
+      { status: 429 }
+    );
   }
 
   if (!hasSupabaseEnv()) {

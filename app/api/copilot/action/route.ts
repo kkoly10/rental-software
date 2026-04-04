@@ -5,6 +5,7 @@ import { getCopilotAccessContext } from "@/lib/security/copilot-access";
 import { executeCopilotAction, type CopilotAction } from "@/lib/copilot/actions";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { revalidatePath } from "next/cache";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,21 @@ export async function POST(request: NextRequest) {
     return jsonResponse(
       { error: "You must be signed in to use Copilot." },
       { status: 401 }
+    );
+  }
+
+  // Rate limiting: 30 per 15 min per user
+  const { allowed } = await enforceRateLimit({
+    scope: "api:copilot:action:user",
+    actor: access.userId,
+    limit: 30,
+    windowSeconds: 900,
+  });
+
+  if (!allowed) {
+    return jsonResponse(
+      { error: "Too many requests. Please wait a few minutes before trying again." },
+      { status: 429 }
     );
   }
 

@@ -11,6 +11,7 @@ import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
+import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 
 export default async function SettingsPage() {
   const [orgSettings, editableSettings, smsSettings, bookingPolicies] = await Promise.all([
@@ -142,6 +143,9 @@ export default async function SettingsPage() {
 
           <SmsLog />
         </aside>
+      </div>
+      <div style={{ marginTop: 48 }}>
+        <DeleteAccountCard />
       </div>
     </DashboardShell>
   );
