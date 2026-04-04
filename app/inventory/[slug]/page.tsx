@@ -6,6 +6,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { DemoBanner } from "@/components/demo/demo-banner";
+import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { productJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
@@ -37,6 +39,7 @@ export default async function ProductDetailPage({
   searchParams: Promise<{ date?: string; zip?: string }>;
 }) {
   await requirePublicOrg();
+  const isDemo = await isCurrentTenantDemo();
 
   const { slug } = await params;
   const { date, zip } = await searchParams;
@@ -197,6 +200,7 @@ export default async function ProductDetailPage({
       </main>
 
       <PublicFooter />
+      {isDemo && <DemoBanner />}
     </>
   );
 }

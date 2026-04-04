@@ -17,6 +17,8 @@ import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { SaasLanding } from "@/components/marketing/saas-landing";
+import { DemoBanner } from "@/components/demo/demo-banner";
+import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
@@ -54,11 +56,12 @@ export default async function HomePage() {
 
   await requirePublicOrg();
 
-  const [featured, settings, geoAreas, contentSettings] = await Promise.all([
+  const [featured, settings, geoAreas, contentSettings, isDemo] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
     getServiceAreasGeo(),
     getContentSettings(),
+    isCurrentTenantDemo(),
   ]);
 
   const vis = contentSettings.sectionVisibility;
@@ -235,6 +238,8 @@ export default async function HomePage() {
 
         <PublicFooter />
       </main>
+
+      {isDemo && <DemoBanner />}
     </>
   );
 }

@@ -5,6 +5,8 @@ import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CheckoutSummaryCard } from "@/components/checkout/checkout-summary-card";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { DemoBanner } from "@/components/demo/demo-banner";
+import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getCheckoutPricing } from "@/lib/data/checkout-pricing";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
@@ -44,6 +46,7 @@ export default async function CheckoutPage({
   searchParams: Promise<{ product?: string; date?: string; zip?: string }>;
 }) {
   await requirePublicOrg();
+  const isDemo = await isCurrentTenantDemo();
 
   const { product, date, zip } = await searchParams;
   const productName = formatProductName(product);
@@ -106,6 +109,7 @@ export default async function CheckoutPage({
       </main>
 
       <PublicFooter />
+      {isDemo && <DemoBanner />}
     </>
   );
 }

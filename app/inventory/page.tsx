@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
+import { DemoBanner } from "@/components/demo/demo-banner";
+import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { CatalogGrid } from "@/components/public/catalog-grid";
 import { CatalogFilterForm } from "@/components/public/catalog-filter-form";
 import { getCatalogList } from "@/lib/data/catalog-list";
@@ -41,6 +43,7 @@ export default async function InventoryPage({
   }>;
 }) {
   await requirePublicOrg();
+  const isDemo = await isCurrentTenantDemo();
 
   const params = await searchParams;
   const products = await getCatalogList();
@@ -163,6 +166,7 @@ export default async function InventoryPage({
       </main>
 
       <PublicFooter />
+      {isDemo && <DemoBanner />}
     </>
   );
 }
