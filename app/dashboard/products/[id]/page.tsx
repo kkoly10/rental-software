@@ -8,10 +8,14 @@ import { getProductImages } from "@/lib/data/product-images";
 
 export default async function ProductDetailEditorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string }>;
 }) {
   const { id } = await params;
+  const { created } = await searchParams;
+  const justCreated = created === "1";
   const [product, categories, images] = await Promise.all([
     getProductById(id),
     getCategories(),
@@ -27,6 +31,12 @@ export default async function ProductDetailEditorPage({
       title="Edit Product"
       description="Edit pricing, specs, availability rules, public catalog content, and images."
     >
+      {justCreated && (
+        <div className="panel" style={{ background: "var(--success-bg, #e6f9e6)", border: "1px solid var(--success-border, #b3e6b3)", marginBottom: 16 }}>
+          <strong>Product created!</strong> Add images below to showcase it in your catalog.
+        </div>
+      )}
+
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">

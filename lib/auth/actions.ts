@@ -310,7 +310,7 @@ export async function signUpWithPassword(
           terms_ip: clientIp,
         })
         .eq("id", user.id);
-    }).catch(() => {});
+    }).catch((err) => logAppError({ source: "auth/terms-acceptance", message: "Failed to record terms acceptance", context: { error: String(err) } }));
   }
 
   await supabase.auth.signOut();
