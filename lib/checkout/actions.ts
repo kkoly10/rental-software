@@ -160,6 +160,14 @@ export async function createCheckoutOrder(
   }
 
   const orgId = await getPublicOrgId();
+
+  // Block writes on demo org before any DB side effects
+  const { blockDemoWrites } = await import("@/lib/demo/guard");
+  const demoCheck = await blockDemoWrites(orgId);
+  if (demoCheck.blocked) {
+    return { ok: false, message: demoCheck.message };
+  }
+
   if (!orgId) {
     await logAppError({
       source: "checkout.website",

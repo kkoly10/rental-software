@@ -7,6 +7,7 @@ create table if not exists organizations (
   business_type text not null default 'inflatable',
   timezone text not null default 'America/New_York',
   default_currency text not null default 'USD',
+  is_demo boolean not null default false,
   created_at timestamptz not null default now()
 );
 

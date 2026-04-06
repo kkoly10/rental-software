@@ -109,7 +109,7 @@ export async function createProduct(
   const supabase = await createSupabaseServerClient();
   const slug = slugify(name);
 
-  const { error } = await supabase.from("products").insert({
+  const { data: inserted, error } = await supabase.from("products").insert({
     organization_id: ctx.organizationId,
     category_id: categoryId ?? null,
     name,
@@ -123,7 +123,7 @@ export async function createProduct(
     visibility,
     pricing_model: "flat_day",
     rental_mode: "catalog_only",
-  });
+  }).select("id").single();
 
   if (error) {
     if (error.code === "23505") {
@@ -140,7 +140,7 @@ export async function createProduct(
     markSetupStep(ctx.organizationId, "has_products")
   ).catch(() => {});
 
-  redirect("/dashboard/products");
+  redirect(`/dashboard/products/${inserted.id}?created=1`);
 }
 
 export async function updateProduct(

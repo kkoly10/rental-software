@@ -63,6 +63,14 @@ export async function submitContactForm(
 
   // Resolve the tenant org so the email goes to the operator, not Korent
   const orgId = await getPublicOrgId();
+
+  // Block writes on demo org
+  const { blockDemoWrites } = await import("@/lib/demo/guard");
+  const demoCheck = await blockDemoWrites(orgId);
+  if (demoCheck.blocked) {
+    return { ok: false, message: demoCheck.message };
+  }
+
   const operatorEmail = await resolveOperatorEmail(orgId);
 
   // Send contact form email to the operator (non-blocking)

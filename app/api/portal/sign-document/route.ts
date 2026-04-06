@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Service not available." }, { status: 503 });
   }
 
+  // Block writes on demo org
+  const { blockDemoWrites } = await import("@/lib/demo/guard");
+  const demoCheck = await blockDemoWrites(orgId);
+  if (demoCheck.blocked) {
+    return NextResponse.json({ error: demoCheck.message }, { status: 403 });
+  }
+
   const supabase = await createSupabaseServerClient();
 
   // Verify order exists and email matches

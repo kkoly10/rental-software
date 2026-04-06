@@ -7,6 +7,7 @@ const RESERVED_SLUGS = new Set([
   "api",
   "admin",
   "dashboard",
+  "demo",
   "help",
   "support",
   "blog",
