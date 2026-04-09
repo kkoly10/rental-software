@@ -41,8 +41,8 @@ export async function signDocument(
   try {
     const clientKey = await getActionClientKey();
     const [clientLimit, emailLimit] = await Promise.all([
-      enforceRateLimit({ scope: "portal:sign:client", actor: clientKey, limit: 20, windowSeconds: 300 }),
-      enforceRateLimit({ scope: "portal:sign:email", actor: email, limit: 15, windowSeconds: 300 }),
+      enforceRateLimit({ scope: "portal:sign:client", actor: clientKey, limit: 20, windowSeconds: 300, strict: true }),
+      enforceRateLimit({ scope: "portal:sign:email", actor: email, limit: 15, windowSeconds: 300, strict: true }),
     ]);
 
     if (!clientLimit.allowed || !emailLimit.allowed) {

@@ -157,7 +157,7 @@ export function SaasLanding() {
               },
               {
                 title: "Delivery Route Management",
-                desc: "Optimized delivery routes with stop-by-stop tracking and a mobile-friendly crew view for drivers.",
+                desc: "Plan and track delivery routes with stop-by-stop visibility and a mobile-friendly crew view for drivers.",
               },
               {
                 title: "Invoicing & Payments",
@@ -426,7 +426,7 @@ export function SaasLanding() {
           <div className="grid grid-3" style={{ gap: 16 }}>
             {[
               { stat: "24/7", label: "Online booking" },
-              { stat: "0", label: "Double-bookings" },
+              { stat: "Built-in", label: "Conflict prevention" },
               { stat: "<30 min", label: "Setup time" },
             ].map((item) => (
               <div key={item.label} className="panel" style={{ padding: 20, textAlign: "center" }}>

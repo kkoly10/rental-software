@@ -27,18 +27,15 @@ export async function POST(request: NextRequest) {
   // Rate limit by IP
   const hdrs = await headers();
   const clientIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  try {
-    const limit = await enforceRateLimit({
-      scope: "portal:sign:api",
-      actor: clientIp,
-      limit: 20,
-      windowSeconds: 300,
-    });
-    if (!limit.allowed) {
-      return NextResponse.json({ error: "Too many attempts. Please wait." }, { status: 429 });
-    }
-  } catch {
-    // Allow through on rate limit infrastructure failure
+  const limit = await enforceRateLimit({
+    scope: "portal:sign:api",
+    actor: clientIp,
+    limit: 20,
+    windowSeconds: 300,
+    strict: true,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json({ error: "Too many attempts. Please wait." }, { status: 429 });
   }
 
   const orgId = await getPublicOrgId();

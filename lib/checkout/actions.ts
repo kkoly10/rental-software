@@ -114,12 +114,14 @@ export async function createCheckoutOrder(
         actor: clientKey,
         limit: 8,
         windowSeconds: 3600,
+        strict: true,
       }),
       enforceRateLimit({
         scope: "checkout:email",
         actor: email,
         limit: 5,
         windowSeconds: 3600,
+        strict: true,
       }),
     ]);
 
