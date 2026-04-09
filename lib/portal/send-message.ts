@@ -61,8 +61,8 @@ export async function sendCustomerMessage(
   try {
     const clientKey = await getActionClientKey();
     const [clientLimit, emailLimit] = await Promise.all([
-      enforceRateLimit({ scope: "portal:message:client", actor: clientKey, limit: 5, windowSeconds: 600 }),
-      enforceRateLimit({ scope: "portal:message:email", actor: email, limit: 3, windowSeconds: 600 }),
+      enforceRateLimit({ scope: "portal:message:client", actor: clientKey, limit: 5, windowSeconds: 600, strict: true }),
+      enforceRateLimit({ scope: "portal:message:email", actor: email, limit: 3, windowSeconds: 600, strict: true }),
     ]);
 
     if (!clientLimit.allowed || !emailLimit.allowed) {

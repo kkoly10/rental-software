@@ -40,12 +40,14 @@ export async function POST(request: NextRequest) {
       actor: clientIp,
       limit: 5,
       windowSeconds: 600,
+      strict: true,
     }),
     enforceRateLimit({
       scope: "api:portal:send-message:email",
       actor: email,
       limit: 3,
       windowSeconds: 600,
+      strict: true,
     }),
   ]);
 

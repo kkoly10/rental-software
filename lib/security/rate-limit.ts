@@ -10,18 +10,19 @@ export type RateLimitResult = {
   retryAfterSeconds: number;
 };
 
-export async function enforceRateLimit(options: {
+type RateLimitOptions = {
   scope: string;
   actor: string;
   limit: number;
   windowSeconds: number;
-}): Promise<RateLimitResult> {
+  strict?: boolean;
+};
+
+export async function enforceRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
+  const strict = options.strict ?? false;
+
   if (!hasSupabaseServiceRoleEnv()) {
-    return {
-      allowed: true,
-      remaining: options.limit,
-      retryAfterSeconds: 0,
-    };
+    return fallbackResult(options, strict, "missing_service_role_env");
   }
 
   try {
@@ -36,31 +37,55 @@ export async function enforceRateLimit(options: {
     });
 
     if (error) {
-      console.error("Rate limit check failed:", error.message);
-      return {
-        allowed: true,
-        remaining: options.limit,
-        retryAfterSeconds: 0,
-      };
+      return fallbackResult(options, strict, "rpc_error", error.message);
     }
 
     const row = Array.isArray(data) ? data[0] : data;
 
+    if (!row || typeof row.allowed !== "boolean") {
+      return fallbackResult(options, strict, "invalid_rpc_payload");
+    }
+
     return {
-      allowed: Boolean(row?.allowed ?? true),
-      remaining: Number(row?.remaining ?? options.limit),
-      retryAfterSeconds: Number(row?.retry_after_seconds ?? 0),
+      allowed: row.allowed,
+      remaining: Number(row.remaining ?? options.limit),
+      retryAfterSeconds: Number(row.retry_after_seconds ?? 0),
     };
   } catch (error) {
-    console.error("Rate limit check threw:", error);
-    return {
-      allowed: true,
-      remaining: options.limit,
-      retryAfterSeconds: 0,
-    };
+    const detail = error instanceof Error ? error.message : String(error);
+    return fallbackResult(options, strict, "exception", detail);
   }
 }
 
 function hashActorKey(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function fallbackResult(
+  options: RateLimitOptions,
+  strict: boolean,
+  reason: "missing_service_role_env" | "rpc_error" | "invalid_rpc_payload" | "exception",
+  detail?: string
+): RateLimitResult {
+  const context = {
+    scope: options.scope,
+    strict,
+    reason,
+  };
+
+  if (strict) {
+    console.error("[rate-limit] strict fallback deny", detail ? { ...context, detail } : context);
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds: Math.min(Math.max(options.windowSeconds, 30), 300),
+    };
+  }
+
+  console.warn("[rate-limit] fallback allow", detail ? { ...context, detail } : context);
+  return {
+    allowed: true,
+    remaining: options.limit,
+    retryAfterSeconds: 0,
+  };
 }
