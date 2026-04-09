@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { blockDemoWrites } from "@/lib/demo/guard";
 
 export type SignDocumentState = {
   ok: boolean;
@@ -54,6 +55,11 @@ export async function signDocument(
   const orgId = await getPublicOrgId();
   if (!orgId) {
     return { ok: false, message: "Service not available." };
+  }
+
+  const demoCheck = await blockDemoWrites(orgId);
+  if (demoCheck.blocked) {
+    return { ok: false, message: demoCheck.message };
   }
 
   const supabase = await createSupabaseServerClient();

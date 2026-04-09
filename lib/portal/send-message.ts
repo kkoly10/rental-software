@@ -6,6 +6,7 @@ import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { sendEmail } from "@/lib/email/send";
+import { blockDemoWrites } from "@/lib/demo/guard";
 
 export type SendMessageState = {
   ok: boolean;
@@ -74,6 +75,11 @@ export async function sendCustomerMessage(
   const orgId = await getPublicOrgId();
   if (!orgId) {
     return { ok: false, message: "Service not available." };
+  }
+
+  const demoCheck = await blockDemoWrites(orgId);
+  if (demoCheck.blocked) {
+    return { ok: false, message: demoCheck.message };
   }
 
   const supabase = await createSupabaseServerClient();
