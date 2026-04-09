@@ -4,14 +4,9 @@ import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
 import { TrustBar } from "@/components/public/trust-bar";
-import { PainSection } from "@/components/public/pain-section";
-import { BenefitsSection } from "@/components/public/benefits-section";
 import { CategoryGrid } from "@/components/public/category-grid";
 import { HowItWorks } from "@/components/public/how-it-works";
-import { FeatureShowcase } from "@/components/public/feature-showcase";
-import { IntegrationsBar } from "@/components/public/integrations-bar";
 import { FaqSection } from "@/components/public/faq-section";
-import { FinalCta } from "@/components/public/final-cta";
 import { ServiceAreaSection } from "@/components/public/service-area-section";
 import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { AboutSection } from "@/components/public/about-section";
@@ -30,20 +25,47 @@ import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const isTenant = await isTenantHost();
+  if (!isTenant) {
+    return buildPageMetadata({
+      title: "Korent | Rental software for operators",
+      description:
+        "Korent helps rental operators run bookings, inventory, payments, delivery routes, and customer documents from one platform.",
+      path: "/",
+    });
+  }
+
+  await requirePublicOrg();
   const settings = await getOrganizationSettings();
 
   return buildPageMetadata({
-    title: `${settings.businessName} Inflatable Rentals`,
-    description: `${settings.websiteMessage} Serving ${settings.serviceAreaLabel}. Book bounce houses, water slides, and party rentals online.`,
+    title: `${settings.businessName} | Bounce house & party rentals`,
+    description: `${settings.businessName} offers bounce houses, water slides, and party rentals with delivery and setup across ${settings.serviceAreaLabel}. Check availability and book online.`,
     path: "/",
   });
 }
 
 const defaultFaqItems = [
-  { question: "How does the booking process work?", answer: "Customers visit your storefront, pick a date and ZIP code, choose their rentals from your available inventory, and submit a booking request." },
-  { question: "How do deposits and payments work?", answer: "You set your own deposit amounts and payment terms. The system tracks deposits, records payments, and shows remaining balances." },
-  { question: "How do you prevent double-bookings?", answer: "Every confirmed order automatically blocks that product on that date. The availability engine checks for conflicts in real-time." },
-  { question: "What about delivery and setup?", answer: "The platform includes delivery route management with stop-by-stop tracking and a mobile-friendly crew view." },
+  {
+    question: "How does booking work?",
+    answer:
+      "Choose your date, event window, and delivery ZIP, then reserve your rentals online in a few minutes.",
+  },
+  {
+    question: "Do you deliver and set everything up?",
+    answer:
+      "Yes. Our crew delivers, anchors, and sets up your rentals before your event, then returns for takedown and pickup.",
+  },
+  {
+    question: "What if weather changes?",
+    answer:
+      "If rain or unsafe weather is expected, we offer flexible rescheduling to a new available date.",
+  },
+  {
+    question: "How far ahead should I reserve?",
+    answer:
+      "Weekend dates and school-event weekends book quickly, so reserving 1-2 weeks ahead is recommended.",
+  },
 ];
 
 export default async function HomePage() {
@@ -74,7 +96,7 @@ export default async function HomePage() {
     <>
       <PublicHeader />
       <JsonLdScript data={organizationJsonLd(settings)} />
-      {vis.faqSection !== false && (
+      {vis.faq_section !== false && (
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}
 
@@ -97,16 +119,16 @@ export default async function HomePage() {
           <div className="container">
             <div className="public-hero-copy">
               <div className="kicker public-kicker">
-                Inflatable rental software for growing businesses
+                Bounce houses, water slides, and party rentals
               </div>
 
               <h1>
-                {settings.heroHeadline || "Your Next Party, Booked in Minutes"}
+                {settings.heroHeadline || "Party rentals delivered, set up, and ready for fun"}
               </h1>
 
               <p>
-                {settings.websiteMessage} Online booking, real-time
-                availability, and automatic invoicing — serving{" "}
+                {settings.websiteMessage || "Perfect for birthdays, school events, church gatherings, and neighborhood celebrations."}{" "}
+                Check availability by date, time, and ZIP code for delivery across{" "}
                 {settings.serviceAreaLabel}.
               </p>
 
@@ -150,18 +172,12 @@ export default async function HomePage() {
         </section>
 
         {/* Trust signals */}
-        {vis.trustBar !== false && (
+        {vis.trust_bar !== false && (
           <TrustBar customBadges={contentSettings.trustBadges} />
         )}
 
-        {/* Pain / before-after */}
-        {vis.painPoints !== false && <PainSection />}
-
-        {/* Benefits / value props */}
-        {vis.benefits !== false && <BenefitsSection />}
-
         {/* Category browsing */}
-        {vis.categoryGrid !== false && <CategoryGrid />}
+        {vis.category_grid !== false && <CategoryGrid />}
 
         {/* Popular rentals */}
         <section className="section storefront-section-soft">
@@ -199,27 +215,21 @@ export default async function HomePage() {
         </section>
 
         {/* How it works */}
-        {vis.howItWorks !== false && (
+        {vis.how_it_works !== false && (
           <div id="how-it-works">
             <HowItWorks />
           </div>
         )}
 
-        {/* Feature showcase */}
-        {vis.featureShowcase !== false && <FeatureShowcase />}
-
-        {/* Integrations */}
-        {vis.integrationsBar !== false && <IntegrationsBar />}
-
         {/* Service area */}
-        {vis.serviceAreaMap !== false && (
+        {vis.service_area_map !== false && (
           <div id="service-area">
             <ServiceAreaSection areas={geoAreas} />
           </div>
         )}
 
         {/* About */}
-        {vis.aboutSection !== false && (
+        {vis.about_section !== false && (
           <AboutSection text={contentSettings.aboutText} />
         )}
 
@@ -229,12 +239,9 @@ export default async function HomePage() {
         )}
 
         {/* FAQ */}
-        {vis.faqSection !== false && (
+        {vis.faq_section !== false && (
           <FaqSection customFaqs={contentSettings.customFaq} />
         )}
-
-        {/* Final CTA */}
-        <FinalCta />
 
         <PublicFooter />
       </main>

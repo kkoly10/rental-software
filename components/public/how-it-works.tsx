@@ -1,15 +1,15 @@
 const steps = [
   {
-    title: "Pick Your Date",
-    description: "Check live availability for your event window and delivery area.",
+    title: "Choose Your Rentals",
+    description: "Browse bounce houses, water slides, and party add-ons that fit your event.",
   },
   {
-    title: "Choose Your Fun",
-    description: "Compare inflatables, packages, and add-ons that fit your party size.",
+    title: "Select Date, Time & Delivery Area",
+    description: "Enter your event date/time and ZIP code so we can confirm availability and delivery.",
   },
   {
-    title: "We Deliver",
-    description: "Our team brings it out, sets it up, and returns for pickup later.",
+    title: "Reserve Online & Get Ready",
+    description: "Reserve in minutes, then our team delivers, sets up safely, and handles pickup after the event.",
   },
 ] as const;
 

@@ -50,6 +50,14 @@ async function upsertOrg() {
     await supabase.from("availability_blocks").delete().eq("organization_id", orgId);
     await supabase.from("messages").delete().eq("organization_id", orgId);
     await supabase.from("notifications").delete().eq("organization_id", orgId);
+    const { data: resetProducts } = await supabase
+      .from("products")
+      .select("id")
+      .eq("organization_id", orgId);
+    const resetProductIds = resetProducts?.map((product) => product.id) ?? [];
+    if (resetProductIds.length > 0) {
+      await supabase.from("product_images").delete().in("product_id", resetProductIds);
+    }
     await supabase.from("order_items").delete().in(
       "order_id",
       (await supabase.from("orders").select("id").eq("organization_id", orgId)).data?.map(o => o.id) ?? []
@@ -80,43 +88,49 @@ async function upsertOrg() {
     subscription_plan: "pro",
     settings: {
       deposit_percentage: 25,
-      hero_headline: "Making Every Party Unforgettable",
-      hero_message: "Premium bounce houses, water slides, and party packages delivered and set up for your event. Serving the greater metro area.",
+      hero_headline: "Bounce houses, water slides, and party rentals for unforgettable events",
+      hero_message: "Perfect for birthdays, school field days, church events, backyard parties, and neighborhood celebrations. Check your date, time, and ZIP for delivery and setup.",
       brand_primary_color: "#2563eb",
       brand_accent_color: "#f59e0b",
       brand_font_family: "DM Sans",
-      about_text: "Sunshine Party Rentals has been bringing joy to backyard birthdays, school events, and community celebrations since 2019. We personally deliver, set up, and supervise every rental to ensure your event is safe and fun.",
+      about_text: "Sunshine Party Rentals has helped families, schools, and churches celebrate since 2019. We deliver and safely set up every rental across Fredericksburg, Stafford, and nearby ZIP codes, then return for pickup after your event.",
       custom_faq: [
-        { question: "How far in advance should I book?", answer: "We recommend booking at least 2 weeks ahead for weekends. Popular dates in summer fill up fast, so the earlier the better!" },
-        { question: "What if it rains on my event day?", answer: "We offer free rescheduling up to 48 hours before your event. If weather turns bad day-of, we will work with you to find the next available date." },
-        { question: "Do you set up and take down the inflatables?", answer: "Yes! Our crew handles delivery, full setup, safety anchoring, and takedown. We arrive 1-2 hours before your event start time." },
-        { question: "Is a power source required?", answer: "Yes, inflatables need a standard 110V outlet within 50 feet. We can provide a generator rental for $75 if no outlet is available." },
-        { question: "What about safety and insurance?", answer: "All units are commercially insured and inspected before every rental. We follow ASTM standards and provide safety instructions with every setup." },
+        { question: "How far in advance should I book?", answer: "For weekends, we recommend booking 1-2 weeks ahead. Holiday weekends and school-event dates can fill even faster." },
+        { question: "What is your weather or rain policy?", answer: "If heavy rain or high wind is expected, we offer free rescheduling to the next available date for the same rental." },
+        { question: "Do you handle setup and takedown?", answer: "Yes. Our crew delivers, anchors, and safety-checks each unit before your event, then returns for takedown and pickup." },
+        { question: "What power requirements should I plan for?", answer: "Most inflatables need one dedicated 110V outlet within 50 feet. No outlet nearby? We offer generator rentals." },
+        { question: "What ages and capacity are these units best for?", answer: "Every product page includes age guidance and max rider capacity. Ask us anytime if you need help matching a unit to your guest list." },
+        { question: "What are your cancellation and rescheduling options?", answer: "Deposits are transferable to a new date when rescheduled with advance notice. Contact us and we will walk through available options." },
+        { question: "Where do you deliver?", answer: "We serve Fredericksburg, Stafford, and nearby areas, including ZIP codes 22401 and 22554. Delivery fees may vary by location." },
       ],
       testimonials: [
-        { name: "Maria G.", text: "Sunshine Party Rentals made my daughter's 7th birthday absolutely magical. The bounce house was spotless and the crew was so professional!", rating: 5 },
-        { name: "James T.", text: "We use them for every school event now. Reliable, on-time, and the kids go crazy for the obstacle course. Highly recommend.", rating: 5 },
-        { name: "Ashley R.", text: "Booked the water slide for our neighborhood block party. Setup was quick, everything was clean, and pickup was right on schedule. Will definitely book again!", rating: 5 },
+        { name: "Maria G.", text: "Sunshine Party Rentals made my daughter's 7th birthday stress-free. The bounce house was spotless, setup was early, and pickup was right on time.", rating: 5 },
+        { name: "Principal James T.", text: "We booked them for our school field day and everything ran smoothly. Great communication, safe setup, and students loved the obstacle course.", rating: 5 },
+        { name: "Pastor Ashley R.", text: "Our church family event needed dependable delivery windows, and they delivered exactly as promised. Friendly crew and very clean equipment.", rating: 5 },
       ],
       trust_badges: [
-        { title: "Insured & Inspected", description: "Every unit commercially insured and inspected before each rental" },
-        { title: "On-Time Guarantee", description: "We arrive 1-2 hours early so everything is ready when your guests arrive" },
-        { title: "500+ Events", description: "Trusted by families and schools across the metro area since 2019" },
+        { title: "Insured & Inspected", description: "Every unit is commercially insured and inspected before each event." },
+        { title: "Cleaned & Sanitized", description: "High-touch areas are cleaned and sanitized between every rental." },
+        { title: "On-Time Delivery & Setup", description: "We arrive early so your rental is event-ready before guests arrive." },
+        { title: "Weather Rescheduling", description: "Flexible rescheduling available when unsafe weather is forecast." },
+        { title: "Safety-Focused Setup", description: "Anchoring, placement, and operating guidance are reviewed at setup." },
+        { title: "Power Planning Help", description: "We confirm outlet distance and offer generators when needed." },
       ],
       social_facebook: "https://facebook.com/sunshinepartyrentals",
       social_instagram: "https://instagram.com/sunshinepartyrentals",
       section_visibility: {
         trust_bar: true,
-        pain_points: true,
-        benefits: true,
+        pain_points: false,
+        benefits: false,
         category_grid: true,
         how_it_works: true,
-        feature_showcase: true,
-        integrations_bar: true,
+        feature_showcase: false,
+        integrations_bar: false,
         faq_section: true,
         about_section: true,
         testimonials: true,
         service_area_map: true,
+        final_cta: false,
       },
     },
   };
@@ -313,6 +327,39 @@ async function seedAssets(orgId, productIds) {
     }
   }
   console.log("Seeded 8 assets");
+}
+
+async function seedProductImages(productIds) {
+  const productImageMap = {
+    "rainbow-castle-bounce-house": "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=1400&q=80",
+    "tropical-water-slide": "https://images.unsplash.com/photo-1633846802535-75fafbcf9043?auto=format&fit=crop&w=1400&q=80",
+    "mega-obstacle-course": "https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&w=1400&q=80",
+    "princess-combo-unit": "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=1400&q=80",
+    "sports-arena-bounce-house": "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1400&q=80",
+    "ultimate-party-package": "https://images.unsplash.com/photo-1633846804415-78105890e73f?auto=format&fit=crop&w=1400&q=80",
+  };
+
+  const productIdList = Object.values(productIds);
+  if (productIdList.length === 0) return;
+
+  await supabase.from("product_images").delete().in("product_id", productIdList);
+
+  const imageRows = Object.entries(productImageMap)
+    .map(([slug, imageUrl]) => ({
+      product_id: productIds[slug],
+      image_url: imageUrl,
+      alt_text: `${slug.replace(/-/g, " ")} rental photo`,
+      is_primary: true,
+      sort_order: 0,
+    }))
+    .filter((row) => Boolean(row.product_id));
+
+  if (imageRows.length > 0) {
+    const { error } = await supabase.from("product_images").insert(imageRows);
+    if (error) throw new Error(`Product images: ${error.message}`);
+  }
+
+  console.log("Seeded product images for 6 demo products");
 }
 
 async function seedServiceAreas(orgId) {
@@ -570,6 +617,7 @@ async function main() {
   const orgId = await upsertOrg();
   const categoryIds = await seedCategories(orgId);
   const productIds = await seedProducts(orgId, categoryIds);
+  await seedProductImages(productIds);
   await seedAssets(orgId, productIds);
   await seedServiceAreas(orgId);
   const customerIds = await seedCustomers(orgId);
