@@ -68,6 +68,7 @@ export type OrderConfirmationData = {
   depositDue: string;
   supportEmail: string;
   siteUrl: string;
+  portalUrl: string;
 };
 
 export function orderConfirmationEmail(data: OrderConfirmationData): string {
@@ -94,6 +95,8 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
         Please submit your deposit to confirm this booking. We'll reach out with payment instructions.
       </p>
     </div>
+
+    ${button("Open Secure Customer Portal", data.portalUrl)}
 
     <p style="font-size:14px;color:#55708f;">
       Questions? Reply to this email or contact us at ${data.supportEmail}.

@@ -148,6 +148,8 @@ create table if not exists orders (
   balance_due_amount numeric(10,2) not null default 0,
   source_channel text,
   notes text,
+  portal_access_token_hash text,
+  portal_access_token_created_at timestamptz,
   created_at timestamptz not null default now(),
   unique (organization_id, order_number)
 );
@@ -255,6 +257,7 @@ create index if not exists idx_categories_org_slug on categories (organization_i
 create index if not exists idx_products_org_slug on products (organization_id, slug);
 create index if not exists idx_orders_org_event_date on orders (organization_id, event_date);
 create index if not exists idx_orders_org_status on orders (organization_id, order_status);
+create unique index if not exists idx_orders_portal_access_token_hash on orders (portal_access_token_hash) where portal_access_token_hash is not null;
 create index if not exists idx_assets_org_tag on assets (organization_id, asset_tag);
 create index if not exists idx_availability_blocks_time on availability_blocks (starts_at, ends_at);
 create index if not exists idx_route_stops_status on route_stops (stop_status);

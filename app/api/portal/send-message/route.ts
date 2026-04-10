@@ -3,18 +3,19 @@ import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { hashPortalAccessToken } from "@/lib/portal/access-token";
 
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#x27;");
 }
 
 export async function POST(request: NextRequest) {
-  let body: { orderNumber: string; email: string; subject: string; message: string };
+  let body: { portalToken: string; subject: string; message: string };
 
   try {
     body = await request.json();
@@ -22,9 +23,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { orderNumber, email, subject, message } = body;
+  const { portalToken, subject, message } = body;
 
-  if (!orderNumber || !email || !subject || !message) {
+  if (!portalToken || !subject || !message) {
     return NextResponse.json({ error: "All fields are required." }, { status: 400 });
   }
 
@@ -32,9 +33,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Message too long." }, { status: 400 });
   }
 
-  // Rate limiting: 5 per 10 min per IP, 3 per 10 min per email
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const [ipLimit, emailLimit] = await Promise.all([
+  const [ipLimit, tokenLimit] = await Promise.all([
     enforceRateLimit({
       scope: "api:portal:send-message:ip",
       actor: clientIp,
@@ -43,22 +43,21 @@ export async function POST(request: NextRequest) {
       strict: true,
     }),
     enforceRateLimit({
-      scope: "api:portal:send-message:email",
-      actor: email,
+      scope: "api:portal:send-message:token",
+      actor: hashPortalAccessToken(portalToken),
       limit: 3,
       windowSeconds: 600,
       strict: true,
     }),
   ]);
 
-  if (!ipLimit.allowed || !emailLimit.allowed) {
+  if (!ipLimit.allowed || !tokenLimit.allowed) {
     return NextResponse.json(
       { error: "Too many messages. Please wait a few minutes before trying again." },
       { status: 429 }
     );
   }
 
-  // Block writes on demo org
   const orgId = await getPublicOrgId();
   const { blockDemoWrites } = await import("@/lib/demo/guard");
   const demoCheck = await blockDemoWrites(orgId);
@@ -75,8 +74,30 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const tokenHash = hashPortalAccessToken(portalToken);
 
-  // Get org support email
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, customer_id, order_number")
+    .eq("organization_id", orgId)
+    .eq("portal_access_token_hash", tokenHash)
+    .maybeSingle();
+
+  if (!order) {
+    return NextResponse.json({ error: "Invalid portal link." }, { status: 403 });
+  }
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("email")
+    .eq("id", order.customer_id)
+    .maybeSingle();
+
+  const senderEmail = customer?.email;
+  if (!senderEmail) {
+    return NextResponse.json({ error: "Unable to verify customer." }, { status: 403 });
+  }
+
   const { data: org } = await supabase
     .from("organizations")
     .select("name, support_email")
@@ -85,48 +106,29 @@ export async function POST(request: NextRequest) {
 
   const supportEmail = org?.support_email;
 
-  // Look up order and customer for message persistence
-  let orderId: string | null = null;
-  let customerId: string | null = null;
-
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, customer_id")
-    .eq("organization_id", orgId)
-    .eq("order_number", orderNumber)
-    .maybeSingle();
-
-  if (order) {
-    orderId = order.id;
-    customerId = order.customer_id;
-  }
-
-  // Create notification for the operator (non-blocking)
   import("@/lib/data/notifications").then(({ createNotification }) =>
     createNotification(
       orgId,
       "new_message",
       "New customer message",
-      `${subject} — Order #${orderNumber}`,
+      `${subject} — Order #${order.order_number}`,
       "/dashboard/messages"
     )
   ).catch(() => {});
 
-  // Persist the message in the database
   await supabase.from("messages").insert({
     organization_id: orgId,
-    order_id: orderId,
-    customer_id: customerId,
+    order_id: order.id,
+    customer_id: order.customer_id,
     direction: "inbound",
     channel: "portal",
     subject,
     body: message,
     sender_name: null,
-    sender_email: email,
+    sender_email: senderEmail,
     read: false,
   });
 
-  // Try sending email via Resend if available
   const resendKey = getOptionalEnv("RESEND_API_KEY");
   if (resendKey && supportEmail) {
     try {
@@ -139,12 +141,12 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           from: `${org?.name ?? "Korent"} <noreply@korent.app>`,
           to: supportEmail,
-          reply_to: email,
-          subject: `[Customer Message] ${subject} — Order ${orderNumber}`,
+          reply_to: senderEmail,
+          subject: `[Customer Message] ${subject} — Order ${order.order_number}`,
           html: `
             <h2>Customer Message</h2>
-            <p><strong>Order:</strong> ${escapeHtml(orderNumber)}</p>
-            <p><strong>From:</strong> ${escapeHtml(email)}</p>
+            <p><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>
+            <p><strong>From:</strong> ${escapeHtml(senderEmail)}</p>
             <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
             <hr />
             <p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>

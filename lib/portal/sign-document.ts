@@ -7,6 +7,7 @@ import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { blockDemoWrites } from "@/lib/demo/guard";
+import { hashPortalAccessToken } from "@/lib/portal/access-token";
 
 export type SignDocumentState = {
   ok: boolean;
@@ -18,12 +19,11 @@ export async function signDocument(
   formData: FormData
 ): Promise<SignDocumentState> {
   const documentId = String(formData.get("document_id") ?? "").trim();
-  const orderNumber = String(formData.get("order_number") ?? "").trim().toUpperCase();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const portalToken = String(formData.get("portal_token") ?? "").trim();
   const signerName = String(formData.get("signer_name") ?? "").trim();
   const agreed = formData.get("agreed") === "on";
 
-  if (!documentId || !orderNumber || !email || !signerName) {
+  if (!documentId || !portalToken || !signerName) {
     return { ok: false, message: "All fields are required." };
   }
 
@@ -40,12 +40,24 @@ export async function signDocument(
 
   try {
     const clientKey = await getActionClientKey();
-    const [clientLimit, emailLimit] = await Promise.all([
-      enforceRateLimit({ scope: "portal:sign:client", actor: clientKey, limit: 20, windowSeconds: 300, strict: true }),
-      enforceRateLimit({ scope: "portal:sign:email", actor: email, limit: 15, windowSeconds: 300, strict: true }),
+    const [clientLimit, tokenLimit] = await Promise.all([
+      enforceRateLimit({
+        scope: "portal:sign:client",
+        actor: clientKey,
+        limit: 20,
+        windowSeconds: 300,
+        strict: true,
+      }),
+      enforceRateLimit({
+        scope: "portal:sign:token",
+        actor: portalToken,
+        limit: 15,
+        windowSeconds: 300,
+        strict: true,
+      }),
     ]);
 
-    if (!clientLimit.allowed || !emailLimit.allowed) {
+    if (!clientLimit.allowed || !tokenLimit.allowed) {
       return { ok: false, message: "Too many attempts. Please wait a moment." };
     }
   } catch {
@@ -64,29 +76,21 @@ export async function signDocument(
 
   const supabase = await createSupabaseServerClient();
 
-  // Verify order + email match
+  const tokenHash = hashPortalAccessToken(portalToken);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, customer_id")
+    .select("id")
     .eq("organization_id", orgId)
-    .eq("order_number", orderNumber)
+    .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
 
   if (!order) {
-    return { ok: false, message: "Order not found." };
+    return {
+      ok: false,
+      message: "Invalid portal access. Please reopen your portal link.",
+    };
   }
 
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("email")
-    .eq("id", order.customer_id)
-    .maybeSingle();
-
-  if (!customer || customer.email?.toLowerCase() !== email) {
-    return { ok: false, message: "Unable to verify your identity." };
-  }
-
-  // Verify document belongs to this order
   const { data: doc } = await supabase
     .from("documents")
     .select("id, document_status")
@@ -102,7 +106,6 @@ export async function signDocument(
     return { ok: false, message: "This document has already been signed." };
   }
 
-  // Collect audit trail from request headers
   const hdrs = await headers();
   const signerIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const signerUserAgent = hdrs.get("user-agent") ?? null;
@@ -117,10 +120,13 @@ export async function signDocument(
       signer_user_agent: signerUserAgent,
     })
     .eq("id", documentId)
-    .eq("document_status", "pending"); // prevent race condition — only sign if still pending
+    .eq("document_status", "pending");
 
   if (error) {
-    return { ok: false, message: "Failed to sign the document. Please try again." };
+    return {
+      ok: false,
+      message: "Failed to sign the document. Please try again.",
+    };
   }
 
   return { ok: true, message: "Document signed successfully." };

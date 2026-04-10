@@ -11,11 +11,10 @@ type DocumentEntry = {
 
 type Props = {
   documents: DocumentEntry[];
-  orderNumber: string;
-  email: string;
+  portalToken: string;
 };
 
-export function DocumentSign({ documents, orderNumber, email }: Props) {
+export function DocumentSign({ documents, portalToken }: Props) {
   const [signingDocId, setSigningDocId] = useState<string | null>(null);
 
   if (documents.length === 0) return null;
@@ -66,9 +65,7 @@ export function DocumentSign({ documents, orderNumber, email }: Props) {
               <SignForm
                 documentId={doc.id}
                 documentType={doc.type}
-                orderNumber={orderNumber}
-                email={email}
-                onDone={() => setSigningDocId(null)}
+                portalToken={portalToken}
               />
             )}
           </div>
@@ -81,14 +78,11 @@ export function DocumentSign({ documents, orderNumber, email }: Props) {
 function SignForm({
   documentId,
   documentType,
-  orderNumber,
-  email,
+  portalToken,
 }: {
   documentId: string;
   documentType: string;
-  orderNumber: string;
-  email: string;
-  onDone: () => void;
+  portalToken: string;
 }) {
   const [state, formAction, pending] = useActionState<SignDocumentState, FormData>(
     signDocument,
@@ -106,8 +100,7 @@ function SignForm({
   return (
     <form action={formAction} className="portal-sign-form">
       <input type="hidden" name="document_id" value={documentId} />
-      <input type="hidden" name="order_number" value={orderNumber} />
-      <input type="hidden" name="email" value={email} />
+      <input type="hidden" name="portal_token" value={portalToken} />
 
       <label style={{ display: "grid", gap: 4 }}>
         <span style={{ fontSize: 13, fontWeight: 600 }}>Full name</span>

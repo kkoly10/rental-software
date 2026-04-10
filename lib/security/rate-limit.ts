@@ -3,6 +3,10 @@ import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
+import {
+  type RateLimitFallbackReason,
+  resolveRateLimitFallback,
+} from "@/lib/security/rate-limit-policy";
 
 export type RateLimitResult = {
   allowed: boolean;

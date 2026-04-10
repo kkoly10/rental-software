@@ -8,6 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
+import { issuePortalAccessToken } from "@/lib/portal/access-token";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Order Confirmed",
@@ -82,6 +83,31 @@ async function resolvePaymentStatus(
   return { status: "unpaid", orderNumber };
 }
 
+
+async function getPortalAccessUrl(orderNumber: string | undefined): Promise<string | null> {
+  if (!hasSupabaseEnv() || !orderNumber) return null;
+
+  const orgId = await getPublicOrgId();
+  if (!orgId) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+
+  if (!order) return null;
+
+  try {
+    const token = await issuePortalAccessToken({ supabase, orderId: order.id });
+    return `/order-status?token=${encodeURIComponent(token)}`;
+  } catch {
+    return null;
+  }
+}
+
 export default async function OrderConfirmationPage({
   searchParams,
 }: {
@@ -91,6 +117,7 @@ export default async function OrderConfirmationPage({
 
   // Server-verified payment status — URL params are NOT trusted
   const { status } = await resolvePaymentStatus(order, session_id);
+  const portalUrl = await getPortalAccessUrl(order);
 
   const isPaid = status === "paid";
   const isProcessing = status === "processing";
@@ -174,14 +201,14 @@ export default async function OrderConfirmationPage({
               <div className="order-card">
                 <strong>Track your order</strong>
                 <div className="muted" style={{ marginTop: 6 }}>
-                  Use your order number and email to check status, view documents, and message the operator.
+                  Open your secure portal link to check status, view documents, and message the operator.
                 </div>
               </div>
             </div>
 
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <Link href="/order-status" className="primary-btn">
-                Check Order Status
+              <Link href={portalUrl ?? "/order-status"} className="primary-btn">
+                Open Customer Portal
               </Link>
               <Link href="/inventory" className="secondary-btn">
                 Browse More Rentals

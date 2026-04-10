@@ -4,9 +4,10 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { hashPortalAccessToken } from "@/lib/portal/access-token";
 
 export async function POST(request: NextRequest) {
-  let body: { documentId: string; orderNumber: string; email: string; signerName: string };
+  let body: { documentId: string; portalToken: string; signerName: string };
 
   try {
     body = await request.json();
@@ -14,9 +15,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { documentId, orderNumber, email, signerName } = body;
+  const { documentId, portalToken, signerName } = body;
 
-  if (!documentId || !orderNumber || !email || !signerName) {
+  if (!documentId || !portalToken || !signerName) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
@@ -24,7 +25,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, message: "Demo: Document signed." });
   }
 
-  // Rate limit by IP
   const hdrs = await headers();
   const clientIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const limit = await enforceRateLimit({
@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Service not available." }, { status: 503 });
   }
 
-  // Block writes on demo org
   const { blockDemoWrites } = await import("@/lib/demo/guard");
   const demoCheck = await blockDemoWrites(orgId);
   if (demoCheck.blocked) {
@@ -51,30 +50,19 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const tokenHash = hashPortalAccessToken(portalToken);
 
-  // Verify order exists and email matches
   const { data: order } = await supabase
     .from("orders")
-    .select("id, customer_id")
+    .select("id")
     .eq("organization_id", orgId)
-    .eq("order_number", orderNumber)
+    .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
 
   if (!order) {
-    return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    return NextResponse.json({ error: "Invalid portal link." }, { status: 403 });
   }
 
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("email")
-    .eq("id", order.customer_id)
-    .maybeSingle();
-
-  if (!customer || customer.email?.toLowerCase() !== email.toLowerCase()) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
-  }
-
-  // Verify document belongs to this order and check current status
   const { data: doc } = await supabase
     .from("documents")
     .select("id, document_status")
@@ -90,11 +78,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "This document has already been signed." }, { status: 409 });
   }
 
-  // Audit trail
   const signerIp = clientIp;
   const signerUserAgent = hdrs.get("user-agent") ?? null;
 
-  // Atomically update only if still pending (prevents race conditions)
   const { error, count } = await supabase
     .from("documents")
     .update({

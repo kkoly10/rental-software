@@ -19,7 +19,6 @@ function normalizeBaseUrl(value?: string | null) {
 export function getSiteBaseUrl() {
   return normalizeBaseUrl(
     process.env.NEXT_PUBLIC_SITE_URL ??
-      process.env.NEXT_PUBLIC_APP_URL ??
       process.env.SITE_URL ??
       process.env.VERCEL_PROJECT_PRODUCTION_URL ??
       process.env.VERCEL_URL

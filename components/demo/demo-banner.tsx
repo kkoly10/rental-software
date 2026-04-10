@@ -5,10 +5,10 @@
  * Drives visitors to sign up for their own storefront.
  */
 export function DemoBanner() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app";
-  const signupUrl = appUrl
-    ? `${appUrl}/signup`
+  const signupUrl = siteUrl
+    ? `${siteUrl}/signup`
     : `https://${appDomain}/signup`;
 
   return (
