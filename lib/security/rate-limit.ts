@@ -68,7 +68,7 @@ function hashActorKey(value: string) {
 function fallbackResult(
   options: RateLimitOptions,
   strict: boolean,
-  reason: RateLimitFallbackReason,
+  reason: "missing_service_role_env" | "rpc_error" | "invalid_rpc_payload" | "exception",
   detail?: string
 ): RateLimitResult {
   const context = {
@@ -77,23 +77,19 @@ function fallbackResult(
     reason,
   };
 
-  const policy = resolveRateLimitFallback({
-    scope: options.scope,
-    strict,
-    limit: options.limit,
-    windowSeconds: options.windowSeconds,
-  });
-
-  const payload = detail ? { ...context, detail } : context;
-  if (policy.logLevel === "error") {
-    console.error("[rate-limit] strict fallback deny", payload);
-  } else {
-    console.warn("[rate-limit] fallback allow", payload);
+  if (strict) {
+    console.error("[rate-limit] strict fallback deny", detail ? { ...context, detail } : context);
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds: Math.min(Math.max(options.windowSeconds, 30), 300),
+    };
   }
 
+  console.warn("[rate-limit] fallback allow", detail ? { ...context, detail } : context);
   return {
-    allowed: policy.allowed,
-    remaining: policy.remaining,
-    retryAfterSeconds: policy.retryAfterSeconds,
+    allowed: true,
+    remaining: options.limit,
+    retryAfterSeconds: 0,
   };
 }
