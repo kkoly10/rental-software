@@ -57,20 +57,6 @@ export async function sendCustomerMessage(
     };
   }
 
-  try {
-    const clientKey = await getActionClientKey();
-    const [clientLimit, emailLimit] = await Promise.all([
-      enforceRateLimit({ scope: "portal:message:client", actor: clientKey, limit: 5, windowSeconds: 600, strict: true }),
-      enforceRateLimit({ scope: "portal:message:email", actor: email, limit: 3, windowSeconds: 600, strict: true }),
-    ]);
-
-    if (!clientLimit.allowed || !tokenLimit.allowed) {
-      return { ok: false, message: "Too many messages sent. Please wait before trying again." };
-    }
-  } catch {
-    return { ok: false, message: "Unable to send your message right now." };
-  }
-
   const orgId = await getPublicOrgId();
   if (!orgId) {
     return { ok: false, message: "Service not available." };
@@ -92,7 +78,10 @@ export async function sendCustomerMessage(
     .maybeSingle();
 
   if (!order) {
-    return { ok: false, message: "Invalid portal access. Please reopen your portal link." };
+    return {
+      ok: false,
+      message: "Invalid portal access. Please reopen your portal link.",
+    };
   }
 
   const { data: customer } = await supabase
@@ -104,6 +93,35 @@ export async function sendCustomerMessage(
   const senderEmail = customer?.email?.toLowerCase();
   if (!senderEmail) {
     return { ok: false, message: "Unable to verify your identity." };
+  }
+
+  try {
+    const clientKey = await getActionClientKey();
+    const [clientLimit, emailLimit] = await Promise.all([
+      enforceRateLimit({
+        scope: "portal:message:client",
+        actor: clientKey,
+        limit: 5,
+        windowSeconds: 600,
+        strict: true,
+      }),
+      enforceRateLimit({
+        scope: "portal:message:email",
+        actor: senderEmail,
+        limit: 3,
+        windowSeconds: 600,
+        strict: true,
+      }),
+    ]);
+
+    if (!clientLimit.allowed || !emailLimit.allowed) {
+      return {
+        ok: false,
+        message: "Too many messages sent. Please wait before trying again.",
+      };
+    }
+  } catch {
+    return { ok: false, message: "Unable to send your message right now." };
   }
 
   await supabase.from("messages").insert({
@@ -119,30 +137,34 @@ export async function sendCustomerMessage(
     read: false,
   });
 
-  import("@/lib/communications/log").then(({ logCommunication }) =>
-    logCommunication({
-      organizationId: orgId,
-      orderId: order.id,
-      customerId: order.customer_id,
-      channel: "portal_message",
-      direction: "inbound",
-      recipient: null,
-      subject,
-      bodyPreview: body,
-      status: "sent",
-      metadata: { senderEmail },
-    })
-  ).catch(() => {});
-
-  import("@/lib/data/notifications").then(({ createNotification }) =>
-    createNotification(
-      orgId,
-      "new_message",
-      "New customer message",
-      `${subject} — Order #${order.order_number}`,
-      "/dashboard/messages"
+  import("@/lib/communications/log")
+    .then(({ logCommunication }) =>
+      logCommunication({
+        organizationId: orgId,
+        orderId: order.id,
+        customerId: order.customer_id,
+        channel: "portal_message",
+        direction: "inbound",
+        recipient: null,
+        subject,
+        bodyPreview: body,
+        status: "sent",
+        metadata: { senderEmail },
+      })
     )
-  ).catch(() => {});
+    .catch(() => {});
+
+  import("@/lib/data/notifications")
+    .then(({ createNotification }) =>
+      createNotification(
+        orgId,
+        "new_message",
+        "New customer message",
+        `${subject} — Order #${order.order_number}`,
+        "/dashboard/messages"
+      )
+    )
+    .catch(() => {});
 
   const { data: org } = await supabase
     .from("organizations")
@@ -172,5 +194,8 @@ export async function sendCustomerMessage(
     organizationId: orgId,
   });
 
-  return { ok: true, message: "Your message has been sent. We'll get back to you soon." };
+  return {
+    ok: true,
+    message: "Your message has been sent. We'll get back to you soon.",
+  };
 }
