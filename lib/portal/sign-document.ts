@@ -40,9 +40,21 @@ export async function signDocument(
 
   try {
     const clientKey = await getActionClientKey();
-    const [clientLimit, emailLimit] = await Promise.all([
-      enforceRateLimit({ scope: "portal:sign:client", actor: clientKey, limit: 20, windowSeconds: 300, strict: true }),
-      enforceRateLimit({ scope: "portal:sign:email", actor: email, limit: 15, windowSeconds: 300, strict: true }),
+    const [clientLimit, tokenLimit] = await Promise.all([
+      enforceRateLimit({
+        scope: "portal:sign:client",
+        actor: clientKey,
+        limit: 20,
+        windowSeconds: 300,
+        strict: true,
+      }),
+      enforceRateLimit({
+        scope: "portal:sign:token",
+        actor: portalToken,
+        limit: 15,
+        windowSeconds: 300,
+        strict: true,
+      }),
     ]);
 
     if (!clientLimit.allowed || !tokenLimit.allowed) {
@@ -73,7 +85,10 @@ export async function signDocument(
     .maybeSingle();
 
   if (!order) {
-    return { ok: false, message: "Invalid portal access. Please reopen your portal link." };
+    return {
+      ok: false,
+      message: "Invalid portal access. Please reopen your portal link.",
+    };
   }
 
   const { data: doc } = await supabase
@@ -108,7 +123,10 @@ export async function signDocument(
     .eq("document_status", "pending");
 
   if (error) {
-    return { ok: false, message: "Failed to sign the document. Please try again." };
+    return {
+      ok: false,
+      message: "Failed to sign the document. Please try again.",
+    };
   }
 
   return { ok: true, message: "Document signed successfully." };
