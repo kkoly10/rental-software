@@ -8,6 +8,7 @@ import {
   documentsReadyEmail,
 } from "./templates";
 import { createNotification } from "@/lib/data/notifications";
+import { issuePortalAccessToken } from "@/lib/portal/access-token";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,22 @@ export async function triggerOrderConfirmationEmail(params: {
 }) {
   const branding = await getOrgBranding(params.organizationId);
 
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("organization_id", params.organizationId)
+    .eq("order_number", params.orderNumber)
+    .maybeSingle();
+
+  const portalToken = order
+    ? await issuePortalAccessToken({ supabase, orderId: order.id }).catch(() => null)
+    : null;
+  const portalUrl = portalToken
+    ? `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
+    : `${branding.siteUrl}/order-status`;
+
   // Email to customer
   await sendEmail({
     to: params.customerEmail,
@@ -87,6 +104,7 @@ export async function triggerOrderConfirmationEmail(params: {
       depositDue: formatMoney(params.depositDue),
       supportEmail: branding.supportEmail,
       siteUrl: branding.siteUrl,
+      portalUrl,
     }),
     replyTo: branding.supportEmail,
     organizationId: params.organizationId,

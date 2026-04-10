@@ -11,7 +11,6 @@ function normalizeOrigin(value?: string | null) {
 function getConfiguredOrigins() {
   const configured = [
     getOptionalEnv("NEXT_PUBLIC_SITE_URL"),
-    getOptionalEnv("NEXT_PUBLIC_APP_URL"),
     getOptionalEnv("SITE_URL"),
   ]
     .map((value) => normalizeOrigin(value))

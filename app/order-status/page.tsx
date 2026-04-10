@@ -4,15 +4,24 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { OrderLookupForm } from "@/components/portal/order-lookup-form";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { lookupOrderByPortalToken } from "@/lib/portal/lookup";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Check Order Status",
-  description: "Look up your rental order status, event details, and balance due.",
+  description: "View your rental order, documents, and balance through your secure portal link.",
   path: "/order-status",
 });
 
-export default async function OrderStatusPage() {
+export default async function OrderStatusPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
   await requirePublicOrg();
+
+  const { token } = await searchParams;
+  const initialState = token ? await lookupOrderByPortalToken(token) : undefined;
+
   return (
     <>
       <PublicHeader />
@@ -25,12 +34,12 @@ export default async function OrderStatusPage() {
               Check your order status
             </h1>
             <p className="muted">
-              Enter your order number and email to view your booking details,
-              balance, and documents.
+              Open your secure portal link to view booking details, balance,
+              and documents. If needed, you can request access with order number + email.
             </p>
           </div>
 
-          <OrderLookupForm />
+          <OrderLookupForm initialState={initialState} />
         </div>
       </main>
 

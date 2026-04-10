@@ -4,8 +4,7 @@ import { useActionState } from "react";
 import { sendCustomerMessage, type SendMessageState } from "@/lib/portal/send-message";
 
 type Props = {
-  orderNumber: string;
-  email: string;
+  portalToken: string;
 };
 
 const SUBJECTS = [
@@ -15,7 +14,7 @@ const SUBJECTS = [
   "Other",
 ];
 
-export function CustomerMessageForm({ orderNumber, email }: Props) {
+export function CustomerMessageForm({ portalToken }: Props) {
   const [state, formAction, pending] = useActionState<SendMessageState, FormData>(
     sendCustomerMessage,
     { ok: true, message: "" }
@@ -39,8 +38,7 @@ export function CustomerMessageForm({ orderNumber, email }: Props) {
       </div>
 
       <form action={formAction} className="portal-message-form">
-        <input type="hidden" name="order_number" value={orderNumber} />
-        <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="portal_token" value={portalToken} />
 
         <label style={{ display: "grid", gap: 4 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Subject</span>

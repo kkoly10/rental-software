@@ -9,7 +9,7 @@ function normalizeOrigin(value?: string | null) {
 
 export async function getSiteUrl() {
   const explicit = normalizeOrigin(
-    process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? process.env.SITE_URL
+    process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL
   );
 
   if (explicit) {

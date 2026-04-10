@@ -55,6 +55,7 @@ export async function submitContactForm(
     actor: clientKey,
     limit: 5,
     windowSeconds: 3600,
+    strict: true,
   });
 
   if (!limit.allowed) {

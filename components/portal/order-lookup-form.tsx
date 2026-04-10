@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { lookupOrder, type PortalLookupState } from "@/lib/portal/lookup";
 import { OrderTimeline } from "./order-timeline";
@@ -22,55 +22,64 @@ const statusTones: Record<string, string> = {
 
 const DELIVERY_STATUSES = ["Scheduled", "Out for Delivery", "Delivered"];
 
-export function OrderLookupForm() {
+type Props = {
+  initialState?: PortalLookupState;
+};
+
+export function OrderLookupForm({ initialState }: Props) {
   const [state, formAction, pending] = useActionState<PortalLookupState, FormData>(
     lookupOrder,
-    { ok: true, message: "" }
+    initialState ?? { ok: true, message: "" }
   );
   const [lookupEmail, setLookupEmail] = useState("");
 
+  const activeToken = useMemo(() => state.portalToken ?? "", [state.portalToken]);
+
+  const hasPortalResult = Boolean(state.ok && state.order && activeToken);
+
   return (
     <div>
-      <form action={formAction} className="panel" style={{ marginBottom: 24 }}>
-        <div style={{ display: "grid", gap: 14 }}>
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Order number</span>
-            <input
-              name="order_number"
-              type="text"
-              placeholder="ORD-2401"
-              required
-              style={{ textTransform: "uppercase" }}
-            />
-          </label>
+      {!hasPortalResult && (
+        <form action={formAction} className="panel" style={{ marginBottom: 24 }}>
+          <div style={{ display: "grid", gap: 14 }}>
+            <label style={{ display: "grid", gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Order number</span>
+              <input
+                name="order_number"
+                type="text"
+                placeholder="ORD-2401"
+                required
+                style={{ textTransform: "uppercase" }}
+              />
+            </label>
 
-          <label style={{ display: "grid", gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Email address</span>
-            <input
-              name="email"
-              type="email"
-              placeholder="your@email.com"
-              required
-              value={lookupEmail}
-              onChange={(e) => setLookupEmail(e.target.value)}
-            />
-          </label>
+            <label style={{ display: "grid", gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Email address</span>
+              <input
+                name="email"
+                type="email"
+                placeholder="your@email.com"
+                required
+                value={lookupEmail}
+                onChange={(e) => setLookupEmail(e.target.value)}
+              />
+            </label>
 
-          <button type="submit" className="primary-btn" disabled={pending}>
-            {pending ? "Looking up..." : "Look Up Order"}
-          </button>
-        </div>
-
-        {!state.ok && state.message && (
-          <div className="badge warning" style={{ marginTop: 12 }}>
-            {state.message}
+            <button type="submit" className="primary-btn" disabled={pending}>
+              {pending ? "Looking up..." : "Look Up Order"}
+            </button>
           </div>
-        )}
-      </form>
 
-      {state.ok && state.order && (
+          {!state.ok && state.message && (
+            <div className="badge warning" style={{ marginTop: 12 }}>
+              {state.message}
+            </div>
+          )}
+        </form>
+      )}
+
+      {state.ok && state.order && activeToken && (
         <>
-          {/* Order header + timeline */}
           <div className="panel">
             <div className="section-header">
               <div>
@@ -85,12 +94,10 @@ export function OrderLookupForm() {
               </span>
             </div>
 
-            {/* Order Progress Timeline */}
             <div style={{ marginTop: 20 }}>
               <OrderTimeline currentStatus={state.order.status} />
             </div>
 
-            {/* Delivery info card */}
             {DELIVERY_STATUSES.includes(state.order.status) && state.order.deliveryDate && (
               <div className="portal-delivery-card" style={{ marginTop: 16 }}>
                 <strong>Delivery Information</strong>
@@ -109,7 +116,6 @@ export function OrderLookupForm() {
               </div>
             )}
 
-            {/* Weather note */}
             <div style={{
               marginTop: 12,
               padding: "10px 14px",
@@ -121,7 +127,6 @@ export function OrderLookupForm() {
               Check weather for your event day
             </div>
 
-            {/* Rental items and pricing */}
             <div className="list" style={{ marginTop: 12 }}>
               <div className="order-card">
                 <strong>Rental items</strong>
@@ -154,26 +159,19 @@ export function OrderLookupForm() {
               </div>
             </div>
 
-            {/* Invoice download */}
             <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
               <InvoiceDownload order={state.order} />
             </div>
           </div>
 
-          {/* Document signing */}
           {state.order.documents.length > 0 && (
             <DocumentSign
               documents={state.order.documents}
-              orderNumber={state.order.orderNumber}
-              email={lookupEmail}
+              portalToken={activeToken}
             />
           )}
 
-          {/* Customer messaging */}
-          <CustomerMessageForm
-            orderNumber={state.order.orderNumber}
-            email={lookupEmail}
-          />
+          <CustomerMessageForm portalToken={activeToken} />
         </>
       )}
     </div>

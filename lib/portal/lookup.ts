@@ -6,6 +6,7 @@ import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getOrderFinancials } from "@/lib/payments/financials";
+import { hashPortalAccessToken, issuePortalAccessToken } from "@/lib/portal/access-token";
 
 export type PortalOrder = {
   orderNumber: string;
@@ -27,10 +28,152 @@ export type PortalLookupState = {
   ok: boolean;
   message: string;
   order?: PortalOrder;
+  portalToken?: string;
+};
+
+type OrderBase = {
+  id: string;
+  order_number: string;
+  order_status: string;
+  event_date: string | null;
+  event_start_time: string | null;
+  event_end_time: string | null;
+  subtotal_amount: number | string | null;
+  delivery_fee_amount: number | string | null;
+  total_amount: number | string | null;
+  deposit_due_amount: number | string | null;
+  customer_id: string;
 };
 
 function formatMoney(val: number): string {
   return `$${val.toFixed(2)}`;
+}
+
+async function buildPortalOrder(order: OrderBase, customer: { first_name: string | null; last_name: string | null }) {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: items }, { data: docs }] = await Promise.all([
+    supabase.from("order_items").select("item_name_snapshot").eq("order_id", order.id),
+    supabase
+      .from("documents")
+      .select("id, document_type, document_status")
+      .eq("order_id", order.id),
+  ]);
+
+  const eventDate = order.event_date
+    ? new Date(`${order.event_date}T12:00:00`).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "TBD";
+
+  const statusLabels: Record<string, string> = {
+    inquiry: "Inquiry",
+    quote_sent: "Quote Sent",
+    awaiting_deposit: "Awaiting Deposit",
+    confirmed: "Confirmed",
+    scheduled: "Scheduled",
+    out_for_delivery: "Out for Delivery",
+    delivered: "Delivered",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+
+  const financials = await getOrderFinancials(order.id);
+  const remainingBalance = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
+
+  return {
+    orderNumber: order.order_number,
+    status: statusLabels[order.order_status] ?? order.order_status,
+    eventDate,
+    items: (items ?? []).map((i) => i.item_name_snapshot ?? "Rental item"),
+    subtotal: formatMoney(Number(order.subtotal_amount ?? 0)),
+    deliveryFee: formatMoney(Number(order.delivery_fee_amount ?? 0)),
+    total: formatMoney(Number(order.total_amount ?? 0)),
+    depositDue: formatMoney(Number(order.deposit_due_amount ?? 0)),
+    balanceDue: formatMoney(remainingBalance),
+    documents: (docs ?? []).map((d) => ({
+      id: d.id,
+      type: (d.document_type ?? "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      status: d.document_status,
+    })),
+    deliveryDate: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? eventDate : undefined,
+    deliveryTimeWindow: (() => {
+      if (!["scheduled", "out_for_delivery", "delivered"].includes(order.order_status)) return undefined;
+      if (order.event_start_time && order.event_end_time) {
+        const fmt = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        return `${fmt(order.event_start_time)} – ${fmt(order.event_end_time)}`;
+      }
+      return "See confirmation email for details";
+    })(),
+    customerName: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Customer",
+  } satisfies PortalOrder;
+}
+
+export async function lookupOrderByPortalToken(token: string): Promise<PortalLookupState> {
+  const normalized = token.trim();
+  if (!normalized) return { ok: false, message: "Invalid portal link." };
+  if (!hasSupabaseEnv()) {
+    return {
+      ok: true,
+      message: "",
+      portalToken: normalized,
+      order: {
+        orderNumber: "ORD-2401",
+        status: "Confirmed",
+        eventDate: "Saturday, April 12, 2026",
+        items: ["Tropical Bounce House"],
+        subtotal: "$225.00",
+        deliveryFee: "$45.00",
+        total: "$270.00",
+        depositDue: "$81.00",
+        balanceDue: "$189.00",
+        documents: [
+          { id: "doc-demo-1", type: "Rental Agreement", status: "pending" },
+          { id: "doc-demo-2", type: "Safety Waiver", status: "pending" },
+        ],
+        deliveryDate: "Saturday, April 12, 2026",
+        deliveryTimeWindow: "8:00 AM – 10:00 AM",
+        customerName: "Jane Smith",
+      },
+    };
+  }
+
+  const orgId = await getPublicOrgId();
+  if (!orgId) return { ok: false, message: "Service not available." };
+
+  const supabase = await createSupabaseServerClient();
+  const tokenHash = hashPortalAccessToken(normalized);
+  const { data: order } = await supabase
+    .from("orders")
+    .select(`
+      id, order_number, order_status, event_date,
+      event_start_time, event_end_time,
+      subtotal_amount, delivery_fee_amount, total_amount,
+      deposit_due_amount, customer_id
+    `)
+    .eq("organization_id", orgId)
+    .eq("portal_access_token_hash", tokenHash)
+    .maybeSingle();
+
+  if (!order) {
+    return { ok: false, message: "This portal link is invalid or expired." };
+  }
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("first_name, last_name")
+    .eq("id", order.customer_id)
+    .maybeSingle();
+
+  return {
+    ok: true,
+    message: "",
+    portalToken: normalized,
+    order: await buildPortalOrder(order, customer ?? { first_name: null, last_name: null }),
+  };
 }
 
 export async function lookupOrder(
@@ -48,6 +191,7 @@ export async function lookupOrder(
     return {
       ok: true,
       message: "",
+      portalToken: "demo-portal-token",
       order: {
         orderNumber: "ORD-2401",
         status: "Confirmed",
@@ -90,15 +234,13 @@ export async function lookupOrder(
 
   const supabase = await createSupabaseServerClient();
 
-  // Find order by number + verify email matches customer
   const { data: order } = await supabase
     .from("orders")
     .select(`
       id, order_number, order_status, event_date,
       event_start_time, event_end_time,
       subtotal_amount, delivery_fee_amount, total_amount,
-      deposit_due_amount, balance_due_amount,
-      customer_id
+      deposit_due_amount, customer_id
     `)
     .eq("organization_id", orgId)
     .eq("order_number", orderNumber)
@@ -108,7 +250,6 @@ export async function lookupOrder(
     return { ok: false, message: "Order not found. Please check your order number." };
   }
 
-  // Verify email matches
   const { data: customer } = await supabase
     .from("customers")
     .select("email, first_name, last_name")
@@ -119,71 +260,12 @@ export async function lookupOrder(
     return { ok: false, message: "Order not found. Please check your order number and email." };
   }
 
-  // Fetch items
-  const { data: items } = await supabase
-    .from("order_items")
-    .select("item_name_snapshot")
-    .eq("order_id", order.id);
-
-  // Fetch documents
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("id, document_type, document_status")
-    .eq("order_id", order.id);
-
-  const eventDate = order.event_date
-    ? new Date(`${order.event_date}T12:00:00`).toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "TBD";
-
-  const statusLabels: Record<string, string> = {
-    inquiry: "Inquiry",
-    quote_sent: "Quote Sent",
-    awaiting_deposit: "Awaiting Deposit",
-    confirmed: "Confirmed",
-    scheduled: "Scheduled",
-    out_for_delivery: "Out for Delivery",
-    delivered: "Delivered",
-    completed: "Completed",
-    cancelled: "Cancelled",
-  };
-
-  // Compute financials from the payments table — never trust stored balance_due_amount
-  const financials = await getOrderFinancials(order.id);
-  const remainingBalance = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
+  const newPortalToken = await issuePortalAccessToken({ supabase, orderId: order.id });
 
   return {
     ok: true,
     message: "",
-    order: {
-      orderNumber: order.order_number,
-      status: statusLabels[order.order_status] ?? order.order_status,
-      eventDate,
-      items: (items ?? []).map((i) => i.item_name_snapshot ?? "Rental item"),
-      subtotal: formatMoney(Number(order.subtotal_amount ?? 0)),
-      deliveryFee: formatMoney(Number(order.delivery_fee_amount ?? 0)),
-      total: formatMoney(Number(order.total_amount ?? 0)),
-      depositDue: formatMoney(Number(order.deposit_due_amount ?? 0)),
-      balanceDue: formatMoney(remainingBalance),
-      documents: (docs ?? []).map((d) => ({
-        id: d.id,
-        type: (d.document_type ?? "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
-        status: d.document_status,
-      })),
-      deliveryDate: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? eventDate : undefined,
-      deliveryTimeWindow: (() => {
-        if (!["scheduled", "out_for_delivery", "delivered"].includes(order.order_status)) return undefined;
-        if (order.event_start_time && order.event_end_time) {
-          const fmt = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-          return `${fmt(order.event_start_time)} – ${fmt(order.event_end_time)}`;
-        }
-        return "See confirmation email for details";
-      })(),
-      customerName: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Customer",
-    },
+    portalToken: newPortalToken,
+    order: await buildPortalOrder(order, customer),
   };
 }
