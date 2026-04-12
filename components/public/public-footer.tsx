@@ -4,6 +4,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 export async function PublicFooter() {
   const year = new Date().getFullYear();
   const settings = await getOrganizationSettings();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   const hasPhone = settings.phone && settings.phone !== "(555) 000-0000";
   const hasEmail = settings.supportEmail && settings.supportEmail !== "hello@example.com";
@@ -79,8 +80,8 @@ export async function PublicFooter() {
             <div>
               <strong style={{ fontSize: 13 }}>For Operators</strong>
               <div className="list" style={{ marginTop: 10 }}>
-                <Link href="/signup" className="muted">Create Account</Link>
-                <Link href="/login" className="muted">Operator Login</Link>
+                <a href={`${siteUrl}/signup`} className="muted">Create Account</a>
+                <a href={`${siteUrl}/login`} className="muted">Operator Login</a>
                 <Link href="/pricing" className="muted">Plans & Pricing</Link>
               </div>
 

@@ -6,9 +6,10 @@ import { createPortal } from "react-dom";
 
 interface MobileMenuToggleProps {
   isOperator: boolean;
+  siteUrl?: string;
 }
 
-export function MobileMenuToggle({ isOperator }: MobileMenuToggleProps) {
+export function MobileMenuToggle({ isOperator, siteUrl = "" }: MobileMenuToggleProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -138,13 +139,13 @@ export function MobileMenuToggle({ isOperator }: MobileMenuToggleProps) {
                 Book Now
               </Link>
               {isOperator ? (
-                <Link href="/dashboard" className="ghost-btn" onClick={close}>
+                <a href={`${siteUrl}/dashboard`} className="ghost-btn" onClick={close}>
                   Dashboard
-                </Link>
+                </a>
               ) : (
-                <Link href="/login" className="ghost-btn" onClick={close}>
+                <a href={`${siteUrl}/login`} className="ghost-btn" onClick={close}>
                   Rentals Login
-                </Link>
+                </a>
               )}
             </div>
           </div>

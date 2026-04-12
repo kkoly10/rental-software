@@ -12,6 +12,7 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
   ]);
   const resolvedLogoUrl = logoUrl ?? brand.logoUrl;
   const isOperator = !!orgCtx;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   return (
     <>
@@ -20,9 +21,9 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
           <div className="container operator-bar-inner">
             <span className="operator-bar-badge">Operator View</span>
             <span className="operator-bar-name">{settings.businessName}</span>
-            <Link href="/dashboard" className="operator-bar-link">
+            <a href={`${siteUrl}/dashboard`} className="operator-bar-link">
               Dashboard &rarr;
-            </Link>
+            </a>
           </div>
         </div>
       )}
@@ -51,13 +52,13 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
 
           <div className="public-nav-right">
             {isOperator ? (
-              <Link href="/dashboard" className="ghost-btn public-nav-auth-btn">
+              <a href={`${siteUrl}/dashboard`} className="ghost-btn public-nav-auth-btn">
                 Dashboard
-              </Link>
+              </a>
             ) : (
-              <Link href="/login" className="ghost-btn public-nav-auth-btn">
+              <a href={`${siteUrl}/login`} className="ghost-btn public-nav-auth-btn">
                 Rentals Login
-              </Link>
+              </a>
             )}
             <Link
               href="/inventory"
@@ -67,7 +68,7 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
             </Link>
           </div>
 
-          <MobileMenuToggle isOperator={isOperator} />
+          <MobileMenuToggle isOperator={isOperator} siteUrl={siteUrl} />
         </div>
       </header>
     </>
