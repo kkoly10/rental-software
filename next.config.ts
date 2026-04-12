@@ -12,7 +12,7 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline' https://unpkg.com",
     "font-src 'self' data: https:",
     "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://cdn.pixabay.com https://images.pexels.com https://*.tile.openstreetmap.org",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com",
+    `connect-src 'self' ${process.env.NEXT_PUBLIC_SITE_URL ?? ""} https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com`,
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
     "form-action 'self' https://checkout.stripe.com",
   ];
