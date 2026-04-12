@@ -25,12 +25,12 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
       <div className="section-header">
         <div>
           <div className="kicker">Calculator</div>
-          <h2 style={{ margin: "6px 0 0" }}>Pricing Preview</h2>
+          <h2 className="page-title-sm">Pricing Preview</h2>
         </div>
       </div>
 
       <div className="list">
-        <label className="order-card">
+        <label className="order-card field-stack">
           <strong>Base price ($)</strong>
           <input
             type="number"
@@ -38,28 +38,28 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
             min={0}
             step={10}
             onChange={(e) => setBasePrice(Number(e.target.value))}
-            style={{ marginTop: 6, width: "100%" }}
+            style={{ width: "100%" }}
           />
         </label>
 
-        <label className="order-card">
+        <label className="order-card field-stack">
           <strong>Event date</strong>
           <input
             type="date"
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
-            style={{ marginTop: 6, width: "100%" }}
+            style={{ width: "100%" }}
           />
         </label>
 
-        <label className="order-card">
+        <label className="order-card field-stack">
           <strong>Rental days</strong>
           <input
             type="number"
             value={rentalDays}
             min={1}
             onChange={(e) => setRentalDays(Number(e.target.value))}
-            style={{ marginTop: 6, width: "100%" }}
+            style={{ width: "100%" }}
           />
         </label>
       </div>

@@ -34,18 +34,18 @@ export function PricingRuleForm({
   return (
     <div className="pricing-rule-form">
       <div className="grid grid-3" style={{ gap: 12 }}>
-        <label>
+        <label className="field-stack">
           <strong>Name</strong>
           <input
             type="text"
             value={rule.name}
             onChange={(e) => update({ name: e.target.value })}
             placeholder="Rule name"
-            style={{ marginTop: 6, width: "100%" }}
+            style={{ width: "100%" }}
           />
         </label>
 
-        <label>
+        <label className="field-stack">
           <strong>Type</strong>
           <select
             value={rule.type}
@@ -53,7 +53,7 @@ export function PricingRuleForm({
               const type = e.target.value as PricingRuleType;
               update({ type, conditions: getDefaultConditions(type) });
             }}
-            style={{ marginTop: 6, width: "100%" }}
+            style={{ width: "100%" }}
           >
             {Object.entries(RULE_TYPE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -63,14 +63,14 @@ export function PricingRuleForm({
           </select>
         </label>
 
-        <label>
+        <label className="field-stack">
           <strong>Adjustment %</strong>
           <input
             type="number"
             value={rule.adjustment}
             onChange={(e) => update({ adjustment: Number(e.target.value) })}
             step="1"
-            style={{ marginTop: 6, width: "100%" }}
+            style={{ width: "100%" }}
           />
           <span className="muted" style={{ fontSize: 12 }}>
             Positive = surcharge, negative = discount
@@ -78,15 +78,15 @@ export function PricingRuleForm({
         </label>
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      <div className="stack-gap-xs">
         {rule.type === "weekend" && (
-          <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+          <fieldset className="field-stack" style={{ border: "none", padding: 0, margin: 0 }}>
             <strong>Days of week</strong>
-            <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+            <div className="grid grid-4" style={{ gap: 10 }}>
               {DAY_LABELS.map((label, i) => (
                 <label
                   key={i}
-                  style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14 }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}
                 >
                   <input
                     type="checkbox"
@@ -107,10 +107,19 @@ export function PricingRuleForm({
         )}
 
         {(rule.type === "holiday" || rule.type === "peak_season") && (
-          <div>
+          <div className="field-stack">
             <strong>Date ranges</strong>
             {(rule.conditions.dateRanges ?? []).map((range, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginTop: 6,
+                  alignItems: "center",
+                }}
+              >
                 <input
                   type="date"
                   value={range.start}
@@ -119,8 +128,11 @@ export function PricingRuleForm({
                     ranges[idx] = { ...ranges[idx], start: e.target.value };
                     updateConditions({ dateRanges: ranges });
                   }}
+                  style={{ flex: "1 1 160px" }}
                 />
-                <span>to</span>
+                <span className="muted" style={{ fontSize: 13 }}>
+                  to
+                </span>
                 <input
                   type="date"
                   value={range.end}
@@ -129,6 +141,7 @@ export function PricingRuleForm({
                     ranges[idx] = { ...ranges[idx], end: e.target.value };
                     updateConditions({ dateRanges: ranges });
                   }}
+                  style={{ flex: "1 1 160px" }}
                 />
                 <button
                   type="button"
@@ -159,7 +172,7 @@ export function PricingRuleForm({
         )}
 
         {rule.type === "early_bird" && (
-          <label>
+          <label className="field-stack" style={{ maxWidth: 180 }}>
             <strong>Minimum days before event</strong>
             <input
               type="number"
@@ -173,13 +186,13 @@ export function PricingRuleForm({
                   },
                 })
               }
-              style={{ marginTop: 6, width: 120 }}
+              style={{ width: "100%" }}
             />
           </label>
         )}
 
         {rule.type === "last_minute" && (
-          <label>
+          <label className="field-stack" style={{ maxWidth: 180 }}>
             <strong>Maximum days before event</strong>
             <input
               type="number"
@@ -193,13 +206,13 @@ export function PricingRuleForm({
                   },
                 })
               }
-              style={{ marginTop: 6, width: 120 }}
+              style={{ width: "100%" }}
             />
           </label>
         )}
 
         {rule.type === "multi_day" && (
-          <label>
+          <label className="field-stack" style={{ maxWidth: 180 }}>
             <strong>Minimum rental days</strong>
             <input
               type="number"
@@ -208,7 +221,7 @@ export function PricingRuleForm({
               onChange={(e) =>
                 updateConditions({ minRentalDays: Number(e.target.value) })
               }
-              style={{ marginTop: 6, width: 120 }}
+              style={{ width: "100%" }}
             />
           </label>
         )}
@@ -226,6 +239,8 @@ export function PricingRuleForm({
           justifyContent: "space-between",
           alignItems: "center",
           marginTop: 14,
+          gap: 12,
+          flexWrap: "wrap",
         }}
       >
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}>

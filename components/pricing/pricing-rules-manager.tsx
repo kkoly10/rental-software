@@ -43,7 +43,7 @@ export function PricingRulesManager({
       <div className="section-header">
         <div>
           <div className="kicker">Configuration</div>
-          <h2 style={{ margin: "6px 0 0" }}>Pricing Rules</h2>
+          <h2 className="page-title-sm">Pricing Rules</h2>
         </div>
         <button type="button" className="primary-btn" onClick={addRule}>
           + Add Rule
@@ -61,7 +61,7 @@ export function PricingRulesManager({
           <div className="list">
             {rules.map((rule, index) => (
               <div key={rule.id} className="pricing-rule-card">
-                <div className="pricing-rule-card-header">
+                <div className="pricing-rule-card-header" style={{ flexWrap: "wrap", gap: 8 }}>
                   <strong>{rule.name || "Untitled Rule"}</strong>
                   <span
                     className={
@@ -93,7 +93,7 @@ export function PricingRulesManager({
           </div>
         )}
 
-        <div style={{ marginTop: 14 }}>
+        <div className="action-row-end">
           <button className="primary-btn" type="submit" disabled={pending}>
             {pending ? "Saving..." : "Save All Rules"}
           </button>
