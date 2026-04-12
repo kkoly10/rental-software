@@ -19,9 +19,10 @@ import { getNotifications } from "@/lib/data/notifications";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 import { getDomainSettings } from "@/lib/data/domain-settings";
 import { buildStorefrontUrl } from "@/lib/storefront/url";
+import { headers } from "next/headers";
 
 export default async function DashboardPage() {
-  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings] =
+  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList] =
     await Promise.all([
       getDashboardSummary(),
       getGuidanceSnapshot(),
@@ -30,11 +31,13 @@ export default async function DashboardPage() {
       getNotifications(),
       getSubscriptionStatus(),
       getDomainSettings(),
+      headers(),
     ]);
 
   const checklist = computeChecklist(snapshot);
   const helpConfig = pageHelpMap["/dashboard"];
-  const storefrontUrl = buildStorefrontUrl(domainSettings);
+  const requestHost = headersList.get("host") ?? undefined;
+  const storefrontUrl = buildStorefrontUrl(domainSettings, requestHost);
   const milestone = detectNewMilestone(
     snapshot,
     guidanceState.dismissedMilestones ?? []

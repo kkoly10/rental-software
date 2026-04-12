@@ -18,17 +18,20 @@ import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { buildStorefrontUrl } from "@/lib/storefront/url";
+import { headers } from "next/headers";
 
 export default async function WebsitePage() {
-  const [data, editableSettings, brandSettings, contentSettings, domainSettings] = await Promise.all([
+  const [data, editableSettings, brandSettings, contentSettings, domainSettings, headersList] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
     getBrandSettings(),
     getContentSettings(),
     getDomainSettings(),
+    headers(),
   ]);
   const guidanceState = await getGuidanceState();
-  const storefrontUrl = buildStorefrontUrl(domainSettings);
+  const requestHost = headersList.get("host") ?? undefined;
+  const storefrontUrl = buildStorefrontUrl(domainSettings, requestHost);
   const pageConfig = pageHelpMap["/dashboard/website"];
   const helpConfig = pageConfig
     ? {

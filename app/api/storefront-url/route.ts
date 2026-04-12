@@ -3,10 +3,18 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildStorefrontUrl } from "@/lib/storefront/url";
+import { headers } from "next/headers";
 
 export async function GET() {
+  const headersList = await headers();
+  const requestHost = headersList.get("host") ?? undefined;
+
   if (!hasSupabaseEnv()) {
-    return NextResponse.json({ error: "Not configured." }, { status: 503 });
+    // In local dev without Supabase, point to the local root URL
+    const bare = (requestHost ?? "localhost").split(":")[0];
+    const isLocal = bare === "localhost" || bare === "127.0.0.1";
+    const url = isLocal ? `http://${requestHost ?? "localhost:3000"}` : "/";
+    return NextResponse.json({ url });
   }
 
   const ctx = await getOrgContext();
@@ -25,11 +33,14 @@ export async function GET() {
     return NextResponse.json({ error: "Unable to resolve storefront URL." }, { status: 500 });
   }
 
-  const url = buildStorefrontUrl({
-    slug: org.slug,
-    customDomain: org.custom_domain,
-    customDomainVerified: org.custom_domain_verified ?? false,
-  });
+  const url = buildStorefrontUrl(
+    {
+      slug: org.slug,
+      customDomain: org.custom_domain,
+      customDomainVerified: org.custom_domain_verified ?? false,
+    },
+    requestHost,
+  );
 
   return NextResponse.json({ url });
 }
