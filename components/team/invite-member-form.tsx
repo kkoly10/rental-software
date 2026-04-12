@@ -11,8 +11,8 @@ export function InviteMemberForm() {
 
   return (
     <form action={formAction}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "end" }}>
-        <label style={{ display: "grid", gap: 4 }}>
+      <div className="team-invite-grid">
+        <label className="field-stack">
           <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>Email address</span>
           <input
             name="email"
@@ -22,7 +22,7 @@ export function InviteMemberForm() {
           />
         </label>
 
-        <label style={{ display: "grid", gap: 4 }}>
+        <label className="field-stack">
           <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>Role</span>
           <select name="role" defaultValue="viewer">
             <option value="admin">Admin</option>
@@ -32,7 +32,7 @@ export function InviteMemberForm() {
           </select>
         </label>
 
-        <button type="submit" className="primary-btn" disabled={pending}>
+        <button type="submit" className="primary-btn team-invite-submit" disabled={pending}>
           {pending ? "Sending..." : "Send Invite"}
         </button>
       </div>

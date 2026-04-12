@@ -20,7 +20,7 @@ export default async function TeamPage() {
               <div className="section-header">
                 <div>
                   <div className="kicker">Add member</div>
-                  <h2 style={{ margin: "6px 0 0" }}>Invite a team member</h2>
+                  <h2 className="page-title-sm">Invite a team member</h2>
                 </div>
               </div>
               <InviteMemberForm />
@@ -31,7 +31,7 @@ export default async function TeamPage() {
             <div className="section-header">
               <div>
                 <div className="kicker">Active members</div>
-                <h2 style={{ margin: "6px 0 0" }}>
+                <h2 className="page-title-sm">
                   Team ({team.members.length})
                 </h2>
               </div>
@@ -54,7 +54,7 @@ export default async function TeamPage() {
             <div className="section-header">
               <div>
                 <div className="kicker">Pending</div>
-                <h2 style={{ margin: "6px 0 0" }}>Invites</h2>
+                <h2 className="page-title-sm">Invites</h2>
               </div>
             </div>
 
@@ -77,7 +77,7 @@ export default async function TeamPage() {
             <div className="section-header">
               <div>
                 <div className="kicker">Roles guide</div>
-                <h2 style={{ margin: "6px 0 0" }}>Permissions</h2>
+                <h2 className="page-title-sm">Permissions</h2>
               </div>
             </div>
             <div className="list">

@@ -3,7 +3,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
-import { resolveOrgFromHostname } from "@/lib/auth/resolve-org";
+import { resolveOrgFromHostname, getAppDomain } from "@/lib/auth/resolve-org";
 
 export type OrgContext = {
   userId: string;
@@ -65,5 +65,23 @@ export async function getPublicOrgId(): Promise<string | null> {
  */
 export async function isTenantHost(): Promise<boolean> {
   const headersList = await headers();
-  return !!headersList.get("x-tenant-host");
+  if (headersList.get("x-tenant-host")) {
+    return true;
+  }
+
+  const host = headersList.get("host") ?? headersList.get("x-forwarded-host") ?? "localhost";
+  const hostWithoutPort = host.split(":")[0];
+  const appDomain = getAppDomain().split(":")[0];
+
+  if (
+    hostWithoutPort === "localhost" ||
+    hostWithoutPort === "127.0.0.1" ||
+    hostWithoutPort.endsWith(".vercel.app") ||
+    hostWithoutPort === appDomain ||
+    hostWithoutPort === `www.${appDomain}`
+  ) {
+    return false;
+  }
+
+  return true;
 }
