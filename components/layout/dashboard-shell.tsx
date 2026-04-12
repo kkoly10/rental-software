@@ -37,6 +37,7 @@ export function DashboardShell({
   const [badgeCount, setBadgeCount] = useState(unreadMessages);
   const [subStatus, setSubStatus] = useState(initialSubscriptionStatus ?? null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [publicSiteUrl, setPublicSiteUrl] = useState("/");
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -51,6 +52,19 @@ export function DashboardShell({
     // even on dashboard pages that don't pass the prop from the server.
     getSubscriptionStatus().then((s) => { if (s) setSubStatus(s); }).catch(() => {});
   }, [pathname]);
+
+  useEffect(() => {
+    fetch("/api/storefront-url")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const payload = (await response.json()) as { url?: string };
+        return payload.url ?? null;
+      })
+      .then((url) => {
+        if (url) setPublicSiteUrl(url);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -128,9 +142,9 @@ export function DashboardShell({
         ))}
 
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.12)" }}>
-          <Link href="/" style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, opacity: 0.7 }}>
+          <a href={publicSiteUrl} style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, opacity: 0.7 }}>
             Public Site
-          </Link>
+          </a>
           <button
             type="button"
             style={{
@@ -229,9 +243,9 @@ export function DashboardShell({
               ))}
             </nav>
             <div className="mobile-menu-footer">
-              <Link href="/" className="secondary-btn" onClick={closeMobileNav}>
+              <a href={publicSiteUrl} className="secondary-btn" onClick={closeMobileNav}>
                 Public Site
-              </Link>
+              </a>
               <button
                 type="button"
                 className="primary-btn"
