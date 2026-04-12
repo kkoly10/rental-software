@@ -325,6 +325,70 @@ a:focus-visible {
   margin-top: 12px;
 }
 
+.action-row,
+.action-row-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-row {
+  justify-content: center;
+}
+
+.action-row-inline {
+  justify-content: flex-start;
+}
+
+.action-row-end {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.two-col-responsive {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.card-header-wrap {
+  flex-wrap: wrap;
+}
+
+.card-title-tight {
+  margin: 8px 0 4px;
+}
+
+.page-title {
+  margin: 6px 0 8px;
+}
+
+.page-title-sm {
+  margin: 6px 0 0;
+}
+
+.field-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.stack-gap-xs {
+  margin-top: 10px;
+}
+
+.stack-gap-sm {
+  margin-top: 16px;
+}
+
+.stack-gap-md {
+  margin-top: 18px;
+}
+
+.centered-stack-lg {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
@@ -439,6 +503,57 @@ a:focus-visible {
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
+}
+
+.dashboard-mobile-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.dashboard-mobile-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.dashboard-mobile-menu-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.dashboard-mobile-drawer .mobile-menu-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-mobile-drawer .mobile-menu-nav a.active {
+  color: var(--primary);
+  background: var(--surface-muted);
+}
+
+.dashboard-nav-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  line-height: 18px;
+}
+
+.dashboard-desktop-notifications {
+  display: block;
 }
 
 .sidebar a {
@@ -694,8 +809,7 @@ textarea[aria-invalid="true"] {
   .hero-panel,
   .two-col,
   .dashboard-grid,
-  .delivery-board,
-  .sidebar-layout {
+  .delivery-board {
     grid-template-columns: 1fr;
   }
 
@@ -708,8 +822,48 @@ textarea[aria-invalid="true"] {
     grid-template-columns: 1fr 1fr;
   }
 
-  .sidebar {
-    padding-bottom: 0;
+  .dashboard-sidebar-desktop {
+    display: none;
+  }
+
+  .sidebar-layout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .main-shell {
+    padding: 20px;
+  }
+
+  .dashboard-mobile-bar {
+    display: flex;
+  }
+
+  .dashboard-desktop-notifications {
+    display: none;
+  }
+
+  .action-row {
+    justify-content: flex-start;
+  }
+
+  .action-row-end {
+    justify-content: flex-start;
+  }
+
+  .order-row,
+  .delivery-row,
+  .price-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .two-col-responsive {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -734,13 +888,31 @@ textarea[aria-invalid="true"] {
     gap: 10px;
   }
 
-  .hero-panel,
-  .main-shell {
+  .hero-panel {
     padding: 18px;
   }
 
-  .sidebar-layout {
-    min-height: auto;
+  .main-shell {
+    padding: 14px;
+  }
+
+  .action-row,
+  .action-row-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-row > *,
+  .action-row-inline > * {
+    width: 100%;
+  }
+
+  .stat-grid-responsive {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header-wrap .badge {
+    white-space: normal;
   }
 }
 
@@ -764,6 +936,28 @@ textarea[aria-invalid="true"] {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.public-nav-auth-btn {
+  font-size: 14px;
+}
+
+.public-nav-book-btn {
+  background: var(--accent);
+  min-height: 42px;
+}
+
+.saas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saas-header-nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
 /* Mobile menu — hamburger button hidden on desktop */
@@ -1917,6 +2111,10 @@ textarea[aria-invalid="true"] {
     display: none;
   }
 
+  .saas-header-nav {
+    display: none;
+  }
+
   .mobile-menu-btn {
     display: flex;
   }
@@ -1970,6 +2168,10 @@ textarea[aria-invalid="true"] {
 
   .public-hero-copy h1 {
     font-size: 2.5rem;
+  }
+
+  .saas-header {
+    padding-inline: 14px !important;
   }
 }
 

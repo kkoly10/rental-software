@@ -42,7 +42,7 @@ export function OrderLookupForm({ initialState }: Props) {
       {!hasPortalResult && (
         <form action={formAction} className="panel" style={{ marginBottom: 24 }}>
           <div style={{ display: "grid", gap: 14 }}>
-            <label style={{ display: "grid", gap: 4 }}>
+            <label className="field-stack">
               <span style={{ fontSize: 13, fontWeight: 600 }}>Order number</span>
               <input
                 name="order_number"
@@ -53,7 +53,7 @@ export function OrderLookupForm({ initialState }: Props) {
               />
             </label>
 
-            <label style={{ display: "grid", gap: 4 }}>
+            <label className="field-stack">
               <span style={{ fontSize: 13, fontWeight: 600 }}>Email address</span>
               <input
                 name="email"
@@ -159,7 +159,7 @@ export function OrderLookupForm({ initialState }: Props) {
               </div>
             </div>
 
-            <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+            <div className="action-row-end">
               <InvoiceDownload order={state.order} />
             </div>
           </div>

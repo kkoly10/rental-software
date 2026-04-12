@@ -51,18 +51,17 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
 
           <div className="public-nav-right">
             {isOperator ? (
-              <Link href="/dashboard" className="ghost-btn" style={{ fontSize: 14 }}>
+              <Link href="/dashboard" className="ghost-btn public-nav-auth-btn">
                 Dashboard
               </Link>
             ) : (
-              <Link href="/login" className="ghost-btn" style={{ fontSize: 14 }}>
+              <Link href="/login" className="ghost-btn public-nav-auth-btn">
                 Rentals Login
               </Link>
             )}
             <Link
               href="/inventory"
-              className="primary-btn"
-              style={{ background: "var(--accent)", minHeight: 42 }}
+              className="primary-btn public-nav-book-btn"
             >
               Book Now
             </Link>
