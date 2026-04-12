@@ -36,10 +36,9 @@ export default async function WebsitePage() {
   const helpConfig = pageConfig
     ? {
         ...pageConfig,
-        primaryAction: {
-          label: pageConfig.primaryAction?.label ?? "View storefront",
-          href: storefrontUrl,
-        },
+        primaryAction: storefrontUrl
+          ? { label: pageConfig.primaryAction?.label ?? "View storefront", href: storefrontUrl }
+          : undefined,
       }
     : undefined;
 
@@ -59,16 +58,22 @@ export default async function WebsitePage() {
             Changes you make here update YOUR public storefront — the website your customers see when they visit your booking page.
           </div>
         </div>
-        <a
-          href={storefrontUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="secondary-btn"
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
-        >
-          Preview Your Storefront
-          <span style={{ fontSize: 13 }}>&#8599;</span>
-        </a>
+        {storefrontUrl ? (
+          <a
+            href={storefrontUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="secondary-btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
+          >
+            Preview Your Storefront
+            <span style={{ fontSize: 13 }}>&#8599;</span>
+          </a>
+        ) : (
+          <span className="secondary-btn" style={{ opacity: 0.45, cursor: "default", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+            Set up your domain first
+          </span>
+        )}
       </div>
 
       <div className="dashboard-grid">

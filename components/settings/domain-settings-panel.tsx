@@ -204,14 +204,20 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
           </div>
         ) : (
           <div style={{ marginTop: 8 }}>
-            <a
-              href={`https://${slug}.${appDomain}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontFamily: "monospace", fontSize: 14, color: "var(--primary)" }}
-            >
-              {slug}.{appDomain} &#8599;
-            </a>
+            {slug ? (
+              <a
+                href={`https://${slug}.${appDomain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontFamily: "monospace", fontSize: 14, color: "var(--primary)" }}
+              >
+                {slug}.{appDomain} &#8599;
+              </a>
+            ) : (
+              <span className="muted" style={{ fontSize: 13 }}>
+                No subdomain configured — click Edit to set one.
+              </span>
+            )}
           </div>
         )}
       </div>

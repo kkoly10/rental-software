@@ -30,7 +30,7 @@ export async function GET() {
     .single();
 
   if (error || !org) {
-    return NextResponse.json({ error: "Unable to resolve storefront URL." }, { status: 500 });
+    return NextResponse.json({ url: null });
   }
 
   const url = buildStorefrontUrl(

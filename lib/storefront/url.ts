@@ -16,7 +16,7 @@ export type StorefrontDomainSettings = {
 export function buildStorefrontUrl(
   settings: StorefrontDomainSettings,
   requestHost?: string,
-): string {
+): string | null {
   if (settings.customDomain && settings.customDomainVerified) {
     return `https://${settings.customDomain}`;
   }
@@ -28,6 +28,8 @@ export function buildStorefrontUrl(
       return `http://${requestHost}`;
     }
   }
+
+  if (!settings.slug) return null;
 
   return `https://${settings.slug}.${getAppDomain()}`;
 }

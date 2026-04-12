@@ -36,3 +36,15 @@ export async function createSupabaseServerClient() {
 export function createSupabaseServiceClient() {
   return createClient(supabaseUrl, supabaseAnonKey);
 }
+
+/**
+ * Admin client using the service role key — bypasses RLS entirely.
+ * Only use server-side for internal lookups where the caller has already
+ * authenticated the user via getUser(). Never expose to the client.
+ */
+export function createSupabaseAdminClient() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
