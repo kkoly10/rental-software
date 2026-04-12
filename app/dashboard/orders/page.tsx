@@ -44,13 +44,13 @@ export default async function OrdersPage({
         <div className="section-header">
           <div>
             <div className="kicker">Rental pipeline</div>
-            <h2 style={{ margin: "6px 0 0" }}>All orders</h2>
+            <h2 className="page-title-sm">All orders</h2>
             <div className="muted" style={{ marginTop: 8 }}>
               {ordersPage.totalItems} matching order
               {ordersPage.totalItems === 1 ? "" : "s"} found
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="action-row-inline">
             <ExportCsvButton exportAction={exportOrders} label="Export CSV" />
             <Link href="/dashboard/orders/new" className="primary-btn">
               New order

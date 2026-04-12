@@ -91,7 +91,7 @@ export default async function DashboardPage() {
       </div>
 
       {!guidanceState.dismissedChecklist && (
-        <div style={{ marginTop: 18 }}>
+        <div className="stack-gap-md">
           <SetupChecklistCard
             items={checklist.items.map((i) => ({
               id: i.id,
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Today</div>
-              <h2 style={{ margin: "6px 0 0" }}>Recent orders</h2>
+              <h2 className="page-title-sm">Recent orders</h2>
             </div>
             <Link href="/dashboard/orders" className="ghost-btn">
               View all
@@ -157,7 +157,7 @@ export default async function DashboardPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Quick actions</div>
-              <h2 style={{ margin: "6px 0 0" }}>Get things done</h2>
+              <h2 className="page-title-sm">Get things done</h2>
             </div>
           </div>
 

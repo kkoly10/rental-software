@@ -28,7 +28,7 @@ export default async function OrderStatusPage({
 
       <main className="page">
         <div className="container" style={{ maxWidth: 680 }}>
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div className="centered-stack-lg">
             <div className="kicker">Customer portal</div>
             <h1 style={{ margin: "8px 0 12px", fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
               Check your order status

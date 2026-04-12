@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 
 interface MobileMenuToggleProps {
   isOperator: boolean;
@@ -9,6 +10,7 @@ interface MobileMenuToggleProps {
 
 export function MobileMenuToggle({ isOperator }: MobileMenuToggleProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
 
@@ -60,6 +62,10 @@ export function MobileMenuToggle({ isOperator }: MobileMenuToggleProps) {
     return () => drawer.removeEventListener("keydown", trapFocus);
   }, [open]);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Lock body scroll when open
   useEffect(() => {
     if (open) {
@@ -89,7 +95,7 @@ export function MobileMenuToggle({ isOperator }: MobileMenuToggleProps) {
         </svg>
       </button>
 
-      {open && (
+      {mounted && open && createPortal(
         <div className="mobile-menu-overlay" onClick={close}>
           <div
             ref={drawerRef}
@@ -142,7 +148,8 @@ export function MobileMenuToggle({ isOperator }: MobileMenuToggleProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

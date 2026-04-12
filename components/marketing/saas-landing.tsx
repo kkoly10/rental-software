@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 
 /**
  * SaaS marketing landing page for the root domain (korent.app without a subdomain).
@@ -12,10 +13,8 @@ export function SaasLanding() {
   return (
     <>
       <header
+        className="saas-header"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
           padding: "16px 24px",
           borderBottom: "1px solid var(--border, #e5e7eb)",
           maxWidth: 1200,
@@ -23,7 +22,7 @@ export function SaasLanding() {
         }}
       >
         <div style={{ fontWeight: 800, fontSize: "1.3rem" }}>Korent</div>
-        <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
+        <nav className="saas-header-nav">
           <a href="#features" className="ghost-btn">
             Features
           </a>
@@ -37,6 +36,7 @@ export function SaasLanding() {
             Start Free Trial
           </Link>
         </nav>
+        <MobileMenuToggle isOperator={false} />
       </header>
 
       <main>
@@ -65,7 +65,7 @@ export function SaasLanding() {
             Online booking, real-time availability, delivery routing, invoicing,
             and customer management — built specifically for party rental operators.
           </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <div className="action-row">
             <Link href="/signup" className="primary-btn" style={{ fontSize: "1.05rem", padding: "12px 28px" }}>
               Start Free Trial
             </Link>
@@ -88,7 +88,7 @@ export function SaasLanding() {
             <h2>How it works</h2>
           </div>
 
-          <div className="grid grid-3" style={{ gap: 24 }}>
+          <div className="grid grid-3 stat-grid-responsive" style={{ gap: 24 }}>
             {[
               {
                 step: "1",
@@ -145,7 +145,7 @@ export function SaasLanding() {
             <h2>Features built for rental operators</h2>
           </div>
 
-          <div className="grid grid-3" style={{ gap: 24 }}>
+          <div className="grid grid-3 stat-grid-responsive" style={{ gap: 24 }}>
             {[
               {
                 title: "Online Storefront",
@@ -196,7 +196,7 @@ export function SaasLanding() {
             </p>
           </div>
 
-          <div className="grid grid-2" style={{ gap: 24 }}>
+          <div className="grid grid-2 two-col-responsive" style={{ gap: 24 }}>
             {/* Booking Calendar */}
             <div className="panel" style={{ padding: 24 }}>
               <div className="kicker" style={{ marginBottom: 8 }}>Booking Calendar</div>
@@ -423,7 +423,7 @@ export function SaasLanding() {
             starts at $49/month.
           </p>
 
-          <div className="grid grid-3" style={{ gap: 16 }}>
+          <div className="grid grid-3 stat-grid-responsive" style={{ gap: 16 }}>
             {[
               { stat: "24/7", label: "Online booking" },
               { stat: "Built-in", label: "Conflict prevention" },
@@ -458,7 +458,7 @@ export function SaasLanding() {
             </p>
           </div>
 
-          <div className="grid grid-3" style={{ gap: 24 }}>
+          <div className="grid grid-3 stat-grid-responsive" style={{ gap: 24 }}>
             {[
               {
                 name: "Starter",
@@ -569,7 +569,7 @@ export function SaasLanding() {
           <p className="muted" style={{ marginBottom: 24 }}>
             Free to start. No credit card required. Set up your storefront in minutes.
           </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <div className="action-row">
             <Link href="/signup" className="primary-btn" style={{ fontSize: "1.05rem", padding: "12px 32px" }}>
               Start Free Trial
             </Link>

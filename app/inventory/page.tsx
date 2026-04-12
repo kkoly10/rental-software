@@ -82,7 +82,7 @@ export default async function InventoryPage({
             <div className="section-header">
               <div>
                 <div className="kicker">Catalog</div>
-                <h1 style={{ margin: "6px 0 8px" }}>
+                <h1 className="page-title">
                   Browse inflatables by event type
                 </h1>
                 <div className="muted">
@@ -151,7 +151,7 @@ export default async function InventoryPage({
             ) : (
               <div className="panel storefront-empty-state">
                 <div className="kicker">No direct matches</div>
-                <h2 style={{ margin: "8px 0 10px" }}>
+                <h2 className="card-title-tight">
                   Try broadening your filters
                 </h2>
                 <div className="muted">
