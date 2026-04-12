@@ -43,7 +43,7 @@ export default async function OrderDetailPage({
           <div className="section-header">
             <div>
               <div className="kicker">Order #{order.orderNumber}</div>
-              <h2 style={{ margin: "6px 0 0" }}>{order.customerName}</h2>
+              <h2 className="page-title-sm">{order.customerName}</h2>
             </div>
             <StatusBadge label={order.status} tone={statusTone(order.status)} />
           </div>
@@ -107,7 +107,7 @@ export default async function OrderDetailPage({
           <div className="section-header">
             <div>
               <div className="kicker">Financials</div>
-              <h2 style={{ margin: "6px 0 0" }}>Summary</h2>
+              <h2 className="page-title-sm">Summary</h2>
             </div>
           </div>
 
@@ -144,7 +144,7 @@ export default async function OrderDetailPage({
             </div>
           </div>
 
-          <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div className="action-row">
             <a
               href={`/api/invoices/${id}`}
               target="_blank"
@@ -164,11 +164,11 @@ export default async function OrderDetailPage({
       </div>
 
       {/* Communications audit trail */}
-      <div className="panel" style={{ marginTop: 16 }}>
+      <div className="panel stack-gap-sm">
         <div className="section-header">
           <div>
             <div className="kicker">Audit trail</div>
-            <h2 style={{ margin: "6px 0 0" }}>Communications</h2>
+            <h2 className="page-title-sm">Communications</h2>
           </div>
           <span className="badge default">{communications.length}</span>
         </div>

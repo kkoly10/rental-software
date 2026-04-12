@@ -29,7 +29,7 @@ export default async function DeliveriesPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Operations</div>
-              <h2 style={{ margin: "6px 0 0" }}>Today's route board</h2>
+              <h2 className="page-title-sm">Today&apos;s route board</h2>
             </div>
             <StatusBadge label="Live" tone="success" />
           </div>
@@ -44,7 +44,7 @@ export default async function DeliveriesPage() {
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
                       <div className="muted">{route.stops} stops</div>
-                      <div style={{ marginTop: 10 }}>
+                      <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
                           className="ghost-btn"
@@ -69,7 +69,7 @@ export default async function DeliveriesPage() {
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
                       <div className="muted">{route.stops} stops</div>
-                      <div style={{ marginTop: 10 }}>
+                      <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
                           className="ghost-btn"
@@ -94,7 +94,7 @@ export default async function DeliveriesPage() {
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
                       <div className="muted">{route.stops} stops</div>
-                      <div style={{ marginTop: 10 }}>
+                      <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
                           className="ghost-btn"
@@ -114,7 +114,7 @@ export default async function DeliveriesPage() {
 
         <aside className="map-card">
           <div className="kicker">Route detail</div>
-          <h2 style={{ marginTop: 8 }}>
+          <h2 className="page-title-sm" style={{ marginTop: 8 }}>
             {board.primaryRoute ? board.primaryRoute.name : "No route selected"}
           </h2>
           <DeliveryStats route={enhancedRoute} />

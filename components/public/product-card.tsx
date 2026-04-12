@@ -44,15 +44,15 @@ export function ProductCard({
         )}
       </div>
       <div className="product-copy">
-        <div className="price-row" style={{ marginTop: 0 }}>
+        <div className="price-row card-header-wrap" style={{ marginTop: 0 }}>
           <div className="kicker">{category}</div>
           <StatusBadge label={status} tone={tone} />
         </div>
-        <h3 style={{ margin: "8px 0 4px" }}>{name}</h3>
+        <h3 className="card-title-tight">{name}</h3>
         <p className="muted" style={{ marginTop: 0 }}>
           {description}
         </p>
-        <div className="price-row">
+        <div className="price-row action-row-inline">
           <strong>{price}</strong>
           <Link href={`/inventory/${slug}`} className="secondary-btn">
             View Details
