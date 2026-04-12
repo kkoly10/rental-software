@@ -69,7 +69,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
       if (data.ok) {
         setSlug(data.slug);
         setSlugEditing(false);
-        setSlugMessage("Slug updated successfully.");
+        setSlugMessage("Slug updated. The new URL may take a few minutes to resolve everywhere.");
       } else {
         setSlugMessage(data.error ?? "Failed to update slug.");
       }
@@ -125,7 +125,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
           <div>
             <strong>Subdomain URL</strong>
             <div className="muted" style={{ marginTop: 4 }}>
-              Your storefront is live at this URL.
+              This is your default storefront URL. DNS and platform routing changes can take a few minutes to fully propagate.
             </div>
           </div>
           {!slugEditing && (
@@ -146,7 +146,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
 
         {slugEditing ? (
           <div style={{ marginTop: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14 }}>
+            <div className="domain-slug-row" style={{ fontSize: 14 }}>
               <input
                 type="text"
                 value={slugInput}
@@ -155,7 +155,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                   setSlugInput(v);
                 }}
                 onBlur={() => checkSlugAvailability(slugInput)}
-                style={{ width: 180, fontFamily: "monospace" }}
+                style={{ fontFamily: "monospace" }}
                 maxLength={63}
               />
               <span className="muted">.{appDomain}</span>
@@ -180,7 +180,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
               Your old URL will stop working immediately. Customers using your current URL will need the new one.
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <div className="inline-form-actions" style={{ marginTop: 10 }}>
               <button
                 className="primary-btn"
                 style={{ fontSize: 13 }}
@@ -225,7 +225,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
 
         {customDomain ? (
           <div style={{ marginTop: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div className="domain-url-row" style={{ marginBottom: 10 }}>
               <a
                 href={`https://${customDomain}`}
                 target="_blank"
@@ -325,7 +325,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <div className="inline-form-actions" style={{ marginTop: 10 }}>
               <button className="primary-btn" type="submit" disabled={domainPending} style={{ fontSize: 13 }}>
                 {domainPending ? "Saving..." : "Save Domain"}
               </button>

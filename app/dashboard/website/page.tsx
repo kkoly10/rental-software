@@ -17,6 +17,7 @@ import { getDomainSettings } from "@/lib/data/domain-settings";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { buildStorefrontUrl } from "@/lib/storefront/url";
 
 export default async function WebsitePage() {
   const [data, editableSettings, brandSettings, contentSettings, domainSettings] = await Promise.all([
@@ -27,7 +28,17 @@ export default async function WebsitePage() {
     getDomainSettings(),
   ]);
   const guidanceState = await getGuidanceState();
-  const helpConfig = pageHelpMap["/dashboard/website"];
+  const storefrontUrl = buildStorefrontUrl(domainSettings);
+  const pageConfig = pageHelpMap["/dashboard/website"];
+  const helpConfig = pageConfig
+    ? {
+        ...pageConfig,
+        primaryAction: {
+          label: pageConfig.primaryAction?.label ?? "View storefront",
+          href: storefrontUrl,
+        },
+      }
+    : undefined;
 
   return (
     <DashboardShell
@@ -46,7 +57,7 @@ export default async function WebsitePage() {
           </div>
         </div>
         <a
-          href="/"
+          href={storefrontUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="secondary-btn"

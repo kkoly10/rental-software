@@ -54,7 +54,6 @@ export const pageHelpMap: Record<string, PageHelpConfig> = {
     title: "Customize your public storefront",
     description:
       "Set your hero message, upload your logo, choose brand colors and fonts, and let the AI Copilot write content for you.",
-    primaryAction: { label: "View storefront", href: "/" },
     secondaryAction: { label: "Brand guide", href: "/dashboard/help/brand-customization" },
   },
   "/dashboard/pricing": {

@@ -372,6 +372,30 @@ a:focus-visible {
   gap: 4px;
 }
 
+.inline-form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.domain-slug-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.domain-slug-row input {
+  width: 180px;
+  min-width: 0;
+}
+
+.domain-url-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .stack-gap-xs {
   margin-top: 10px;
 }
@@ -907,6 +931,22 @@ textarea[aria-invalid="true"] {
     width: 100%;
   }
 
+  .inline-form-actions {
+    flex-direction: column;
+  }
+
+  .inline-form-actions > * {
+    width: 100%;
+  }
+
+  .domain-slug-row {
+    flex-wrap: wrap;
+  }
+
+  .domain-slug-row input {
+    width: 100%;
+  }
+
   .stat-grid-responsive {
     grid-template-columns: 1fr;
   }
@@ -1210,6 +1250,17 @@ textarea[aria-invalid="true"] {
 
 .storefront-search-btn:hover {
   filter: brightness(0.9);
+}
+
+.team-invite-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.team-invite-submit {
+  min-height: 48px;
 }
 
 .public-hero-visual {
@@ -2141,7 +2192,7 @@ textarea[aria-invalid="true"] {
   }
 
   .public-hero {
-    min-height: 540px;
+    min-height: 0;
   }
 
   .public-hero-overlay {
@@ -2156,9 +2207,39 @@ textarea[aria-invalid="true"] {
 
   .public-hero-copy {
     width: auto;
-    padding: 24px 20px;
-    margin: 18px 0;
+    padding: 20px 16px;
+    margin: 14px 0;
     background: rgba(255, 255, 255, 0.45);
+    border-radius: 20px;
+  }
+
+  .storefront-search-card {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .storefront-search-grid {
+    gap: 10px;
+  }
+
+  .storefront-field input,
+  .storefront-field select,
+  .storefront-search-btn {
+    min-height: 44px;
+  }
+
+  .team-invite-grid {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .team-invite-grid > * {
+    min-width: 0;
+  }
+
+  .team-invite-submit {
+    width: 100%;
   }
 
   .storefront-search-grid {
@@ -2174,11 +2255,29 @@ textarea[aria-invalid="true"] {
   }
 
   .public-hero-copy h1 {
-    font-size: 2.5rem;
+    font-size: clamp(2rem, 11vw, 2.5rem);
+    line-height: 0.98;
+  }
+
+  .public-hero-copy p {
+    font-size: 0.98rem;
+    line-height: 1.5;
   }
 
   .saas-header {
     padding-inline: 14px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .public-hero-copy {
+    padding: 16px 12px;
+    margin: 12px 0;
+  }
+
+  .storefront-search-card {
+    padding: 10px;
+    border-radius: 14px;
   }
 }
 

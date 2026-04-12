@@ -17,9 +17,11 @@ import { SetupProgressBar } from "@/components/dashboard/setup-progress-bar";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getNotifications } from "@/lib/data/notifications";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
+import { getDomainSettings } from "@/lib/data/domain-settings";
+import { buildStorefrontUrl } from "@/lib/storefront/url";
 
 export default async function DashboardPage() {
-  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus] =
+  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings] =
     await Promise.all([
       getDashboardSummary(),
       getGuidanceSnapshot(),
@@ -27,10 +29,12 @@ export default async function DashboardPage() {
       getOrganizationSettings(),
       getNotifications(),
       getSubscriptionStatus(),
+      getDomainSettings(),
     ]);
 
   const checklist = computeChecklist(snapshot);
   const helpConfig = pageHelpMap["/dashboard"];
+  const storefrontUrl = buildStorefrontUrl(domainSettings);
   const milestone = detectNewMilestone(
     snapshot,
     guidanceState.dismissedMilestones ?? []
@@ -209,7 +213,7 @@ export default async function DashboardPage() {
               <div className="muted">Guides and articles for every feature</div>
             </Link>
             <a
-              href="/"
+              href={storefrontUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="order-card"
