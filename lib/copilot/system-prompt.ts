@@ -21,7 +21,7 @@ Korent is an inflatable rental management platform with:
 - Delivery route planning with interactive map, timeline, and crew dispatch
 - Service area management with ZIP codes, delivery fees, minimums, and interactive coverage map
 - Public storefront with booking, checkout, and weather forecasts
-- Website settings (hero message, featured inventory, brand customization, AI content builder)
+- Website settings (hero message, featured inventory, brand customization, navigation link customization, AI content builder)
 - Dynamic pricing engine (weekend surcharges, early bird discounts, seasonal rates)
 - SMS notifications (order confirmations, delivery updates, weather alerts via Twilio)
 - Customer self-service portal (order tracking, document signing, invoice download, messaging)
