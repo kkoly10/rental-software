@@ -49,10 +49,11 @@ export function BrandSettingsForm({
       : "inherit";
 
   return (
-    <form action={formAction} className="list" style={{ marginTop: 12 }}>
-      {/* Logo Section */}
+    <div className="list" style={{ marginTop: 12 }}>
+      {/* Logo Section — rendered outside the form to avoid invalid nested <form> tags */}
       <LogoUpload currentUrl={defaults.logoUrl} />
 
+      <form action={formAction}>
       {/* Brand Colors Section */}
       <div className="brand-form-section">
         <strong>Brand Colors</strong>
@@ -183,6 +184,7 @@ export function BrandSettingsForm({
           {pending ? "Saving..." : "Save Brand Settings"}
         </button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
