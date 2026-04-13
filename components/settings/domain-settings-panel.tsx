@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useActionState } from "react";
+import { useState, useCallback, useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { setCustomDomain, removeCustomDomain } from "@/lib/settings/domain-actions";
 import type { DomainSettings } from "@/lib/data/domain-settings";
 
-const initialState = { ok: false, message: "" };
+const initialState = { ok: false, message: "", savedDomain: undefined as string | undefined };
 
 function getAppDomain() {
   return process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
@@ -12,6 +13,7 @@ function getAppDomain() {
 
 export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) {
   const appDomain = getAppDomain();
+  const router = useRouter();
 
   // Slug editing
   const [slug, setSlug] = useState(defaults.slug);
@@ -29,6 +31,17 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState("");
   const [removing, setRemoving] = useState(false);
+
+  // When setCustomDomain succeeds, transition the UI from "add form" to
+  // the saved domain display without requiring a full page reload.
+  useEffect(() => {
+    if (domainState.ok && domainState.savedDomain) {
+      setCustomDomainLocal(domainState.savedDomain);
+      setDomainVerified(false);
+      setShowDomainForm(false);
+      router.refresh();
+    }
+  }, [domainState]);
 
   const checkSlugAvailability = useCallback(
     async (value: string) => {
@@ -70,6 +83,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
         setSlug(data.slug);
         setSlugEditing(false);
         setSlugMessage("Slug updated. The new URL may take a few minutes to resolve everywhere.");
+        router.refresh();
       } else {
         setSlugMessage(data.error ?? "Failed to update slug.");
       }
@@ -89,6 +103,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
       if (data.verified) {
         setDomainVerified(true);
         setVerifyMessage("Domain verified successfully!");
+        router.refresh();
       } else {
         setVerifyMessage(data.message ?? "Verification failed.");
       }
@@ -109,6 +124,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
         setDomainVerified(false);
         setShowDomainForm(false);
         setVerifyMessage("");
+        router.refresh();
       }
     } catch {
       // ignore

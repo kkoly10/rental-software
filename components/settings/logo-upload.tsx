@@ -1,15 +1,24 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { uploadLogoImage, removeLogoImage } from "@/lib/settings/brand-upload-actions";
+import type { SettingsActionState } from "@/lib/settings/actions";
 
-const initialState = { ok: false, message: "" };
+const initialState: SettingsActionState = { ok: false, message: "" };
 
 export function LogoUpload({ currentUrl }: { currentUrl: string }) {
   const [url, setUrl] = useState(currentUrl);
   const [uploadState, uploadAction, uploading] = useActionState(uploadLogoImage, initialState);
   const [removeState, removeAction, removing] = useActionState(removeLogoImage, initialState);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Update preview and clear file input when upload succeeds.
+  useEffect(() => {
+    if (uploadState.ok && uploadState.url) {
+      setUrl(uploadState.url);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [uploadState]);
 
   const state = uploadState.message ? uploadState : removeState;
 

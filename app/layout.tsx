@@ -6,6 +6,7 @@ import { BrandStyleInjector } from "@/components/layout/brand-style-injector";
 import { RegisterSW } from "@/components/pwa/register-sw";
 import { DemoModeBanner } from "@/components/layout/demo-mode-banner";
 import { ProductionEnvGuard } from "@/components/layout/production-env-guard";
+import { isTenantHost } from "@/lib/auth/org-context";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -63,12 +64,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const brand = await getBrandSettings();
+  // Only inject tenant brand styles on tenant subdomains/custom domains.
+  // The SaaS marketing page (root domain) must never be affected by
+  // individual tenant brand overrides.
+  const tenantHost = await isTenantHost();
+  const brand = tenantHost ? await getBrandSettings() : null;
 
   return (
     <html lang="en">
       <body>
-        <BrandStyleInjector brand={brand} />
+        {brand && <BrandStyleInjector brand={brand} />}
         <RegisterSW />
         <ProductionEnvGuard>
           <DemoModeBanner />

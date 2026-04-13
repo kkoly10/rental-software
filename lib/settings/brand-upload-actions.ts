@@ -120,7 +120,8 @@ export async function uploadLogoImage(
   const result = await uploadBrandAsset(file, "logo", LOGO_MAX_SIZE, LOGO_TYPES);
   if (!result.ok) return { ok: false, message: result.message };
 
-  return saveSetting("brand_logo_url", result.url);
+  const saved = await saveSetting("brand_logo_url", result.url);
+  return { ...saved, url: result.url };
 }
 
 export async function removeLogoImage(
@@ -150,7 +151,8 @@ export async function uploadHeroImage(
   const result = await uploadBrandAsset(file, "hero", HERO_MAX_SIZE, HERO_TYPES);
   if (!result.ok) return { ok: false, message: result.message };
 
-  return saveSetting("hero_image_url", result.url);
+  const saved = await saveSetting("hero_image_url", result.url);
+  return { ...saved, url: result.url };
 }
 
 export async function removeHeroImage(
