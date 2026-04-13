@@ -4,12 +4,29 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 
+interface NavLink {
+  key: string;
+  label: string;
+  href: string;
+}
+
 interface MobileMenuToggleProps {
   isOperator: boolean;
   siteUrl?: string;
+  navLinks?: NavLink[];
 }
 
-export function MobileMenuToggle({ isOperator, siteUrl = "" }: MobileMenuToggleProps) {
+const defaultLinks: NavLink[] = [
+  { key: "catalog", label: "Catalog", href: "/inventory" },
+  { key: "how_it_works", label: "How It Works", href: "/#how-it-works" },
+  { key: "service_area", label: "Service Area", href: "/#service-area" },
+  { key: "pricing", label: "Pricing", href: "/pricing" },
+  { key: "order_status", label: "Order Status", href: "/order-status" },
+  { key: "contact", label: "Contact", href: "/contact" },
+];
+
+export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks }: MobileMenuToggleProps) {
+  const links = navLinks ?? defaultLinks;
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -122,12 +139,9 @@ export function MobileMenuToggle({ isOperator, siteUrl = "" }: MobileMenuToggleP
             </div>
 
             <nav className="mobile-menu-nav">
-              <Link href="/inventory" onClick={close}>Catalog</Link>
-              <Link href="/#how-it-works" onClick={close}>How It Works</Link>
-              <Link href="/#service-area" onClick={close}>Service Area</Link>
-              <Link href="/pricing" onClick={close}>Pricing</Link>
-              <Link href="/order-status" onClick={close}>Order Status</Link>
-              <Link href="/contact" onClick={close}>Contact</Link>
+              {links.map((link) => (
+                <Link key={link.key} href={link.href} onClick={close}>{link.label}</Link>
+              ))}
             </nav>
 
             <div className="mobile-menu-footer">

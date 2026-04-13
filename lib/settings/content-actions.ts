@@ -33,6 +33,15 @@ const trustBadgeSchema = z
   )
   .max(4, "Maximum 4 trust badges allowed");
 
+const navLinkSchema = z.array(
+  z.object({
+    key: z.string().min(1),
+    label: z.string().min(1, "Label is required").max(30, "Label must be 30 characters or fewer"),
+    href: z.string().min(1),
+    visible: z.boolean(),
+  })
+);
+
 const sectionVisibilitySchema = z.record(z.string(), z.boolean());
 
 /* ── Helpers ── */
@@ -188,4 +197,29 @@ export async function updateSectionVisibility(
   }
 
   return readMergeWrite("section_visibility", result.data);
+}
+
+export async function updateNavLinks(
+  _prevState: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  const raw = String(formData.get("nav_links_json") ?? "[]");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { ok: false, message: "Invalid navigation data." };
+  }
+
+  const result = navLinkSchema.safeParse(parsed);
+  if (!result.success) {
+    return { ok: false, message: result.error.issues[0]?.message ?? "Invalid navigation data." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: Navigation would be updated." };
+  }
+
+  return readMergeWrite("nav_links", result.data);
 }
