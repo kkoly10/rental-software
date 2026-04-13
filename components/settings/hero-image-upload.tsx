@@ -2,8 +2,9 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { uploadHeroImage, removeHeroImage } from "@/lib/settings/brand-upload-actions";
+import type { SettingsActionState } from "@/lib/settings/actions";
 
-const initialState = { ok: false, message: "" };
+const initialState: SettingsActionState = { ok: false, message: "" };
 
 export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
   const [url, setUrl] = useState(currentUrl);
