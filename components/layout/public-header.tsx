@@ -2,14 +2,17 @@ import Link from "next/link";
 import { getBrandSettings } from "@/lib/data/brand";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getContentSettings } from "@/lib/data/content-settings";
 import { MobileMenuToggle } from "./mobile-menu-toggle";
 
 export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
-  const [brand, settings, orgCtx] = await Promise.all([
+  const [brand, settings, orgCtx, contentSettings] = await Promise.all([
     getBrandSettings(),
     getOrganizationSettings(),
     getOrgContext(),
+    getContentSettings(),
   ]);
+  const visibleNavLinks = contentSettings.navLinks.filter((l) => l.visible);
   const resolvedLogoUrl = logoUrl ?? brand.logoUrl;
   const isOperator = !!orgCtx;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
@@ -42,12 +45,9 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
           </Link>
 
           <nav className="nav-links public-nav-links public-nav-desktop">
-            <Link href="/inventory">Catalog</Link>
-            <Link href="/#how-it-works">How It Works</Link>
-            <Link href="/#service-area">Service Area</Link>
-            <Link href="/pricing">Pricing</Link>
-            <Link href="/order-status">Order Status</Link>
-            <Link href="/contact">Contact</Link>
+            {visibleNavLinks.map((link) => (
+              <Link key={link.key} href={link.href}>{link.label}</Link>
+            ))}
           </nav>
 
           <div className="public-nav-right">
@@ -68,7 +68,7 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
             </Link>
           </div>
 
-          <MobileMenuToggle isOperator={isOperator} siteUrl={siteUrl} />
+          <MobileMenuToggle isOperator={isOperator} siteUrl={siteUrl} navLinks={visibleNavLinks} />
         </div>
       </header>
     </>

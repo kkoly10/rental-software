@@ -345,12 +345,13 @@ The Deliveries page shows your delivery board with routes organized by status, a
 - Customer self-service portal for order tracking and document signing
 
 **New features:**
+- **Navigation links** — Choose which nav links appear on your storefront and rename them (see "Customizing navigation links")
 - **Brand customization** — Upload your logo, set custom colors and fonts (see "Customizing your brand")
 - **AI content writing** — Let the Copilot write your hero headline, FAQs, and more (see "Using AI to write storefront content")
 - **Interactive map** — Your delivery coverage areas shown on a real map (see "Interactive service area map")
 
 **Tip:** Preview your storefront by clicking "Public Site" in the sidebar. This shows exactly what customers see.`,
-    related: ["managing-service-areas", "adding-products", "brand-customization", "ai-storefront-builder", "service-area-map"],
+    related: ["managing-service-areas", "adding-products", "nav-links", "brand-customization", "ai-storefront-builder", "service-area-map"],
   },
   {
     slug: "managing-service-areas",
@@ -459,6 +460,34 @@ The Deliveries page shows your delivery board with routes organized by status, a
 
 **Tip:** Add more service areas with specific ZIP codes for more precise map coverage. Areas with city/state-only entries are geocoded less precisely.`,
     related: ["managing-service-areas", "customizing-storefront"],
+  },
+
+  {
+    slug: "nav-links",
+    title: "Customizing navigation links",
+    section: "Website",
+    summary: "How to show, hide, and rename the links in your storefront navigation bar.",
+    body: `Your storefront navigation bar shows links like Catalog, How It Works, Service Area, Pricing, Order Status, and Contact. You can control which links appear and change their labels.
+
+**To customize navigation links:**
+
+1. Go to **Website** in the sidebar
+2. Scroll to the **Navigation Links** panel (under Layout)
+3. For each link you can:
+   - **Toggle visibility** — Turn the switch off to hide the link from both desktop and mobile navigation
+   - **Rename the label** — Click the label field and type a new name (max 30 characters). For example, rename "Catalog" to "Our Rentals" or "Contact" to "Get a Quote"
+4. Click **Save Navigation**
+
+**How it works:**
+- Changes apply to both the desktop nav bar and the mobile hamburger menu
+- The link destinations (URLs) stay the same — only visibility and labels change
+- If you haven't customised anything, all six default links are shown
+
+**Tips:**
+- Hide "How It Works" or "Service Area" if you've also hidden those homepage sections in Section Visibility — otherwise the nav link scrolls to nothing
+- Keep labels short so they fit well on mobile screens
+- The "Catalog" and "Contact" links are the most commonly kept by operators`,
+    related: ["customizing-storefront", "brand-customization"],
   },
 
   // Pricing

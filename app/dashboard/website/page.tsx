@@ -8,6 +8,7 @@ import { AboutEditor } from "@/components/settings/about-editor";
 import { TestimonialsManager } from "@/components/settings/testimonials-manager";
 import { TrustBadgesEditor } from "@/components/settings/trust-badges-editor";
 import { SectionVisibilityForm } from "@/components/settings/section-visibility-form";
+import { NavLinksEditor } from "@/components/settings/nav-links-editor";
 import { DomainSettingsPanel } from "@/components/settings/domain-settings-panel";
 import { getWebsiteAdminData } from "@/lib/data/website-admin";
 import { getOrgSettings } from "@/lib/data/settings";
@@ -259,6 +260,17 @@ export default async function WebsitePage() {
       </div>
 
       <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Layout</div>
+              <h2 style={{ margin: "6px 0 0" }}>Navigation Links</h2>
+            </div>
+          </div>
+
+          <NavLinksEditor defaults={contentSettings.navLinks} />
+        </section>
+
         <section className="panel">
           <div className="section-header">
             <div>
