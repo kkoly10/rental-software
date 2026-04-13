@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache";
 export type SettingsActionState = {
   ok: boolean;
   message: string;
+  /** Returned by upload actions so the client can update its preview immediately. */
+  url?: string;
 };
 
 export async function updateBusinessProfile(
@@ -98,6 +100,7 @@ export async function updateWebsiteSettings(
   }
 
   revalidatePath("/dashboard/website");
+  revalidatePath("/");
   return { ok: true, message: "Website settings updated." };
 }
 

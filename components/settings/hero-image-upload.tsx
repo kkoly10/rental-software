@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { uploadHeroImage, removeHeroImage } from "@/lib/settings/brand-upload-actions";
 
 const initialState = { ok: false, message: "" };
@@ -11,10 +11,14 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
   const [removeState, removeAction, removing] = useActionState(removeHeroImage, initialState);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Sync after successful actions
-  if (uploadState.ok && uploadState.message === "Saved successfully." && url === currentUrl && !uploading) {
-    // Force a page reload to pick up the new URL from server
-  }
+  // Update preview and clear file input when upload succeeds.
+  // The action returns the new URL so we don't need a round-trip router.refresh().
+  useEffect(() => {
+    if (uploadState.ok && uploadState.url) {
+      setUrl(uploadState.url);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [uploadState]);
 
   const state = uploadState.message ? uploadState : removeState;
 

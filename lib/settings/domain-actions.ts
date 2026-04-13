@@ -6,7 +6,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { customDomainSchema } from "@/lib/validation/domains";
 import { revalidatePath } from "next/cache";
 
-type ActionResult = { ok: boolean; message: string };
+type ActionResult = { ok: boolean; message: string; savedDomain?: string };
 
 export async function setCustomDomain(
   _prev: ActionResult,
@@ -54,7 +54,7 @@ export async function setCustomDomain(
   revalidatePath("/dashboard/website");
   revalidatePath("/dashboard");
 
-  return { ok: true, message: "Custom domain saved. Follow the DNS instructions to verify it." };
+  return { ok: true, message: "Custom domain saved. Follow the DNS instructions to verify it.", savedDomain: parsed.data.domain };
 }
 
 export async function removeCustomDomain(): Promise<ActionResult> {
