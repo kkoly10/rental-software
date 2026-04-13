@@ -109,13 +109,20 @@ export async function completeOnboarding(
     };
   }
 
-  // Update the slug to the user's chosen one (the RPC may have generated a different one)
+  // Update the slug to the user's chosen one (the RPC generates a temporary one)
   const orgId = typeof data === "string" ? data : (data as any)?.organization_id ?? data;
   if (orgId) {
-    await supabase
+    const { error: slugError } = await supabase
       .from("organizations")
       .update({ slug: slugInput })
       .eq("id", orgId);
+
+    if (slugError) {
+      return {
+        ok: false,
+        message: "Organization created but failed to set your chosen URL slug. Please try updating it from Settings > Domain.",
+      };
+    }
 
     // Record onboarding completion timestamp in org settings
     const { data: org } = await supabase
