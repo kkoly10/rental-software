@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { customDomainSchema } from "@/lib/validation/domains";
+import { revalidatePath } from "next/cache";
 
 type ActionResult = { ok: boolean; message: string };
 
@@ -50,6 +51,9 @@ export async function setCustomDomain(
 
   if (error) return { ok: false, message: error.message };
 
+  revalidatePath("/dashboard/website");
+  revalidatePath("/dashboard");
+
   return { ok: true, message: "Custom domain saved. Follow the DNS instructions to verify it." };
 }
 
@@ -71,6 +75,9 @@ export async function removeCustomDomain(): Promise<ActionResult> {
     .eq("id", ctx.organizationId);
 
   if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/dashboard/website");
+  revalidatePath("/dashboard");
 
   return { ok: true, message: "Custom domain removed." };
 }

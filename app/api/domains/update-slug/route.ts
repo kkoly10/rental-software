@@ -6,6 +6,7 @@ import { updateSlugSchema } from "@/lib/validation/domains";
 import { isSlugAvailable } from "@/lib/auth/resolve-org";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestClientKey } from "@/lib/security/request-client";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest) {
   if (!hasSupabaseEnv()) {
@@ -81,6 +82,9 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  revalidatePath("/dashboard/website");
+  revalidatePath("/dashboard");
 
   return NextResponse.json({ ok: true, slug });
 }
