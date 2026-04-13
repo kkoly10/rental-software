@@ -41,6 +41,7 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
     { label: "Generate a safety FAQ", prompt: "Generate a FAQ about bounce house safety" },
     { label: "Improve my service area description", prompt: "Improve my service area description" },
     { label: "Create an about section", prompt: "Create an about section for my business" },
+    { label: "Customize my nav links", prompt: "How do I customize the navigation links on my storefront?" },
     { label: "How do I customize my site?", prompt: "How do I customize my public storefront?" },
     { label: "What do customers see?", prompt: "What does my public storefront look like to customers?" },
   ],

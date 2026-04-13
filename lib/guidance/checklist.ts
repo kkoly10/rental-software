@@ -83,11 +83,19 @@ export const checklistItems: ChecklistItem[] = [
     isComplete: () => false, // Manual — always shown until dismissed
   },
   {
+    id: "navigation-links",
+    title: "Customize your navigation links",
+    description: "Choose which links appear on your storefront and rename them to match your business.",
+    href: "/dashboard/website",
+    order: 10,
+    isComplete: () => false, // Manual — always shown until dismissed
+  },
+  {
     id: "pricing-rules",
     title: "Configure pricing rules",
     description: "Set up weekend surcharges, early bird discounts, or seasonal rates to maximize revenue.",
     href: "/dashboard/pricing",
-    order: 10,
+    order: 11,
     isComplete: () => false, // Manual — always shown until dismissed
   },
   {
@@ -95,7 +103,7 @@ export const checklistItems: ChecklistItem[] = [
     title: "Enable SMS notifications",
     description: "Keep customers in the loop with automated text messages for order confirmations and delivery updates.",
     href: "/dashboard/settings#sms-notifications",
-    order: 11,
+    order: 12,
     isComplete: () => false, // Manual — always shown until dismissed
   },
   {
@@ -103,7 +111,7 @@ export const checklistItems: ChecklistItem[] = [
     title: "Review your storefront",
     description: "Preview how your public booking site looks to customers, including the delivery map and weather alerts.",
     href: "/",
-    order: 12,
+    order: 13,
     isComplete: () => false, // Manual — always shown until dismissed
   },
   {
@@ -111,7 +119,7 @@ export const checklistItems: ChecklistItem[] = [
     title: "Share your booking link",
     description: "Send your storefront URL to a friend or customer for feedback.",
     href: "/dashboard/website",
-    order: 13,
+    order: 14,
     isComplete: () => false, // Manual — always shown until dismissed
   },
 ];

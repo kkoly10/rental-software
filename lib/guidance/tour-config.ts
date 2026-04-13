@@ -168,9 +168,9 @@ export const advancedFeaturesTour: MiniTour = {
       id: "nav-website",
       route: "/dashboard",
       targetSelector: '[data-tour="nav-website"]',
-      title: "Brand & AI Content Builder",
+      title: "Brand, Navigation & AI Content",
       description:
-        "Upload your logo, choose brand colors and fonts. Use the AI Copilot to write your hero headline, FAQs, and about section — apply changes with one click.",
+        "Upload your logo, choose brand colors and fonts, customize which navigation links appear on your storefront, and use the AI Copilot to write your hero headline, FAQs, and about section.",
       placement: "right",
       order: 3,
     },
