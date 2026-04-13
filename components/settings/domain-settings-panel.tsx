@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useActionState } from "react";
+import { useRouter } from "next/navigation";
 import { setCustomDomain, removeCustomDomain } from "@/lib/settings/domain-actions";
 import type { DomainSettings } from "@/lib/data/domain-settings";
 
@@ -12,6 +13,7 @@ function getAppDomain() {
 
 export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) {
   const appDomain = getAppDomain();
+  const router = useRouter();
 
   // Slug editing
   const [slug, setSlug] = useState(defaults.slug);
@@ -70,6 +72,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
         setSlug(data.slug);
         setSlugEditing(false);
         setSlugMessage("Slug updated. The new URL may take a few minutes to resolve everywhere.");
+        router.refresh();
       } else {
         setSlugMessage(data.error ?? "Failed to update slug.");
       }
@@ -89,6 +92,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
       if (data.verified) {
         setDomainVerified(true);
         setVerifyMessage("Domain verified successfully!");
+        router.refresh();
       } else {
         setVerifyMessage(data.message ?? "Verification failed.");
       }
@@ -109,6 +113,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
         setDomainVerified(false);
         setShowDomainForm(false);
         setVerifyMessage("");
+        router.refresh();
       }
     } catch {
       // ignore

@@ -9,7 +9,7 @@ function buildCsp() {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "script-src 'self' 'unsafe-inline' https://js.stripe.com https://unpkg.com",
-    "style-src 'self' 'unsafe-inline' https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
     "font-src 'self' data: https:",
     "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://cdn.pixabay.com https://images.pexels.com https://*.tile.openstreetmap.org",
     `connect-src 'self' ${process.env.NEXT_PUBLIC_SITE_URL ?? ""} https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com`,
@@ -25,6 +25,9 @@ function buildCsp() {
 }
 
 const nextConfig: NextConfig = {
+  serverActions: {
+    bodySizeLimit: "10mb",
+  },
   images: {
     remotePatterns: [
       {
