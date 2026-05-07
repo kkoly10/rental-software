@@ -49,13 +49,16 @@ export async function checkProductAvailability(options: {
       .or(`expires_at.is.null,expires_at.gt.${now}`),
   ]);
 
-  const assetCapacity = Math.max(assetCount ?? 0, 1);
+  const assetCapacity = assetCount ?? 0;
   const reservedCount = overlappingCount ?? 0;
 
-  if (reservedCount >= assetCapacity) {
+  // A product with no asset records has no physical inventory — treat as unavailable.
+  if (assetCapacity === 0 || reservedCount >= assetCapacity) {
     return {
       available: false,
-      reason: "This rental is already reserved for the selected date.",
+      reason: assetCapacity === 0
+        ? "This item is not currently available for booking."
+        : "This rental is already reserved for the selected date.",
       assetCapacity,
       reservedCount,
       startsAt: window.startsAt,

@@ -14,11 +14,12 @@ import {
  * so operators aren't confused by ghost orders.
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret to prevent unauthorized access
-  const authHeader = request.headers.get("authorization");
+  // Verify cron secret — fail closed: if CRON_SECRET is not configured the
+  // route must not be publicly callable.
   const cronSecret = process.env.CRON_SECRET;
+  const authHeader = request.headers.get("authorization");
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

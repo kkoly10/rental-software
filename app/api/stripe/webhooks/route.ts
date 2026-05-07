@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
                     .from("orders")
                     .select("order_status")
                     .eq("id", orderId)
+                    .eq("organization_id", orgId)
                     .maybeSingle();
 
                   if (order?.order_status === "awaiting_deposit") {
@@ -137,7 +138,8 @@ export async function POST(request: NextRequest) {
                 await admin
                   .from("orders")
                   .update(updates)
-                  .eq("id", orderId);
+                  .eq("id", orderId)
+                  .eq("organization_id", orgId);
               }
 
               // Convert temporary availability hold to permanent (remove expiration)
