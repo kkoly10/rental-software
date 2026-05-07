@@ -27,7 +27,7 @@ export async function GET() {
     .from("organizations")
     .select("slug, custom_domain, custom_domain_verified")
     .eq("id", ctx.organizationId)
-    .single();
+    .maybeSingle();
 
   if (error || !org) {
     return NextResponse.json({ url: null });

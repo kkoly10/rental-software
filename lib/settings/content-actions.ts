@@ -7,6 +7,19 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SettingsActionState } from "./actions";
 
+const MAX_JSON_BYTES = 50_000;
+
+function parseJsonField(raw: string, label: string): { ok: true; value: unknown } | { ok: false; message: string } {
+  if (raw.length > MAX_JSON_BYTES) {
+    return { ok: false, message: `${label} payload too large (max 50 KB).` };
+  }
+  try {
+    return { ok: true, value: JSON.parse(raw) };
+  } catch {
+    return { ok: false, message: `Invalid ${label} data.` };
+  }
+}
+
 /* ── Zod schemas ── */
 
 const faqSchema = z.array(
@@ -91,15 +104,10 @@ export async function updateFaqContent(
   formData: FormData
 ): Promise<SettingsActionState> {
   const raw = String(formData.get("faq_json") ?? "[]");
+  const decoded = parseJsonField(raw, "FAQ");
+  if (!decoded.ok) return { ok: false, message: decoded.message };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { ok: false, message: "Invalid FAQ data." };
-  }
-
-  const result = faqSchema.safeParse(parsed);
+  const result = faqSchema.safeParse(decoded.value);
   if (!result.success) {
     return { ok: false, message: result.error.issues[0]?.message ?? "Invalid FAQ data." };
   }
@@ -129,15 +137,10 @@ export async function updateTestimonials(
   formData: FormData
 ): Promise<SettingsActionState> {
   const raw = String(formData.get("testimonials_json") ?? "[]");
+  const decoded = parseJsonField(raw, "Testimonials");
+  if (!decoded.ok) return { ok: false, message: decoded.message };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { ok: false, message: "Invalid testimonials data." };
-  }
-
-  const result = testimonialSchema.safeParse(parsed);
+  const result = testimonialSchema.safeParse(decoded.value);
   if (!result.success) {
     return { ok: false, message: result.error.issues[0]?.message ?? "Invalid testimonials data." };
   }
@@ -154,15 +157,10 @@ export async function updateTrustBadges(
   formData: FormData
 ): Promise<SettingsActionState> {
   const raw = String(formData.get("trust_badges_json") ?? "[]");
+  const decoded = parseJsonField(raw, "Trust badges");
+  if (!decoded.ok) return { ok: false, message: decoded.message };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { ok: false, message: "Invalid trust badges data." };
-  }
-
-  const result = trustBadgeSchema.safeParse(parsed);
+  const result = trustBadgeSchema.safeParse(decoded.value);
   if (!result.success) {
     return { ok: false, message: result.error.issues[0]?.message ?? "Invalid trust badges data." };
   }
@@ -179,15 +177,10 @@ export async function updateSectionVisibility(
   formData: FormData
 ): Promise<SettingsActionState> {
   const raw = String(formData.get("visibility_json") ?? "{}");
+  const decoded = parseJsonField(raw, "Visibility");
+  if (!decoded.ok) return { ok: false, message: decoded.message };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { ok: false, message: "Invalid visibility data." };
-  }
-
-  const result = sectionVisibilitySchema.safeParse(parsed);
+  const result = sectionVisibilitySchema.safeParse(decoded.value);
   if (!result.success) {
     return { ok: false, message: result.error.issues[0]?.message ?? "Invalid visibility data." };
   }
@@ -204,15 +197,10 @@ export async function updateNavLinks(
   formData: FormData
 ): Promise<SettingsActionState> {
   const raw = String(formData.get("nav_links_json") ?? "[]");
+  const decoded = parseJsonField(raw, "Navigation");
+  if (!decoded.ok) return { ok: false, message: decoded.message };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { ok: false, message: "Invalid navigation data." };
-  }
-
-  const result = navLinkSchema.safeParse(parsed);
+  const result = navLinkSchema.safeParse(decoded.value);
   if (!result.success) {
     return { ok: false, message: result.error.issues[0]?.message ?? "Invalid navigation data." };
   }
