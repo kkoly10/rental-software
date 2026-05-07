@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useRef } from "react";
+import { useActionState, useState } from "react";
 import { signDocument, type SignDocumentState } from "@/lib/portal/sign-document";
 import { SignatureCanvasInput } from "./signature-canvas";
 
@@ -90,7 +90,6 @@ function SignForm({
     { ok: true, message: "" }
   );
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   if (state.ok && state.message && state.message.includes("successfully")) {
     return (
@@ -100,15 +99,8 @@ function SignForm({
     );
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    // Inject signature data into hidden input before submitting
-    const form = e.currentTarget;
-    const hidden = form.querySelector<HTMLInputElement>('input[name="signature_data_url"]');
-    if (hidden && signatureDataUrl) hidden.value = signatureDataUrl;
-  }
-
   return (
-    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="portal-sign-form">
+    <form action={formAction} className="portal-sign-form">
       <input type="hidden" name="document_id" value={documentId} />
       <input type="hidden" name="portal_token" value={portalToken} />
       <input type="hidden" name="signature_data_url" value={signatureDataUrl ?? ""} />

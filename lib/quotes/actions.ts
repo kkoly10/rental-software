@@ -62,15 +62,18 @@ export async function sendQuote(orderId: string): Promise<QuoteActionState> {
   revalidatePath(`/dashboard/orders/${orderId}`);
   revalidatePath("/dashboard/orders");
 
-  // Non-blocking email to customer
-  import("@/lib/email/triggers").then(({ triggerQuoteSentEmail }) =>
-    triggerQuoteSentEmail({
+  // Send quote email — awaited so it completes before the Lambda returns
+  try {
+    const { triggerQuoteSentEmail } = await import("@/lib/email/triggers");
+    await triggerQuoteSentEmail({
       organizationId: ctx.organizationId,
       orderId,
       customerId: order.customer_id,
       orderNumber: order.order_number,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    // Email failure is non-fatal — status is already updated
+  }
 
   return { ok: true, message: "Quote sent to customer." };
 }
