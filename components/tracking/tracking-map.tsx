@@ -24,7 +24,13 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   const markerRef = useRef<any>(null);
   const [position, setPosition] = useState<DriverPosition | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">("connecting");
+  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supabase = createSupabaseBrowserClient();
+
+  function resetStaleTimer() {
+    if (staleTimerRef.current) clearTimeout(staleTimerRef.current);
+    staleTimerRef.current = setTimeout(() => setConnectionState("offline"), 45_000);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +61,7 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
         .maybeSingle();
       if (data) setPosition({ lat: data.lat, lng: data.lng, accuracy_m: data.accuracy_m ?? undefined });
       setConnectionState("live");
+      resetStaleTimer();
     })();
   }, [routeId, isLive]);
 
@@ -65,18 +72,16 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
       .on("broadcast", { event: "location_update" }, (msg: { payload: DriverPosition }) => {
         setPosition(msg.payload);
         setConnectionState("live");
+        resetStaleTimer();
       })
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") setConnectionState("live");
+        if (status === "SUBSCRIBED") { setConnectionState("live"); resetStaleTimer(); }
         else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setConnectionState("offline");
       });
 
-    // Flag stale if no broadcast for 45s
-    const staleTimer = setInterval(() => setConnectionState("offline"), 45_000);
-
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(staleTimer);
+      if (staleTimerRef.current) clearTimeout(staleTimerRef.current);
     };
   }, [routeId, isLive]);
 
