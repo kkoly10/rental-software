@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
@@ -22,7 +23,7 @@ const fallbackSettings = {
   socialGoogleBusiness: "",
 };
 
-export async function getOrganizationSettings() {
+export const getOrganizationSettings = cache(async function getOrganizationSettings() {
   if (!hasSupabaseEnv()) {
     return fallbackSettings;
   }
@@ -103,4 +104,4 @@ export async function getOrganizationSettings() {
     socialTiktok: (orgSettings.social_tiktok as string) || "",
     socialGoogleBusiness: (orgSettings.social_google_business as string) || "",
   };
-}
+});

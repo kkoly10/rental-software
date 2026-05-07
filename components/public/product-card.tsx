@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getPlaceholderImage } from "@/lib/utils/placeholders";
 
@@ -36,11 +37,12 @@ export function ProductCard({
     <article
       className={`product-card${isUnavailable ? " product-card-unavailable" : ""}`}
     >
-      <div className="product-media">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+      <div className="product-media" style={{ position: "relative" }}>
+        <Image
           src={displayImage}
           alt={name}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="product-media-img"
         />
       </div>

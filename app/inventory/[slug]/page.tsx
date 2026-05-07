@@ -95,15 +95,11 @@ export default async function ProductDetailPage({
                   <div
                     key={`${image}-${index}`}
                     className="storefront-thumb"
-                    style={
-                      image
-                        ? {
-                            backgroundImage: `url(${image})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }
-                        : undefined
-                    }
+                    style={{
+                      backgroundImage: `url(${image || getPlaceholderImage(product.category)})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
                   />
                 ))}
               </div>
