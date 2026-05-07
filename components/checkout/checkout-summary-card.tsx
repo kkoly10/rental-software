@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 export type CheckoutPricing = {
+  basePrice: number;
+  adjustments: { ruleName: string; amount: number; percentage: number }[];
   subtotal: number;
   deliveryFee: number | null;
   total: number | null;
@@ -19,6 +21,7 @@ export function CheckoutSummaryCard({
   cancellationPolicy?: string;
 }) {
   const hasPricing = pricing && pricing.subtotal > 0;
+  const hasAdjustments = pricing && pricing.adjustments.length > 0;
 
   return (
     <aside className="panel storefront-summary-card">
@@ -31,8 +34,31 @@ export function CheckoutSummaryCard({
         <div className="list" style={{ marginTop: 16 }}>
           <div className="order-card">
             <div style={{ display: "grid", gap: 8 }}>
+              {hasAdjustments && (
+                <div className="order-row">
+                  <span className="muted">Base price</span>
+                  <span>${pricing.basePrice.toFixed(2)}</span>
+                </div>
+              )}
+              {hasAdjustments &&
+                pricing.adjustments.map((adj) => (
+                  <div className="order-row" key={adj.ruleName}>
+                    <span className="muted" style={{ fontSize: 13 }}>
+                      {adj.ruleName} ({adj.percentage > 0 ? "+" : ""}
+                      {adj.percentage}%)
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: adj.amount >= 0 ? "inherit" : "var(--success)",
+                      }}
+                    >
+                      {adj.amount >= 0 ? "+" : ""}${adj.amount.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
               <div className="order-row">
-                <span className="muted">Subtotal</span>
+                <span className="muted">{hasAdjustments ? "Adjusted subtotal" : "Subtotal"}</span>
                 <span>${pricing.subtotal.toFixed(2)}</span>
               </div>
               <div className="order-row">
