@@ -301,7 +301,8 @@ export async function getThreadMessages(
     await supabase
       .from("messages")
       .update({ read: true })
-      .in("id", unreadIds);
+      .in("id", unreadIds)
+      .eq("organization_id", ctx.organizationId);
   }
 
   return {

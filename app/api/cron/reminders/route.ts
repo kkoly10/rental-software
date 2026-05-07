@@ -210,23 +210,23 @@ async function sendDayBeforeReminders(
       });
       sent++;
 
-      // SMS reminder (non-blocking)
+      // SMS reminder — must be awaited; fire-and-forget is killed by Lambda
+      // before the import resolves. Failure is non-critical (email already sent).
       if (customer.phone) {
-        import("@/lib/sms/send-notification")
-          .then(({ sendSmsNotification }) =>
-            sendSmsNotification(
-              "deliveryScheduled",
-              customer.phone!,
-              {
-                orderNumber: order.order_number,
-                date: "tomorrow",
-                timeWindow: deliveryTime ?? "See your email for details",
-                businessName: branding.businessName,
-              },
-              order.organization_id
-            )
-          )
-          .catch(() => {});
+        try {
+          const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+          await sendSmsNotification(
+            "deliveryScheduled",
+            customer.phone!,
+            {
+              orderNumber: order.order_number,
+              date: "tomorrow",
+              timeWindow: deliveryTime ?? "See your email for details",
+              businessName: branding.businessName,
+            },
+            order.organization_id
+          );
+        } catch { /* non-critical — delivery email already sent */ }
       }
     } catch {
       errors++;
