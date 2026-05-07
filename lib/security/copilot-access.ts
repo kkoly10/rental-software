@@ -1,3 +1,4 @@
+import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type CopilotAccessContext = {
@@ -7,6 +8,7 @@ export type CopilotAccessContext = {
 };
 
 export async function getCopilotAccessContext(): Promise<CopilotAccessContext | null> {
+  if (!hasSupabaseEnv()) return null;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
