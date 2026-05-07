@@ -52,7 +52,7 @@ export default async function CheckoutPage({
   const productName = formatProductName(product);
 
   const [pricing, policies, settings] = await Promise.all([
-    getCheckoutPricing(product, zip),
+    getCheckoutPricing(product, zip, date),
     getBookingPolicies(),
     getOrganizationSettings(),
   ]);
