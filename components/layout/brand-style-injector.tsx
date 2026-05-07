@@ -4,6 +4,8 @@ import { BrandSettings } from "@/lib/data/brand";
 import { relativeLuminance } from "@/lib/utils/contrast";
 
 const GOOGLE_FONT_MAP: Record<string, string> = {
+  "Plus Jakarta Sans": "Plus+Jakarta+Sans:wght@400;500;600;700;800",
+  Sora: "Sora:wght@300;400;500;600;700;800",
   Inter: "Inter:wght@400;500;600;700",
   Poppins: "Poppins:wght@400;500;600;700",
   Montserrat: "Montserrat:wght@400;500;600;700",
@@ -23,8 +25,8 @@ function darkenHex(hex: string, factor: number): string {
 }
 
 export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
-  const hasCustomPrimary = brand.primaryColor && brand.primaryColor !== "#1e5dcf";
-  const hasCustomAccent = brand.accentColor && brand.accentColor !== "#20b486";
+  const hasCustomPrimary = brand.primaryColor && brand.primaryColor !== "#e8590c";
+  const hasCustomAccent = brand.accentColor && brand.accentColor !== "#7c3aed";
   const hasCustomFont = brand.fontFamily && brand.fontFamily !== "System Default";
 
   if (!hasCustomPrimary && !hasCustomAccent && !hasCustomFont) {
@@ -67,7 +69,7 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
 
   if (hasCustomFont) {
     cssVars.push(
-      `--brand-font: "${brand.fontFamily}", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;`
+      `--brand-font: "${brand.fontFamily}", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;`
     );
   }
 
