@@ -3,6 +3,7 @@ import { BusinessProfileForm } from "@/components/settings/business-profile-form
 import { BookingPoliciesForm } from "@/components/settings/booking-policies-form";
 import { SmsSettingsForm } from "@/components/settings/sms-settings-form";
 import { SmsLog } from "@/components/settings/sms-log";
+import { getSmsLog } from "@/lib/data/sms-log";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getOrgSettings } from "@/lib/data/settings";
 import { getSmsSettings } from "@/lib/data/sms-settings";
@@ -14,11 +15,12 @@ import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 
 export default async function SettingsPage() {
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
     getBookingPolicies(),
+    getSmsLog(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/settings"];
@@ -141,7 +143,7 @@ export default async function SettingsPage() {
             </div>
           </div>
 
-          <SmsLog />
+          <SmsLog entries={smsLog} />
         </aside>
       </div>
       <div style={{ marginTop: 48 }}>

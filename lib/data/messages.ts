@@ -151,7 +151,7 @@ export async function getConversations(): Promise<ConversationSummary[]> {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (error || !messages || messages.length === 0) return demoConversations;
+  if (error || !messages || messages.length === 0) return [];
 
   // Fetch customer names and order numbers
   const customerIds = [...new Set(messages.map((m) => m.customer_id).filter(Boolean))] as string[];
