@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const PUBLISH_INTERVAL_MS = 20_000;
@@ -14,7 +14,7 @@ export function LocationShareButton({ routeId }: { routeId: string }) {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const channelRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]> | null>(null);
   const lastPublishRef = useRef<number>(0);
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   async function startSharing() {
     if (!("geolocation" in navigator)) {

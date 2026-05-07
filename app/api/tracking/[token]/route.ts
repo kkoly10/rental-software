@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
+import { hasSupabaseEnv } from "@/lib/env";
 import { hashTrackingToken } from "@/lib/tracking/access-token";
 
 export async function GET(
@@ -12,8 +13,14 @@ export async function GET(
     return NextResponse.json({ error: "Invalid token." }, { status: 400 });
   }
 
+  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+    return NextResponse.json({ error: "Not available in demo mode." }, { status: 503 });
+  }
+
   const tokenHash = hashTrackingToken(token);
-  const supabase = await createSupabaseServerClient();
+  // Use admin client — this is a public unauthenticated route; authorization
+  // is provided by the hashed token lookup, not a user session.
+  const supabase = createSupabaseAdminClient();
 
   const { data: stop } = await supabase
     .from("route_stops")

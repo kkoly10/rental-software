@@ -54,9 +54,8 @@ export async function sendSmsNotification(
   }
 
   // Build message from template
-  const templateFn = smsTemplates[type] as (...args: string[]) => string;
-  const args = Object.values(params);
-  let body = templateFn(...args);
+  const templateFn = smsTemplates[type] as (p: Record<string, string | undefined>) => string;
+  let body = templateFn(params);
 
   // Append signature if set
   if (settings.signature) {

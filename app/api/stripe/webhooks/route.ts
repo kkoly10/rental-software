@@ -68,21 +68,21 @@ export async function POST(request: NextRequest) {
           const orgId = session.metadata?.organization_id;
 
           if (orderId && orgId) {
-            // Avoid duplicate payment records (idempotency via payment_intent)
+            // Resolve payment intent ID; fall back to session ID so dedup and
+            // the unique index on (order_id, provider_payment_id) always work
+            // even for Stripe sessions where payment_intent is null.
             const paymentIntentId =
               typeof session.payment_intent === "string"
                 ? session.payment_intent
                 : session.payment_intent?.id ?? null;
+            const dedupId = paymentIntentId ?? session.id;
 
-            let alreadyRecorded = false;
-            if (paymentIntentId) {
-              const { count } = await admin
-                .from("payments")
-                .select("id", { count: "exact", head: true })
-                .eq("order_id", orderId)
-                .eq("provider_payment_id", paymentIntentId);
-              alreadyRecorded = (count ?? 0) > 0;
-            }
+            const { count } = await admin
+              .from("payments")
+              .select("id", { count: "exact", head: true })
+              .eq("order_id", orderId)
+              .eq("provider_payment_id", dedupId);
+            const alreadyRecorded = (count ?? 0) > 0;
 
             if (!alreadyRecorded) {
               const amountPaid = (session.amount_total ?? 0) / 100;
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
               const { error: insertErr } = await admin.from("payments").insert({
                 order_id: orderId,
                 provider: "stripe",
-                provider_payment_id: paymentIntentId,
+                provider_payment_id: dedupId,
                 payment_type: paymentType,
                 payment_status: "paid",
                 amount: amountPaid,

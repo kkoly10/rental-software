@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadLeaflet } from "@/lib/maps/load-leaflet";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -25,7 +25,7 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   const [position, setPosition] = useState<DriverPosition | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">("connecting");
   const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   function resetStaleTimer() {
     if (staleTimerRef.current) clearTimeout(staleTimerRef.current);
