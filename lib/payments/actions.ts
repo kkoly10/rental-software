@@ -209,7 +209,7 @@ export async function recordPayment(
         amount: amount.toFixed(2),
         orderNumber: fullOrder.order_number,
         businessName: org?.name ?? "Your rental company",
-      });
+      }, ctx.organizationId, { orderId: orderId as string, customerId: fullOrder.customer_id });
     }
   }).catch(() => {});
 

@@ -8,11 +8,17 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { DeliveryStats } from "@/components/deliveries/delivery-stats";
 import { RouteMapWrapper } from "./route-map-wrapper";
+import { CreateRouteForm } from "@/components/deliveries/create-route-form";
+import { getTeamMembersForRoute } from "@/lib/data/unrouted-orders";
 
 export default async function DeliveriesPage() {
-  const board = await getDeliveryBoardData();
+  const [board, teamMembers] = await Promise.all([
+    getDeliveryBoardData(),
+    getTeamMembersForRoute(),
+  ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
+  const todayDate = new Date().toISOString().slice(0, 10);
   const primaryRouteId = board.primaryRoute?.id ?? "route_1";
   const enhancedRoute = await getRouteDetailEnhanced(primaryRouteId);
 
@@ -24,6 +30,13 @@ export default async function DeliveriesPage() {
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
       )}
+
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="kicker">Dispatch</div>
+        <h2 className="page-title-sm" style={{ marginTop: 6 }}>Create a route</h2>
+        <CreateRouteForm teamMembers={teamMembers} defaultDate={todayDate} />
+      </section>
+
       <div className="delivery-board">
         <section className="panel">
           <div className="section-header">

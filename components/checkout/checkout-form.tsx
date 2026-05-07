@@ -143,6 +143,20 @@ export function CheckoutForm({
         </label>
       </div>
 
+      <label
+        style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "10px 0 2px" }}
+      >
+        <input
+          name="sms_opt_in"
+          type="checkbox"
+          value="true"
+          style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
+        />
+        <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
+          Text me order updates (confirmation, delivery reminders, status). Msg &amp; data rates may apply. Reply STOP to opt out.
+        </span>
+      </label>
+
       <label className="order-card">
         <strong>Email</strong>
         <input

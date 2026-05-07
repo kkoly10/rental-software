@@ -498,25 +498,41 @@ export async function updateOrderStatus(
     const businessName = org?.name ?? "Your rental company";
     const status = parsed.data.newStatus;
 
-    if (status === "scheduled") {
+    const smsContext = {
+      orderId: parsed.data.orderId,
+      customerId: order.customer_id,
+    };
+
+    if (status === "awaiting_deposit") {
+      await sendSmsNotification("depositReminder", customer.phone, {
+        orderNumber: order.order_number,
+        amount: "your deposit",
+        businessName,
+      }, ctx.organizationId, smsContext);
+    } else if (status === "confirmed") {
+      await sendSmsNotification("orderConfirmation", customer.phone, {
+        orderNumber: order.order_number,
+        businessName,
+      }, ctx.organizationId, smsContext);
+    } else if (status === "scheduled") {
       const eventDate = order.event_date ?? "your event date";
       await sendSmsNotification("deliveryScheduled", customer.phone, {
         orderNumber: order.order_number,
         date: eventDate,
         timeWindow: "See email for details",
         businessName,
-      });
+      }, ctx.organizationId, smsContext);
     } else if (status === "out_for_delivery") {
       await sendSmsNotification("deliveryEnRoute", customer.phone, {
         orderNumber: order.order_number,
         eta: "shortly",
         businessName,
-      });
+      }, ctx.organizationId, smsContext);
     } else if (status === "delivered") {
       await sendSmsNotification("deliveryCompleted", customer.phone, {
         orderNumber: order.order_number,
         businessName,
-      });
+      }, ctx.organizationId, smsContext);
     }
   }).catch(() => {});
 

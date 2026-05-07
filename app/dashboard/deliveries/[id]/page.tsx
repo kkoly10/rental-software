@@ -4,6 +4,9 @@ import { getRouteDetailEnhanced } from "@/lib/data/route-detail";
 import { DeliveryStats } from "@/components/deliveries/delivery-stats";
 import { RouteDetailMapWrapper } from "./route-detail-map-wrapper";
 import { RouteDetailTimeline } from "./route-detail-timeline";
+import { RouteStatusControls, StopStatusButton, RemoveStopButton } from "@/components/deliveries/route-controls";
+import { AddStopForm } from "@/components/deliveries/add-stop-form";
+import { getUnroutedOrdersForDate } from "@/lib/data/unrouted-orders";
 
 export default async function DeliveryDetailPage({
   params,
@@ -12,6 +15,7 @@ export default async function DeliveryDetailPage({
 }) {
   const { id } = await params;
   const route = await getRouteDetailEnhanced(id);
+  const unroutedOrders = await getUnroutedOrdersForDate(route.routeDateRaw);
 
   return (
     <DashboardShell
@@ -53,9 +57,10 @@ export default async function DeliveryDetailPage({
 
             <div className="order-card">
               <strong>Status</strong>
-              <div className="muted">
+              <div className="muted" style={{ marginBottom: 10 }}>
                 {route.routeStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
               </div>
+              <RouteStatusControls routeId={id} currentStatus={route.routeStatus} />
             </div>
 
             <div className="order-card">
@@ -75,10 +80,62 @@ export default async function DeliveryDetailPage({
             </div>
           </div>
 
-          <RouteDetailTimeline stops={route.stops} />
+          <div className="list" style={{ marginTop: 12 }}>
+            {route.stops.length === 0 ? (
+              <div className="muted" style={{ fontSize: 13 }}>No stops yet. Add orders below.</div>
+            ) : (
+              route.stops.map((stop) => (
+                <div key={stop.id} className="order-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <div>
+                    <strong>#{stop.sequence} {stop.customerName ?? "Stop"}</strong>
+                    <div className="muted" style={{ fontSize: 13 }}>
+                      {stop.scheduledTime ?? "TBD"} · {stop.type === "pickup" ? "Pickup" : "Delivery"}
+                    </div>
+                    {stop.address && (
+                      <div className="muted" style={{ fontSize: 12 }}>{stop.address}</div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end", flexShrink: 0 }}>
+                    <StopStatusButton
+                      stopId={stop.id}
+                      routeId={id}
+                      orderId={stop.orderId}
+                      currentStatus={stop.status ?? "assigned"}
+                    />
+                    {stop.status !== "completed" && (
+                      <RemoveStopButton stopId={stop.id} routeId={id} />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
 
-          <div style={{ marginTop: 16 }}>
-            <Link href="/crew/today" className="secondary-btn">
+          <div className="panel" style={{ marginTop: 16, background: "var(--primary-bg)" }}>
+            <div className="kicker">Add stop</div>
+            <AddStopForm
+              routeId={id}
+              routeDate={route.routeDateRaw}
+              unroutedOrders={unroutedOrders}
+            />
+          </div>
+
+          {route.stops.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&travelmode=driving&waypoints=${route.stops.map((s) => encodeURIComponent(s.address ?? "")).filter(Boolean).join("|")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="secondary-btn"
+                style={{ display: "inline-block" }}
+              >
+                Open route in Google Maps
+              </a>
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <Link href="/crew/today" className="ghost-btn">
               Open crew mobile view
             </Link>
           </div>
