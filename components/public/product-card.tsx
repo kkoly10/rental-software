@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getPlaceholderImage } from "@/lib/utils/placeholders";
 
 export function ProductCard({
   name,
@@ -29,19 +30,19 @@ export function ProductCard({
           ? "warning"
           : "default";
 
+  const displayImage = imageUrl || getPlaceholderImage(category);
+
   return (
     <article
       className={`product-card${isUnavailable ? " product-card-unavailable" : ""}`}
     >
       <div className="product-media">
-        {imageUrl && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={imageUrl}
-            alt={name}
-            className="product-media-img"
-          />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={displayImage}
+          alt={name}
+          className="product-media-img"
+        />
       </div>
       <div className="product-copy">
         <div className="price-row card-header-wrap" style={{ marginTop: 0 }}>

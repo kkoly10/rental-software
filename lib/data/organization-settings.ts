@@ -15,6 +15,7 @@ const fallbackSettings = {
   websiteMessage: "Epic parties delivered with clean setup and on-time dropoff.",
   heroHeadline: "",
   heroImageUrl: "",
+  bookingMessage: "",
   socialFacebook: "",
   socialInstagram: "",
   socialTiktok: "",
@@ -84,7 +85,7 @@ export async function getOrganizationSettings() {
       fallbackSettings.phone,
     timezone: organization?.timezone ?? fallbackSettings.timezone,
     currency: organization?.default_currency ?? fallbackSettings.currency,
-    serviceAreaLabel: areaLabel,
+    serviceAreaLabel: (orgSettings.service_area_text as string) || areaLabel,
     depositPolicy: typeof orgSettings.deposit_percentage === "number"
       ? `${orgSettings.deposit_percentage}% deposit to reserve event date`
       : fallbackSettings.depositPolicy,
@@ -96,6 +97,7 @@ export async function getOrganizationSettings() {
       (orgSettings.hero_headline as string) || "",
     heroImageUrl:
       (orgSettings.hero_image_url as string) || "",
+    bookingMessage: (orgSettings.booking_message as string) || "",
     socialFacebook: (orgSettings.social_facebook as string) || "",
     socialInstagram: (orgSettings.social_instagram as string) || "",
     socialTiktok: (orgSettings.social_tiktok as string) || "",

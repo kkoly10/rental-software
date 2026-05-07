@@ -51,9 +51,10 @@ export default async function CheckoutPage({
   const { product, date, zip } = await searchParams;
   const productName = formatProductName(product);
 
-  const [pricing, policies] = await Promise.all([
+  const [pricing, policies, settings] = await Promise.all([
     getCheckoutPricing(product, zip),
     getBookingPolicies(),
+    getOrganizationSettings(),
   ]);
   const stripeEnabled = hasStripeEnv();
 
@@ -87,6 +88,15 @@ export default async function CheckoutPage({
                 We will confirm availability, setup timing, and agreement details
                 after submission.
               </div>
+
+              {settings.bookingMessage && (
+                <div className="order-card" style={{ marginTop: 16, background: "var(--primary-bg)", borderColor: "var(--border)" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 16 }}>ℹ️</span>
+                    <span className="muted" style={{ fontSize: 14 }}>{settings.bookingMessage}</span>
+                  </div>
+                </div>
+              )}
 
               <CheckoutForm
                 productSlug={product}

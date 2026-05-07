@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getPlaceholderImage } from "@/lib/utils/placeholders";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -83,15 +84,11 @@ export default async function ProductDetailPage({
             <section className="panel storefront-gallery">
               <div
                 className="storefront-gallery-main"
-                style={
-                  product.imageUrl
-                    ? {
-                        backgroundImage: `url(${product.imageUrl})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }
-                    : undefined
-                }
+                style={{
+                  backgroundImage: `url(${product.imageUrl || getPlaceholderImage(product.category)})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
               />
               <div className="storefront-thumb-grid">
                 {galleryImages.slice(0, 4).map((image, index) => (

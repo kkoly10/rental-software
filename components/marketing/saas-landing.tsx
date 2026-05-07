@@ -21,7 +21,8 @@ export function SaasLanding() {
           margin: "0 auto",
         }}
       >
-        <div style={{ fontWeight: 800, fontSize: "1.3rem" }}>Korent</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/wordmark.png" alt="Korent" style={{ height: 32, width: "auto", display: "block" }} />
         <nav className="saas-header-nav">
           <a href="#features" className="ghost-btn">
             Features
