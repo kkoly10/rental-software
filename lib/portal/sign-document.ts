@@ -117,7 +117,7 @@ export async function signDocument(
   const signerIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const signerUserAgent = hdrs.get("user-agent") ?? null;
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("documents")
     .update({
       document_status: "signed",
@@ -128,13 +128,19 @@ export async function signDocument(
       ...(signatureDataUrl ? { signature_data_url: signatureDataUrl } : {}),
     })
     .eq("id", documentId)
-    .eq("document_status", "pending");
+    .eq("document_status", "pending")
+    .select("id");
 
   if (error) {
     return {
       ok: false,
       message: "Failed to sign the document. Please try again.",
     };
+  }
+
+  // If no rows were updated, the document was already signed by a concurrent request
+  if (!updated || updated.length === 0) {
+    return { ok: false, message: "This document has already been signed." };
   }
 
   return { ok: true, message: "Document signed successfully." };

@@ -3,6 +3,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { generateDocumentPdf } from "@/lib/documents/generate-pdf";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
   _request: NextRequest,
@@ -17,6 +18,16 @@ export async function GET(
   const ctx = await getOrgContext();
   if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { allowed } = await enforceRateLimit({
+    scope: "api:documents:user",
+    actor: ctx.userId,
+    limit: 20,
+    windowSeconds: 900,
+  });
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests. Please wait before trying again." }, { status: 429 });
   }
 
   const supabase = await createSupabaseServerClient();

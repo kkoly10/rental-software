@@ -117,7 +117,7 @@ function SignForm({
 
       <div style={{ display: "grid", gap: 4 }}>
         <span style={{ fontSize: 13, fontWeight: 600 }}>Draw your signature</span>
-        <SignatureCanvasInput name="signature_canvas" onChange={setSignatureDataUrl} />
+        <SignatureCanvasInput onChange={setSignatureDataUrl} />
         {!signatureDataUrl && (
           <span style={{ fontSize: 11, color: "var(--text-soft)" }}>
             Optional — a typed name is legally sufficient, but a drawn signature is accepted too.

@@ -4,11 +4,10 @@ import { useRef, useEffect, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
 type Props = {
-  name: string;
   onChange: (dataUrl: string | null) => void;
 };
 
-export function SignatureCanvasInput({ name, onChange }: Props) {
+export function SignatureCanvasInput({ onChange }: Props) {
   const canvasRef = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
 
@@ -88,8 +87,6 @@ export function SignatureCanvasInput({ name, onChange }: Props) {
           Clear
         </button>
       </div>
-      {/* Hidden input carries the PNG data URL into the form submission */}
-      <input type="hidden" name={name} value={isEmpty ? "" : (canvasRef.current?.toDataURL("image/png") ?? "")} />
     </div>
   );
 }

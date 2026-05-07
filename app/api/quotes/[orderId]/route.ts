@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { generateQuotePdf } from "@/lib/quotes/generate-pdf";
 import { getSiteUrl } from "@/lib/site-url";
-import { issuePortalAccessToken } from "@/lib/portal/access-token";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
   _request: NextRequest,
@@ -19,6 +19,16 @@ export async function GET(
   const ctx = await getOrgContext();
   if (!ctx) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { allowed } = await enforceRateLimit({
+    scope: "api:quotes:user",
+    actor: ctx.userId,
+    limit: 10,
+    windowSeconds: 900,
+  });
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests. Please wait before trying again." }, { status: 429 });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -80,11 +90,11 @@ export async function GET(
       })
     : "TBD";
 
+  // Use the static lookup URL — never issue a new portal token here, as that
+  // would overwrite the hash stored during sendQuote() and break the link in
+  // the customer's email. Customers can always look up their order by number + email.
   const siteUrl = await getSiteUrl();
-  const portalToken = await issuePortalAccessToken({ supabase, orderId }).catch(() => null);
-  const portalUrl = portalToken
-    ? `${siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
-    : `${siteUrl}/order-status`;
+  const portalUrl = `${siteUrl}/order-status`;
 
   const pdfBytes = generateQuotePdf({
     businessName: org?.name ?? "Rental Co",

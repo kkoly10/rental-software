@@ -10,8 +10,18 @@ export function AcceptQuoteButton({ portalToken }: { portalToken: string }) {
 
   if (state.ok && state.message) {
     return (
-      <div className="badge success" style={{ padding: "10px 14px", fontSize: 13 }}>
-        {state.message}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="badge success" style={{ padding: "10px 14px", fontSize: 13 }}>
+          {state.message}
+        </div>
+        <button
+          type="button"
+          className="primary-btn"
+          onClick={() => window.location.reload()}
+          style={{ fontSize: 13 }}
+        >
+          Continue to payment →
+        </button>
       </div>
     );
   }
