@@ -126,6 +126,17 @@ export async function removeStopFromRoute(
   const routeId = String(formData.get("route_id") ?? "");
 
   const supabase = await createSupabaseServerClient();
+
+  // Verify the stop belongs to a route owned by this org before deleting
+  const { data: stop } = await supabase
+    .from("route_stops")
+    .select("id, routes!inner(organization_id)")
+    .eq("id", stopId)
+    .eq("routes.organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  if (!stop) return { ok: false, message: "Stop not found." };
+
   await supabase.from("route_stops").delete().eq("id", stopId);
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);

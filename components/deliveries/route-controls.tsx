@@ -61,8 +61,13 @@ export function StopStatusButton({
     return <span className="badge success">Done</span>;
   }
 
-  const nextStatus = currentStatus === "assigned" ? "en_route" : "completed";
-  const label = currentStatus === "assigned" ? "Mark En Route" : "Mark Delivered";
+  const nextStatus =
+    currentStatus === "assigned" ? "en_route"
+    : currentStatus === "en_route" || currentStatus === "in_progress" ? "completed"
+    : "completed";
+  const label =
+    currentStatus === "assigned" ? "Mark En Route"
+    : "Mark Delivered";
 
   return (
     <form action={action} style={{ display: "inline" }}>
