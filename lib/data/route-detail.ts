@@ -11,12 +11,14 @@ export type RouteStopData = {
   time: string;
   type: string;
   status: string;
+  proofPhotoUrl?: string;
+  signatureName?: string;
 };
 
 const fallbackStops: RouteStopData[] = [
-  { id: "stop_1", sequence: 1, label: "Johnson Birthday", time: "9:00 AM", type: "Delivery", status: "assigned" },
-  { id: "stop_2", sequence: 2, label: "Church Event", time: "11:00 AM", type: "Delivery", status: "assigned" },
-  { id: "stop_3", sequence: 3, label: "School Field Day", time: "4:00 PM", type: "Pickup", status: "assigned" },
+  { id: "stop_1", sequence: 1, label: "Johnson Birthday", time: "9:00 AM", type: "Delivery", status: "assigned", proofPhotoUrl: undefined, signatureName: undefined },
+  { id: "stop_2", sequence: 2, label: "Church Event", time: "11:00 AM", type: "Delivery", status: "assigned", proofPhotoUrl: undefined, signatureName: undefined },
+  { id: "stop_3", sequence: 3, label: "School Field Day", time: "4:00 PM", type: "Pickup", status: "assigned", proofPhotoUrl: undefined, signatureName: undefined },
 ];
 
 const fallbackRouteDetail: RouteDetail = {
@@ -111,7 +113,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
     .from("route_stops")
-    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, orders(order_number, customers(first_name, last_name))")
+    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, orders(order_number, customers(first_name, last_name))")
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true });
 
@@ -131,6 +133,8 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
         : "TBD",
       type: (stop.stop_type ?? "delivery").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: stop.stop_status ?? "assigned",
+      proofPhotoUrl: (stop as Record<string, unknown>).proof_photo_url as string | undefined,
+      signatureName: (stop as Record<string, unknown>).signature_name as string | undefined,
     };
   });
 }

@@ -20,9 +20,12 @@ export const smsTemplates = {
   deliveryEnRoute: (
     orderNumber: string,
     eta: string,
-    businessName: string
+    businessName: string,
+    trackingUrl?: string
   ) =>
-    `${businessName}: Our crew is on the way with order #${orderNumber}! ETA: ${eta}.`,
+    trackingUrl
+      ? `${businessName}: Our crew is on the way with order #${orderNumber}! ETA: ${eta}. Track live: ${trackingUrl}`
+      : `${businessName}: Our crew is on the way with order #${orderNumber}! ETA: ${eta}.`,
 
   deliveryCompleted: (orderNumber: string, businessName: string) =>
     `${businessName}: Order #${orderNumber} has been delivered and set up. Enjoy your event!`,
