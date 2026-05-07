@@ -188,6 +188,7 @@ const fallbackEnhancedDetail: RouteDetailEnhanced = {
   id: "route_1",
   name: "Crew A Morning Route",
   routeDate: "Mar 31, 2026",
+  routeDateRaw: "2026-03-31",
   routeStatus: "in_progress",
   crewLabel: "Driver + setup technician",
   vehicleLabel: "Truck 1 · Trailer attached",
@@ -227,7 +228,7 @@ export async function getRouteDetailEnhanced(
   const { data: stops } = await supabase
     .from("route_stops")
     .select(
-      "id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses(id, line1, city, state, postal_code, latitude, longitude))"
+      "id, order_id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses(id, line1, city, state, postal_code, latitude, longitude))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true });
@@ -290,6 +291,7 @@ export async function getRouteDetailEnhanced(
 
     return {
       id: stop.id,
+      orderId: (stop as Record<string, unknown>).order_id as string | undefined,
       sequence: stop.stop_sequence ?? index + 1,
       type: (stop.stop_type ?? "delivery") as "delivery" | "pickup",
       status: (stop.stop_status ?? "assigned") as RouteStopEnhanced["status"],
@@ -331,6 +333,7 @@ export async function getRouteDetailEnhanced(
           year: "numeric",
         })
       : "TBD",
+    routeDateRaw: route.route_date ?? new Date().toISOString().slice(0, 10),
     routeStatus: route.route_status ?? "planned",
     crewLabel: driver?.full_name ?? "Unassigned crew",
     vehicleLabel: route.assigned_vehicle ?? "No vehicle assigned",

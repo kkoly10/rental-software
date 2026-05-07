@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
+import { getPlaceholderImage } from "@/lib/utils/placeholders";
 
 export async function CategoryGrid() {
   const categories = await getCategoryGridItems();
@@ -27,29 +28,12 @@ export async function CategoryGrid() {
               className="category-photo-card"
             >
               <div className="category-photo-img">
-                {category.imageUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={category.imageUrl}
-                    alt={category.name}
-                    className="category-photo-img-el"
-                  />
-                ) : (
-                  <div
-                    className="category-photo-img-el"
-                    style={{
-                      background: "var(--surface-muted)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--text-soft)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {category.name}
-                  </div>
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={category.imageUrl || getPlaceholderImage(category.name)}
+                  alt={category.name}
+                  className="category-photo-img-el"
+                />
               </div>
               <div className="category-photo-body">
                 <h3>{category.name}</h3>

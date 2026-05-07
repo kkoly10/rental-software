@@ -33,6 +33,26 @@ export async function sendSmsNotification(
     return;
   }
 
+  // Check customer-level SMS opt-in (TCPA compliance)
+  if (context?.customerId && organizationId) {
+    try {
+      const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+      const supabase = await createSupabaseServerClient();
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("sms_opt_in")
+        .eq("id", context.customerId)
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+      if (customer && !customer.sms_opt_in) {
+        return;
+      }
+    } catch {
+      // If we can't confirm opt-in, don't send
+      return;
+    }
+  }
+
   // Build message from template
   const templateFn = smsTemplates[type] as (...args: string[]) => string;
   const args = Object.values(params);

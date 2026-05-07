@@ -116,6 +116,7 @@ export type RouteDetail = {
 
 export type RouteStopEnhanced = {
   id: string;
+  orderId?: string;
   sequence: number;
   type: "delivery" | "pickup";
   status: "assigned" | "en_route" | "in_progress" | "completed";
@@ -130,6 +131,7 @@ export type RouteDetailEnhanced = {
   id: string;
   name: string;
   routeDate: string;
+  routeDateRaw: string;
   routeStatus: string;
   crewLabel: string;
   vehicleLabel: string;

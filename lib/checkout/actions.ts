@@ -46,6 +46,8 @@ export async function createCheckoutOrder(
     };
   }
 
+  const smsOptIn = formData.get("sms_opt_in") === "true";
+
   const parsed = checkoutOrderSchema.safeParse({
     firstName: String(formData.get("first_name") ?? ""),
     lastName: String(formData.get("last_name") ?? ""),
@@ -321,6 +323,7 @@ export async function createCheckoutOrder(
         first_name: firstName,
         last_name: lastName,
         phone: phone ?? null,
+        ...(smsOptIn ? { sms_opt_in: true, sms_opt_in_at: new Date().toISOString() } : {}),
       })
       .eq("id", customerId)
       .eq("organization_id", orgId);
@@ -347,6 +350,8 @@ export async function createCheckoutOrder(
         last_name: lastName,
         email,
         phone: phone ?? null,
+        sms_opt_in: smsOptIn,
+        sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
       })
       .select("id")
       .single();
