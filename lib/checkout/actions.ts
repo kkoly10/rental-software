@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -47,6 +48,10 @@ export async function createCheckoutOrder(
   }
 
   const smsOptIn = formData.get("sms_opt_in") === "true";
+  const requestHeaders = await headers();
+  const clientIp = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? requestHeaders.get("x-real-ip")
+    ?? null;
 
   const parsed = checkoutOrderSchema.safeParse({
     firstName: String(formData.get("first_name") ?? ""),
@@ -323,7 +328,7 @@ export async function createCheckoutOrder(
         first_name: firstName,
         last_name: lastName,
         phone: phone ?? null,
-        ...(smsOptIn ? { sms_opt_in: true, sms_opt_in_at: new Date().toISOString() } : {}),
+        ...(smsOptIn ? { sms_opt_in: true, sms_opt_in_at: new Date().toISOString(), sms_opt_in_ip: clientIp } : {}),
       })
       .eq("id", customerId)
       .eq("organization_id", orgId);
@@ -352,6 +357,7 @@ export async function createCheckoutOrder(
         phone: phone ?? null,
         sms_opt_in: smsOptIn,
         sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
+        sms_opt_in_ip: smsOptIn ? clientIp : null,
       })
       .select("id")
       .single();

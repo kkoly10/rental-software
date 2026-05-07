@@ -91,7 +91,7 @@ export async function getCheckoutPricing(
   const policies = await getBookingPolicies();
   let deposit = Number((total * (policies.depositPercentage / 100)).toFixed(2));
   if (policies.depositMinimum !== null && deposit < policies.depositMinimum) {
-    deposit = policies.depositMinimum;
+    deposit = Math.min(policies.depositMinimum, total);
   }
 
   return { basePrice, adjustments, subtotal, deliveryFee, total, deposit };

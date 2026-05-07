@@ -79,5 +79,5 @@ export async function getTeamMembersForRoute(): Promise<{ id: string; name: stri
         name: profile?.full_name ?? "Team member",
       };
     })
-    .filter((m) => m.name !== "Team member" || true);
+    .filter((m) => !!m.name);
 }
