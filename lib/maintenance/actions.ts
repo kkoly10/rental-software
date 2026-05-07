@@ -103,12 +103,15 @@ export async function updateMaintenanceStatus(
 
   const supabase = await createSupabaseServerClient();
 
+  const updatePayload: Record<string, unknown> = { status: newStatus };
+  if (newStatus === "resolved") {
+    updatePayload.completed_at = new Date().toISOString();
+  }
+  // Don't clear completed_at on re-open — preserve the historical timestamp.
+
   const { error } = await supabase
     .from("maintenance_records")
-    .update({
-      status: newStatus,
-      completed_at: newStatus === "resolved" ? new Date().toISOString() : null,
-    })
+    .update(updatePayload)
     .eq("id", recordId)
     .eq("organization_id", ctx.organizationId);
 

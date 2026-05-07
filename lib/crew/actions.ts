@@ -162,7 +162,7 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Stop not found." };
   }
 
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_PRODUCT_IMAGES_BUCKET || "product-images";
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
   const ext = file.name.split(".").pop() ?? "jpg";
   const filePath = `proof-photos/${ctx.organizationId}/${stopId}-${Date.now()}.${ext}`;
 
@@ -215,7 +215,7 @@ export async function saveSignature(
 
   await supabase
     .from("route_stops")
-    .update({ signature_name: `${signerName} — ${new Date().toLocaleString()}` })
+    .update({ signature_name: `${signerName} — ${new Date().toISOString()}` })
     .eq("id", stopId);
 
   revalidatePath("/crew/today");
