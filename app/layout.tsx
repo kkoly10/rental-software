@@ -12,7 +12,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1e5dcf",
+  themeColor: "#e8590c",
 };
 
 export const metadata: Metadata = {
@@ -50,12 +50,14 @@ export const metadata: Metadata = {
     siteName: "Korent",
     type: "website",
     url: getSiteBaseUrl(),
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Korent" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Korent",
     description:
       "Inflatable-first rental software with storefront, operations dashboard, and crew workflows.",
+    images: ["/og-image.png"],
   },
 };
 
@@ -72,6 +74,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        />
+      </head>
       <body>
         {brand && <BrandStyleInjector brand={brand} />}
         <RegisterSW />
