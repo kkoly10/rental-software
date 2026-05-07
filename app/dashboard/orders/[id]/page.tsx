@@ -7,6 +7,7 @@ import { CreateDocumentsButton } from "@/components/documents/document-actions";
 import { WeatherAlert } from "@/components/weather/weather-alert";
 import { CommunicationList } from "@/components/communications/communication-list";
 import { getOrderCommunications } from "@/lib/data/communication-history";
+import { SendQuoteButton } from "@/components/orders/send-quote-button";
 
 function extractZip(address: string): string | undefined {
   const match = address.match(/\b(\d{5})\b/);
@@ -86,7 +87,31 @@ export default async function OrderDetailPage({
                 <strong>Documents</strong>
                 {!hasDocuments && <CreateDocumentsButton orderId={id} />}
               </div>
-              <div className="muted" style={{ marginTop: 4 }}>{order.documents.join(" · ")}</div>
+              {hasDocuments ? (
+                <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
+                  {order.documentObjects.map((doc) => (
+                    <div key={doc.id} className="order-row">
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        {doc.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                        {" — "}
+                        <span style={{ color: doc.status === "signed" ? "var(--success)" : undefined }}>
+                          {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                        </span>
+                      </span>
+                      <a
+                        href={`/api/documents/${doc.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: 12, color: "var(--primary)" }}
+                      >
+                        Download PDF
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="muted" style={{ marginTop: 4 }}>No documents</div>
+              )}
             </div>
 
             {order.notes && (
@@ -145,6 +170,20 @@ export default async function OrderDetailPage({
           </div>
 
           <div className="action-row">
+            {order.status === "Inquiry" && (
+              <SendQuoteButton orderId={id} />
+            )}
+            {(order.status === "Quote Sent" || order.status === "Inquiry") && (
+              <a
+                href={`/api/quotes/${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="secondary-btn"
+                style={{ fontSize: 13 }}
+              >
+                Download Quote PDF
+              </a>
+            )}
             <a
               href={`/api/invoices/${id}`}
               target="_blank"

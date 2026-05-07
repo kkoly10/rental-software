@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useRef } from "react";
 import { signDocument, type SignDocumentState } from "@/lib/portal/sign-document";
+import { SignatureCanvasInput } from "./signature-canvas";
 
 type DocumentEntry = {
   id: string;
@@ -88,6 +89,8 @@ function SignForm({
     signDocument,
     { ok: true, message: "" }
   );
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   if (state.ok && state.message && state.message.includes("successfully")) {
     return (
@@ -97,10 +100,18 @@ function SignForm({
     );
   }
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // Inject signature data into hidden input before submitting
+    const form = e.currentTarget;
+    const hidden = form.querySelector<HTMLInputElement>('input[name="signature_data_url"]');
+    if (hidden && signatureDataUrl) hidden.value = signatureDataUrl;
+  }
+
   return (
-    <form action={formAction} className="portal-sign-form">
+    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="portal-sign-form">
       <input type="hidden" name="document_id" value={documentId} />
       <input type="hidden" name="portal_token" value={portalToken} />
+      <input type="hidden" name="signature_data_url" value={signatureDataUrl ?? ""} />
 
       <label style={{ display: "grid", gap: 4 }}>
         <span style={{ fontSize: 13, fontWeight: 600 }}>Full name</span>
@@ -111,6 +122,16 @@ function SignForm({
           required
         />
       </label>
+
+      <div style={{ display: "grid", gap: 4 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>Draw your signature</span>
+        <SignatureCanvasInput name="signature_canvas" onChange={setSignatureDataUrl} />
+        {!signatureDataUrl && (
+          <span style={{ fontSize: 11, color: "var(--text-soft)" }}>
+            Optional — a typed name is legally sufficient, but a drawn signature is accepted too.
+          </span>
+        )}
+      </div>
 
       <label className="portal-sign-checkbox">
         <input name="agreed" type="checkbox" required />

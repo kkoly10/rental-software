@@ -22,6 +22,13 @@ export async function signDocument(
   const portalToken = String(formData.get("portal_token") ?? "").trim();
   const signerName = String(formData.get("signer_name") ?? "").trim();
   const agreed = formData.get("agreed") === "on";
+  const rawSignatureDataUrl = String(formData.get("signature_data_url") ?? "").trim();
+  // Only accept valid PNG data URLs; discard anything malformed
+  const signatureDataUrl =
+    rawSignatureDataUrl.startsWith("data:image/png;base64,") &&
+    rawSignatureDataUrl.length < 300_000
+      ? rawSignatureDataUrl
+      : null;
 
   if (!documentId || !portalToken || !signerName) {
     return { ok: false, message: "All fields are required." };
@@ -118,6 +125,7 @@ export async function signDocument(
       signer_name: signerName,
       signer_ip: signerIp,
       signer_user_agent: signerUserAgent,
+      ...(signatureDataUrl ? { signature_data_url: signatureDataUrl } : {}),
     })
     .eq("id", documentId)
     .eq("document_status", "pending");

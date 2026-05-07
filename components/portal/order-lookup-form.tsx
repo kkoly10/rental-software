@@ -8,6 +8,7 @@ import { DocumentSign } from "./document-sign";
 import { CustomerMessageForm } from "./customer-message-form";
 import { InvoiceDownload } from "./invoice-download";
 import { PayBalanceButton } from "./pay-balance-button";
+import { AcceptQuoteButton } from "./accept-quote-button";
 
 const statusTones: Record<string, string> = {
   Confirmed: "success",
@@ -159,6 +160,12 @@ export function OrderLookupForm({ initialState }: Props) {
                 </div>
               </div>
             </div>
+
+            {state.order.status === "Quote Sent" && (
+              <div style={{ marginTop: 16 }}>
+                <AcceptQuoteButton portalToken={activeToken} />
+              </div>
+            )}
 
             <div className="action-row-end" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
               <InvoiceDownload order={state.order} />

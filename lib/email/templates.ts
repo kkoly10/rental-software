@@ -496,3 +496,41 @@ export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
     `
   );
 }
+
+export function quoteSentEmail(data: {
+  businessName: string;
+  customerFirstName: string;
+  orderNumber: string;
+  eventDate: string;
+  total: string;
+  depositRequired: string;
+  portalUrl: string;
+  supportEmail: string;
+}): string {
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">Your quote is ready!</h1>
+    <p style="color:#55708f;margin:0 0 20px;">
+      Hi ${data.customerFirstName}, we've prepared a quote for your upcoming event.
+      Review the details below and accept online to secure your booking.
+    </p>
+
+    ${detailTable([
+      ["Order", `#${data.orderNumber}`],
+      ["Event Date", data.eventDate],
+      ["Total", data.total],
+      ["Deposit to confirm", data.depositRequired],
+    ])}
+
+    <div style="text-align:center;margin:28px 0;">
+      ${button("View &amp; Accept Quote", data.portalUrl)}
+    </div>
+
+    <p style="font-size:13px;color:#55708f;text-align:center;">
+      This quote is not a confirmed booking. Pay your deposit to reserve your date.<br>
+      Questions? Contact us at ${data.supportEmail}.
+    </p>
+    `
+  );
+}

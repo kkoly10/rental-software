@@ -6,6 +6,7 @@ import {
   refundProcessedEmail,
   orderStatusUpdateEmail,
   documentsReadyEmail,
+  quoteSentEmail,
 } from "./templates";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
@@ -385,4 +386,74 @@ export async function triggerDocumentsReadyEmail(params: {
     replyTo: branding.supportEmail,
     organizationId: params.organizationId,
   });
+}
+
+// ─── Quote sent ──────────────────────────────────────────────────────────────
+
+export async function triggerQuoteSentEmail(params: {
+  organizationId: string;
+  orderId: string;
+  customerId: string;
+  orderNumber: string;
+}) {
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: customer }, { data: order }] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("first_name, email")
+      .eq("id", params.customerId)
+      .maybeSingle(),
+    supabase
+      .from("orders")
+      .select("event_date, total_amount, deposit_due_amount")
+      .eq("id", params.orderId)
+      .maybeSingle(),
+  ]);
+
+  if (!customer?.email || !order) return;
+
+  const branding = await getOrgBranding(params.organizationId);
+
+  const portalToken = await import("@/lib/portal/access-token").then(({ issuePortalAccessToken }) =>
+    issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(() => null)
+  );
+  const portalUrl = portalToken
+    ? `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
+    : `${branding.siteUrl}/order-status`;
+
+  const eventDate = order.event_date
+    ? new Date(`${order.event_date}T12:00:00`).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "TBD";
+
+  await sendEmail({
+    to: customer.email,
+    subject: `Your quote for order #${params.orderNumber} — ${branding.businessName}`,
+    html: quoteSentEmail({
+      businessName: branding.businessName,
+      customerFirstName: customer.first_name ?? "there",
+      orderNumber: params.orderNumber,
+      eventDate,
+      total: formatMoney(Number(order.total_amount ?? 0)),
+      depositRequired: formatMoney(Number(order.deposit_due_amount ?? 0)),
+      portalUrl,
+      supportEmail: branding.supportEmail,
+    }),
+    replyTo: branding.supportEmail,
+    organizationId: params.organizationId,
+  });
+
+  await createNotification(
+    params.organizationId,
+    "new_order",
+    "Quote sent",
+    `#${params.orderNumber} — quote emailed to customer`,
+    `/dashboard/orders/${params.orderId}`
+  );
 }
