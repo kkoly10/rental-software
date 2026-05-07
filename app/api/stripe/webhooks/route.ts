@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
 
             if (!alreadyRecorded) {
               const amountPaid = (session.amount_total ?? 0) / 100;
+              const paymentType = session.metadata?.payment_type === "balance" ? "balance" : "deposit";
 
               // Insert with conflict guard — the unique index on
               // (order_id, provider_payment_id) prevents double-crediting
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
                 order_id: orderId,
                 provider: "stripe",
                 provider_payment_id: paymentIntentId,
-                payment_type: "deposit",
+                payment_type: paymentType,
                 payment_status: "paid",
                 amount: amountPaid,
                 paid_at: new Date().toISOString(),
