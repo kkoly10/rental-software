@@ -15,6 +15,7 @@ const fallbackOrderDetail: OrderDetail = {
   items: ["Castle Bouncer", "Generator Add-on"],
   deliveryLabel: "123 Oak Lane, Stafford, VA 22554",
   documents: ["Rental Agreement: Signed", "Safety Waiver: Pending"],
+  documentObjects: [],
   subtotal: "$225",
   deliveryFee: "$20",
   depositPaid: "$75",
@@ -43,7 +44,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       deposit_due_amount, balance_due_amount,
       customers(first_name, last_name, email, phone),
       order_items(item_name_snapshot, line_total),
-      documents(document_type, document_status),
+      documents(id, document_type, document_status),
       customer_addresses(line1, city, state, postal_code)
     `)
     .eq("id", orderId)
@@ -68,7 +69,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
 
   const docs =
     ((data as Record<string, unknown>).documents as
-      | { document_type: string; document_status: string }[]
+      | { id: string; document_type: string; document_status: string }[]
       | null) ?? [];
 
   const address = (data as Record<string, unknown>).customer_addresses as {
@@ -131,6 +132,11 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
                 .replace(/\b\w/g, (c: string) => c.toUpperCase())}: ${(d.document_status ?? "pending").replace(/\b\w/g, (c: string) => c.toUpperCase())}`
           )
         : ["No documents"],
+    documentObjects: docs.map((d) => ({
+      id: d.id,
+      type: d.document_type ?? "",
+      status: d.document_status ?? "pending",
+    })),
     subtotal: `$${data.subtotal_amount ?? 0}`,
     deliveryFee: `$${data.delivery_fee_amount ?? 0}`,
     depositPaid: `$${totalPaid.toFixed(2)}`,

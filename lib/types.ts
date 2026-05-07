@@ -87,6 +87,7 @@ export type OrderDetail = {
   items: string[];
   deliveryLabel: string;
   documents: string[];
+  documentObjects: { id: string; type: string; status: string }[];
   subtotal: string;
   deliveryFee: string;
   depositPaid: string;
