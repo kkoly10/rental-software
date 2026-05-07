@@ -2,6 +2,9 @@ import Link from "next/link";
 import { getRoutes } from "@/lib/data/routes";
 import { getRouteDetail, getRouteStops } from "@/lib/data/route-detail";
 import { StopActionButtons } from "@/components/crew/stop-actions";
+import { ProofPhotoUpload } from "@/components/crew/proof-photo-upload";
+import { SignaturePad } from "@/components/crew/signature-pad";
+import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export default async function CrewTodayPage() {
@@ -42,6 +45,12 @@ export default async function CrewTodayPage() {
                   </div>
                 </div>
 
+                {activeRoute && (
+                  <div className="mobile-card" style={{ marginTop: 12 }}>
+                    <LocationShareButton routeId={activeRoute.id} />
+                  </div>
+                )}
+
                 <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>Stop sequence</h2>
                 <div className="list">
                   {stops.map((stop) => (
@@ -59,15 +68,21 @@ export default async function CrewTodayPage() {
                       <div style={{ marginTop: 8 }}>
                         <StopActionButtons stopId={stop.id} currentStatus={stop.status} />
                       </div>
+                      {stop.status !== "assigned" && (
+                        <>
+                          <ProofPhotoUpload stopId={stop.id} existingUrl={stop.proofPhotoUrl} />
+                          {!stop.signatureName ? (
+                            <SignaturePad stopId={stop.id} />
+                          ) : (
+                            <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-soft)" }}>
+                              <span className="badge success" style={{ fontSize: 11, marginRight: 6 }}>Signed</span>
+                              {stop.signatureName}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   ))}
-                </div>
-
-                <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>Checklist</h2>
-                <div className="list">
-                  <div className="mobile-card">Blower, tarp, stakes, extension cord</div>
-                  <div className="mobile-card">Upload setup photo (coming soon)</div>
-                  <div className="mobile-card">Collect customer signature (coming soon)</div>
                 </div>
               </>
             ) : (
