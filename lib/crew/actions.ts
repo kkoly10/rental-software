@@ -77,54 +77,53 @@ export async function updateStopStatus(
       .eq("id", stop.route_id);
   }
 
-  // Issue tracking token and send SMS when driver marks en_route
+  // Issue tracking token and send SMS when driver marks en_route.
+  // Must be awaited — fire-and-forget is terminated by Vercel Lambda before completion.
   if (newStatus === "en_route") {
-    (async () => {
-      try {
-        const token = await issueTrackingToken({ supabase, stopId });
-        const siteUrl = await getSiteUrl();
-        const trackingUrl = `${siteUrl}/track/${token}`;
+    try {
+      const token = await issueTrackingToken({ supabase, stopId });
+      const siteUrl = await getSiteUrl();
+      const trackingUrl = `${siteUrl}/track/${token}`;
 
-        const { data: stopWithOrder } = await supabase
-          .from("route_stops")
-          .select("orders!inner(id, order_number, customer_id, customers!inner(phone, first_name, sms_opt_in))")
-          .eq("id", stopId)
-          .maybeSingle();
+      const { data: stopWithOrder } = await supabase
+        .from("route_stops")
+        .select("orders!inner(id, order_number, customer_id, customers!inner(phone, first_name, sms_opt_in))")
+        .eq("id", stopId)
+        .maybeSingle();
 
-        if (stopWithOrder) {
-          const order = (stopWithOrder as unknown as {
-            orders: {
-              id: string;
-              order_number: string;
-              customer_id: string;
-              customers: { phone: string; first_name: string; sms_opt_in: boolean };
-            };
-          }).orders;
-          const customer = order?.customers;
-          if (customer?.phone) {
-            const { data: org } = await supabase
-              .from("organizations")
-              .select("name")
-              .eq("id", ctx.organizationId)
-              .maybeSingle();
-            await sendSmsNotification(
-              "deliveryEnRoute",
-              customer.phone,
-              {
-                orderNumber: order.order_number,
-                eta: "shortly",
-                businessName: org?.name ?? "Your delivery",
-                trackingUrl,
-              },
-              ctx.organizationId,
-              { orderId: order.id, customerId: order.customer_id }
-            );
-          }
+      if (stopWithOrder) {
+        const order = (stopWithOrder as unknown as {
+          orders: {
+            id: string;
+            order_number: string;
+            customer_id: string;
+            customers: { phone: string; first_name: string; sms_opt_in: boolean };
+          };
+        }).orders;
+        const customer = order?.customers;
+        if (customer?.phone) {
+          const { data: org } = await supabase
+            .from("organizations")
+            .select("name")
+            .eq("id", ctx.organizationId)
+            .maybeSingle();
+          await sendSmsNotification(
+            "deliveryEnRoute",
+            customer.phone,
+            {
+              orderNumber: order.order_number,
+              eta: "shortly",
+              businessName: org?.name ?? "Your delivery",
+              trackingUrl,
+            },
+            ctx.organizationId,
+            { orderId: order.id, customerId: order.customer_id }
+          );
         }
-      } catch (err) {
-        console.error("[Tracking] Failed to issue token or send SMS:", err);
       }
-    })();
+    } catch (err) {
+      console.error("[Tracking] Failed to issue token or send SMS:", err);
+    }
   }
 
   revalidatePath("/crew/today");

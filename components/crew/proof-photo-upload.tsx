@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { uploadProofPhoto, type StopActionState } from "@/lib/crew/actions";
 
 const initial: StopActionState = { ok: false, message: "" };
@@ -8,7 +8,6 @@ const initial: StopActionState = { ok: false, message: "" };
 export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; existingUrl?: string }) {
   const [state, action, pending] = useActionState(uploadProofPhoto, initial);
   const [preview, setPreview] = useState<string | null>(existingUrl ?? null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -38,7 +37,6 @@ export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; exis
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <input
-          ref={inputRef}
           name="photo"
           type="file"
           accept="image/*"
