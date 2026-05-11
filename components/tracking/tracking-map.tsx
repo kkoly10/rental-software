@@ -24,6 +24,7 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   const markerRef = useRef<any>(null);
   const [position, setPosition] = useState<DriverPosition | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">("connecting");
+  const [mapError, setMapError] = useState<string | null>(null);
   const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -35,7 +36,12 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   useEffect(() => {
     let cancelled = false;
     async function initMap() {
-      await loadLeaflet();
+      try {
+        await loadLeaflet();
+      } catch {
+        if (!cancelled) setMapError("Map failed to load. Please check your connection and refresh.");
+        return;
+      }
       if (cancelled || !containerRef.current || mapRef.current) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const L = (window as any).L;
@@ -59,9 +65,12 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
         .select("lat, lng, accuracy_m")
         .eq("route_id", routeId)
         .maybeSingle();
-      if (data) setPosition({ lat: data.lat, lng: data.lng, accuracy_m: data.accuracy_m ?? undefined });
-      setConnectionState("live");
-      resetStaleTimer();
+      if (data) {
+        setPosition({ lat: data.lat, lng: data.lng, accuracy_m: data.accuracy_m ?? undefined });
+        setConnectionState("live");
+        resetStaleTimer();
+      }
+      // If no data yet, keep "connecting" — the realtime channel will update once the driver shares location.
     })();
   }, [routeId, isLive]);
 
@@ -118,6 +127,14 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
       : connectionState === "offline"
       ? "Waiting for location update…"
       : "Connecting…";
+
+  if (mapError) {
+    return (
+      <div style={{ flex: 1, minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-soft, #f8f9fa)", borderRadius: 8 }}>
+        <p className="muted" style={{ textAlign: "center" }}>{mapError}</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>

@@ -1,5 +1,7 @@
 /**
  * Shared Leaflet CDN loader — singleton, used by both RouteMap and ServiceAreaMap.
+ * The promise is cleared on failure so a transient CDN error doesn't permanently
+ * break maps for the rest of the session.
  */
 
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
@@ -13,6 +15,8 @@ export function loadLeaflet(): Promise<void> {
   if (leafletPromise) return leafletPromise;
 
   leafletPromise = new Promise<void>((resolve, reject) => {
+    const fail = (err: Error) => { leafletPromise = null; reject(err); };
+
     if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
@@ -35,7 +39,7 @@ export function loadLeaflet(): Promise<void> {
         } else if (attempts >= MAX_POLL_ATTEMPTS) {
           clearInterval(check);
           console.error("Leaflet CDN: timed out waiting for window.L");
-          reject(new Error("Leaflet load timeout"));
+          fail(new Error("Leaflet load timeout"));
         }
       }, 50);
       return;
@@ -44,7 +48,7 @@ export function loadLeaflet(): Promise<void> {
     const script = document.createElement("script");
     script.src = LEAFLET_JS;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Leaflet"));
+    script.onerror = () => fail(new Error("Failed to load Leaflet from CDN"));
     document.head.appendChild(script);
   });
 
