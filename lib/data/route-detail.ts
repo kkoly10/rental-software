@@ -229,13 +229,19 @@ export async function getRouteDetailEnhanced(
 
   // Join through: route_stops → orders → customers (for name)
   //              route_stops → orders → customer_addresses (via delivery_address_id, for address + coords)
-  const { data: stops } = await supabase
+  const { data: rawStops } = await supabase
     .from("route_stops")
     .select(
-      "id, order_id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses(id, line1, city, state, postal_code, latitude, longitude))"
+      "id, order_id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, order_status, delivery_address_id, customers(first_name, last_name), customer_addresses(id, line1, city, state, postal_code, latitude, longitude))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true });
+
+  // Exclude stops whose linked order has been cancelled
+  const stops = (rawStops ?? []).filter((stop) => {
+    const order = (stop as Record<string, unknown>).orders as { order_status?: string } | null;
+    return order?.order_status !== "cancelled";
+  });
 
   const driver = (route as Record<string, unknown>).profiles as {
     full_name: string;
@@ -245,9 +251,10 @@ export async function getRouteDetailEnhanced(
   type AddressToGeocode = { addressId: string; postalCode: string; stopIndex: number };
   const toGeocode: AddressToGeocode[] = [];
 
-  const enhancedStops: RouteStopEnhanced[] = (stops ?? []).map((stop, index) => {
+  const enhancedStops: RouteStopEnhanced[] = stops.map((stop, index) => {
     const order = (stop as Record<string, unknown>).orders as {
       order_number: string;
+      order_status?: string;
       delivery_address_id?: string;
       customers: {
         first_name: string;

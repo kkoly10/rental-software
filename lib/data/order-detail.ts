@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
@@ -52,7 +53,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     .maybeSingle();
 
   if (error || !data) {
-    return { ...fallbackOrderDetail, id: orderId };
+    notFound();
   }
 
   const customer = (data as Record<string, unknown>).customers as {
@@ -72,12 +73,13 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       | { id: string; document_type: string; document_status: string }[]
       | null) ?? [];
 
-  const address = (data as Record<string, unknown>).customer_addresses as {
+  const addressRows = (data as Record<string, unknown>).customer_addresses as {
     line1: string;
     city: string;
     state: string;
     postal_code: string;
-  } | null;
+  }[] | null;
+  const address = addressRows?.[0] ?? null;
 
   const status = (data.order_status ?? "inquiry")
     .replace(/_/g, " ")

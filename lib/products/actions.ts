@@ -226,6 +226,9 @@ export async function updateProduct(
     .is("deleted_at", null);
 
   if (error) {
+    if (error.code === "23505") {
+      return { ok: false, message: "A product with that name already exists. Please choose a different name." };
+    }
     return { ok: false, message: error.message };
   }
 

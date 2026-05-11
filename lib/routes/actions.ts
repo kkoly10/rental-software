@@ -80,6 +80,20 @@ export async function addOrderToRoute(
 
   if (!route) return { ok: false, message: "Route not found." };
 
+  // Guard: prevent adding the same order to multiple routes
+  const { data: existingStop } = await supabase
+    .from("route_stops")
+    .select("id, route_id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (existingStop) {
+    if (existingStop.route_id === routeId) {
+      return { ok: false, message: "This order is already on this route." };
+    }
+    return { ok: false, message: "This order is already assigned to another route." };
+  }
+
   // Get next sequence number
   const { data: existing } = await supabase
     .from("route_stops")
@@ -200,9 +214,12 @@ export async function updateStopStatus(
 
   // Sync order status when delivery stop is completed
   if (orderId && status === "completed") {
-    import("@/lib/orders/actions").then(({ updateOrderStatus }) =>
-      updateOrderStatus(orderId, "delivered").catch(() => {})
-    );
+    try {
+      const { updateOrderStatus } = await import("@/lib/orders/actions");
+      await updateOrderStatus(orderId, "delivered");
+    } catch {
+      // Non-fatal — stop is already marked complete
+    }
   }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
