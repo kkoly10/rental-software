@@ -8,7 +8,11 @@ import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
  * End customers see the operator's storefront on tenant subdomains.
  */
 export function SaasLanding() {
-  const demoUrl = `https://demo.${process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app"}`;
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app";
+  // Only construct a real demo URL for production-like domains; fall back to
+  // "#" in local dev so the link doesn't point at an unusable localhost URL.
+  const isLocalDev = appDomain.startsWith("localhost") || appDomain.startsWith("127.0.0.1");
+  const demoUrl = isLocalDev ? "#" : `https://demo.${appDomain}`;
 
   return (
     <>
@@ -99,7 +103,7 @@ export function SaasLanding() {
               {
                 step: "2",
                 title: "Share Your Link",
-                desc: "Your customers visit your-business.korent.app to browse, check availability, and book online.",
+                desc: `Your customers visit your-business.${appDomain} to browse, check availability, and book online.`,
               },
               {
                 step: "3",
