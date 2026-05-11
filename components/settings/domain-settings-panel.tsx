@@ -31,6 +31,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState("");
   const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   // When setCustomDomain succeeds, transition the UI from "add form" to
   // the saved domain display without requiring a full page reload.
@@ -117,6 +118,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
   async function handleRemoveDomain() {
     if (!confirm("Remove your custom domain? Your storefront will only be accessible via your subdomain URL.")) return;
     setRemoving(true);
+    setRemoveError("");
     try {
       const result = await removeCustomDomain();
       if (result.ok) {
@@ -125,9 +127,11 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
         setShowDomainForm(false);
         setVerifyMessage("");
         router.refresh();
+      } else {
+        setRemoveError(result.message ?? "Failed to remove domain.");
       }
     } catch {
-      // ignore
+      setRemoveError("Network error. Please try again.");
     } finally {
       setRemoving(false);
     }
@@ -317,6 +321,9 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
               >
                 {removing ? "Removing..." : "Remove Domain"}
               </button>
+              {removeError && (
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--danger, #dc2626)" }}>{removeError}</p>
+              )}
             </div>
 
             {domainVerified && (

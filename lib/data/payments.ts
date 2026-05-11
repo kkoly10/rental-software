@@ -81,15 +81,9 @@ export async function getPaymentsPage(options?: {
     .order("paid_at", { ascending: false, nullsFirst: false })
     .limit(500);
 
-  if (error || !data || data.length === 0) {
-    const filtered = fallbackPayments.filter((payment) =>
-      matchesPaymentQuery(payment, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+  if (error) {
+    console.error("[payments] Query failed:", error.message);
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const mapped: PaymentSummary[] = data.map((payment) => {

@@ -454,11 +454,14 @@ export async function updateOrderStatus(
     return { ok: false, message: error.message };
   }
 
-  // Release availability blocks when order is cancelled (non-blocking)
+  // Release availability blocks when order is cancelled — awaited so inventory is freed immediately
   if (parsed.data.newStatus === "cancelled") {
-    import("@/lib/availability/actions").then(({ releaseOrderAvailability }) =>
-      releaseOrderAvailability(ctx.organizationId, parsed.data.orderId).catch(() => {})
-    );
+    try {
+      const { releaseOrderAvailability } = await import("@/lib/availability/actions");
+      await releaseOrderAvailability(ctx.organizationId, parsed.data.orderId);
+    } catch {
+      console.error("[orders] Failed to release availability for cancelled order", parsed.data.orderId);
+    }
   }
 
   // Send status update email to customer (non-blocking)

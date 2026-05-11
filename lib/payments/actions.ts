@@ -112,6 +112,16 @@ export async function recordPayment(
     };
   }
 
+  if (paymentType === "refund") {
+    const totalPaid = financials?.totalPaid ?? 0;
+    if (amount > totalPaid) {
+      return {
+        ok: false,
+        message: `Refund cannot exceed total payments received ($${totalPaid.toFixed(2)}).`,
+      };
+    }
+  }
+
   // Insert the payment record — this is the source of truth
   const { error } = await supabase.from("payments").insert({
     order_id: orderId,

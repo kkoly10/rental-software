@@ -68,6 +68,19 @@ export async function POST(request: NextRequest) {
           const orgId = session.metadata?.organization_id;
 
           if (orderId && orgId) {
+            // Verify the order actually belongs to the claimed org (don't trust client metadata)
+            const { data: orderRecord } = await admin
+              .from("orders")
+              .select("id")
+              .eq("id", orderId)
+              .eq("organization_id", orgId)
+              .maybeSingle();
+
+            if (!orderRecord) {
+              console.warn("Stripe webhook: order/org mismatch or order not found", { orderId, orgId });
+              break;
+            }
+
             // Resolve payment intent ID; fall back to session ID so dedup and
             // the unique index on (order_id, provider_payment_id) always work
             // even for Stripe sessions where payment_intent is null.

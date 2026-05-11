@@ -258,6 +258,11 @@ export async function createCheckoutOrder(
     };
   }
 
+  // Event date is required when a specific product is being booked
+  if (productId && !eventDate) {
+    return { ok: false, message: "Please select an event date to check availability." };
+  }
+
   // Enforce booking date policies (lead time and max advance)
   if (eventDate) {
     const bookingPolicies = await getBookingPolicies();
@@ -555,9 +560,10 @@ export async function createCheckoutOrder(
     markSetupStep(orgId, "has_first_order")
   ).catch(() => {});
 
-  // Send order confirmation email (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerOrderConfirmationEmail }) =>
-    triggerOrderConfirmationEmail({
+  // Send order confirmation email — awaited so customers reliably receive their booking proof
+  try {
+    const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
+    await triggerOrderConfirmationEmail({
       organizationId: orgId,
       customerFirstName: firstName,
       customerEmail: email,
@@ -568,8 +574,11 @@ export async function createCheckoutOrder(
       deliveryFee,
       total,
       depositDue: deposit,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    // Non-fatal — order is already created; log but don't block the success response
+    console.error("[checkout] Confirmation email failed for order", orderNumber);
+  }
 
   // Send order confirmation SMS (non-blocking)
   if (phone) {
@@ -616,6 +625,7 @@ export async function createCheckoutOrder(
           organization_id: orgId,
           order_id: order.id,
           order_number: orderNumber,
+          payment_type: "deposit",
         },
       });
 

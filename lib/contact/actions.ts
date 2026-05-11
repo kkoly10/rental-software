@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { hasSupabaseEnv } from "@/lib/env";
+import { escapeHtml } from "@/lib/maps/escape-html";
 
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -82,9 +83,9 @@ export async function submitContactForm(
       subject: `Contact form: ${parsed.data.name}`,
       replyTo: parsed.data.email,
       html: `
-        <p><strong>From:</strong> ${parsed.data.name} (${parsed.data.email})</p>
+        <p><strong>From:</strong> ${escapeHtml(parsed.data.name)} (${escapeHtml(parsed.data.email)})</p>
         <hr />
-        <p>${parsed.data.message.replace(/\n/g, "<br />")}</p>
+        <p>${escapeHtml(parsed.data.message).replace(/\n/g, "<br />")}</p>
       `,
     });
   } catch {
