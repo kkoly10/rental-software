@@ -74,7 +74,7 @@ export function SaasLanding() {
             <Link href="/signup" className="primary-btn" style={{ fontSize: "1.05rem", padding: "12px 28px" }}>
               Start Free Trial
             </Link>
-            <a href={demoUrl} className="secondary-btn" style={{ fontSize: "1.05rem", padding: "12px 28px" }}>
+            <a href={demoUrl} className="secondary-btn" style={{ fontSize: "1.05rem", padding: "12px 28px" }} rel="noopener noreferrer">
               See a Live Demo
             </a>
           </div>
@@ -307,7 +307,7 @@ export function SaasLanding() {
                 }}
               >
                 {/* Simulated route path */}
-                <svg viewBox="0 0 300 120" style={{ width: "100%", height: "100%" }}>
+                <svg viewBox="0 0 300 120" style={{ width: "100%", height: "100%" }} aria-hidden="true">
                   <path
                     d="M30,90 Q80,20 150,60 T270,30"
                     fill="none"
@@ -398,6 +398,7 @@ export function SaasLanding() {
               href={demoUrl}
               className="secondary-btn"
               style={{ fontSize: "1rem", padding: "10px 24px" }}
+              rel="noopener noreferrer"
             >
               See a Live Demo Storefront
             </a>
@@ -578,7 +579,7 @@ export function SaasLanding() {
             <Link href="/signup" className="primary-btn" style={{ fontSize: "1.05rem", padding: "12px 32px" }}>
               Start Free Trial
             </Link>
-            <a href={demoUrl} className="secondary-btn" style={{ fontSize: "1.05rem", padding: "12px 32px" }}>
+            <a href={demoUrl} className="secondary-btn" style={{ fontSize: "1.05rem", padding: "12px 32px" }} rel="noopener noreferrer">
               See a Live Demo
             </a>
           </div>
