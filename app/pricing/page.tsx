@@ -78,8 +78,10 @@ export default function PricingPage() {
 
             <div style={{ marginTop: 40 }}>
               <p className="muted">
-                Have questions? <Link href="/dashboard/help" style={{ color: "var(--primary)", fontWeight: 600 }}>Visit our help center</Link> or
-                email us at support@korent.app
+                Have questions?{" "}
+                <a href="mailto:support@korent.app" style={{ color: "var(--primary)", fontWeight: 600 }}>
+                  Email us
+                </a>
               </p>
             </div>
           </div>
