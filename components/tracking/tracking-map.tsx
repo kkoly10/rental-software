@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadLeaflet } from "@/lib/maps/load-leaflet";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface DriverPosition {
@@ -22,6 +21,10 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   const mapRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markerRef = useRef<any>(null);
+  // Store L so the position effect can use it without re-importing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const leafletRef = useRef<any>(null);
+
   const [position, setPosition] = useState<DriverPosition | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">("connecting");
   const [mapError, setMapError] = useState<string | null>(null);
@@ -33,30 +36,37 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
     staleTimerRef.current = setTimeout(() => setConnectionState("offline"), 45_000);
   }
 
+  /* ── Init map ── */
   useEffect(() => {
     let cancelled = false;
+
     async function initMap() {
+      let L: typeof import("leaflet");
       try {
-        await loadLeaflet();
+        L = (await import("leaflet")).default as unknown as typeof import("leaflet");
       } catch {
         if (!cancelled) setMapError("Map failed to load. Please check your connection and refresh.");
         return;
       }
       if (cancelled || !containerRef.current || mapRef.current) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const L = (window as any).L;
+
+      leafletRef.current = L;
+
       const map = L.map(containerRef.current, { scrollWheelZoom: true, zoomControl: true })
         .setView([38.9, -77.0], 10);
       mapRef.current = map;
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 18,
       }).addTo(map);
     }
+
     initMap();
     return () => { cancelled = true; };
   }, []);
 
+  /* ── Fetch last known position on mount ── */
   useEffect(() => {
     if (!isLive) { setConnectionState("offline"); return; }
     (async () => {
@@ -70,10 +80,11 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
         setConnectionState("live");
         resetStaleTimer();
       }
-      // If no data yet, keep "connecting" — the realtime channel will update once the driver shares location.
+      // No data yet → keep "connecting"; realtime channel will update when driver shares location
     })();
   }, [routeId, isLive]);
 
+  /* ── Subscribe to realtime location broadcasts ── */
   useEffect(() => {
     if (!isLive) return;
     const channel = supabase
@@ -94,11 +105,11 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
     };
   }, [routeId, isLive]);
 
+  /* ── Move marker when position updates ── */
   useEffect(() => {
-    if (!position || !mapRef.current) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const L = (window as any).L;
-    if (!L) return;
+    const L = leafletRef.current;
+    if (!position || !mapRef.current || !L) return;
+
     const latlng: [number, number] = [position.lat, position.lng];
 
     const icon = L.divIcon({

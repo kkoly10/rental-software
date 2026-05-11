@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { loadLeaflet } from "@/lib/maps/load-leaflet";
 import { geocodeZipClient } from "@/lib/maps/geocode-client";
 import { escapeHtml } from "@/lib/maps/escape-html";
 
@@ -31,17 +30,23 @@ export function ServiceAreaMap({
   height = "400px",
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
-      await loadLeaflet();
+      let L: typeof import("leaflet");
+      try {
+        L = (await import("leaflet")).default as unknown as typeof import("leaflet");
+      } catch {
+        if (!cancelled) setMapError("Map failed to load. Please refresh the page.");
+        return;
+      }
       if (cancelled || !containerRef.current) return;
-
-      const L = (window as any).L;
 
       /* Prevent double-init */
       if (mapRef.current) {
@@ -93,7 +98,23 @@ export function ServiceAreaMap({
           </div>
         `;
 
-        L.marker([geo.lat, geo.lng]).addTo(map).bindPopup(popupHtml);
+        /* Use a divIcon circle to avoid webpack breaking Leaflet's default PNG marker paths */
+        const icon = L.divIcon({
+          className: "svc-area-marker-icon",
+          html: `<div style="
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary, #2563eb);
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+          "></div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -18],
+        });
+
+        L.marker([geo.lat, geo.lng], { icon }).addTo(map).bindPopup(popupHtml);
         bounds.push([geo.lat, geo.lng]);
       }
 
@@ -107,6 +128,7 @@ export function ServiceAreaMap({
 
       /* Interactive click handler */
       if (interactive) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         map.on("click", (e: any) => {
           const { lat, lng } = e.latlng;
           const msg = `Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -126,6 +148,14 @@ export function ServiceAreaMap({
       }
     };
   }, [areas, interactive]);
+
+  if (mapError) {
+    return (
+      <div className="svc-map-container" style={{ height, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-soft, #f8f9fa)", borderRadius: 8 }}>
+        <p className="muted" style={{ textAlign: "center" }}>{mapError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="svc-map-container" style={{ height }}>
