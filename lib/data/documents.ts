@@ -38,7 +38,7 @@ export async function getDocuments(): Promise<DocumentSummary[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackDocuments;
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase

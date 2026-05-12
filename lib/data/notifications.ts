@@ -88,7 +88,7 @@ export async function getNotifications(): Promise<Notification[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return demoNotifications;
+  if (!ctx) return [];
 
   try {
     const supabase = await createSupabaseServerClient();
@@ -100,8 +100,13 @@ export async function getNotifications(): Promise<Notification[]> {
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (error || !data || data.length === 0) {
-      return demoNotifications;
+    if (error) {
+      console.error("[notifications] Query failed:", error.message);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
     }
 
     return data.map((n) => ({
@@ -114,7 +119,7 @@ export async function getNotifications(): Promise<Notification[]> {
       link: n.link ?? undefined,
     }));
   } catch {
-    return demoNotifications;
+    return [];
   }
 }
 
