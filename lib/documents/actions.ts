@@ -150,6 +150,7 @@ export async function createDocumentsForOrder(
     .from("documents")
     .select("id")
     .eq("order_id", parsed.data.orderId)
+    .eq("organization_id", ctx.organizationId)
     .limit(1);
 
   if (existing && existing.length > 0) {
