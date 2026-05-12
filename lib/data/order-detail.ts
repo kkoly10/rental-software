@@ -32,7 +32,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return { ...fallbackOrderDetail, id: orderId };
+    notFound();
   }
 
   const supabase = await createSupabaseServerClient();

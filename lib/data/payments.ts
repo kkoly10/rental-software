@@ -61,14 +61,7 @@ export async function getPaymentsPage(options?: {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    const filtered = fallbackPayments.filter((payment) =>
-      matchesPaymentQuery(payment, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const supabase = await createSupabaseServerClient();

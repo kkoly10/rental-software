@@ -42,7 +42,7 @@ export async function getRouteDetail(routeId: string): Promise<RouteDetail> {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return { ...fallbackRouteDetail, id: routeId };
+    notFound();
   }
 
   const supabase = await createSupabaseServerClient();
@@ -218,7 +218,7 @@ export async function getRouteDetailEnhanced(
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return { ...fallbackEnhancedDetail, id: routeId };
+    notFound();
   }
 
   const supabase = await createSupabaseServerClient();
