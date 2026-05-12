@@ -12,7 +12,7 @@ const fallbackSettings = {
   serviceAreaLabel: "Your service area",
   depositPolicy: "25% deposit to reserve event date",
   publicBookingLabel: "Public checkout enabled",
-  featuredInventoryLabel: "3 highlighted inflatables on homepage",
+  featuredInventoryLabel: "3 highlighted products on homepage",
   websiteMessage: "Epic parties delivered with clean setup and on-time dropoff.",
   heroHeadline: "",
   heroImageUrl: "",

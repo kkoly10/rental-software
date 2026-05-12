@@ -39,9 +39,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
 
   return buildPageMetadata({
-    title: `${settings.businessName} | Bounce house & party rentals`,
-    description: `${settings.businessName} offers bounce houses, water slides, and party rentals with delivery and setup across ${settings.serviceAreaLabel}. Check availability and book online.`,
+    title: settings.businessName,
+    description: `${settings.businessName} offers rentals with delivery and setup${settings.serviceAreaLabel ? ` across ${settings.serviceAreaLabel}` : ""}. Check availability and book online.`,
     path: "/",
+    siteName: settings.businessName,
   });
 }
 

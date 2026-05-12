@@ -74,7 +74,7 @@ export function SaasLanding() {
           }}
         >
           <div className="kicker" style={{ marginBottom: 12 }}>
-            Party &amp; inflatable rental software
+            Party &amp; event rental software
           </div>
           <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", lineHeight: 1.15, margin: "0 0 20px" }}>
             Stop answering availability calls. Start taking bookings online.
@@ -170,7 +170,7 @@ export function SaasLanding() {
               {
                 icon: "😬",
                 pain: "Double-bookings happen",
-                desc: "Two customers show up for the same bounce house on the same Saturday. Someone&rsquo;s party gets ruined.",
+                desc: "Two customers show up for the same rental on the same Saturday. Someone&rsquo;s event gets ruined.",
               },
               {
                 icon: "📋",
@@ -290,7 +290,7 @@ export function SaasLanding() {
               },
               {
                 title: "Zero double-bookings, ever",
-                desc: "Every confirmed order automatically blocks inventory for that date. No spreadsheet to update, no risk of sending two customers to the same bounce house.",
+                desc: "Every confirmed order automatically blocks inventory for that date. No spreadsheet to update, no risk of double-booking the same item.",
               },
               {
                 title: "Drivers know exactly where to go",

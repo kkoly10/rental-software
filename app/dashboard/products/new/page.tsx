@@ -31,8 +31,8 @@ export default async function NewProductPage() {
             Here&apos;s what works well:
           </div>
           <ul style={{ margin: "8px 0 0", paddingLeft: 20, lineHeight: 1.8, fontSize: 14, color: "var(--text-soft)" }}>
-            <li><strong>Name:</strong> Use what customers search for (e.g., &quot;Rainbow Bounce House&quot; not &quot;Product A&quot;)</li>
-            <li><strong>Price:</strong> Check local competitors — most bounce houses rent for $150–300/day</li>
+            <li><strong>Name:</strong> Use what customers search for (e.g., &quot;Large Party Tent&quot; not &quot;Product A&quot;)</li>
+            <li><strong>Price:</strong> Check local competitors for pricing guidance in your market</li>
             <li><strong>Description:</strong> Include dimensions, age range, and capacity</li>
             <li>Keep <strong>&quot;Active&quot;</strong> checked so it appears on your storefront immediately</li>
           </ul>
@@ -43,7 +43,7 @@ export default async function NewProductPage() {
         <div className="section-header">
           <div>
             <div className="kicker">Catalog creation</div>
-            <h2 style={{ margin: "6px 0 0" }}>New inflatable product</h2>
+            <h2 style={{ margin: "6px 0 0" }}>New product</h2>
           </div>
         </div>
         <ProductForm categories={categories} />

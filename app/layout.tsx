@@ -20,14 +20,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(getSiteBaseUrl()),
   title: "Korent",
   description:
-    "Korent is an inflatable-first rental software platform with a public storefront, operator dashboard, and crew workflow support.",
+    "Korent is a rental software platform with a public storefront, operator dashboard, and crew workflow support.",
   applicationName: "Korent",
   manifest: "/manifest.json",
   keywords: [
     "rental software",
     "party rental software",
-    "inflatable rental software",
-    "bounce house booking",
+    "equipment rental software",
+    "online rental booking",
     "equipment rental platform",
   ],
   icons: {

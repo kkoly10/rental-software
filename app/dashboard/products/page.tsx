@@ -63,7 +63,7 @@ export default async function ProductsPage({
             <EmptyState
               icon="products"
               title="No products yet"
-              description="Add your first inflatable product to start building your catalog."
+              description="Add your first product to start building your catalog."
               actionLabel="Add first product"
               actionHref="/dashboard/products/new"
             />

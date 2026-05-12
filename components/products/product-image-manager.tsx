@@ -39,7 +39,7 @@ export function ProductImageManager({
             <input
               name="alt_text"
               type="text"
-              placeholder="Front view of the inflatable setup"
+              placeholder="Describe the image (e.g., front view of the product)"
               style={{ width: "100%" }}
             />
           </label>

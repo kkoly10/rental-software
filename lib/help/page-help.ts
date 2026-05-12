@@ -19,7 +19,7 @@ export const pageHelpMap: Record<string, PageHelpConfig> = {
     key: "products",
     title: "Manage your rental inventory",
     description:
-      "Add inflatables with photos, pricing, and descriptions. Active products appear on your public storefront automatically.",
+      "Add products with photos, pricing, and descriptions. Active products appear on your public storefront automatically.",
     primaryAction: { label: "Add new product", href: "/dashboard/products/new" },
   },
   "/dashboard/orders": {

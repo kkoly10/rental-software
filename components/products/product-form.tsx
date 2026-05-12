@@ -115,7 +115,7 @@ export function ProductForm({
         <textarea
           name="description"
           defaultValue={product?.description ?? ""}
-          placeholder="e.g., 15x15 bounce house with safety netting. Holds up to 8 kids. Includes blower, stakes, and setup."
+          placeholder="e.g., Describe dimensions, capacity, and what's included with the rental."
           rows={4}
           style={{ marginTop: 10, width: "100%", fontFamily: "inherit", border: "1px solid var(--border)", borderRadius: 12, padding: 12 }}
         />

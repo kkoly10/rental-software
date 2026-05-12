@@ -27,7 +27,7 @@ export function CheckoutSummaryCard({
     <aside className="panel storefront-summary-card">
       <div className="kicker">Reservation summary</div>
       <h2 style={{ margin: "8px 0 10px" }}>
-        {productName ?? "Your inflatable reservation"}
+        {productName ?? "Your rental reservation"}
       </h2>
 
       {hasPricing ? (
