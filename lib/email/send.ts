@@ -97,6 +97,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
       message: err instanceof Error ? err.message : "Unknown email error",
       stack: err instanceof Error ? err.stack : undefined,
       context: { to: payload.to, subject: payload.subject },
+      error: err,
     });
 
     // Log failed email to communication_log

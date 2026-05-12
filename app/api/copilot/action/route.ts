@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
       message: "Copilot action execution failed",
       route: request.nextUrl.pathname,
       stack: error instanceof Error ? error.stack : undefined,
+      error,
     });
 
     return jsonResponse(
