@@ -9,12 +9,18 @@ import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Order Confirmed",
-  description: "Your rental booking has been submitted successfully.",
-  path: "/order-confirmation",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getOrganizationSettings();
+  return buildPageMetadata({
+    title: `Booking Confirmed — ${settings.businessName}`,
+    description: "Your rental booking has been submitted successfully.",
+    path: "/order-confirmation",
+    siteName: settings.businessName,
+    noIndex: true,
+  });
+}
 
 /**
  * Determine the real payment status for this order.

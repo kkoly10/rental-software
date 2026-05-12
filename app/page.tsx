@@ -95,7 +95,7 @@ export default async function HomePage() {
   return (
     <>
       <PublicHeader />
-      <JsonLdScript data={organizationJsonLd(settings)} />
+      <JsonLdScript data={organizationJsonLd({ ...settings, websiteMessage: settings.websiteMessage || undefined })} />
       {vis.faq_section !== false && (
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}

@@ -136,8 +136,11 @@ export async function sendReply(
     const businessName = org?.name ?? "Korent";
     const supportEmail = org?.support_email ?? "support@korent.app";
 
+    const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
+    const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
     await sendEmail({
       to: customerEmail,
+      from: `${safeFromName} <${fromDomain}>`,
       subject: orderNumber
         ? `Re: Order #${orderNumber} — ${businessName}`
         : `Message from ${businessName}`,

@@ -35,7 +35,16 @@ type OrgBranding = {
   businessName: string;
   supportEmail: string;
   siteUrl: string;
+  fromAddress: string;
 };
+
+function buildFromAddress(businessName: string): string {
+  const rawAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
+  // Strip any existing display name to get just the email address
+  const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
+  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
+  return `${safeName} <${emailOnly}>`;
+}
 
 async function getOrgBranding(
   organizationId: string
@@ -50,10 +59,12 @@ async function getOrgBranding(
     .eq("id", organizationId)
     .maybeSingle();
 
+  const businessName = org?.name ?? "Korent";
   return {
-    businessName: org?.name ?? "Korent",
+    businessName,
     supportEmail: org?.support_email ?? "support@korent.app",
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    fromAddress: buildFromAddress(businessName),
   };
 }
 
@@ -92,6 +103,7 @@ export async function triggerOrderConfirmationEmail(params: {
   // Email to customer
   await sendEmail({
     to: params.customerEmail,
+    from: branding.fromAddress,
     subject: `Booking #${params.orderNumber} received — ${branding.businessName}`,
     html: orderConfirmationEmail({
       businessName: branding.businessName,
@@ -114,6 +126,7 @@ export async function triggerOrderConfirmationEmail(params: {
   // Alert to operator
   await sendEmail({
     to: branding.supportEmail,
+    from: branding.fromAddress,
     subject: `New order #${params.orderNumber} from website`,
     html: newOrderAlertEmail({
       businessName: branding.businessName,
@@ -156,6 +169,7 @@ export async function triggerDashboardOrderEmail(params: {
 
   await sendEmail({
     to: branding.supportEmail,
+    from: branding.fromAddress,
     subject: `New order #${params.orderNumber} created from dashboard`,
     html: newOrderAlertEmail({
       businessName: branding.businessName,
@@ -200,6 +214,7 @@ export async function triggerPaymentReceivedEmail(params: {
   if (params.paymentType === "refund") {
     await sendEmail({
       to: params.customerEmail,
+      from: branding.fromAddress,
       subject: `Refund processed for order #${params.orderNumber} — ${branding.businessName}`,
       html: refundProcessedEmail({
         businessName: branding.businessName,
@@ -214,6 +229,7 @@ export async function triggerPaymentReceivedEmail(params: {
   } else {
     await sendEmail({
       to: params.customerEmail,
+      from: branding.fromAddress,
       subject: `Payment received for order #${params.orderNumber} — ${branding.businessName}`,
       html: paymentReceivedEmail({
         businessName: branding.businessName,
@@ -329,6 +345,7 @@ export async function triggerOrderStatusEmail(params: {
 
   await sendEmail({
     to: customer.email,
+    from: branding.fromAddress,
     subject: `Order #${order.order_number} — ${params.newStatus.replace(/_/g, " ")} — ${branding.businessName}`,
     html: orderStatusUpdateEmail({
       businessName: branding.businessName,
@@ -375,6 +392,7 @@ export async function triggerDocumentsReadyEmail(params: {
 
   await sendEmail({
     to: customer.email,
+    from: branding.fromAddress,
     subject: `Documents ready for order #${order.order_number} — ${branding.businessName}`,
     html: documentsReadyEmail({
       businessName: branding.businessName,
@@ -434,6 +452,7 @@ export async function triggerQuoteSentEmail(params: {
 
   await sendEmail({
     to: customer.email,
+    from: branding.fromAddress,
     subject: `Your quote for order #${params.orderNumber} — ${branding.businessName}`,
     html: quoteSentEmail({
       businessName: branding.businessName,

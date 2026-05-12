@@ -7,13 +7,14 @@ export type EmailPayload = {
   to: string;
   subject: string;
   html: string;
+  from?: string;
   replyTo?: string;
   organizationId?: string;
   orderId?: string | null;
   customerId?: string | null;
 };
 
-const DEFAULT_FROM = "Korent <noreply@korent.app>";
+const DEFAULT_FROM_ADDRESS = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? "noreply@korent.app";
 
 /**
  * Send a transactional email via Resend.
@@ -26,7 +27,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     return false;
   }
 
-  const fromAddress = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? DEFAULT_FROM;
+  const fromAddress = payload.from ?? DEFAULT_FROM_ADDRESS;
 
   try {
     const resend = getResend();

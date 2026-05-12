@@ -65,9 +65,17 @@ type OrgBranding = {
   businessName: string;
   supportEmail: string;
   siteUrl: string;
+  fromAddress: string;
   googleReviewUrl?: string;
   slug?: string;
 };
+
+function buildFromAddress(businessName: string): string {
+  const rawAddress = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? "noreply@korent.app";
+  const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
+  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
+  return `${safeName} <${emailOnly}>`;
+}
 
 async function getOrgBrandings(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
@@ -85,11 +93,13 @@ async function getOrgBrandings(
 
   for (const org of orgs ?? []) {
     const settings = (org.settings as Record<string, unknown>) ?? {};
+    const businessName = org.name ?? "Korent";
     map.set(org.id, {
       orgId: org.id,
-      businessName: org.name ?? "Korent",
+      businessName,
       supportEmail: org.support_email ?? "support@korent.app",
       siteUrl,
+      fromAddress: buildFromAddress(businessName),
       googleReviewUrl: (settings.social_google_business as string) || undefined,
       slug: org.slug ?? undefined,
     });
@@ -194,6 +204,7 @@ async function sendDayBeforeReminders(
     try {
       await sendEmail({
         to: customer.email,
+        from: branding.fromAddress,
         subject: `Reminder: Your rental from ${branding.businessName} is tomorrow!`,
         html: eventReminderEmail({
           businessName: branding.businessName,
@@ -313,6 +324,7 @@ async function sendMorningDigests(
     try {
       await sendEmail({
         to: branding.supportEmail,
+        from: branding.fromAddress,
         subject: `Today's Schedule: ${events.length} event${events.length === 1 ? "" : "s"} — ${branding.businessName}`,
         html: dailyScheduleEmail({
           businessName: branding.businessName,
@@ -376,6 +388,7 @@ async function sendPostEventFollowUps(
     try {
       await sendEmail({
         to: customer.email,
+        from: branding.fromAddress,
         subject: `How was your event? — ${branding.businessName}`,
         html: postEventFollowUpEmail({
           businessName: branding.businessName,
