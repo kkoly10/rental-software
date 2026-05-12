@@ -8,8 +8,8 @@ if (dsn) {
     tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
     replaysOnErrorSampleRate: 1.0,
     replaysSessionSampleRate: 0.01,
-    // Replay integration is added lazily after page load to avoid
-    // blocking the main thread and inflating the critical-path bundle.
+    // Replay integration is registered after page load to defer starting
+    // DOM observers and the compression WebWorker until the page is idle.
   });
 
   if (typeof window !== "undefined") {
