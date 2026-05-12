@@ -2,7 +2,14 @@
  * Shared email layout wrapper.
  * Inlines all styles for maximum email client compatibility.
  */
+
+function esc(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[ch] ?? ch));
+}
+
 function layout(businessName: string, body: string, footer?: string): string {
+  const safeName = esc(businessName);
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -13,7 +20,7 @@ function layout(businessName: string, body: string, footer?: string): string {
         <!-- Header -->
         <tr>
           <td style="background:linear-gradient(135deg,#1e5dcf,#2d77f2);padding:24px 32px;">
-            <span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.01em;">${businessName}</span>
+            <span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.01em;">${safeName}</span>
           </td>
         </tr>
         <!-- Body -->
@@ -25,7 +32,7 @@ function layout(businessName: string, body: string, footer?: string): string {
         <!-- Footer -->
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #dbe6f4;color:#55708f;font-size:13px;">
-            ${footer ?? `<p style="margin:0;">Sent by ${businessName} via <span style="color:#1e5dcf;font-weight:600;">Korent</span></p>`}
+            ${footer ?? `<p style="margin:0;">Sent by ${safeName} via <span style="color:#1e5dcf;font-weight:600;">Korent</span></p>`}
           </td>
         </tr>
       </table>
@@ -36,15 +43,15 @@ function layout(businessName: string, body: string, footer?: string): string {
 }
 
 function button(text: string, url: string): string {
-  return `<a href="${url}" style="display:inline-block;padding:14px 28px;background:#1e5dcf;color:#ffffff;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;margin:16px 0;">
-    ${text}
+  return `<a href="${esc(url)}" style="display:inline-block;padding:14px 28px;background:#1e5dcf;color:#ffffff;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;margin:16px 0;">
+    ${esc(text)}
   </a>`;
 }
 
 function detailRow(label: string, value: string): string {
   return `<tr>
-    <td style="padding:8px 0;color:#55708f;font-size:14px;width:140px;vertical-align:top;">${label}</td>
-    <td style="padding:8px 0;font-size:14px;font-weight:500;">${value}</td>
+    <td style="padding:8px 0;color:#55708f;font-size:14px;width:140px;vertical-align:top;">${esc(label)}</td>
+    <td style="padding:8px 0;font-size:14px;font-weight:500;">${esc(value)}</td>
   </tr>`;
 }
 
@@ -77,7 +84,7 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Booking received!</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, thanks for your reservation. Here are your details:
+      Hi ${esc(data.customerFirstName)}, thanks for your reservation. Here are your details:
     </p>
 
     ${detailTable([
@@ -90,7 +97,7 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
     ])}
 
     <div style="background:#fff4e5;border:1px solid #fde2a7;border-radius:12px;padding:16px;margin:20px 0;">
-      <strong style="color:#a86a08;">Deposit required: ${data.depositDue}</strong>
+      <strong style="color:#a86a08;">Deposit required: ${esc(data.depositDue)}</strong>
       <p style="margin:8px 0 0;font-size:14px;color:#a86a08;">
         Please submit your deposit to confirm this booking. We'll reach out with payment instructions.
       </p>
@@ -99,7 +106,7 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
     ${button("Open Secure Customer Portal", data.portalUrl)}
 
     <p style="font-size:14px;color:#55708f;">
-      Questions? Reply to this email or contact us at ${data.supportEmail}.
+      Questions? Reply to this email or contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );
@@ -163,7 +170,7 @@ export function paymentReceivedEmail(data: PaymentReceivedData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Payment received</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, we received your ${data.paymentType} payment.
+      Hi ${esc(data.customerFirstName)}, we received your ${esc(data.paymentType)} payment.
     </p>
 
     ${detailTable([
@@ -181,12 +188,12 @@ export function paymentReceivedEmail(data: PaymentReceivedData): string {
           </p>
         </div>`
       : `<p style="font-size:14px;color:#55708f;">
-          Your remaining balance of ${data.newBalance} is due before the event date.
+          Your remaining balance of ${esc(data.newBalance)} is due before the event date.
         </p>`
     }
 
     <p style="font-size:14px;color:#55708f;">
-      Questions? Contact us at ${data.supportEmail}.
+      Questions? Contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );
@@ -208,7 +215,7 @@ export function refundProcessedEmail(data: RefundProcessedData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Refund processed</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, a refund has been issued for your order.
+      Hi ${esc(data.customerFirstName)}, a refund has been issued for your order.
     </p>
 
     ${detailTable([
@@ -218,7 +225,7 @@ export function refundProcessedEmail(data: RefundProcessedData): string {
 
     <p style="font-size:14px;color:#55708f;">
       The refund may take 5-10 business days to appear on your statement.
-      Contact us at ${data.supportEmail} with any questions.
+      Contact us at ${esc(data.supportEmail)} with any questions.
     </p>
     `
   );
@@ -266,7 +273,7 @@ const statusMessages: Record<string, { heading: string; body: string }> = {
 
 export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
   const msg = statusMessages[data.newStatus] ?? {
-    heading: `Order updated to ${data.newStatus}`,
+    heading: `Order updated`,
     body: "Your order status has been updated.",
   };
 
@@ -286,17 +293,17 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${msg.heading}</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(msg.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, here's an update on your booking:
+      Hi ${esc(data.customerFirstName)}, here's an update on your booking:
     </p>
 
     ${detailTable(rows)}
 
-    <p style="font-size:14px;margin:16px 0;">${msg.body}</p>
+    <p style="font-size:14px;margin:16px 0;">${esc(msg.body)}</p>
 
     <p style="font-size:14px;color:#55708f;">
-      Questions? Contact us at ${data.supportEmail}.
+      Questions? Contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );
@@ -313,22 +320,24 @@ export type DocumentsReadyData = {
 };
 
 export function documentsReadyEmail(data: DocumentsReadyData): string {
-  const docList = data.documentTypes
-    .map((t) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
-    .join(" and ");
+  const docList = esc(
+    data.documentTypes
+      .map((t) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
+      .join(" and ")
+  );
 
   return layout(
     data.businessName,
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Documents ready to sign</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, your ${docList} for order #${data.orderNumber}
+      Hi ${esc(data.customerFirstName)}, your ${docList} for order #${esc(data.orderNumber)}
       ${data.documentTypes.length > 1 ? "are" : "is"} ready for review.
     </p>
 
     <p style="font-size:14px;">
       Our team will send you the documents for signing. If you have questions,
-      contact us at ${data.supportEmail}.
+      contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );
@@ -363,7 +372,7 @@ export function eventReminderEmail(data: EventReminderData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Your rental is tomorrow!</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, just a friendly reminder that your rental is coming up tomorrow.
+      Hi ${esc(data.customerFirstName)}, just a friendly reminder that your rental is coming up tomorrow.
     </p>
 
     ${detailTable(rows)}
@@ -371,7 +380,7 @@ export function eventReminderEmail(data: EventReminderData): string {
     ${data.setupInstructions
       ? `<div style="background:#f0f6ff;border:1px solid #c4d8f4;border-radius:12px;padding:16px;margin:20px 0;">
           <strong style="color:#1e5dcf;">Setup Notes</strong>
-          <p style="margin:8px 0 0;font-size:14px;color:#10233f;">${data.setupInstructions}</p>
+          <p style="margin:8px 0 0;font-size:14px;color:#10233f;">${esc(data.setupInstructions).replace(/\n/g, "<br />")}</p>
         </div>`
       : ""
     }
@@ -380,7 +389,7 @@ export function eventReminderEmail(data: EventReminderData): string {
       Please ensure the setup area is accessible and clear of obstacles. Our crew will handle everything else!
     </p>
     <p style="font-size:14px;color:#55708f;">
-      Questions? Contact us at ${data.supportEmail}.
+      Questions? Contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );
@@ -409,13 +418,13 @@ export function dailyScheduleEmail(data: DailyScheduleData): string {
     .map(
       (e) => `
       <tr style="border-bottom:1px solid #f0f3f8;">
-        <td style="padding:12px 8px;font-size:14px;font-weight:600;">#${e.orderNumber}</td>
-        <td style="padding:12px 8px;font-size:14px;">${e.customerName}</td>
-        <td style="padding:12px 8px;font-size:14px;">${e.productName}</td>
-        <td style="padding:12px 8px;font-size:14px;color:#55708f;">${e.time ?? "TBD"}</td>
+        <td style="padding:12px 8px;font-size:14px;font-weight:600;">#${esc(e.orderNumber)}</td>
+        <td style="padding:12px 8px;font-size:14px;">${esc(e.customerName)}</td>
+        <td style="padding:12px 8px;font-size:14px;">${esc(e.productName)}</td>
+        <td style="padding:12px 8px;font-size:14px;color:#55708f;">${esc(e.time ?? "TBD")}</td>
         <td style="padding:12px 8px;font-size:14px;">
           <span style="background:#eaf9f4;color:#188862;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;">
-            ${e.status.replace(/_/g, " ")}
+            ${esc(e.status.replace(/_/g, " "))}
           </span>
         </td>
       </tr>
@@ -428,7 +437,7 @@ export function dailyScheduleEmail(data: DailyScheduleData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Today&rsquo;s Schedule</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      You have <strong>${data.events.length}</strong> event${data.events.length === 1 ? "" : "s"} on <strong>${data.date}</strong>.
+      You have <strong>${data.events.length}</strong> event${data.events.length === 1 ? "" : "s"} on <strong>${esc(data.date)}</strong>.
     </p>
 
     <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border:1px solid #dbe6f4;border-radius:12px;overflow:hidden;">
@@ -466,7 +475,7 @@ export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">How was your event?</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, we hope your event on ${data.eventDate} was a blast! Thank you for renting with ${data.businessName}.
+      Hi ${esc(data.customerFirstName)}, we hope your event on ${esc(data.eventDate)} was a blast! Thank you for renting with ${esc(data.businessName)}.
     </p>
 
     ${detailTable([
@@ -491,7 +500,7 @@ export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
     </div>
 
     <p style="font-size:14px;color:#55708f;">
-      Questions or feedback? Contact us at ${data.supportEmail}.
+      Questions or feedback? Contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );
@@ -512,7 +521,7 @@ export function quoteSentEmail(data: {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">Your quote is ready!</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${data.customerFirstName}, we've prepared a quote for your upcoming event.
+      Hi ${esc(data.customerFirstName)}, we've prepared a quote for your upcoming event.
       Review the details below and accept online to secure your booking.
     </p>
 
@@ -524,12 +533,12 @@ export function quoteSentEmail(data: {
     ])}
 
     <div style="text-align:center;margin:28px 0;">
-      ${button("View &amp; Accept Quote", data.portalUrl)}
+      ${button("View & Accept Quote", data.portalUrl)}
     </div>
 
     <p style="font-size:13px;color:#55708f;text-align:center;">
       This quote is not a confirmed booking. Pay your deposit to reserve your date.<br>
-      Questions? Contact us at ${data.supportEmail}.
+      Questions? Contact us at ${esc(data.supportEmail)}.
     </p>
     `
   );

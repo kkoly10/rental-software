@@ -38,7 +38,7 @@ export async function getOrgSettings(): Promise<OrgSettings> {
   if (!hasSupabaseEnv()) return fallbackSettings;
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackSettings;
+  if (!ctx) return { ...fallbackSettings, name: "" };
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -47,7 +47,11 @@ export async function getOrgSettings(): Promise<OrgSettings> {
     .eq("id", ctx.organizationId)
     .maybeSingle();
 
-  if (error || !data) return fallbackSettings;
+  if (error) {
+    console.error("[settings] Query failed:", error.message);
+    return { ...fallbackSettings, name: "" };
+  }
+  if (!data) return { ...fallbackSettings, name: "" };
 
   const settings = (data.settings as Record<string, unknown>) ?? {};
 

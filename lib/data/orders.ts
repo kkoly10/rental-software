@@ -67,14 +67,7 @@ export async function getOrdersPage(options?: {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    const filtered = mockOrders.filter((order) =>
-      matchesOrderQuery(order, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -87,15 +80,9 @@ export async function getOrdersPage(options?: {
     .order("created_at", { ascending: false })
     .limit(500);
 
-  if (error || !data || data.length === 0) {
-    const filtered = mockOrders.filter((order) =>
-      matchesOrderQuery(order, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+  if (error) {
+    console.error("[orders] Query failed:", error.message);
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const mapped: OrderSummary[] = data.map((order) => {

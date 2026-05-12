@@ -135,10 +135,10 @@ export async function createProduct(
     return { ok: false, message: error.message };
   }
 
-  // Track setup progress (non-blocking)
-  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
-    markSetupStep(ctx.organizationId, "has_products")
-  ).catch(() => {});
+  try {
+    const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
+    await markSetupStep(ctx.organizationId, "has_products");
+  } catch { /* non-critical */ }
 
   redirect(`/dashboard/products/${inserted.id}?created=1`);
 }
@@ -226,6 +226,9 @@ export async function updateProduct(
     .is("deleted_at", null);
 
   if (error) {
+    if (error.code === "23505") {
+      return { ok: false, message: "A product with that name already exists. Please choose a different name." };
+    }
     return { ok: false, message: error.message };
   }
 

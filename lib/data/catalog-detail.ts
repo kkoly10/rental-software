@@ -85,9 +85,7 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   const ctx = await getOrgContext();
   const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
   if (!organizationId) {
-    return (
-      fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
-    );
+    notFound();
   }
 
   const supabase = await createSupabaseServerClient();

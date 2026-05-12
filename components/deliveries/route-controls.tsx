@@ -94,7 +94,7 @@ export function RemoveStopButton({
   stopId: string;
   routeId: string;
 }) {
-  const [, action, pending] = useActionState(removeStopFromRoute, initial);
+  const [state, action, pending] = useActionState(removeStopFromRoute, initial);
 
   return (
     <form action={action} style={{ display: "inline" }}>
@@ -103,6 +103,11 @@ export function RemoveStopButton({
       <button type="submit" className="ghost-btn" disabled={pending} style={{ fontSize: 12, color: "var(--text-soft)" }}>
         {pending ? "…" : "Remove"}
       </button>
+      {state.message && !state.ok && (
+        <span style={{ marginLeft: 6, fontSize: 12, color: "var(--danger, #e53e3e)" }}>
+          {state.message}
+        </span>
+      )}
     </form>
   );
 }

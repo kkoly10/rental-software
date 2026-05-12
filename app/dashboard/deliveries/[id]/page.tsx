@@ -120,19 +120,29 @@ export default async function DeliveryDetailPage({
             />
           </div>
 
-          {route.stops.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&travelmode=driving&waypoints=${route.stops.map((s) => encodeURIComponent(s.address ?? "")).filter(Boolean).join("|")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="secondary-btn"
-                style={{ display: "inline-block" }}
-              >
-                Open route in Google Maps
-              </a>
-            </div>
-          )}
+          {(() => {
+            const addressedStops = route.stops
+              .filter((s) => s.address)
+              .sort((a, b) => a.sequence - b.sequence);
+            if (addressedStops.length === 0) return null;
+            const origin = encodeURIComponent(addressedStops[0].address!);
+            const destination = encodeURIComponent(addressedStops[addressedStops.length - 1].address!);
+            const mid = addressedStops.slice(1, -1).map((s) => encodeURIComponent(s.address!)).join("|");
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}${mid ? `&waypoints=${mid}` : ""}`;
+            return (
+              <div style={{ marginTop: 16 }}>
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="secondary-btn"
+                  style={{ display: "inline-block" }}
+                >
+                  Open route in Google Maps
+                </a>
+              </div>
+            );
+          })()}
 
           <div style={{ marginTop: 12 }}>
             <Link href="/crew/today" className="ghost-btn">

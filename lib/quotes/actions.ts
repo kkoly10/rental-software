@@ -47,8 +47,8 @@ export async function sendQuote(orderId: string): Promise<QuoteActionState> {
 
   if (!order) return { ok: false, message: "Order not found." };
 
-  if (!["inquiry"].includes(order.order_status ?? "")) {
-    return { ok: false, message: "Quote can only be sent for orders in Inquiry status." };
+  if (!["inquiry", "quote_sent"].includes(order.order_status ?? "")) {
+    return { ok: false, message: "Quote can only be sent for orders in Inquiry or Quote Sent status." };
   }
 
   const { error } = await supabase

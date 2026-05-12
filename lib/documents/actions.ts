@@ -180,15 +180,17 @@ export async function createDocumentsForOrder(
   revalidatePath("/dashboard/documents");
   revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);
 
-  // Send documents-ready email to customer (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerDocumentsReadyEmail }) =>
-    triggerDocumentsReadyEmail({
+  try {
+    const { triggerDocumentsReadyEmail } = await import("@/lib/email/triggers");
+    await triggerDocumentsReadyEmail({
       organizationId: ctx.organizationId,
       orderId: parsed.data.orderId,
       customerId: order.customer_id,
       documentTypes: ["rental_agreement", "safety_waiver"],
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    console.error("[documents] Failed to send documents-ready email for order", parsed.data.orderId);
+  }
 
   return {
     ok: true,

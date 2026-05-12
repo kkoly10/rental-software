@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 import type { PricingRule } from "@/lib/pricing/types";
 
 const fallbackRules: PricingRule[] = [
@@ -29,9 +29,11 @@ export async function getPricingRules(): Promise<PricingRule[]> {
     return fallbackRules;
   }
 
+  // Support both authenticated dashboard context and public storefront (unauthenticated tenant)
   const ctx = await getOrgContext();
-  if (!ctx) {
-    return fallbackRules;
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  if (!organizationId) {
+    return [];
   }
 
   const supabase = await createSupabaseServerClient();
@@ -39,13 +41,11 @@ export async function getPricingRules(): Promise<PricingRule[]> {
   const { data: org } = await supabase
     .from("organizations")
     .select("settings")
-    .eq("id", ctx.organizationId)
+    .eq("id", organizationId)
     .maybeSingle();
 
   const settings = (org?.settings as Record<string, unknown>) ?? {};
   const rules = settings.pricing_rules as PricingRule[] | undefined;
 
-  return rules && Array.isArray(rules) && rules.length > 0
-    ? rules
-    : fallbackRules;
+  return rules && Array.isArray(rules) ? rules : [];
 }

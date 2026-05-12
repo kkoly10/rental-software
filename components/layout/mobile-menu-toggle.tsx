@@ -14,6 +14,8 @@ interface MobileMenuToggleProps {
   isOperator: boolean;
   siteUrl?: string;
   navLinks?: NavLink[];
+  cta?: { label: string; href: string };
+  authLabel?: string;
 }
 
 const defaultLinks: NavLink[] = [
@@ -25,8 +27,10 @@ const defaultLinks: NavLink[] = [
   { key: "contact", label: "Contact", href: "/contact" },
 ];
 
-export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks }: MobileMenuToggleProps) {
+export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks, cta, authLabel }: MobileMenuToggleProps) {
   const links = navLinks ?? defaultLinks;
+  const ctaHref = cta?.href ?? "/inventory";
+  const ctaLabel = cta?.label ?? "Book Now";
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -146,11 +150,11 @@ export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks }: MobileM
 
             <div className="mobile-menu-footer">
               <Link
-                href="/inventory"
+                href={ctaHref}
                 className="primary-btn mobile-menu-cta"
                 onClick={close}
               >
-                Book Now
+                {ctaLabel}
               </Link>
               {isOperator ? (
                 <a href={`${siteUrl}/dashboard`} className="ghost-btn" onClick={close}>
@@ -158,7 +162,7 @@ export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks }: MobileM
                 </a>
               ) : (
                 <a href={`${siteUrl}/login`} className="ghost-btn" onClick={close}>
-                  Rentals Login
+                  {authLabel ?? "Rentals Login"}
                 </a>
               )}
             </div>

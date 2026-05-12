@@ -36,7 +36,7 @@ export async function getServiceAreaAdminRecords(): Promise<ServiceAreaAdminReco
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return fallbackAreas;
+    return [];
   }
 
   const supabase = await createSupabaseServerClient();
@@ -49,8 +49,13 @@ export async function getServiceAreaAdminRecords(): Promise<ServiceAreaAdminReco
     .is("deleted_at", null)
     .order("label", { ascending: true });
 
-  if (error || !data) {
-    return fallbackAreas;
+  if (error) {
+    console.error("[service-areas-admin] Query failed:", error.message);
+    return [];
+  }
+
+  if (!data) {
+    return [];
   }
 
   return data.map((area) => {

@@ -295,12 +295,13 @@ export async function signUpWithPassword(
     metadata: { email },
   });
 
-  // Record terms acceptance on the profile (non-blocking — don't block signup if this fails)
+  // Record terms acceptance on the profile before terminating the Lambda via redirect
   const hdrs = await headers();
   const clientIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? hdrs.get("x-real-ip") ?? null;
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
-    import("@/lib/supabase/admin").then(async ({ createSupabaseAdminClient }) => {
+    try {
+      const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
       const admin = createSupabaseAdminClient();
       await admin
         .from("profiles")
@@ -310,7 +311,9 @@ export async function signUpWithPassword(
           terms_ip: clientIp,
         })
         .eq("id", user.id);
-    }).catch((err) => logAppError({ source: "auth/terms-acceptance", message: "Failed to record terms acceptance", context: { error: String(err) } }));
+    } catch (err) {
+      await logAppError({ source: "auth/terms-acceptance", message: "Failed to record terms acceptance", context: { error: String(err) } });
+    }
   }
 
   await supabase.auth.signOut();

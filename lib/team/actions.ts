@@ -149,7 +149,12 @@ export async function inviteTeamMember(
   const businessName = org?.name ?? "Korent";
   const inviteUrl = `${siteUrl}/invite/${token}`;
 
-  sendEmail({
+  const htmlEscapeMap: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
+  const safeBusinessName = businessName.replace(/[&<>"']/g, (ch: string) => htmlEscapeMap[ch] ?? ch);
+  // sendEmail never throws (it catches internally and returns false on failure).
+  // Check the return value so we can warn if delivery failed — but don't block
+  // the invite, because the token is already in the DB and the operator can resend.
+  const sent = await sendEmail({
     to: email,
     subject: `You're invited to join ${businessName} on Korent`,
     html: `<!DOCTYPE html>
@@ -160,7 +165,7 @@ export async function inviteTeamMember(
         <tr><td>
           <h1 style="margin:0 0 12px;font-size:22px;color:#10233f;">You've been invited!</h1>
           <p style="color:#55708f;font-size:15px;">
-            <strong>${businessName}</strong> has invited you to join their team as a <strong>${role}</strong>.
+            <strong>${safeBusinessName}</strong> has invited you to join their team as a <strong>${role}</strong>.
           </p>
           <a href="${inviteUrl}" style="display:inline-block;padding:14px 28px;background:#1e5dcf;color:#fff;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;margin:20px 0;">
             Accept Invite
@@ -171,9 +176,11 @@ export async function inviteTeamMember(
     </td></tr>
   </table>
 </body></html>`,
-    replyTo: org?.name ? undefined : undefined,
     organizationId: ctx.organizationId,
-  }).catch(() => {});
+  });
+  if (!sent) {
+    console.warn("[team] Invite email delivery failed for", email, "— invite token still valid in DB");
+  }
 
   revalidatePath("/dashboard/settings/team");
 

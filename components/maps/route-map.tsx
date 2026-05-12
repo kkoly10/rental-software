@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { loadLeaflet } from "@/lib/maps/load-leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { escapeHtml } from "@/lib/maps/escape-html";
 
 export type RouteMapStop = {
@@ -42,7 +41,9 @@ export function RouteMap({
   height = "400px",
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const geoStops = stops.filter((s) => s.lat != null && s.lng != null);
 
@@ -55,10 +56,14 @@ export function RouteMap({
     let cancelled = false;
 
     async function init() {
-      await loadLeaflet();
+      let L: typeof import("leaflet");
+      try {
+        L = (await import("leaflet")).default as unknown as typeof import("leaflet");
+      } catch {
+        if (!cancelled) setMapError("Map failed to load. Please refresh the page.");
+        return;
+      }
       if (cancelled || !containerRef.current) return;
-
-      const L = (window as any).L;
 
       if (mapRef.current) {
         mapRef.current.remove();
@@ -108,8 +113,7 @@ export function RouteMap({
           popupAnchor: [0, -18],
         });
 
-        const typeLabel =
-          stop.type === "pickup" ? "Pickup" : "Delivery";
+        const typeLabel = stop.type === "pickup" ? "Pickup" : "Delivery";
         const statusLabel = stop.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
         const safeName = escapeHtml(stop.customerName ?? "Stop " + stop.sequence);
@@ -166,11 +170,21 @@ export function RouteMap({
     return (
       <div className="route-map-container route-map-empty" style={{ height }}>
         <div className="route-map-empty-message">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-soft)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-soft)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
           <p>Add addresses to see route on map</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (mapError) {
+    return (
+      <div className="route-map-container route-map-empty" style={{ height }}>
+        <div className="route-map-empty-message">
+          <p className="muted">{mapError}</p>
         </div>
       </div>
     );

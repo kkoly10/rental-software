@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { escapeHtml } from "@/lib/maps/escape-html";
 
 const replySchema = z.object({
   body: z.string().min(1, "Reply cannot be empty").max(5000),
@@ -107,9 +108,9 @@ export async function sendReply(
     return { ok: false, message: "Failed to save reply." };
   }
 
-  // Log to communication_log for audit trail (non-blocking)
-  import("@/lib/communications/log").then(({ logCommunication }) =>
-    logCommunication({
+  try {
+    const { logCommunication } = await import("@/lib/communications/log");
+    await logCommunication({
       organizationId: ctx.organizationId,
       orderId: orderId ?? undefined,
       customerId: customerId ?? undefined,
@@ -120,41 +121,42 @@ export async function sendReply(
       bodyPreview: body,
       status: "sent",
       metadata: { senderName: profile?.full_name ?? "Operator" },
-    })
-  ).catch(() => {});
+    });
+  } catch { /* non-critical — audit trail */ }
 
-  // Send email to customer (non-blocking)
-  import("@/lib/email/triggers")
-    .then(async () => {
-      const { sendEmail } = await import("@/lib/email/send");
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("name, support_email")
-        .eq("id", ctx.organizationId)
-        .maybeSingle();
+  // Send email to customer — awaited so operators know delivery succeeded
+  try {
+    const { sendEmail } = await import("@/lib/email/send");
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name, support_email")
+      .eq("id", ctx.organizationId)
+      .maybeSingle();
 
-      const businessName = org?.name ?? "Korent";
-      const supportEmail = org?.support_email ?? "support@korent.app";
+    const businessName = org?.name ?? "Korent";
+    const supportEmail = org?.support_email ?? "support@korent.app";
 
-      await sendEmail({
-        to: customerEmail,
-        subject: orderNumber
-          ? `Re: Order #${orderNumber} — ${businessName}`
-          : `Message from ${businessName}`,
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;">
-            <p style="color:#10233f;font-size:14px;line-height:1.6;">${body.replace(/\n/g, "<br />")}</p>
-            <hr style="border:none;border-top:1px solid #dbe6f4;margin:24px 0;" />
-            <p style="color:#55708f;font-size:13px;">
-              Sent by ${profile?.full_name ?? businessName} · Reply to this email or contact us at ${supportEmail}
-            </p>
-          </div>
-        `,
-        replyTo: supportEmail,
-        organizationId: ctx.organizationId,
-      });
-    })
-    .catch(() => {});
+    await sendEmail({
+      to: customerEmail,
+      subject: orderNumber
+        ? `Re: Order #${orderNumber} — ${businessName}`
+        : `Message from ${businessName}`,
+      html: `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;">
+          <p style="color:#10233f;font-size:14px;line-height:1.6;">${escapeHtml(body).replace(/\n/g, "<br />")}</p>
+          <hr style="border:none;border-top:1px solid #dbe6f4;margin:24px 0;" />
+          <p style="color:#55708f;font-size:13px;">
+            Sent by ${escapeHtml(profile?.full_name ?? businessName)} · Reply to this email or contact us at ${escapeHtml(supportEmail)}
+          </p>
+        </div>
+      `,
+      replyTo: supportEmail,
+      organizationId: ctx.organizationId,
+    });
+  } catch {
+    console.error("[messages] Failed to send reply email to", customerEmail);
+    return { ok: false, message: "Reply saved but email delivery failed. Please try again." };
+  }
 
   revalidatePath("/dashboard/messages");
 

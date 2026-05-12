@@ -40,14 +40,7 @@ export async function getProductsPage(options?: {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    const filtered = mockProducts.filter((product) =>
-      matchesProductQuery(product, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -59,15 +52,9 @@ export async function getProductsPage(options?: {
     .order("name", { ascending: true })
     .limit(500);
 
-  if (error || !data || data.length === 0) {
-    const filtered = mockProducts.filter((product) =>
-      matchesProductQuery(product, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+  if (error) {
+    console.error("[products] Query failed:", error.message);
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const mapped: ProductSummary[] = data.map((product) => {

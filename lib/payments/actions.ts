@@ -112,6 +112,16 @@ export async function recordPayment(
     };
   }
 
+  if (paymentType === "refund") {
+    const totalPaid = financials?.totalPaid ?? 0;
+    if (amount > totalPaid) {
+      return {
+        ok: false,
+        message: `Refund cannot exceed total payments received ($${totalPaid.toFixed(2)}).`,
+      };
+    }
+  }
+
   // Insert the payment record — this is the source of truth
   const { error } = await supabase.from("payments").insert({
     order_id: orderId,
@@ -166,52 +176,49 @@ export async function recordPayment(
   revalidatePath("/dashboard/payments");
   revalidatePath(`/dashboard/orders/${orderId}`);
 
-  // Send payment email to customer (non-blocking)
-  import("@/lib/email/triggers").then(async ({ triggerPaymentReceivedEmail }) => {
-    // Fetch customer details for the email
-    const { data: fullOrder } = await supabase
-      .from("orders")
-      .select("order_number, customer_id")
-      .eq("id", orderId)
-      .eq("organization_id", ctx.organizationId)
-      .maybeSingle();
+  try {
+    const [{ triggerPaymentReceivedEmail }, orderResult, orgResult] = await Promise.all([
+      import("@/lib/email/triggers"),
+      supabase.from("orders").select("order_number, customer_id").eq("id", orderId).eq("organization_id", ctx.organizationId).maybeSingle(),
+      supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle(),
+    ]);
+    const fullOrder = orderResult.data;
 
-    if (!fullOrder?.customer_id) return;
-
-    const { data: customer } = await supabase
-      .from("customers")
-      .select("first_name, email, phone")
-      .eq("id", fullOrder.customer_id)
-      .maybeSingle();
-
-    if (!customer?.email) return;
-
-    await triggerPaymentReceivedEmail({
-      organizationId: ctx.organizationId,
-      customerFirstName: customer.first_name ?? "there",
-      customerEmail: customer.email,
-      orderNumber: fullOrder.order_number,
-      amount,
-      paymentType,
-      paymentMethod,
-      newBalance,
-    });
-
-    // Send payment SMS (non-blocking, skip for refunds)
-    if (customer.phone && paymentType !== "refund") {
-      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("name")
-        .eq("id", ctx.organizationId)
+    if (fullOrder?.customer_id) {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("first_name, email, phone")
+        .eq("id", fullOrder.customer_id)
         .maybeSingle();
-      await sendSmsNotification("paymentReceived", customer.phone, {
-        amount: amount.toFixed(2),
-        orderNumber: fullOrder.order_number,
-        businessName: org?.name ?? "Your rental company",
-      }, ctx.organizationId, { orderId: orderId as string, customerId: fullOrder.customer_id });
+
+      if (customer?.email) {
+        const emailTask = triggerPaymentReceivedEmail({
+          organizationId: ctx.organizationId,
+          customerFirstName: customer.first_name ?? "there",
+          customerEmail: customer.email,
+          orderNumber: fullOrder.order_number,
+          amount,
+          paymentType,
+          paymentMethod,
+          newBalance,
+        });
+
+        const smsTask = customer.phone && paymentType !== "refund"
+          ? import("@/lib/sms/send-notification").then(({ sendSmsNotification }) =>
+              sendSmsNotification("paymentReceived", customer.phone!, {
+                amount: amount.toFixed(2),
+                orderNumber: fullOrder.order_number,
+                businessName: orgResult.data?.name ?? "Your rental company",
+              }, ctx.organizationId, { orderId: orderId as string, customerId: fullOrder.customer_id })
+            )
+          : Promise.resolve();
+
+        await Promise.allSettled([emailTask, smsTask]);
+      }
     }
-  }).catch(() => {});
+  } catch {
+    console.error("[payments] Failed to send payment confirmation email for order", orderId);
+  }
 
   return {
     ok: true,

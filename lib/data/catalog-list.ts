@@ -52,7 +52,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
   const ctx = await getOrgContext();
   const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
   if (!organizationId) {
-    return fallbackCatalog;
+    return [];
   }
 
   const supabase = await createSupabaseServerClient();
@@ -67,8 +67,13 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
     .is("deleted_at", null)
     .order("name", { ascending: true });
 
-  if (error || !data || data.length === 0) {
-    return fallbackCatalog;
+  if (error) {
+    console.error("[catalog-list] Failed to fetch products:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
   }
 
   return data.map((product) => {

@@ -50,14 +50,7 @@ export async function getCustomersPage(options?: {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    const filtered = fallbackCustomers.filter((customer) =>
-      matchesCustomerQuery(customer, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const supabase = await createSupabaseServerClient();
@@ -71,15 +64,9 @@ export async function getCustomersPage(options?: {
     .order("created_at", { ascending: false })
     .limit(500);
 
-  if (error || !data || data.length === 0) {
-    const filtered = fallbackCustomers.filter((customer) =>
-      matchesCustomerQuery(customer, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+  if (error) {
+    console.error("[customers] Query failed:", error.message);
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const mapped: CustomerSummary[] = data.map((customer) => {

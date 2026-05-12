@@ -137,7 +137,7 @@ export async function getConversations(): Promise<ConversationSummary[]> {
   if (!hasSupabaseEnv()) return demoConversations;
 
   const ctx = await getOrgContext();
-  if (!ctx) return demoConversations;
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
 

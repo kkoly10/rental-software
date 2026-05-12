@@ -24,10 +24,14 @@ function darkenHex(hex: string, factor: number): string {
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
+function isSafeHex(value: string | null | undefined): boolean {
+  return !!value && /^#[0-9a-fA-F]{3,8}$/.test(value);
+}
+
 export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
-  const hasCustomPrimary = brand.primaryColor && brand.primaryColor !== "#e8590c";
-  const hasCustomAccent = brand.accentColor && brand.accentColor !== "#7c3aed";
-  const hasCustomFont = brand.fontFamily && brand.fontFamily !== "System Default";
+  const hasCustomPrimary = isSafeHex(brand.primaryColor) && brand.primaryColor !== "#e8590c";
+  const hasCustomAccent = isSafeHex(brand.accentColor) && brand.accentColor !== "#7c3aed";
+  const hasCustomFont = brand.fontFamily && brand.fontFamily !== "System Default" && brand.fontFamily in GOOGLE_FONT_MAP;
 
   if (!hasCustomPrimary && !hasCustomAccent && !hasCustomFont) {
     return null;

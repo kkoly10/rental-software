@@ -57,7 +57,7 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackAreas;
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -69,8 +69,13 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
     .eq("is_active", true)
     .order("label", { ascending: true });
 
-  if (error || !data || data.length === 0) {
-    return fallbackAreas;
+  if (error) {
+    console.error("[service-areas] Query failed:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
   }
 
   return data.map((area) => {

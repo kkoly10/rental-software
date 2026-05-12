@@ -50,7 +50,7 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
 
   const ctx = await getOrgContext();
   const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
-  if (!organizationId) return fallbackGeoAreas;
+  if (!organizationId) return [];
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -62,8 +62,13 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
     .eq("is_active", true)
     .order("label", { ascending: true });
 
-  if (error || !data || data.length === 0) {
-    return fallbackGeoAreas;
+  if (error) {
+    console.error("[service-areas-geo] Query failed:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
   }
 
   return data.map((area) => {

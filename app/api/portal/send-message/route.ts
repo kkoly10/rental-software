@@ -106,15 +106,18 @@ export async function POST(request: NextRequest) {
 
   const supportEmail = org?.support_email;
 
-  import("@/lib/data/notifications").then(({ createNotification }) =>
-    createNotification(
+  try {
+    const { createNotification } = await import("@/lib/data/notifications");
+    await createNotification(
       orgId,
       "new_message",
       "New customer message",
       `${subject} — Order #${order.order_number}`,
       "/dashboard/messages"
-    )
-  ).catch(() => {});
+    );
+  } catch {
+    console.error("[portal] Failed to create notification for order", order.order_number);
+  }
 
   await supabase.from("messages").insert({
     organization_id: orgId,

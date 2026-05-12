@@ -375,14 +375,14 @@ export async function createOrder(
 
   const isFirstOrder = (existingOrderCount ?? 0) <= 1;
 
-  // Track setup progress (non-blocking)
-  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
-    markSetupStep(ctx.organizationId, "has_first_order")
-  ).catch(() => {});
+  try {
+    const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
+    await markSetupStep(ctx.organizationId, "has_first_order");
+  } catch { /* non-critical */ }
 
-  // Send new order alert to operator (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerDashboardOrderEmail }) =>
-    triggerDashboardOrderEmail({
+  try {
+    const { triggerDashboardOrderEmail } = await import("@/lib/email/triggers");
+    await triggerDashboardOrderEmail({
       organizationId: ctx.organizationId,
       customerName: `${firstName} ${lastName}`,
       customerEmail: email ?? "",
@@ -390,8 +390,10 @@ export async function createOrder(
       productName: productNameSnapshot,
       eventDate: eventDate ?? "",
       total,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    console.error("[orders] Failed to send new order alert for", orderNumber);
+  }
 
   redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
 }
@@ -454,24 +456,29 @@ export async function updateOrderStatus(
     return { ok: false, message: error.message };
   }
 
-  // Release availability blocks when order is cancelled (non-blocking)
+  // Release availability blocks when order is cancelled — awaited so inventory is freed immediately
   if (parsed.data.newStatus === "cancelled") {
-    import("@/lib/availability/actions").then(({ releaseOrderAvailability }) =>
-      releaseOrderAvailability(ctx.organizationId, parsed.data.orderId).catch(() => {})
-    );
+    try {
+      const { releaseOrderAvailability } = await import("@/lib/availability/actions");
+      await releaseOrderAvailability(ctx.organizationId, parsed.data.orderId);
+    } catch {
+      console.error("[orders] Failed to release availability for cancelled order", parsed.data.orderId);
+    }
   }
 
-  // Send status update email to customer (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerOrderStatusEmail }) =>
-    triggerOrderStatusEmail({
+  try {
+    const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+    await triggerOrderStatusEmail({
       organizationId: ctx.organizationId,
       orderId: parsed.data.orderId,
       newStatus: parsed.data.newStatus,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    console.error("[orders] Failed to send status update email for order", parsed.data.orderId);
+  }
 
-  // Send status update SMS to customer (non-blocking)
-  import("@/lib/sms/send-notification").then(async ({ sendSmsNotification }) => {
+  try {
+    const { sendSmsNotification } = await import("@/lib/sms/send-notification");
     const { data: order } = await supabase
       .from("orders")
       .select("order_number, event_date, customer_id")
@@ -479,62 +486,59 @@ export async function updateOrderStatus(
       .eq("organization_id", ctx.organizationId)
       .maybeSingle();
 
-    if (!order?.customer_id) return;
+    if (order?.customer_id) {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("phone")
+        .eq("id", order.customer_id)
+        .maybeSingle();
 
-    const { data: customer } = await supabase
-      .from("customers")
-      .select("phone")
-      .eq("id", order.customer_id)
-      .maybeSingle();
+      if (customer?.phone) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("name")
+          .eq("id", ctx.organizationId)
+          .maybeSingle();
 
-    if (!customer?.phone) return;
+        const businessName = org?.name ?? "Your rental company";
+        const status = parsed.data.newStatus;
+        const smsContext = { orderId: parsed.data.orderId, customerId: order.customer_id };
 
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("name")
-      .eq("id", ctx.organizationId)
-      .maybeSingle();
-
-    const businessName = org?.name ?? "Your rental company";
-    const status = parsed.data.newStatus;
-
-    const smsContext = {
-      orderId: parsed.data.orderId,
-      customerId: order.customer_id,
-    };
-
-    if (status === "awaiting_deposit") {
-      await sendSmsNotification("depositReminder", customer.phone, {
-        orderNumber: order.order_number,
-        amount: "your deposit",
-        businessName,
-      }, ctx.organizationId, smsContext);
-    } else if (status === "confirmed") {
-      await sendSmsNotification("orderConfirmation", customer.phone, {
-        orderNumber: order.order_number,
-        businessName,
-      }, ctx.organizationId, smsContext);
-    } else if (status === "scheduled") {
-      const eventDate = order.event_date ?? "your event date";
-      await sendSmsNotification("deliveryScheduled", customer.phone, {
-        orderNumber: order.order_number,
-        date: eventDate,
-        timeWindow: "See email for details",
-        businessName,
-      }, ctx.organizationId, smsContext);
-    } else if (status === "out_for_delivery") {
-      await sendSmsNotification("deliveryEnRoute", customer.phone, {
-        orderNumber: order.order_number,
-        eta: "shortly",
-        businessName,
-      }, ctx.organizationId, smsContext);
-    } else if (status === "delivered") {
-      await sendSmsNotification("deliveryCompleted", customer.phone, {
-        orderNumber: order.order_number,
-        businessName,
-      }, ctx.organizationId, smsContext);
+        if (status === "awaiting_deposit") {
+          await sendSmsNotification("depositReminder", customer.phone, {
+            orderNumber: order.order_number,
+            amount: "your deposit",
+            businessName,
+          }, ctx.organizationId, smsContext);
+        } else if (status === "confirmed") {
+          await sendSmsNotification("orderConfirmation", customer.phone, {
+            orderNumber: order.order_number,
+            businessName,
+          }, ctx.organizationId, smsContext);
+        } else if (status === "scheduled") {
+          await sendSmsNotification("deliveryScheduled", customer.phone, {
+            orderNumber: order.order_number,
+            date: order.event_date ?? "your event date",
+            timeWindow: "See email for details",
+            businessName,
+          }, ctx.organizationId, smsContext);
+        } else if (status === "out_for_delivery") {
+          await sendSmsNotification("deliveryEnRoute", customer.phone, {
+            orderNumber: order.order_number,
+            eta: "shortly",
+            businessName,
+          }, ctx.organizationId, smsContext);
+        } else if (status === "delivered") {
+          await sendSmsNotification("deliveryCompleted", customer.phone, {
+            orderNumber: order.order_number,
+            businessName,
+          }, ctx.organizationId, smsContext);
+        }
+      }
     }
-  }).catch(() => {});
+  } catch {
+    console.error("[orders] Failed to send status update SMS for order", parsed.data.orderId);
+  }
 
   return {
     ok: true,

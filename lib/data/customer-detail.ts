@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
@@ -26,7 +27,7 @@ export async function getCustomerDetail(
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return { ...fallbackCustomerDetail, id: customerId };
+    notFound();
   }
 
   const supabase = await createSupabaseServerClient();
@@ -42,7 +43,7 @@ export async function getCustomerDetail(
     .maybeSingle();
 
   if (error || !data) {
-    return { ...fallbackCustomerDetail, id: customerId };
+    notFound();
   }
 
   const addresses =

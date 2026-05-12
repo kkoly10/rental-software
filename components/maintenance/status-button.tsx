@@ -13,7 +13,7 @@ const NEXT_STATUS: Record<string, { value: string; label: string; className: str
 };
 
 export function MaintenanceStatusButton({ recordId, currentStatus }: { recordId: string; currentStatus: string }) {
-  const [, action, pending] = useActionState(updateMaintenanceStatus, initial);
+  const [state, action, pending] = useActionState(updateMaintenanceStatus, initial);
 
   const normalized = currentStatus.toLowerCase().replace(/\s+/g, "_");
   const next = NEXT_STATUS[normalized];
@@ -26,6 +26,11 @@ export function MaintenanceStatusButton({ recordId, currentStatus }: { recordId:
       <button type="submit" className={next.className} disabled={pending} style={{ fontSize: 12, padding: "4px 10px" }}>
         {pending ? "…" : next.label}
       </button>
+      {state.message && !state.ok && (
+        <span style={{ marginLeft: 8, fontSize: 12, color: "var(--danger, #e53e3e)" }}>
+          {state.message}
+        </span>
+      )}
     </form>
   );
 }

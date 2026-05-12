@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadLeaflet } from "@/lib/maps/load-leaflet";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface DriverPosition {
@@ -22,8 +21,13 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   const mapRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markerRef = useRef<any>(null);
+  // Store L so the position effect can use it without re-importing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const leafletRef = useRef<any>(null);
+
   const [position, setPosition] = useState<DriverPosition | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">("connecting");
+  const [mapError, setMapError] = useState<string | null>(null);
   const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -32,25 +36,37 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
     staleTimerRef.current = setTimeout(() => setConnectionState("offline"), 45_000);
   }
 
+  /* ── Init map ── */
   useEffect(() => {
     let cancelled = false;
+
     async function initMap() {
-      await loadLeaflet();
+      let L: typeof import("leaflet");
+      try {
+        L = (await import("leaflet")).default as unknown as typeof import("leaflet");
+      } catch {
+        if (!cancelled) setMapError("Map failed to load. Please check your connection and refresh.");
+        return;
+      }
       if (cancelled || !containerRef.current || mapRef.current) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const L = (window as any).L;
+
+      leafletRef.current = L;
+
       const map = L.map(containerRef.current, { scrollWheelZoom: true, zoomControl: true })
         .setView([38.9, -77.0], 10);
       mapRef.current = map;
+
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 18,
       }).addTo(map);
     }
+
     initMap();
     return () => { cancelled = true; };
   }, []);
 
+  /* ── Fetch last known position on mount ── */
   useEffect(() => {
     if (!isLive) { setConnectionState("offline"); return; }
     (async () => {
@@ -59,12 +75,16 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
         .select("lat, lng, accuracy_m")
         .eq("route_id", routeId)
         .maybeSingle();
-      if (data) setPosition({ lat: data.lat, lng: data.lng, accuracy_m: data.accuracy_m ?? undefined });
-      setConnectionState("live");
-      resetStaleTimer();
+      if (data) {
+        setPosition({ lat: data.lat, lng: data.lng, accuracy_m: data.accuracy_m ?? undefined });
+        setConnectionState("live");
+        resetStaleTimer();
+      }
+      // No data yet → keep "connecting"; realtime channel will update when driver shares location
     })();
   }, [routeId, isLive]);
 
+  /* ── Subscribe to realtime location broadcasts ── */
   useEffect(() => {
     if (!isLive) return;
     const channel = supabase
@@ -85,11 +105,11 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
     };
   }, [routeId, isLive]);
 
+  /* ── Move marker when position updates ── */
   useEffect(() => {
-    if (!position || !mapRef.current) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const L = (window as any).L;
-    if (!L) return;
+    const L = leafletRef.current;
+    if (!position || !mapRef.current || !L) return;
+
     const latlng: [number, number] = [position.lat, position.lng];
 
     const icon = L.divIcon({
@@ -118,6 +138,14 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
       : connectionState === "offline"
       ? "Waiting for location update…"
       : "Connecting…";
+
+  if (mapError) {
+    return (
+      <div style={{ flex: 1, minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-soft, #f8f9fa)", borderRadius: 8 }}>
+        <p className="muted" style={{ textAlign: "center" }}>{mapError}</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>

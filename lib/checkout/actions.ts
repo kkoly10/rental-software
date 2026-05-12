@@ -258,6 +258,11 @@ export async function createCheckoutOrder(
     };
   }
 
+  // Event date is required when a specific product is being booked
+  if (productId && !eventDate) {
+    return { ok: false, message: "Please select an event date to check availability." };
+  }
+
   // Enforce booking date policies (lead time and max advance)
   if (eventDate) {
     const bookingPolicies = await getBookingPolicies();
@@ -550,14 +555,15 @@ export async function createCheckoutOrder(
     },
   });
 
-  // Track setup progress (non-blocking)
-  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
-    markSetupStep(orgId, "has_first_order")
-  ).catch(() => {});
+  try {
+    const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
+    await markSetupStep(orgId, "has_first_order");
+  } catch { /* non-critical */ }
 
-  // Send order confirmation email (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerOrderConfirmationEmail }) =>
-    triggerOrderConfirmationEmail({
+  // Send order confirmation email — awaited so customers reliably receive their booking proof
+  try {
+    const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
+    await triggerOrderConfirmationEmail({
       organizationId: orgId,
       customerFirstName: firstName,
       customerEmail: email,
@@ -568,12 +574,15 @@ export async function createCheckoutOrder(
       deliveryFee,
       total,
       depositDue: deposit,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    // Non-fatal — order is already created; log but don't block the success response
+    console.error("[checkout] Confirmation email failed for order", orderNumber);
+  }
 
-  // Send order confirmation SMS (non-blocking)
   if (phone) {
-    import("@/lib/sms/send-notification").then(async ({ sendSmsNotification }) => {
+    try {
+      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
       const { createSupabaseServerClient: createSB } = await import("@/lib/supabase/server");
       const sb = await createSB();
       const { data: org } = await sb
@@ -585,7 +594,7 @@ export async function createCheckoutOrder(
         orderNumber,
         businessName: org?.name ?? "Your rental company",
       }, orgId);
-    }).catch(() => {});
+    } catch { /* non-critical — email confirmation already sent */ }
   }
 
   // Attempt Stripe Checkout for deposit payment
@@ -616,6 +625,7 @@ export async function createCheckoutOrder(
           organization_id: orgId,
           order_id: order.id,
           order_number: orderNumber,
+          payment_type: "deposit",
         },
       });
 

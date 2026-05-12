@@ -48,7 +48,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
       // Log failed email to communication_log
       if (payload.organizationId) {
-        logCommunication({
+        await logCommunication({
           organizationId: payload.organizationId,
           orderId: payload.orderId,
           customerId: payload.customerId,
@@ -75,7 +75,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
     // Log sent email to communication_log
     if (payload.organizationId) {
-      logCommunication({
+      await logCommunication({
         organizationId: payload.organizationId,
         orderId: payload.orderId,
         customerId: payload.customerId,
@@ -100,7 +100,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
     // Log failed email to communication_log
     if (payload.organizationId) {
-      logCommunication({
+      await logCommunication({
         organizationId: payload.organizationId,
         orderId: payload.orderId,
         customerId: payload.customerId,

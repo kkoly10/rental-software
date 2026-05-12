@@ -14,7 +14,7 @@ export async function getRoutes(): Promise<RouteSummary[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackRoutes;
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -24,8 +24,13 @@ export async function getRoutes(): Promise<RouteSummary[]> {
     .order("route_date", { ascending: false })
     .limit(50);
 
-  if (error || !data || data.length === 0) {
-    return fallbackRoutes;
+  if (error) {
+    console.error("[routes] Query failed:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
   }
 
   return data.map((route) => {

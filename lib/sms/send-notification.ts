@@ -68,9 +68,9 @@ export async function sendSmsNotification(
     console.error(`[SMS] Failed to send ${type} to ${customerPhone}:`, result.error);
   }
 
-  // Log to communication_log
+  // Log to communication_log — must be awaited; fire-and-forget is killed by Lambda
   if (organizationId) {
-    logCommunication({
+    await logCommunication({
       organizationId,
       orderId: context?.orderId,
       customerId: context?.customerId,

@@ -142,18 +142,20 @@ export async function completeOnboarding(
       })
       .eq("id", orgId);
 
-    // Send welcome email to the operator (non-blocking)
     const storefrontUrl = `https://${slugInput}.${getAppDomain()}`;
     const dashboardUrl = `https://${getAppDomain()}/dashboard`;
-    import("@/lib/email/send").then(({ sendEmail }) =>
-      sendEmail({
+    try {
+      const { sendEmail } = await import("@/lib/email/send");
+      await sendEmail({
         to: user.email ?? "",
         subject: "Welcome to Korent — your rental site is live!",
         html: welcomeEmailHtml(businessName, storefrontUrl, dashboardUrl),
         replyTo: "support@korent.app",
         organizationId: orgId,
-      })
-    ).catch(() => {});
+      });
+    } catch {
+      console.error("[onboarding] Failed to send welcome email to", user.email);
+    }
   }
 
   return {
