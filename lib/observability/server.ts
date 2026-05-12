@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
+import * as Sentry from "@sentry/nextjs";
 
 function sanitizePayload(value: unknown) {
   try {
@@ -45,7 +46,23 @@ export async function logAppError(input: {
   route?: string | null;
   stack?: string | null;
   context?: Record<string, unknown>;
+  error?: unknown;
 }) {
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    Sentry.withScope((scope) => {
+      if (input.organizationId) scope.setTag("organization_id", input.organizationId);
+      if (input.userId) scope.setUser({ id: input.userId });
+      if (input.route) scope.setTag("route", input.route);
+      scope.setTag("source", input.source);
+      if (input.context) scope.setExtras(input.context);
+      if (input.error instanceof Error) {
+        Sentry.captureException(input.error);
+      } else {
+        Sentry.captureMessage(input.message, "error");
+      }
+    });
+  }
+
   if (!hasSupabaseServiceRoleEnv()) {
     return;
   }
