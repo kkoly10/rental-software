@@ -50,7 +50,17 @@ export function SaasLanding() {
           <Link href="/login" className="secondary-btn">Log In</Link>
           <Link href="/signup" className="primary-btn">Start Free</Link>
         </nav>
-        <MobileMenuToggle isOperator={false} />
+        <MobileMenuToggle
+          isOperator={false}
+          navLinks={[
+            { key: "why_korent", label: "Why Korent", href: "#pain" },
+            { key: "features", label: "Features", href: "#features" },
+            { key: "pricing", label: "Pricing", href: "#pricing" },
+            { key: "faq", label: "FAQ", href: "#faq" },
+          ]}
+          cta={{ label: "Start Free", href: "/signup" }}
+          authLabel="Log In"
+        />
       </header>
 
       <main>
