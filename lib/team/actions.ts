@@ -151,11 +151,13 @@ export async function inviteTeamMember(
 
   const htmlEscapeMap: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
   const safeBusinessName = businessName.replace(/[&<>"']/g, (ch: string) => htmlEscapeMap[ch] ?? ch);
-  try {
-    await sendEmail({
-      to: email,
-      subject: `You're invited to join ${businessName} on Korent`,
-      html: `<!DOCTYPE html>
+  // sendEmail never throws (it catches internally and returns false on failure).
+  // Check the return value so we can warn if delivery failed — but don't block
+  // the invite, because the token is already in the DB and the operator can resend.
+  const sent = await sendEmail({
+    to: email,
+    subject: `You're invited to join ${businessName} on Korent`,
+    html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr><td align="center">
@@ -174,11 +176,10 @@ export async function inviteTeamMember(
     </td></tr>
   </table>
 </body></html>`,
-      organizationId: ctx.organizationId,
-    });
-  } catch {
-    console.error("[team] Failed to send invite email to", email);
-    return { ok: false, message: "Invite created but email delivery failed. Please try again or share the invite link manually." };
+    organizationId: ctx.organizationId,
+  });
+  if (!sent) {
+    console.warn("[team] Invite email delivery failed for", email, "— invite token still valid in DB");
   }
 
   revalidatePath("/dashboard/settings/team");

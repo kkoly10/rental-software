@@ -108,9 +108,9 @@ export async function sendReply(
     return { ok: false, message: "Failed to save reply." };
   }
 
-  // Log to communication_log for audit trail (non-blocking)
-  import("@/lib/communications/log").then(({ logCommunication }) =>
-    logCommunication({
+  try {
+    const { logCommunication } = await import("@/lib/communications/log");
+    await logCommunication({
       organizationId: ctx.organizationId,
       orderId: orderId ?? undefined,
       customerId: customerId ?? undefined,
@@ -121,8 +121,8 @@ export async function sendReply(
       bodyPreview: body,
       status: "sent",
       metadata: { senderName: profile?.full_name ?? "Operator" },
-    })
-  ).catch(() => {});
+    });
+  } catch { /* non-critical — audit trail */ }
 
   // Send email to customer — awaited so operators know delivery succeeded
   try {
