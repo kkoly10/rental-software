@@ -100,7 +100,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
     });
 
     const resolvedCategory =
-      category && !category.deleted_at ? category.name : "Inflatable";
+      category && !category.deleted_at ? category.name : "Rental";
 
     return {
       id: product.id,
@@ -113,7 +113,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
           : "$0/day",
       description:
         product.short_description ??
-        "Inflatable rental product ready for public booking.",
+        "Rental product available for booking.",
       status: product.is_active ? "Available" : "Hidden",
       imageUrl:
         sortedImages[0]?.image_url ??

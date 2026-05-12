@@ -42,7 +42,7 @@ function buildFromAddress(businessName: string): string {
   const rawAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
   // Strip any existing display name to get just the email address
   const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
-  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
+  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
   return `${safeName} <${emailOnly}>`;
 }
 
@@ -59,7 +59,7 @@ async function getOrgBranding(
     .eq("id", organizationId)
     .maybeSingle();
 
-  const businessName = org?.name ?? "Korent";
+  const businessName = org?.name ?? "Rental Company";
   return {
     businessName,
     supportEmail: org?.support_email ?? "support@korent.app",

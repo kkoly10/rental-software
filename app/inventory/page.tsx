@@ -9,6 +9,7 @@ import { getCatalogList } from "@/lib/data/catalog-list";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 function normalizeCategory(value: string) {
@@ -47,7 +48,15 @@ export default async function InventoryPage({
   const isDemo = await isCurrentTenantDemo();
 
   const params = await searchParams;
-  const products = await getCatalogList();
+  const [products, categoryItems] = await Promise.all([
+    getCatalogList(),
+    getCategoryGridItems().catch(() => []),
+  ]);
+
+  const categoryOptions = categoryItems.map((cat) => ({
+    value: cat.slug,
+    label: cat.name,
+  }));
 
   // Filter by category
   const categoryFiltered = params.category
@@ -115,6 +124,7 @@ export default async function InventoryPage({
               initialDate={params.date}
               initialZip={params.zip}
               initialCategory={params.category}
+              categories={categoryOptions}
             />
           </section>
 

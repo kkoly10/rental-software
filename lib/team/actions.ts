@@ -146,7 +146,7 @@ export async function inviteTeamMember(
     .eq("id", ctx.organizationId)
     .maybeSingle();
 
-  const businessName = org?.name ?? "Korent";
+  const businessName = org?.name ?? "Rental Company";
   const inviteUrl = `${siteUrl}/invite/${token}`;
 
   const htmlEscapeMap: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
@@ -155,7 +155,7 @@ export async function inviteTeamMember(
   // Check the return value so we can warn if delivery failed — but don't block
   // the invite, because the token is already in the DB and the operator can resend.
   const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
-  const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
+  const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
 
   const sent = await sendEmail({
     to: email,

@@ -28,7 +28,7 @@ export const helpArticles: HelpArticle[] = [
     title: "First steps after signing up",
     section: "Getting Started",
     summary: "What to do right after creating your account and organization.",
-    body: `After completing onboarding, your organization is created with starter categories (Bounce Houses, Water Slides, Combos, Obstacle Courses, and Add-ons) and your primary service area.
+    body: `After completing onboarding, your organization is created with starter categories and your primary service area.
 
 **Recommended first steps:**
 
@@ -104,8 +104,8 @@ The bottom of the sidebar has links to your **Public Site** (storefront preview)
 1. Go to **Products** in the sidebar
 2. Click **Add Product**
 3. Fill in the required fields:
-   - **Name** — What customers see (e.g., "Rainbow Bounce House")
-   - **Category** — Select from your categories (Bounce Houses, Water Slides, etc.)
+   - **Name** — What customers see (e.g., "Large Party Tent")
+   - **Category** — Select from your categories
    - **Base Price** — Daily rental rate
    - **Description** — Details about the product, dimensions, capacity, etc.
 4. Set **Active** status to show it on your storefront

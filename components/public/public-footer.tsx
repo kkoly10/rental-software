@@ -2,13 +2,15 @@ import Link from "next/link";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { isTenantHost } from "@/lib/auth/org-context";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 
 export async function PublicFooter() {
   const year = new Date().getFullYear();
-  const [settings, contentSettings, isTenant] = await Promise.all([
+  const [settings, contentSettings, isTenant, categories] = await Promise.all([
     getOrganizationSettings(),
     getContentSettings(),
     isTenantHost(),
+    getCategoryGridItems().catch(() => []),
   ]);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
@@ -68,9 +70,11 @@ export async function PublicFooter() {
               <strong style={{ fontSize: 13 }}>Browse</strong>
               <div className="list" style={{ marginTop: 10 }}>
                 <Link href="/inventory" className="muted">Full Catalog</Link>
-                <Link href="/inventory?category=bounce-houses" className="muted">Bounce Houses</Link>
-                <Link href="/inventory?category=water-slides" className="muted">Water Slides</Link>
-                <Link href="/inventory?category=packages" className="muted">Party Packages</Link>
+                {categories.slice(0, 3).map((cat) => (
+                  <Link key={cat.slug} href={`/inventory?category=${cat.slug}`} className="muted">
+                    {cat.name}
+                  </Link>
+                ))}
               </div>
             </div>
 
