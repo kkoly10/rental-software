@@ -135,12 +135,15 @@ export async function PublicFooter() {
             <div className="muted" style={{ fontSize: 12 }}>
               &copy; {year} {settings.businessName}. All rights reserved.
             </div>
-            {!isTenant && (
-              <div className="footer-bottom-links">
-                <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
-                <Link href="/terms" className="muted" style={{ fontSize: 12 }}>Terms</Link>
-              </div>
-            )}
+            <div className="footer-bottom-links">
+              {!isTenant && (
+                <>
+                  <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
+                  <Link href="/terms" className="muted" style={{ fontSize: 12 }}>Terms</Link>
+                </>
+              )}
+              <a href="https://CrecyStudio.com" target="_blank" rel="noopener noreferrer" className="muted" style={{ fontSize: 12 }}>Made by CrecyStudio</a>
+            </div>
           </div>
         </div>
       </div>
