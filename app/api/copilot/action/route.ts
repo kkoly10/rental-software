@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
 
     if (result.ok) {
       revalidatePath("/dashboard/website");
+      revalidatePath("/");
 
       await logAppEvent({
         organizationId: access.organizationId,
