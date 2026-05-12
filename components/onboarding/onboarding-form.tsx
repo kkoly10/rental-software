@@ -68,7 +68,7 @@ export function OnboardingForm() {
         <input
           name="business_name"
           type="text"
-          placeholder="e.g. Fun Zone Inflatables"
+          placeholder="e.g. Premier Party Rentals"
           required
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}

@@ -6,8 +6,8 @@ export default function AppLoading() {
           <div className="section-header">
             <div>
               <div className="kicker">Loading</div>
-              <h1 style={{ margin: "6px 0 8px" }}>Preparing Korent</h1>
-              <div className="muted">Loading booking, dashboard, and catalog resources.</div>
+              <h1 style={{ margin: "6px 0 8px" }}>Loading…</h1>
+              <div className="muted">Loading resources, please wait.</div>
             </div>
           </div>
         </section>

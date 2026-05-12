@@ -24,7 +24,7 @@ export default function OfflinePage() {
             <line x1="12" y1="20" x2="12.01" y2="20" />
           </svg>
         </div>
-        <h1 className="offline-title">Korent</h1>
+        <h1 className="offline-title">Offline</h1>
         <p className="offline-heading">You&apos;re offline</p>
         <p className="offline-body">
           Check your internet connection and try again.

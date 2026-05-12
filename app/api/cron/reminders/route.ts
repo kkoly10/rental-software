@@ -73,7 +73,7 @@ type OrgBranding = {
 function buildFromAddress(businessName: string): string {
   const rawAddress = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? "noreply@korent.app";
   const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
-  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
+  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
   return `${safeName} <${emailOnly}>`;
 }
 
@@ -93,7 +93,7 @@ async function getOrgBrandings(
 
   for (const org of orgs ?? []) {
     const settings = (org.settings as Record<string, unknown>) ?? {};
-    const businessName = org.name ?? "Korent";
+    const businessName = org.name ?? "Rental Company";
     map.set(org.id, {
       orgId: org.id,
       businessName,

@@ -37,7 +37,7 @@ export function ProductForm({
           name="name"
           type="text"
           defaultValue={product?.name ?? ""}
-          placeholder="e.g., Rainbow Castle Bounce House"
+          placeholder="e.g., Large Party Tent"
           required
           style={{ marginTop: 10, width: "100%" }}
         />
