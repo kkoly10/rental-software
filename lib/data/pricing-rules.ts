@@ -45,7 +45,5 @@ export async function getPricingRules(): Promise<PricingRule[]> {
   const settings = (org?.settings as Record<string, unknown>) ?? {};
   const rules = settings.pricing_rules as PricingRule[] | undefined;
 
-  return rules && Array.isArray(rules) && rules.length > 0
-    ? rules
-    : fallbackRules;
+  return rules && Array.isArray(rules) ? rules : [];
 }

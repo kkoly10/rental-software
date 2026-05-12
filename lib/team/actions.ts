@@ -149,10 +149,13 @@ export async function inviteTeamMember(
   const businessName = org?.name ?? "Korent";
   const inviteUrl = `${siteUrl}/invite/${token}`;
 
-  sendEmail({
-    to: email,
-    subject: `You're invited to join ${businessName} on Korent`,
-    html: `<!DOCTYPE html>
+  const htmlEscapeMap: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
+  const safeBusinessName = businessName.replace(/[&<>"']/g, (ch: string) => htmlEscapeMap[ch] ?? ch);
+  try {
+    await sendEmail({
+      to: email,
+      subject: `You're invited to join ${businessName} on Korent`,
+      html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr><td align="center">
@@ -160,7 +163,7 @@ export async function inviteTeamMember(
         <tr><td>
           <h1 style="margin:0 0 12px;font-size:22px;color:#10233f;">You've been invited!</h1>
           <p style="color:#55708f;font-size:15px;">
-            <strong>${businessName}</strong> has invited you to join their team as a <strong>${role}</strong>.
+            <strong>${safeBusinessName}</strong> has invited you to join their team as a <strong>${role}</strong>.
           </p>
           <a href="${inviteUrl}" style="display:inline-block;padding:14px 28px;background:#1e5dcf;color:#fff;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;margin:20px 0;">
             Accept Invite
@@ -171,9 +174,12 @@ export async function inviteTeamMember(
     </td></tr>
   </table>
 </body></html>`,
-    replyTo: org?.name ? undefined : undefined,
-    organizationId: ctx.organizationId,
-  }).catch(() => {});
+      organizationId: ctx.organizationId,
+    });
+  } catch {
+    console.error("[team] Failed to send invite email to", email);
+    return { ok: false, message: "Invite created but email delivery failed. Please try again or share the invite link manually." };
+  }
 
   revalidatePath("/dashboard/settings/team");
 

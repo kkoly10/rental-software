@@ -268,17 +268,18 @@ export async function GET(request: NextRequest) {
           })
           .eq("id", org.id);
 
-        // Log to communication_log
-        logCommunication({
-          organizationId: org.id,
-          channel: "email",
-          direction: "outbound",
-          recipient: email,
-          subject: `${org.name}, ready to add your first product?`,
-          bodyPreview: "Day 3 re-engagement nudge — add your first product",
-          status: "sent",
-          metadata: { type: "reengagement", nudge: "day3" },
-        }).catch(() => {});
+        try {
+          await logCommunication({
+            organizationId: org.id,
+            channel: "email",
+            direction: "outbound",
+            recipient: email,
+            subject: `${org.name}, ready to add your first product?`,
+            bodyPreview: "Day 3 re-engagement nudge — add your first product",
+            status: "sent",
+            metadata: { type: "reengagement", nudge: "day3" },
+          });
+        } catch { /* non-critical */ }
       }
     } catch {
       errors++;
@@ -326,17 +327,18 @@ export async function GET(request: NextRequest) {
           })
           .eq("id", org.id);
 
-        // Log to communication_log
-        logCommunication({
-          organizationId: org.id,
-          channel: "email",
-          direction: "outbound",
-          recipient: email,
-          subject: `Need help getting started, ${org.name}?`,
-          bodyPreview: "Day 7 re-engagement nudge — need help getting started?",
-          status: "sent",
-          metadata: { type: "reengagement", nudge: "day7" },
-        }).catch(() => {});
+        try {
+          await logCommunication({
+            organizationId: org.id,
+            channel: "email",
+            direction: "outbound",
+            recipient: email,
+            subject: `Need help getting started, ${org.name}?`,
+            bodyPreview: "Day 7 re-engagement nudge — need help getting started?",
+            status: "sent",
+            metadata: { type: "reengagement", nudge: "day7" },
+          });
+        } catch { /* non-critical */ }
       }
     } catch {
       errors++;

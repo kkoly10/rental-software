@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
@@ -53,7 +54,7 @@ export async function getRouteDetail(routeId: string): Promise<RouteDetail> {
     .maybeSingle();
 
   if (routeError || !route) {
-    return { ...fallbackRouteDetail, id: routeId };
+    notFound();
   }
 
   const { data: stops } = await supabase
@@ -117,8 +118,13 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true });
 
-  if (error || !stops || stops.length === 0) {
-    return fallbackStops;
+  if (error) {
+    console.error("[route-detail] getRouteStops query failed:", error.message);
+    return [];
+  }
+
+  if (!stops || stops.length === 0) {
+    return [];
   }
 
   return stops.map((stop, index) => {
@@ -224,7 +230,7 @@ export async function getRouteDetailEnhanced(
     .maybeSingle();
 
   if (routeError || !route) {
-    return { ...fallbackEnhancedDetail, id: routeId };
+    notFound();
   }
 
   // Join through: route_stops → orders → customers (for name)

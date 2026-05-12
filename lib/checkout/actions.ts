@@ -555,10 +555,10 @@ export async function createCheckoutOrder(
     },
   });
 
-  // Track setup progress (non-blocking)
-  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
-    markSetupStep(orgId, "has_first_order")
-  ).catch(() => {});
+  try {
+    const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
+    await markSetupStep(orgId, "has_first_order");
+  } catch { /* non-critical */ }
 
   // Send order confirmation email — awaited so customers reliably receive their booking proof
   try {
@@ -580,9 +580,9 @@ export async function createCheckoutOrder(
     console.error("[checkout] Confirmation email failed for order", orderNumber);
   }
 
-  // Send order confirmation SMS (non-blocking)
   if (phone) {
-    import("@/lib/sms/send-notification").then(async ({ sendSmsNotification }) => {
+    try {
+      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
       const { createSupabaseServerClient: createSB } = await import("@/lib/supabase/server");
       const sb = await createSB();
       const { data: org } = await sb
@@ -594,7 +594,7 @@ export async function createCheckoutOrder(
         orderNumber,
         businessName: org?.name ?? "Your rental company",
       }, orgId);
-    }).catch(() => {});
+    } catch { /* non-critical — email confirmation already sent */ }
   }
 
   // Attempt Stripe Checkout for deposit payment

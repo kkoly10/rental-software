@@ -50,8 +50,13 @@ export async function getDocuments(): Promise<DocumentSummary[]> {
     .order("id", { ascending: false })
     .limit(200);
 
-  if (error || !data || data.length === 0) {
-    return fallbackDocuments;
+  if (error) {
+    console.error("[documents] Query failed:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
   }
 
   const byOrder = new Map<
@@ -200,15 +205,13 @@ export async function getDocumentsDetailedPage(options?: {
     .order("id", { ascending: false })
     .limit(500);
 
-  if (error || !data || data.length === 0) {
-    const filtered = fallbackDetailed.filter((doc) =>
-      matchesDetailedDocumentQuery(doc, query)
-    );
-    return paginateItems(filtered, {
-      page: options?.page,
-      pageSize: options?.pageSize ?? 20,
-      query,
-    });
+  if (error) {
+    console.error("[documents] getDocumentsDetailedPage query failed:", error.message);
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
+  }
+
+  if (!data || data.length === 0) {
+    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
   const byOrder = new Map<string, DetailedDocument>();

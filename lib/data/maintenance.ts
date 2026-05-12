@@ -49,8 +49,13 @@ export async function getMaintenanceRecords() {
     .order("opened_at", { ascending: false })
     .limit(50);
 
-  if (error || !data || data.length === 0) {
-    return fallbackMaintenance;
+  if (error) {
+    console.error("[maintenance] Query failed:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    return [];
   }
 
   return data.map((record) => {

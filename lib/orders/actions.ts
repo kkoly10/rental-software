@@ -375,14 +375,14 @@ export async function createOrder(
 
   const isFirstOrder = (existingOrderCount ?? 0) <= 1;
 
-  // Track setup progress (non-blocking)
-  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
-    markSetupStep(ctx.organizationId, "has_first_order")
-  ).catch(() => {});
+  try {
+    const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
+    await markSetupStep(ctx.organizationId, "has_first_order");
+  } catch { /* non-critical */ }
 
-  // Send new order alert to operator (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerDashboardOrderEmail }) =>
-    triggerDashboardOrderEmail({
+  try {
+    const { triggerDashboardOrderEmail } = await import("@/lib/email/triggers");
+    await triggerDashboardOrderEmail({
       organizationId: ctx.organizationId,
       customerName: `${firstName} ${lastName}`,
       customerEmail: email ?? "",
@@ -390,8 +390,10 @@ export async function createOrder(
       productName: productNameSnapshot,
       eventDate: eventDate ?? "",
       total,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    console.error("[orders] Failed to send new order alert for", orderNumber);
+  }
 
   redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
 }
@@ -464,16 +466,18 @@ export async function updateOrderStatus(
     }
   }
 
-  // Send status update email to customer (non-blocking)
-  import("@/lib/email/triggers").then(({ triggerOrderStatusEmail }) =>
-    triggerOrderStatusEmail({
+  try {
+    const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+    await triggerOrderStatusEmail({
       organizationId: ctx.organizationId,
       orderId: parsed.data.orderId,
       newStatus: parsed.data.newStatus,
-    }).catch(() => {})
-  );
+    });
+  } catch {
+    console.error("[orders] Failed to send status update email for order", parsed.data.orderId);
+  }
 
-  // Send status update SMS to customer (non-blocking)
+  // Send status update SMS to customer
   import("@/lib/sms/send-notification").then(async ({ sendSmsNotification }) => {
     const { data: order } = await supabase
       .from("orders")

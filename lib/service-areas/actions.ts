@@ -119,10 +119,10 @@ export async function createServiceArea(
     return { ok: false, message: error.message };
   }
 
-  // Track setup progress (non-blocking)
-  import("@/lib/guidance/update-setup-progress").then(({ markSetupStep }) =>
-    markSetupStep(ctx.organizationId, "has_service_area")
-  ).catch(() => {});
+  try {
+    const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
+    await markSetupStep(ctx.organizationId, "has_service_area");
+  } catch { /* non-critical */ }
 
   revalidatePath("/dashboard/service-areas");
   return { ok: true, message: "Service area created." };

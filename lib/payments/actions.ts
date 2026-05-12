@@ -176,9 +176,8 @@ export async function recordPayment(
   revalidatePath("/dashboard/payments");
   revalidatePath(`/dashboard/orders/${orderId}`);
 
-  // Send payment email to customer (non-blocking)
-  import("@/lib/email/triggers").then(async ({ triggerPaymentReceivedEmail }) => {
-    // Fetch customer details for the email
+  try {
+    const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
     const { data: fullOrder } = await supabase
       .from("orders")
       .select("order_number, customer_id")
@@ -186,42 +185,45 @@ export async function recordPayment(
       .eq("organization_id", ctx.organizationId)
       .maybeSingle();
 
-    if (!fullOrder?.customer_id) return;
-
-    const { data: customer } = await supabase
-      .from("customers")
-      .select("first_name, email, phone")
-      .eq("id", fullOrder.customer_id)
-      .maybeSingle();
-
-    if (!customer?.email) return;
-
-    await triggerPaymentReceivedEmail({
-      organizationId: ctx.organizationId,
-      customerFirstName: customer.first_name ?? "there",
-      customerEmail: customer.email,
-      orderNumber: fullOrder.order_number,
-      amount,
-      paymentType,
-      paymentMethod,
-      newBalance,
-    });
-
-    // Send payment SMS (non-blocking, skip for refunds)
-    if (customer.phone && paymentType !== "refund") {
-      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("name")
-        .eq("id", ctx.organizationId)
+    if (fullOrder?.customer_id) {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("first_name, email, phone")
+        .eq("id", fullOrder.customer_id)
         .maybeSingle();
-      await sendSmsNotification("paymentReceived", customer.phone, {
-        amount: amount.toFixed(2),
-        orderNumber: fullOrder.order_number,
-        businessName: org?.name ?? "Your rental company",
-      }, ctx.organizationId, { orderId: orderId as string, customerId: fullOrder.customer_id });
+
+      if (customer?.email) {
+        await triggerPaymentReceivedEmail({
+          organizationId: ctx.organizationId,
+          customerFirstName: customer.first_name ?? "there",
+          customerEmail: customer.email,
+          orderNumber: fullOrder.order_number,
+          amount,
+          paymentType,
+          paymentMethod,
+          newBalance,
+        });
+
+        if (customer.phone && paymentType !== "refund") {
+          try {
+            const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+            const { data: org } = await supabase
+              .from("organizations")
+              .select("name")
+              .eq("id", ctx.organizationId)
+              .maybeSingle();
+            await sendSmsNotification("paymentReceived", customer.phone, {
+              amount: amount.toFixed(2),
+              orderNumber: fullOrder.order_number,
+              businessName: org?.name ?? "Your rental company",
+            }, ctx.organizationId, { orderId: orderId as string, customerId: fullOrder.customer_id });
+          } catch { /* non-critical — email already sent */ }
+        }
+      }
     }
-  }).catch(() => {});
+  } catch {
+    console.error("[payments] Failed to send payment confirmation email for order", orderId);
+  }
 
   return {
     ok: true,

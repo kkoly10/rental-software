@@ -137,34 +137,36 @@ export async function sendCustomerMessage(
     read: false,
   });
 
-  import("@/lib/communications/log")
-    .then(({ logCommunication }) =>
-      logCommunication({
-        organizationId: orgId,
-        orderId: order.id,
-        customerId: order.customer_id,
-        channel: "portal_message",
-        direction: "inbound",
-        recipient: null,
-        subject,
-        bodyPreview: body,
-        status: "sent",
-        metadata: { senderEmail },
-      })
-    )
-    .catch(() => {});
+  try {
+    const { logCommunication } = await import("@/lib/communications/log");
+    await logCommunication({
+      organizationId: orgId,
+      orderId: order.id,
+      customerId: order.customer_id,
+      channel: "portal_message",
+      direction: "inbound",
+      recipient: null,
+      subject,
+      bodyPreview: body,
+      status: "sent",
+      metadata: { senderEmail },
+    });
+  } catch {
+    console.error("[portal] Failed to log communication for order", order.order_number);
+  }
 
-  import("@/lib/data/notifications")
-    .then(({ createNotification }) =>
-      createNotification(
-        orgId,
-        "new_message",
-        "New customer message",
-        `${subject} — Order #${order.order_number}`,
-        "/dashboard/messages"
-      )
-    )
-    .catch(() => {});
+  try {
+    const { createNotification } = await import("@/lib/data/notifications");
+    await createNotification(
+      orgId,
+      "new_message",
+      "New customer message",
+      `${subject} — Order #${order.order_number}`,
+      "/dashboard/messages"
+    );
+  } catch {
+    console.error("[portal] Failed to create notification for order", order.order_number);
+  }
 
   const { data: org } = await supabase
     .from("organizations")
