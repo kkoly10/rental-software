@@ -202,12 +202,6 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
     footerY,
     { align: "center" }
   );
-  doc.text(
-    "Powered by Korent",
-    pageWidth / 2,
-    footerY + 14,
-    { align: "center" }
-  );
 
   return doc.output("arraybuffer") as unknown as Uint8Array;
 }

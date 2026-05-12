@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/env";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { sendEmail } from "@/lib/email/send";
 
 function escapeHtml(str: string): string {
   return str
@@ -132,33 +133,28 @@ export async function POST(request: NextRequest) {
     read: false,
   });
 
-  const resendKey = getOptionalEnv("RESEND_API_KEY");
-  if (resendKey && supportEmail) {
-    try {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${resendKey}`,
-        },
-        body: JSON.stringify({
-          from: `${org?.name ?? "Korent"} <noreply@korent.app>`,
-          to: supportEmail,
-          reply_to: senderEmail,
-          subject: `[Customer Message] ${subject} — Order ${order.order_number}`,
-          html: `
-            <h2>Customer Message</h2>
-            <p><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>
-            <p><strong>From:</strong> ${escapeHtml(senderEmail)}</p>
-            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
-            <hr />
-            <p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>
-          `,
-        }),
-      });
-    } catch {
-      // Email sending failed but don't block the response
-    }
+  if (supportEmail) {
+    const businessName = org?.name ?? "Korent";
+    const rawFromAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
+    const fromEmail = rawFromAddress.replace(/^.*<(.+)>$/, "$1").trim();
+    const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Korent";
+
+    await sendEmail({
+      to: supportEmail,
+      from: `${safeName} <${fromEmail}>`,
+      replyTo: senderEmail,
+      subject: `[Customer Message] ${subject} — Order ${order.order_number}`,
+      html: `
+        <h2>Customer Message</h2>
+        <p><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>
+        <p><strong>From:</strong> ${escapeHtml(senderEmail)}</p>
+        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+        <hr />
+        <p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>
+      `,
+      organizationId: orgId,
+      orderId: order.id,
+    });
   }
 
   return NextResponse.json({ ok: true, message: "Message sent." });
