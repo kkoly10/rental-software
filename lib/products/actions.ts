@@ -11,6 +11,7 @@ import {
 } from "@/lib/validation/products";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { checkPlanLimit } from "@/lib/stripe/gate";
 
 export type ProductActionState = {
   ok: boolean;
@@ -108,6 +109,18 @@ export async function createProduct(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { count: productCount } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null);
+
+  const gate = await checkPlanLimit("products", productCount ?? 0);
+  if (!gate.allowed) {
+    return { ok: false, message: gate.reason ?? "Product limit reached." };
+  }
+
   const slug = slugify(name);
 
   const { data: inserted, error } = await supabase.from("products").insert({

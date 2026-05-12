@@ -33,7 +33,11 @@ function formatDate(dateStr: string): string {
 
 type OrgBranding = {
   businessName: string;
-  supportEmail: string;
+  supportEmail: string | null;
+  // Where to send operator-facing alerts (new order, payment received, etc).
+  // Falls back to the org owner's profile email when support_email is unset,
+  // so internal notifications never get dropped.
+  operatorAlertEmail: string | null;
   siteUrl: string;
   fromAddress: string;
 };
@@ -60,9 +64,27 @@ async function getOrgBranding(
     .maybeSingle();
 
   const businessName = org?.name ?? "Rental Company";
+  const supportEmail = org?.support_email ?? null;
+
+  let operatorAlertEmail = supportEmail;
+  if (!operatorAlertEmail) {
+    const { data: ownerMembership } = await supabase
+      .from("organization_memberships")
+      .select("profiles(email)")
+      .eq("organization_id", organizationId)
+      .eq("role", "owner")
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    const ownerEmail = (ownerMembership as { profiles?: { email?: string | null } | null } | null)
+      ?.profiles?.email;
+    operatorAlertEmail = ownerEmail ?? null;
+  }
+
   return {
     businessName,
-    supportEmail: org?.support_email ?? "support@korent.app",
+    supportEmail,
+    operatorAlertEmail,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
     fromAddress: buildFromAddress(businessName),
   };
@@ -119,28 +141,30 @@ export async function triggerOrderConfirmationEmail(params: {
       siteUrl: branding.siteUrl,
       portalUrl,
     }),
-    replyTo: branding.supportEmail,
+    replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
   });
 
   // Alert to operator
-  await sendEmail({
-    to: branding.supportEmail,
-    from: branding.fromAddress,
-    subject: `New order #${params.orderNumber} from website`,
-    html: newOrderAlertEmail({
-      businessName: branding.businessName,
-      customerName: params.customerFirstName,
-      customerEmail: params.customerEmail,
-      orderNumber: params.orderNumber,
-      productName: params.productName,
-      eventDate: formatDate(params.eventDate),
-      total: formatMoney(params.total),
-      source: "website",
-      dashboardUrl: `${branding.siteUrl}/dashboard/orders`,
-    }),
-    organizationId: params.organizationId,
-  });
+  if (branding.operatorAlertEmail) {
+    await sendEmail({
+      to: branding.operatorAlertEmail,
+      from: branding.fromAddress,
+      subject: `New order #${params.orderNumber} from website`,
+      html: newOrderAlertEmail({
+        businessName: branding.businessName,
+        customerName: params.customerFirstName,
+        customerEmail: params.customerEmail,
+        orderNumber: params.orderNumber,
+        productName: params.productName,
+        eventDate: formatDate(params.eventDate),
+        total: formatMoney(params.total),
+        source: "website",
+        dashboardUrl: `${branding.siteUrl}/dashboard/orders`,
+      }),
+      organizationId: params.organizationId,
+    });
+  }
 
   // Persist notification
   await createNotification(
@@ -167,23 +191,25 @@ export async function triggerDashboardOrderEmail(params: {
 
   const branding = await getOrgBranding(params.organizationId);
 
-  await sendEmail({
-    to: branding.supportEmail,
-    from: branding.fromAddress,
-    subject: `New order #${params.orderNumber} created from dashboard`,
-    html: newOrderAlertEmail({
-      businessName: branding.businessName,
-      customerName: params.customerName,
-      customerEmail: params.customerEmail,
-      orderNumber: params.orderNumber,
-      productName: params.productName,
-      eventDate: formatDate(params.eventDate),
-      total: formatMoney(params.total),
-      source: "dashboard",
-      dashboardUrl: `${branding.siteUrl}/dashboard/orders`,
-    }),
-    organizationId: params.organizationId,
-  });
+  if (branding.operatorAlertEmail) {
+    await sendEmail({
+      to: branding.operatorAlertEmail,
+      from: branding.fromAddress,
+      subject: `New order #${params.orderNumber} created from dashboard`,
+      html: newOrderAlertEmail({
+        businessName: branding.businessName,
+        customerName: params.customerName,
+        customerEmail: params.customerEmail,
+        orderNumber: params.orderNumber,
+        productName: params.productName,
+        eventDate: formatDate(params.eventDate),
+        total: formatMoney(params.total),
+        source: "dashboard",
+        dashboardUrl: `${branding.siteUrl}/dashboard/orders`,
+      }),
+      organizationId: params.organizationId,
+    });
+  }
 
   // Persist notification
   await createNotification(
@@ -223,7 +249,7 @@ export async function triggerPaymentReceivedEmail(params: {
         amount: formatMoney(params.amount),
         supportEmail: branding.supportEmail,
       }),
-      replyTo: branding.supportEmail,
+      replyTo: branding.supportEmail ?? undefined,
       organizationId: params.organizationId,
     });
   } else {
@@ -241,7 +267,7 @@ export async function triggerPaymentReceivedEmail(params: {
         newBalance: formatMoney(params.newBalance),
         supportEmail: branding.supportEmail,
       }),
-      replyTo: branding.supportEmail,
+      replyTo: branding.supportEmail ?? undefined,
       organizationId: params.organizationId,
     });
   }
@@ -357,7 +383,7 @@ export async function triggerOrderStatusEmail(params: {
       deliveryTimeWindow,
       crewName,
     }),
-    replyTo: branding.supportEmail,
+    replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
   });
 }
@@ -401,7 +427,7 @@ export async function triggerDocumentsReadyEmail(params: {
       documentTypes: params.documentTypes,
       supportEmail: branding.supportEmail,
     }),
-    replyTo: branding.supportEmail,
+    replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
   });
 }
@@ -464,7 +490,7 @@ export async function triggerQuoteSentEmail(params: {
       portalUrl,
       supportEmail: branding.supportEmail,
     }),
-    replyTo: branding.supportEmail,
+    replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
   });
 

@@ -8,6 +8,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { sendEmail } from "@/lib/email/send";
+import { checkPlanLimit } from "@/lib/stripe/gate";
 
 export type TeamActionState = {
   ok: boolean;
@@ -122,6 +123,25 @@ export async function inviteTeamMember(
 
   if (pendingInvite) {
     return { ok: false, message: "An invite is already pending for this email." };
+  }
+
+  // Plan limit: count active members + pending invites against the team cap.
+  const [{ count: activeCount }, { count: pendingCount }] = await Promise.all([
+    supabase
+      .from("organization_memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .eq("status", "active"),
+    supabase
+      .from("team_invites")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .eq("status", "pending"),
+  ]);
+
+  const gate = await checkPlanLimit("teamMembers", (activeCount ?? 0) + (pendingCount ?? 0));
+  if (!gate.allowed) {
+    return { ok: false, message: gate.reason ?? "Team member limit reached." };
   }
 
   const token = crypto.randomBytes(32).toString("hex");

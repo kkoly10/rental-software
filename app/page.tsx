@@ -143,16 +143,6 @@ export default async function HomePage() {
                   </label>
 
                   <label className="storefront-field">
-                    <span>Start Time</span>
-                    <input name="start" type="time" />
-                  </label>
-
-                  <label className="storefront-field">
-                    <span>End Time</span>
-                    <input name="end" type="time" />
-                  </label>
-
-                  <label className="storefront-field">
                     <span>Delivery ZIP</span>
                     <input
                       name="zip"

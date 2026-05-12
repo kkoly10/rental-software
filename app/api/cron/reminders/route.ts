@@ -63,7 +63,11 @@ function formatMoney(amount: number): string {
 type OrgBranding = {
   orgId: string;
   businessName: string;
-  supportEmail: string;
+  supportEmail: string | null;
+  // Where to send operator-facing alerts. Falls back to the org owner's
+  // profile email when support_email is unset so internal cron alerts
+  // don't get dropped.
+  operatorAlertEmail: string | null;
   siteUrl: string;
   fromAddress: string;
   googleReviewUrl?: string;
@@ -91,13 +95,33 @@ async function getOrgBrandings(
   const map = new Map<string, OrgBranding>();
   const siteUrl = getOptionalEnv("NEXT_PUBLIC_SITE_URL") ?? "http://localhost:3000";
 
+  // Fetch owner emails in one round-trip for orgs that need an alert fallback.
+  const orgsMissingSupport = (orgs ?? []).filter((o) => !o.support_email).map((o) => o.id);
+  const ownerEmailByOrg = new Map<string, string>();
+  if (orgsMissingSupport.length > 0) {
+    const { data: owners } = await supabase
+      .from("organization_memberships")
+      .select("organization_id, profiles(email)")
+      .in("organization_id", orgsMissingSupport)
+      .eq("role", "owner")
+      .eq("status", "active");
+    for (const m of owners ?? []) {
+      const email = (m as { profiles?: { email?: string | null } | null }).profiles?.email;
+      if (email && !ownerEmailByOrg.has(m.organization_id)) {
+        ownerEmailByOrg.set(m.organization_id, email);
+      }
+    }
+  }
+
   for (const org of orgs ?? []) {
     const settings = (org.settings as Record<string, unknown>) ?? {};
     const businessName = org.name ?? "Rental Company";
+    const supportEmail = org.support_email ?? null;
     map.set(org.id, {
       orgId: org.id,
       businessName,
-      supportEmail: org.support_email ?? "support@korent.app",
+      supportEmail,
+      operatorAlertEmail: supportEmail ?? ownerEmailByOrg.get(org.id) ?? null,
       siteUrl,
       fromAddress: buildFromAddress(businessName),
       googleReviewUrl: (settings.social_google_business as string) || undefined,
@@ -216,7 +240,7 @@ async function sendDayBeforeReminders(
           deliveryAddress: addressMap.get(order.id),
           supportEmail: branding.supportEmail,
         }),
-        replyTo: branding.supportEmail,
+        replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
       sent++;
@@ -322,9 +346,11 @@ async function sendMorningDigests(
       };
     });
 
+    if (!branding.operatorAlertEmail) continue;
+
     try {
       await sendEmail({
-        to: branding.supportEmail,
+        to: branding.operatorAlertEmail,
         from: branding.fromAddress,
         subject: `Today's Schedule: ${events.length} event${events.length === 1 ? "" : "s"} — ${branding.businessName}`,
         html: dailyScheduleEmail({
@@ -401,7 +427,7 @@ async function sendPostEventFollowUps(
           storefrontUrl,
           supportEmail: branding.supportEmail,
         }),
-        replyTo: branding.supportEmail,
+        replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
 
