@@ -14,7 +14,7 @@ export async function getRoutes(): Promise<RouteSummary[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackRoutes;
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase

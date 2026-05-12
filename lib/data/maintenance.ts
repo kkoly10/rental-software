@@ -36,7 +36,7 @@ export async function getMaintenanceRecords() {
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return fallbackMaintenance;
+    return [];
   }
 
   const supabase = await createSupabaseServerClient();

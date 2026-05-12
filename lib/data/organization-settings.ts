@@ -32,7 +32,15 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
   const ctx = await getOrgContext();
   const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
   if (!organizationId) {
-    return fallbackSettings;
+    // No org found — return empty settings rather than fake contact info that
+    // could mislead visitors on a misconfigured or unclaimed storefront.
+    return {
+      ...fallbackSettings,
+      businessName: "",
+      supportEmail: "",
+      phone: "",
+      websiteMessage: "",
+    };
   }
 
   const supabase = await createSupabaseServerClient();
