@@ -57,7 +57,7 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
   }
 
   const ctx = await getOrgContext();
-  if (!ctx) return fallbackAreas;
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
