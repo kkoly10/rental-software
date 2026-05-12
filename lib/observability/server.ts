@@ -55,11 +55,17 @@ export async function logAppError(input: {
       if (input.route) scope.setTag("route", input.route);
       scope.setTag("source", input.source);
       if (input.context) scope.setExtras(input.context);
+
+      let err: Error;
       if (input.error instanceof Error) {
-        Sentry.captureException(input.error);
+        err = input.error;
       } else {
-        Sentry.captureMessage(input.message, "error");
+        // Reconstruct a real Error so Sentry shows a stack trace rather
+        // than a plain message — callers pass stack as a string field.
+        err = new Error(input.message);
+        if (input.stack) err.stack = input.stack;
       }
+      Sentry.captureException(err);
     });
   }
 
