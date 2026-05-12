@@ -235,7 +235,8 @@ async function sendDayBeforeReminders(
               timeWindow: deliveryTime ?? "See your email for details",
               businessName: branding.businessName,
             },
-            order.organization_id
+            order.organization_id,
+            { orderId: order.id, customerId: order.customer_id }
           );
         } catch { /* non-critical — delivery email already sent */ }
       }
