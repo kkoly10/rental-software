@@ -150,6 +150,17 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Choose a photo first." };
   }
 
+  const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+  const MAX_PHOTO_SIZE = 20 * 1024 * 1024; // 20 MB — allow large mobile photos
+
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+    return { ok: false, message: "Only JPEG, PNG, or WebP photos are allowed." };
+  }
+
+  if (file.size > MAX_PHOTO_SIZE) {
+    return { ok: false, message: "Photo must be under 20 MB." };
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const { data: stop } = await supabase
