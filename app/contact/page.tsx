@@ -12,6 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `Contact Us — ${settings.businessName}`,
     description: `Get in touch with ${settings.businessName} for questions about rentals, bookings, or custom event packages.`,
     path: "/contact",
+    siteName: settings.businessName,
   });
 }
 

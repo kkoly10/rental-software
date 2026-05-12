@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Korent — Inflatable Rental Software";
+export const alt = "Korent — Rental Business Software";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -43,7 +43,7 @@ export default function OgImage() {
             marginBottom: 20,
           }}
         >
-          Inflatable Rental Software
+          Rental Business Software
         </div>
         <div
           style={{
@@ -54,7 +54,7 @@ export default function OgImage() {
             maxWidth: 700,
           }}
         >
-          Online booking, real-time availability, and automatic invoicing for party rental businesses
+          Online booking, real-time availability, and automatic invoicing for rental businesses
         </div>
       </div>
     ),

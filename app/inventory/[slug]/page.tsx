@@ -29,6 +29,7 @@ export async function generateMetadata({
     description: product.description,
     path: `/inventory/${product.slug}`,
     image: product.imageUrl || undefined,
+    siteName: settings.businessName,
   });
 }
 
@@ -152,22 +153,22 @@ export default async function ProductDetailPage({
                   <div className="order-card">
                     <strong>Professional setup</strong>
                     <div className="muted" style={{ marginTop: 6 }}>
-                      Our team delivers, positions, anchors, and reviews the
-                      basic safety setup before leaving.
+                      Our team delivers, sets up, and reviews everything with
+                      you before we leave.
                     </div>
                   </div>
                   <div className="order-card">
-                    <strong>Clear area required</strong>
+                    <strong>Setup requirements</strong>
                     <div className="muted" style={{ marginTop: 6 }}>
-                      Flat open space and access to power or a generator keeps
-                      setup smooth on event day.
+                      Check your order confirmation for any space or access
+                      requirements to keep event day smooth.
                     </div>
                   </div>
                   <div className="order-card">
                     <strong>Pickup handled later</strong>
                     <div className="muted" style={{ marginTop: 6 }}>
-                      After the party, we return for pack-down so you can focus
-                      on the event, not logistics.
+                      After the event, we return for pack-down so you can focus
+                      on celebrating, not logistics.
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
@@ -140,6 +141,7 @@ export async function createProduct(
     await markSetupStep(ctx.organizationId, "has_products");
   } catch { /* non-critical */ }
 
+  revalidatePath("/inventory");
   redirect(`/dashboard/products/${inserted.id}?created=1`);
 }
 
@@ -232,5 +234,6 @@ export async function updateProduct(
     return { ok: false, message: error.message };
   }
 
+  revalidatePath("/inventory");
   redirect("/dashboard/products");
 }

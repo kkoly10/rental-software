@@ -5,15 +5,16 @@ export function organizationJsonLd(settings: {
   supportEmail: string;
   phone: string;
   serviceAreaLabel: string;
+  websiteMessage?: string;
 }) {
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: settings.businessName,
-    description: `Inflatable rental business serving ${settings.serviceAreaLabel}. Bounce houses, water slides, obstacle courses, and party packages.`,
+    ...(settings.websiteMessage ? { description: settings.websiteMessage } : {}),
     url: getSiteBaseUrl(),
-    telephone: settings.phone,
-    email: settings.supportEmail,
+    telephone: settings.phone || undefined,
+    email: settings.supportEmail || undefined,
     areaServed: settings.serviceAreaLabel,
     priceRange: "$$",
     sameAs: [],

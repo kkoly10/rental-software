@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { isTenantHost } from "@/lib/auth/org-context";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Terms of Service — Korent",
@@ -10,7 +12,9 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/terms",
 });
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  if (await isTenantHost()) notFound();
+
   return (
     <>
       <PublicHeader />

@@ -186,7 +186,7 @@ export default async function DashboardPage() {
             >
               <strong>Add product</strong>
               <div className="muted">
-                New inflatable for the public catalog
+                New product for the public catalog
               </div>
             </Link>
             <Link

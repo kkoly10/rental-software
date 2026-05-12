@@ -28,7 +28,7 @@ export const helpArticles: HelpArticle[] = [
     title: "First steps after signing up",
     section: "Getting Started",
     summary: "What to do right after creating your account and organization.",
-    body: `After completing onboarding, your organization is created with starter categories (Bounce Houses, Water Slides, Combos, Obstacle Courses, and Add-ons) and your primary service area.
+    body: `After completing onboarding, your organization is created with starter categories and your primary service area.
 
 **Recommended first steps:**
 
@@ -76,7 +76,7 @@ Below the stats, you'll see **Recent orders** on the left (the 3 most recent boo
 - **Dashboard** — Daily overview with stats and recent orders
 - **Orders** — All bookings with weather alerts for event dates
 - **Calendar** — Date-based view of upcoming events
-- **Products** — Your inflatable inventory and catalog management
+- **Products** — Your rental inventory and catalog management
 - **Pricing** — Dynamic pricing rules (weekend surcharges, early bird discounts, seasonal rates)
 - **Customers** — Customer database with contact info and booking history
 - **Payments** — Payment tracking, deposits, and balance management
@@ -104,8 +104,8 @@ The bottom of the sidebar has links to your **Public Site** (storefront preview)
 1. Go to **Products** in the sidebar
 2. Click **Add Product**
 3. Fill in the required fields:
-   - **Name** — What customers see (e.g., "Rainbow Bounce House")
-   - **Category** — Select from your categories (Bounce Houses, Water Slides, etc.)
+   - **Name** — What customers see (e.g., "Large Party Tent")
+   - **Category** — Select from your categories
    - **Base Price** — Daily rental rate
    - **Description** — Details about the product, dimensions, capacity, etc.
 4. Set **Active** status to show it on your storefront
@@ -138,9 +138,9 @@ Click any product from the list to open its detail page. Update fields and save.
 5. The first image becomes the primary image shown in catalog cards
 
 **Image tips:**
-- Use well-lit photos showing the full inflatable set up
+- Use well-lit photos showing the full product set up
 - Include photos from different angles
-- Action shots with people using the inflatables work great
+- Action shots with people using the equipment work great
 - Recommended size: at least 800x600 pixels
 - Supported formats: JPG, PNG, WebP
 
@@ -256,7 +256,7 @@ Not every order follows every step. Some customers pay in full upfront, some are
 2. Click **Generate Documents** for the order
 3. Two documents are created:
    - **Rental Agreement** — Terms and conditions for the rental
-   - **Safety Waiver** — Liability waiver for inflatable use
+   - **Safety Waiver** — Liability waiver for equipment use
 
 **Document statuses:**
 - **Draft** — Generated but not yet sent
@@ -415,7 +415,7 @@ The Deliveries page shows your delivery board with routes organized by status, a
 2. Click the **Copilot** button (bottom-right corner)
 3. Ask it to write content:
    - "Write a catchy hero headline for my rental business"
-   - "Generate a FAQ about bounce house safety"
+   - "Generate a FAQ about rental safety"
    - "Improve my service area description"
    - "Create an about section for my business"
 

@@ -125,6 +125,7 @@ export async function createServiceArea(
   } catch { /* non-critical */ }
 
   revalidatePath("/dashboard/service-areas");
+  revalidatePath("/");
   return { ok: true, message: "Service area created." };
 }
 
@@ -205,6 +206,7 @@ export async function updateServiceArea(
   }
 
   revalidatePath("/dashboard/service-areas");
+  revalidatePath("/");
   return { ok: true, message: "Service area updated." };
 }
 
@@ -258,5 +260,6 @@ export async function archiveServiceArea(serviceAreaId: string): Promise<Service
   }
 
   revalidatePath("/dashboard/service-areas");
+  revalidatePath("/");
   return { ok: true, message: "Service area archived." };
 }

@@ -21,7 +21,7 @@ export const checklistItems: ChecklistItem[] = [
   {
     id: "first-product",
     title: "Add your first product",
-    description: "Create an inflatable listing with pricing and details for your catalog.",
+    description: "Create a product listing with pricing and details for your catalog.",
     href: "/dashboard/products/new",
     order: 2,
     isComplete: (s) => s.productsCount > 0,

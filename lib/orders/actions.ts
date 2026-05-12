@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
@@ -539,6 +540,9 @@ export async function updateOrderStatus(
   } catch {
     console.error("[orders] Failed to send status update SMS for order", parsed.data.orderId);
   }
+
+  revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);
+  revalidatePath("/dashboard/orders");
 
   return {
     ok: true,

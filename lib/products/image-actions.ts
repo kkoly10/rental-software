@@ -38,6 +38,17 @@ export async function uploadProductImage(
     return { ok: false, message: "Choose an image before uploading." };
   }
 
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { ok: false, message: "Only JPEG, PNG, WebP, or GIF images are allowed." };
+  }
+
+  if (file.size > MAX_SIZE) {
+    return { ok: false, message: "Image must be under 10 MB." };
+  }
+
   if (!hasSupabaseEnv()) {
     return {
       ok: true,

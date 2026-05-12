@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { SignupForm } from "@/components/auth/signup-form";
+import { isTenantHost } from "@/lib/auth/org-context";
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  if (await isTenantHost()) notFound();
+
   return (
     <main className="page">
       <div className="container" style={{ maxWidth: 620 }}>

@@ -32,7 +32,7 @@ function layout(businessName: string, body: string, footer?: string): string {
         <!-- Footer -->
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #dbe6f4;color:#55708f;font-size:13px;">
-            ${footer ?? `<p style="margin:0;">Sent by ${safeName} via <span style="color:#1e5dcf;font-weight:600;">Korent</span></p>`}
+            ${footer ?? `<p style="margin:0;">Sent by ${safeName}</p>`}
           </td>
         </tr>
       </table>

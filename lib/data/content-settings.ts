@@ -13,7 +13,7 @@ export const defaultNavLinks: NavLink[] = [
   { key: "catalog", label: "Catalog", href: "/inventory", visible: true },
   { key: "how_it_works", label: "How It Works", href: "/#how-it-works", visible: true },
   { key: "service_area", label: "Service Area", href: "/#service-area", visible: true },
-  { key: "pricing", label: "Pricing", href: "/pricing", visible: true },
+  { key: "pricing", label: "Pricing", href: "/inventory", visible: true },
   { key: "order_status", label: "Order Status", href: "/order-status", visible: true },
   { key: "contact", label: "Contact", href: "/contact", visible: true },
 ];
@@ -29,12 +29,8 @@ export type ContentSettings = {
 
 const defaultVisibility: Record<string, boolean> = {
   trust_bar: true,
-  pain_points: true,
-  benefits: true,
   category_grid: true,
   how_it_works: true,
-  feature_showcase: true,
-  integrations_bar: true,
   faq_section: true,
   about_section: false,
   testimonials: false,

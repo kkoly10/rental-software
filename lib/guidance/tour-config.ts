@@ -46,7 +46,7 @@ export const dashboardTour: MiniTour = {
       targetSelector: '[data-tour="nav-products"]',
       title: "Your Inventory",
       description:
-        "Add bounce houses, water slides, and packages here. Set pricing, upload photos, and control what shows on your public storefront.",
+        "Add products and packages here. Set pricing, upload photos, and control what shows on your public storefront.",
       placement: "right",
       order: 3,
     },
@@ -66,7 +66,7 @@ export const dashboardTour: MiniTour = {
 export const productTour: MiniTour = {
   id: "products",
   name: "Add Your First Product",
-  description: "Learn how to list an inflatable for your catalog.",
+  description: "Learn how to add a product to your catalog.",
   steps: [
     {
       id: "nav-products",

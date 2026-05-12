@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PricingGrid } from "@/components/public/pricing-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { isTenantHost } from "@/lib/auth/org-context";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing — Korent",
@@ -12,7 +13,11 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/pricing",
 });
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  if (await isTenantHost()) {
+    redirect("/inventory");
+  }
+
   return (
     <>
       <PublicHeader />

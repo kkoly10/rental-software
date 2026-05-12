@@ -106,7 +106,7 @@ export async function GET(
   const balanceDue = financials?.remainingBalance ?? totalAmount;
 
   const invoiceData: InvoiceData = {
-    businessName: org?.name ?? "Korent",
+    businessName: org?.name ?? "Rental Company",
     supportEmail: org?.support_email ?? profile?.email ?? "",
     phone: org?.phone ?? profile?.phone ?? "",
     orderNumber: order.order_number,

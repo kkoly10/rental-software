@@ -145,14 +145,14 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
               .replace(/\b\w/g, (c: string) => c.toUpperCase())}: ${a.attribute_value}`
         )
       : [
-          "Setup area: grass preferred, flat and clear",
-          "Power: dedicated outlet or generator",
-          "Includes: blower, anchors, and safety overview",
-          "Turnaround and cleaning buffers enabled",
+          "Professional delivery and setup included",
+          "See your order confirmation for space requirements",
+          "Our team reviews everything with you before we leave",
+          "Contact us with any questions before your event",
         ];
 
   const resolvedCategory =
-    category && !category.deleted_at ? category.name : "Inflatable";
+    category && !category.deleted_at ? category.name : "Rental";
 
   const fallbackImage = getStorefrontFallbackImage(
     data.slug ?? slug,
@@ -175,7 +175,7 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     description:
       data.description ??
       data.short_description ??
-      "Inflatable rental product ready for booking.",
+      "Rental product available for booking.",
     highlights,
     imageUrl: sortedImages[0]?.image_url ?? fallbackImage,
     galleryImages:

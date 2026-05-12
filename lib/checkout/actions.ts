@@ -593,7 +593,7 @@ export async function createCheckoutOrder(
       await sendSmsNotification("orderConfirmation", phone, {
         orderNumber,
         businessName: org?.name ?? "Your rental company",
-      }, orgId);
+      }, orgId, { orderId: order.id, customerId });
     } catch { /* non-critical — email confirmation already sent */ }
   }
 

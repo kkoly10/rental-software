@@ -16,6 +16,14 @@ type Props = {
 };
 
 export function ServiceAreaSection({ areas = [] }: Props) {
+  const coverageLabel = areas.length > 0
+    ? areas
+        .map((a) => a.label || [a.city, a.state].filter(Boolean).join(", "))
+        .filter(Boolean)
+        .slice(0, 5)
+        .join(", ")
+    : null;
+
   return (
     <section className="section">
       <div className="container">
@@ -25,7 +33,7 @@ export function ServiceAreaSection({ areas = [] }: Props) {
               <div className="kicker">Service area</div>
               <h2 style={{ margin: "6px 0 8px" }}>Delivered across your local market</h2>
               <div className="muted">
-                We serve neighborhood parties, school events, and church gatherings across our primary delivery zone.
+                We deliver, set up, and pick up within our service zone. Check our coverage below.
               </div>
             </div>
           </div>
@@ -34,7 +42,9 @@ export function ServiceAreaSection({ areas = [] }: Props) {
             <div className="order-card">
               <strong>Primary ZIP coverage</strong>
               <div className="muted" style={{ marginTop: 6 }}>
-                Stafford, Fredericksburg, and surrounding delivery-ready areas.
+                {coverageLabel
+                  ? `Serving ${coverageLabel} and surrounding delivery-ready areas.`
+                  : "Contact us to confirm delivery availability for your ZIP code."}
               </div>
             </div>
             <div className="order-card">

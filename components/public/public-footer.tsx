@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getContentSettings } from "@/lib/data/content-settings";
+import { isTenantHost } from "@/lib/auth/org-context";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 
 export async function PublicFooter() {
   const year = new Date().getFullYear();
-  const settings = await getOrganizationSettings();
+  const [settings, contentSettings, isTenant, categories] = await Promise.all([
+    getOrganizationSettings(),
+    getContentSettings(),
+    isTenantHost(),
+    getCategoryGridItems().catch(() => []),
+  ]);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   const hasPhone = settings.phone && settings.phone !== "(555) 000-0000";
@@ -21,9 +29,11 @@ export async function PublicFooter() {
           <div className="footer-grid">
             <div>
               <div className="kicker" style={{ marginBottom: 10 }}>{settings.businessName}</div>
-              <div className="muted" style={{ lineHeight: 1.65, maxWidth: 260 }}>
-                Clean, safe, professionally delivered inflatable rentals for birthdays, school events, and church gatherings.
-              </div>
+              {contentSettings.aboutText && (
+                <div className="muted" style={{ lineHeight: 1.65, maxWidth: 260 }}>
+                  {contentSettings.aboutText}
+                </div>
+              )}
               <div style={{ marginTop: 16 }}>
                 <div className="muted" style={{ fontSize: 13 }}>
                   Serving {settings.serviceAreaLabel}
@@ -60,9 +70,11 @@ export async function PublicFooter() {
               <strong style={{ fontSize: 13 }}>Browse</strong>
               <div className="list" style={{ marginTop: 10 }}>
                 <Link href="/inventory" className="muted">Full Catalog</Link>
-                <Link href="/inventory?category=bounce-houses" className="muted">Bounce Houses</Link>
-                <Link href="/inventory?category=water-slides" className="muted">Water Slides</Link>
-                <Link href="/inventory?category=packages" className="muted">Party Packages</Link>
+                {categories.slice(0, 3).map((cat) => (
+                  <Link key={cat.slug} href={`/inventory?category=${cat.slug}`} className="muted">
+                    {cat.name}
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -70,7 +82,7 @@ export async function PublicFooter() {
               <strong style={{ fontSize: 13 }}>Company</strong>
               <div className="list" style={{ marginTop: 10 }}>
                 <a href="#how-it-works" className="muted">How It Works</a>
-                <Link href="/pricing" className="muted">Pricing</Link>
+                <Link href="/inventory" className="muted">Pricing</Link>
                 <Link href="/order-status" className="muted">Order Status</Link>
                 <Link href="/contact" className="muted">Contact Us</Link>
                 <a href="#service-area" className="muted">Service Area</a>
@@ -78,24 +90,42 @@ export async function PublicFooter() {
             </div>
 
             <div>
-              <strong style={{ fontSize: 13 }}>For Operators</strong>
-              <div className="list" style={{ marginTop: 10 }}>
-                <a href={`${siteUrl}/signup`} className="muted">Create Account</a>
-                <a href={`${siteUrl}/login`} className="muted">Operator Login</a>
-                <Link href="/pricing" className="muted">Plans & Pricing</Link>
-              </div>
-
-              {(hasPhone || hasEmail) && (
+              {isTenant ? (
+                (hasPhone || hasEmail) && (
+                  <>
+                    <strong style={{ fontSize: 13 }}>Contact</strong>
+                    <div className="list" style={{ marginTop: 10 }}>
+                      {hasPhone && (
+                        <a href={`tel:${settings.phone}`} className="muted">{settings.phone}</a>
+                      )}
+                      {hasEmail && (
+                        <a href={`mailto:${settings.supportEmail}`} className="muted">{settings.supportEmail}</a>
+                      )}
+                    </div>
+                  </>
+                )
+              ) : (
                 <>
-                  <strong style={{ fontSize: 13, marginTop: 16, display: "block" }}>Contact</strong>
+                  <strong style={{ fontSize: 13 }}>For Operators</strong>
                   <div className="list" style={{ marginTop: 10 }}>
-                    {hasPhone && (
-                      <a href={`tel:${settings.phone}`} className="muted">{settings.phone}</a>
-                    )}
-                    {hasEmail && (
-                      <a href={`mailto:${settings.supportEmail}`} className="muted">{settings.supportEmail}</a>
-                    )}
+                    <a href={`${siteUrl}/signup`} className="muted">Create Account</a>
+                    <a href={`${siteUrl}/login`} className="muted">Operator Login</a>
+                    <Link href="/pricing" className="muted">Plans & Pricing</Link>
                   </div>
+
+                  {(hasPhone || hasEmail) && (
+                    <>
+                      <strong style={{ fontSize: 13, marginTop: 16, display: "block" }}>Contact</strong>
+                      <div className="list" style={{ marginTop: 10 }}>
+                        {hasPhone && (
+                          <a href={`tel:${settings.phone}`} className="muted">{settings.phone}</a>
+                        )}
+                        {hasEmail && (
+                          <a href={`mailto:${settings.supportEmail}`} className="muted">{settings.supportEmail}</a>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -105,10 +135,12 @@ export async function PublicFooter() {
             <div className="muted" style={{ fontSize: 12 }}>
               &copy; {year} {settings.businessName}. All rights reserved.
             </div>
-            <div className="footer-bottom-links">
-              <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
-              <Link href="/terms" className="muted" style={{ fontSize: 12 }}>Terms</Link>
-            </div>
+            {!isTenant && (
+              <div className="footer-bottom-links">
+                <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
+                <Link href="/terms" className="muted" style={{ fontSize: 12 }}>Terms</Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

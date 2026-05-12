@@ -5,12 +5,18 @@ import { OrderLookupForm } from "@/components/portal/order-lookup-form";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { lookupOrderByPortalToken } from "@/lib/portal/lookup";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Check Order Status",
-  description: "View your rental order, documents, and balance through your secure portal link.",
-  path: "/order-status",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getOrganizationSettings();
+  return buildPageMetadata({
+    title: `Order Status — ${settings.businessName}`,
+    description: "View your rental order, documents, and balance through your secure portal link.",
+    path: "/order-status",
+    siteName: settings.businessName,
+    noIndex: true,
+  });
+}
 
 export default async function OrderStatusPage({
   searchParams,

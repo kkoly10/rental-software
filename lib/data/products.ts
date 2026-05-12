@@ -66,7 +66,7 @@ export async function getProductsPage(options?: {
       id: product.id,
       name: product.name ?? "Unnamed",
       category:
-        category && !category.deleted_at ? category.name ?? "Inflatable" : "Inflatable",
+        category && !category.deleted_at ? category.name ?? "Rental" : "Rental",
       price:
         typeof product.base_price === "number"
           ? `$${product.base_price}/day`
@@ -136,7 +136,7 @@ export async function getProductById(productId: string) {
     id: data.id,
     name: data.name ?? "",
     slug: data.slug ?? "",
-    category: category && !category.deleted_at ? category.name : "Inflatable",
+    category: category && !category.deleted_at ? category.name : "Rental",
     categoryId: category && !category.deleted_at ? category.id : "",
     shortDescription: data.short_description ?? "",
     description: data.description ?? "",

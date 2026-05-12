@@ -35,8 +35,9 @@ export async function generateMetadata({
       : `Checkout | ${settings.businessName}`,
     description: productName
       ? `Complete your booking request for ${productName} with ${settings.businessName}.`
-      : `Complete your inflatable rental booking request with ${settings.businessName}.`,
+      : `Complete your rental booking request with ${settings.businessName}.`,
     path: "/checkout",
+    siteName: settings.businessName,
   });
 }
 
@@ -84,7 +85,7 @@ export default async function CheckoutPage({
               <div className="kicker">Checkout</div>
               <h1 style={{ margin: "8px 0 10px" }}>Complete your booking request</h1>
               <div className="muted">
-                Enter your event and delivery details to reserve your inflatable.
+                Enter your event and delivery details to reserve your rental.
                 We will confirm availability, setup timing, and agreement details
                 after submission.
               </div>

@@ -28,7 +28,7 @@ export default function OnboardingPage() {
             </div>
             <div className="order-card">
               <strong>3. Auto-seeded catalog</strong>
-              <div className="muted">Starter inflatable categories created for you.</div>
+              <div className="muted">Starter categories created for you.</div>
             </div>
           </div>
 

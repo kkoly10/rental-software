@@ -146,7 +146,7 @@ export async function inviteTeamMember(
     .eq("id", ctx.organizationId)
     .maybeSingle();
 
-  const businessName = org?.name ?? "Korent";
+  const businessName = org?.name ?? "Rental Company";
   const inviteUrl = `${siteUrl}/invite/${token}`;
 
   const htmlEscapeMap: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
@@ -154,9 +154,13 @@ export async function inviteTeamMember(
   // sendEmail never throws (it catches internally and returns false on failure).
   // Check the return value so we can warn if delivery failed — but don't block
   // the invite, because the token is already in the DB and the operator can resend.
+  const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
+  const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+
   const sent = await sendEmail({
     to: email,
-    subject: `You're invited to join ${businessName} on Korent`,
+    from: `${safeFromName} <${fromDomain}>`,
+    subject: `You're invited to join ${businessName}`,
     html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">

@@ -194,7 +194,7 @@ export function DashboardShell({
         <Breadcrumbs />
         <div className="section-header">
           <div>
-            <div className="kicker">Inflatable-first platform</div>
+            <div className="kicker">Rental platform</div>
             <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>
             <div className="muted">{description}</div>
           </div>

@@ -36,6 +36,7 @@ export function buildPageMetadata(options: {
   path?: string;
   image?: string;
   noIndex?: boolean;
+  siteName?: string;
 }) {
   const canonical = getCanonicalUrl(options.path ?? "/");
 
@@ -49,7 +50,7 @@ export function buildPageMetadata(options: {
       title: options.title,
       description: options.description,
       url: canonical,
-      siteName: "Korent",
+      siteName: options.siteName ?? "Korent",
       type: "website",
       images: options.image ? [{ url: options.image }] : undefined,
     },

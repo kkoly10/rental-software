@@ -9,6 +9,7 @@ import { getCatalogList } from "@/lib/data/catalog-list";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 function normalizeCategory(value: string) {
@@ -28,8 +29,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return buildPageMetadata({
     title: `${settings.businessName} Inventory`,
-    description: `Browse bounce houses, water slides, and party rentals from ${settings.businessName}. Serving ${settings.serviceAreaLabel}.`,
+    description: `Browse rentals from ${settings.businessName}. Serving ${settings.serviceAreaLabel}.`,
     path: "/inventory",
+    siteName: settings.businessName,
   });
 }
 
@@ -46,7 +48,15 @@ export default async function InventoryPage({
   const isDemo = await isCurrentTenantDemo();
 
   const params = await searchParams;
-  const products = await getCatalogList();
+  const [products, categoryItems] = await Promise.all([
+    getCatalogList(),
+    getCategoryGridItems().catch(() => []),
+  ]);
+
+  const categoryOptions = categoryItems.map((cat) => ({
+    value: cat.slug,
+    label: cat.name,
+  }));
 
   // Filter by category
   const categoryFiltered = params.category
@@ -83,7 +93,7 @@ export default async function InventoryPage({
               <div>
                 <div className="kicker">Catalog</div>
                 <h1 className="page-title">
-                  Browse inflatables by event type
+                  Browse rentals by event type
                 </h1>
                 <div className="muted">
                   Search by date, delivery ZIP, and category to narrow down the
@@ -114,6 +124,7 @@ export default async function InventoryPage({
               initialDate={params.date}
               initialZip={params.zip}
               initialCategory={params.category}
+              categories={categoryOptions}
             />
           </section>
 
