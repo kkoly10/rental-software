@@ -29,12 +29,8 @@ export type ContentSettings = {
 
 const defaultVisibility: Record<string, boolean> = {
   trust_bar: true,
-  pain_points: true,
-  benefits: true,
   category_grid: true,
   how_it_works: true,
-  feature_showcase: true,
-  integrations_bar: true,
   faq_section: true,
   about_section: false,
   testimonials: false,

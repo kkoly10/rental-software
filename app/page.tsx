@@ -106,7 +106,7 @@ export default async function HomePage() {
           <div className="public-hero-visual">
             <Image
               src={settings.heroImageUrl || "https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"}
-              alt={`${settings.businessName} — inflatable party rental setup`}
+              alt={`${settings.businessName} event setup`}
               fill
               priority
               sizes="100vw"
@@ -118,9 +118,11 @@ export default async function HomePage() {
 
           <div className="container">
             <div className="public-hero-copy">
-              <div className="kicker public-kicker">
-                Bounce houses, water slides, and party rentals
-              </div>
+              {settings.businessName && (
+                <div className="kicker public-kicker">
+                  {settings.businessName}
+                </div>
+              )}
 
               <h1>
                 {settings.heroHeadline || "Party rentals delivered, set up, and ready for fun"}
@@ -187,8 +189,7 @@ export default async function HomePage() {
                 <div className="kicker">Explore by rentals</div>
                 <h2>Popular Rentals</h2>
                 <div className="muted">
-                  Start with the units families book most often for birthdays,
-                  school events, and backyard celebrations.
+                  Browse our most popular rentals and check availability for your event date.
                 </div>
               </div>
 
@@ -240,7 +241,7 @@ export default async function HomePage() {
 
         {/* FAQ */}
         {vis.faq_section !== false && (
-          <FaqSection customFaqs={contentSettings.customFaq} />
+          <FaqSection customFaqs={faqItems} />
         )}
 
         <PublicFooter />

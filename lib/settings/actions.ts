@@ -50,6 +50,7 @@ export async function updateBusinessProfile(
   }
 
   revalidatePath("/dashboard/settings");
+  revalidatePath("/");
   return { ok: true, message: "Business profile updated." };
 }
 

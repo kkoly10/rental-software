@@ -29,6 +29,7 @@ export async function generateMetadata({
     description: product.description,
     path: `/inventory/${product.slug}`,
     image: product.imageUrl || undefined,
+    siteName: settings.businessName,
   });
 }
 

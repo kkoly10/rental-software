@@ -7,12 +7,8 @@ const initialState = { ok: false, message: "" };
 
 const sectionLabels: { key: string; label: string }[] = [
   { key: "trust_bar", label: "Trust Bar" },
-  { key: "pain_points", label: "Pain Points" },
-  { key: "benefits", label: "Benefits" },
   { key: "category_grid", label: "Category Grid" },
   { key: "how_it_works", label: "How It Works" },
-  { key: "feature_showcase", label: "Feature Showcase" },
-  { key: "integrations_bar", label: "Integrations Bar" },
   { key: "faq_section", label: "FAQ Section" },
   { key: "about_section", label: "About Section" },
   { key: "testimonials", label: "Testimonials" },

@@ -1,11 +1,11 @@
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
-import { getProducts } from "@/lib/data/products";
+import { getCatalogList } from "@/lib/data/catalog-list";
 import { getServiceAreas } from "@/lib/data/service-areas";
 
 export async function getWebsiteAdminData() {
   const [settings, products, serviceAreas] = await Promise.all([
     getOrganizationSettings(),
-    getProducts(),
+    getCatalogList(),
     getServiceAreas(),
   ]);
 

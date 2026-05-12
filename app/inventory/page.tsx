@@ -28,8 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return buildPageMetadata({
     title: `${settings.businessName} Inventory`,
-    description: `Browse bounce houses, water slides, and party rentals from ${settings.businessName}. Serving ${settings.serviceAreaLabel}.`,
+    description: `Browse rentals from ${settings.businessName}. Serving ${settings.serviceAreaLabel}.`,
     path: "/inventory",
+    siteName: settings.businessName,
   });
 }
 
@@ -83,7 +84,7 @@ export default async function InventoryPage({
               <div>
                 <div className="kicker">Catalog</div>
                 <h1 className="page-title">
-                  Browse inflatables by event type
+                  Browse rentals by event type
                 </h1>
                 <div className="muted">
                   Search by date, delivery ZIP, and category to narrow down the

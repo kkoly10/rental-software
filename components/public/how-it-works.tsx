@@ -1,7 +1,7 @@
 const steps = [
   {
     title: "Choose Your Rentals",
-    description: "Browse bounce houses, water slides, and party add-ons that fit your event.",
+    description: "Browse available rentals and add-ons that fit your event.",
   },
   {
     title: "Select Date, Time & Delivery Area",
