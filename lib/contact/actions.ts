@@ -87,6 +87,7 @@ export async function submitContactForm(
         <hr />
         <p>${escapeHtml(parsed.data.message).replace(/\n/g, "<br />")}</p>
       `,
+      organizationId: orgId ?? undefined,
     });
   } catch {
     // Email delivery is non-blocking

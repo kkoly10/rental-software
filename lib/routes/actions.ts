@@ -80,6 +80,16 @@ export async function addOrderToRoute(
 
   if (!route) return { ok: false, message: "Route not found." };
 
+  // Verify the order belongs to this organization before assigning it to any route
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("id", orderId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  if (!order) return { ok: false, message: "Order not found." };
+
   // Guard: prevent adding the same order to multiple routes
   const { data: existingStop } = await supabase
     .from("route_stops")
@@ -202,6 +212,18 @@ export async function updateStopStatus(
   const orderId = String(formData.get("order_id") ?? "") || null;
 
   const supabase = await createSupabaseServerClient();
+
+  // Verify the stop belongs to a route owned by this org before updating
+  const { data: stop } = await supabase
+    .from("route_stops")
+    .select("id, routes!inner(organization_id)")
+    .eq("id", stopId)
+    .maybeSingle();
+
+  if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
+    return { ok: false, message: "Stop not found." };
+  }
+
   const { error } = await supabase
     .from("route_stops")
     .update({
