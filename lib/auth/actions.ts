@@ -314,7 +314,7 @@ export async function signUpWithPassword(
         })
         .eq("id", user.id);
     } catch (err) {
-      await logAppError({ source: "auth/terms-acceptance", message: "Failed to record terms acceptance", context: { error: String(err) } });
+      await logAppError({ source: "auth/terms-acceptance", message: "Failed to record terms acceptance", context: { error: String(err) }, error: err });
     }
   }
 
