@@ -27,7 +27,7 @@ export async function getCustomerDetail(
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return { ...fallbackCustomerDetail, id: customerId };
+    notFound();
   }
 
   const supabase = await createSupabaseServerClient();
