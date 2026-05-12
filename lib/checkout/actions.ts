@@ -151,6 +151,7 @@ export async function createCheckoutOrder(
       message: "Checkout rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
       context: { email },
+      error,
     });
 
     return {
@@ -644,6 +645,7 @@ export async function createCheckoutOrder(
         message: "Stripe checkout session creation failed — order still created",
         stack: stripeError instanceof Error ? stripeError.stack : undefined,
         context: { orderNumber, deposit },
+        error: stripeError,
       });
       // Fall through to non-Stripe confirmation
     }

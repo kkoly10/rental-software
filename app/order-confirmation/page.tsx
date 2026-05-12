@@ -10,6 +10,7 @@ import { getOrderFinancials } from "@/lib/payments/financials";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { requirePublicOrg } from "@/lib/auth/require-public-org";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -119,6 +120,8 @@ export default async function OrderConfirmationPage({
 }: {
   searchParams: Promise<{ order?: string; status?: string; session_id?: string }>;
 }) {
+  await requirePublicOrg();
+
   const { order, session_id } = await searchParams;
 
   // Server-verified payment status — URL params are NOT trusted

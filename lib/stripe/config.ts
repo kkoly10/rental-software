@@ -19,7 +19,7 @@ export function getStripe(): Stripe {
 }
 
 /**
- * Subscription plan tiers for Korent.
+ * Subscription plan tiers.
  *
  * Each tier defines limits that are enforced at the application layer.
  * The `stripePriceId` fields must be populated after creating products
@@ -94,6 +94,21 @@ export const PLAN_TIERS = {
     stripePriceIdYearly: getOptionalEnv("STRIPE_GROWTH_YEARLY_PRICE_ID") ?? "",
   },
 } as const;
+
+if (hasStripeEnv()) {
+  const missingPriceIds = Object.entries(PLAN_TIERS).flatMap(([tier, plan]) => {
+    const missing = [];
+    if (!plan.stripePriceIdMonthly) missing.push(`${tier}_monthly`);
+    if (!plan.stripePriceIdYearly) missing.push(`${tier}_yearly`);
+    return missing;
+  });
+  if (missingPriceIds.length > 0) {
+    console.warn(
+      `[stripe] Missing price IDs for: ${missingPriceIds.join(", ")}. ` +
+        "Run scripts/stripe-seed.sh and set the STRIPE_*_PRICE_ID env vars."
+    );
+  }
+}
 
 export type PlanTier = keyof typeof PLAN_TIERS;
 

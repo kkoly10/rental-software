@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
+import * as Sentry from "@sentry/nextjs";
 
 function sanitizePayload(value: unknown) {
   try {
@@ -45,7 +46,29 @@ export async function logAppError(input: {
   route?: string | null;
   stack?: string | null;
   context?: Record<string, unknown>;
+  error?: unknown;
 }) {
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    Sentry.withScope((scope) => {
+      if (input.organizationId) scope.setTag("organization_id", input.organizationId);
+      if (input.userId) scope.setUser({ id: input.userId });
+      if (input.route) scope.setTag("route", input.route);
+      scope.setTag("source", input.source);
+      if (input.context) scope.setExtras(input.context);
+
+      let err: Error;
+      if (input.error instanceof Error) {
+        err = input.error;
+      } else {
+        // Reconstruct a real Error so Sentry shows a stack trace rather
+        // than a plain message — callers pass stack as a string field.
+        err = new Error(input.message);
+        if (input.stack) err.stack = input.stack;
+      }
+      Sentry.captureException(err);
+    });
+  }
+
   if (!hasSupabaseServiceRoleEnv()) {
     return;
   }

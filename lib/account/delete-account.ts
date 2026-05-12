@@ -110,6 +110,7 @@ export async function deleteAccount(
             source: "account.delete",
             message: "Failed to cancel Stripe subscription during account deletion",
             stack: stripeError instanceof Error ? stripeError.stack : undefined,
+            error: stripeError,
           });
           // Continue with deletion even if Stripe cancel fails — operator can resolve manually
         }
@@ -156,6 +157,7 @@ export async function deleteAccount(
       source: "account.delete",
       message: "Account deletion failed unexpectedly",
       stack: error instanceof Error ? error.stack : undefined,
+      error,
     });
     return { ok: false, message: "An unexpected error occurred. Please try again." };
   }

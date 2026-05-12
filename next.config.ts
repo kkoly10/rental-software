@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -12,7 +13,7 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
     "font-src 'self' data: https:",
     "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://cdn.pixabay.com https://images.pexels.com https://*.tile.openstreetmap.org",
-    `connect-src 'self' ${process.env.NEXT_PUBLIC_SITE_URL ?? ""} https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com`,
+    `connect-src 'self' ${process.env.NEXT_PUBLIC_SITE_URL ?? ""} https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io`,
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
     "form-action 'self' https://checkout.stripe.com",
   ];
@@ -95,4 +96,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  disableLogger: true,
+  tunnelRoute: "/monitoring",
+  sourcemaps: { disable: !process.env.NEXT_PUBLIC_SENTRY_DSN },
+  telemetry: false,
+});

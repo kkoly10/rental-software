@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
       message: "Copilot rate limiting unavailable",
       route,
       stack: error instanceof Error ? error.stack : undefined,
+      error,
     });
 
     return jsonResponse(

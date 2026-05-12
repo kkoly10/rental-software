@@ -123,6 +123,7 @@ export async function signInWithPassword(
       message: "Sign-in rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
       context: { email: parsed.data.email },
+      error,
     });
 
     return {
@@ -253,6 +254,7 @@ export async function signUpWithPassword(
       message: "Signup rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
       context: { email: parsed.data.email },
+      error,
     });
 
     return {
@@ -362,6 +364,7 @@ export async function requestPasswordReset(
       message: "Password reset rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
       context: { email: parsed.data.email },
+      error,
     });
 
     return {
