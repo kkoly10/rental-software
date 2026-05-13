@@ -363,3 +363,54 @@ test.describe("GET /api/cron/reengagement", () => {
     expect([200, 401, 503], "unexpected status from reengagement cron").toContain(res.status());
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /api/documents/[documentId]  (requires user session)
+// ---------------------------------------------------------------------------
+
+test.describe("GET /api/documents/[documentId]", () => {
+  test("returns 401 or 503 without a session", async ({ request }) => {
+    const res = await request.get("/api/documents/smoke-test-doc-id");
+    // 401 = no session; 503 = Supabase not configured in this env
+    expect([401, 503], "unauthenticated document request should be rejected").toContain(
+      res.status()
+    );
+    await expectJson(res);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/quotes/[orderId]  (requires user session)
+// ---------------------------------------------------------------------------
+
+test.describe("GET /api/quotes/[orderId]", () => {
+  test("returns 401 or 503 without a session", async ({ request }) => {
+    const res = await request.get("/api/quotes/smoke-test-order-id");
+    // 401 = no session; 503 = Supabase not configured in this env
+    expect([401, 503], "unauthenticated quote request should be rejected").toContain(
+      res.status()
+    );
+    await expectJson(res);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/tracking/[token]  (public route — auth via hashed token)
+// ---------------------------------------------------------------------------
+
+test.describe("GET /api/tracking/[token]", () => {
+  test("returns 400 for a token that is too short", async ({ request }) => {
+    const res = await request.get("/api/tracking/short");
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+  });
+
+  test("returns 404 or 503 for a well-formed but unknown token", async ({ request }) => {
+    // 20+ char token that won't match any real row
+    const res = await request.get("/api/tracking/smoke-test-token-unknown-xyz");
+    // 404 = token not found; 503 = Supabase/service-role not configured
+    expect([404, 503], "unknown token should return 404 or 503").toContain(res.status());
+    await expectJson(res);
+  });
+});
