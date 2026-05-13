@@ -171,16 +171,25 @@ export async function importProductsFromCsv(
       .select("id, name");
 
     if (catError) {
+      // Batch failed — fall back to individual inserts so partial success is preserved.
       await logAppError({
         organizationId: ctx.organizationId,
         source: "products.csv_import",
-        message: "Failed to batch-create categories",
+        message: "Batch category create failed, falling back to per-row",
         context: { reason: catError.message },
       });
-    }
-
-    for (const cat of newCats ?? []) {
-      categoryMap.set(cat.name.toLowerCase(), cat.id);
+      for (const catName of newCategoryNames) {
+        const { data: cat } = await supabase
+          .from("categories")
+          .insert({ organization_id: ctx.organizationId, name: catName, slug: slugify(catName), sort_order: 99 })
+          .select("id, name")
+          .single();
+        if (cat) categoryMap.set(cat.name.toLowerCase(), cat.id);
+      }
+    } else {
+      for (const cat of newCats ?? []) {
+        categoryMap.set(cat.name.toLowerCase(), cat.id);
+      }
     }
   }
 
