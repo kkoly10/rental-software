@@ -8,6 +8,12 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { hashPortalAccessToken, issuePortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 
+export type PortalPayment = {
+  date: string;
+  amount: string;
+  type: string;
+};
+
 export type PortalOrder = {
   orderNumber: string;
   status: string;
@@ -19,6 +25,7 @@ export type PortalOrder = {
   depositDue: string;
   balanceDue: string;
   documents: { id: string; type: string; status: string }[];
+  payments: PortalPayment[];
   deliveryDate?: string;
   deliveryTimeWindow?: string;
   customerName: string;
@@ -52,12 +59,18 @@ function formatMoney(val: number): string {
 async function buildPortalOrder(order: OrderBase, customer: { first_name: string | null; last_name: string | null }) {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: items }, { data: docs }] = await Promise.all([
+  const [{ data: items }, { data: docs }, { data: paymentRows }] = await Promise.all([
     supabase.from("order_items").select("item_name_snapshot").eq("order_id", order.id),
     supabase
       .from("documents")
       .select("id, document_type, document_status")
       .eq("order_id", order.id),
+    supabase
+      .from("payments")
+      .select("amount, payment_type, paid_at")
+      .eq("order_id", order.id)
+      .eq("payment_status", "paid")
+      .order("paid_at", { ascending: true }),
   ]);
 
   const eventDate = order.event_date
@@ -99,6 +112,13 @@ async function buildPortalOrder(order: OrderBase, customer: { first_name: string
       type: (d.document_type ?? "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: d.document_status,
     })),
+    payments: (paymentRows ?? []).map((p) => ({
+      date: p.paid_at
+        ? new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : "—",
+      amount: formatMoney(Number(p.amount ?? 0)),
+      type: (p.payment_type ?? "payment").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    })),
     deliveryDate: ["scheduled", "out_for_delivery", "delivered"].includes(order.order_status) ? eventDate : undefined,
     deliveryTimeWindow: (() => {
       if (!["scheduled", "out_for_delivery", "delivered"].includes(order.order_status)) return undefined;
@@ -133,6 +153,9 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
         documents: [
           { id: "doc-demo-1", type: "Rental Agreement", status: "pending" },
           { id: "doc-demo-2", type: "Safety Waiver", status: "pending" },
+        ],
+        payments: [
+          { date: "Mar 15, 2026", amount: "$81.00", type: "Deposit" },
         ],
         deliveryDate: "Saturday, April 12, 2026",
         deliveryTimeWindow: "8:00 AM – 10:00 AM",
@@ -210,6 +233,9 @@ export async function lookupOrder(
         documents: [
           { id: "doc-demo-1", type: "Rental Agreement", status: "pending" },
           { id: "doc-demo-2", type: "Safety Waiver", status: "pending" },
+        ],
+        payments: [
+          { date: "Mar 15, 2026", amount: "$81.00", type: "Deposit" },
         ],
         deliveryDate: "Saturday, April 12, 2026",
         deliveryTimeWindow: "8:00 AM – 10:00 AM",

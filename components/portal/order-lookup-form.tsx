@@ -167,6 +167,20 @@ export function OrderLookupForm({ initialState }: Props) {
               </div>
             )}
 
+            {state.order.payments.length > 0 && (
+              <div className="order-card" style={{ marginTop: 12 }}>
+                <strong>Payment history</strong>
+                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                  {state.order.payments.map((p, i) => (
+                    <div key={i} className="order-row" style={{ fontSize: 13 }}>
+                      <span className="muted">{p.date} · {p.type}</span>
+                      <span>{p.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="action-row-end" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
               <InvoiceDownload order={state.order} />
               {state.order.status !== "Quote Sent" && state.order.status !== "Inquiry" && (
