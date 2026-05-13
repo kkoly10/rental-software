@@ -38,7 +38,7 @@ export function DashboardShell({
   const [subStatus, setSubStatus] = useState(initialSubscriptionStatus ?? null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState("/");
-  const [businessType, setBusinessType] = useState("inflatable");
+  const [businessType, setBusinessType] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -133,7 +133,7 @@ export function DashboardShell({
           Korent
         </Link>
 
-        {getNavItemsForVertical(businessType).map((item) => (
+        {(businessType ? getNavItemsForVertical(businessType) : []).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -235,7 +235,7 @@ export function DashboardShell({
               </button>
             </div>
             <nav className="mobile-menu-nav">
-              {getNavItemsForVertical(businessType).map((item) => (
+              {(businessType ? getNavItemsForVertical(businessType) : []).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

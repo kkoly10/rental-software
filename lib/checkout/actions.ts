@@ -14,6 +14,8 @@ import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
+import { calculatePrice } from "@/lib/pricing/engine";
+import type { PricingRule } from "@/lib/pricing/types";
 
 export type CheckoutFieldErrors = {
   firstName?: string;
@@ -255,7 +257,30 @@ export async function createCheckoutOrder(
         const startMs = new Date(eventDate + "T00:00:00Z").getTime();
         const endMs = new Date(rentalEndDate + "T00:00:00Z").getTime();
         const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)));
-        subtotal = Number((ratePerDay * days).toFixed(2));
+
+        const { data: rulesRows } = await supabase
+          .from("pricing_rules")
+          .select("id, name, type, adjustment, conditions, is_active, priority")
+          .eq("organization_id", orgId);
+
+        const rules: PricingRule[] = (rulesRows ?? []).map((r) => ({
+          id: r.id as string,
+          name: r.name as string,
+          type: r.type as PricingRule["type"],
+          adjustment: r.adjustment as number,
+          conditions: (r.conditions ?? {}) as PricingRule["conditions"],
+          isActive: r.is_active as boolean,
+          priority: r.priority as number,
+        }));
+
+        const priceCalc = calculatePrice(ratePerDay, rules, {
+          eventDate,
+          bookingDate: new Date().toISOString().split("T")[0],
+          rentalDays: days,
+          pricingModel: "per_day",
+        });
+
+        subtotal = priceCalc.finalPrice;
         itemRentalDays = days;
         itemRatePerDay = ratePerDay;
       } else {

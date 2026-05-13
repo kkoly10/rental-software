@@ -6,5 +6,8 @@ export async function GET() {
   if (!ctx) {
     return NextResponse.json({ businessType: "inflatable" });
   }
-  return NextResponse.json({ businessType: ctx.businessType });
+  return NextResponse.json(
+    { businessType: ctx.businessType },
+    { headers: { "Cache-Control": "private, max-age=300" } }
+  );
 }
