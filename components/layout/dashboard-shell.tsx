@@ -133,7 +133,11 @@ export function DashboardShell({
           Korent
         </Link>
 
-        {(businessType ? getNavItemsForVertical(businessType) : []).map((item) => (
+        {businessType === null
+          ? Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} style={{ height: 18, margin: "12px 14px", borderRadius: 6, background: "rgba(255,255,255,.12)" }} />
+            ))
+          : getNavItemsForVertical(businessType).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -235,17 +239,21 @@ export function DashboardShell({
               </button>
             </div>
             <nav className="mobile-menu-nav">
-              {(businessType ? getNavItemsForVertical(businessType) : []).map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={closeMobileNav}
-                  className={isNavItemActive(pathname, item.href) ? "active" : undefined}
-                >
-                  {item.label}
-                  {item.label === "Messages" && renderMessagesBadge()}
-                </Link>
-              ))}
+              {businessType === null
+                ? Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} style={{ height: 18, margin: "12px 14px", borderRadius: 6, background: "rgba(255,255,255,.12)" }} />
+                  ))
+                : getNavItemsForVertical(businessType).map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMobileNav}
+                      className={isNavItemActive(pathname, item.href) ? "active" : undefined}
+                    >
+                      {item.label}
+                      {item.label === "Messages" && renderMessagesBadge()}
+                    </Link>
+                  ))}
             </nav>
             <div className="mobile-menu-footer">
               <a href={publicSiteUrl} className="secondary-btn" onClick={closeMobileNav}>

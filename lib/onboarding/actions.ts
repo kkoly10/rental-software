@@ -116,7 +116,7 @@ export async function completeOnboarding(
     };
   }
 
-  const orgId = typeof data === "string" ? data : (data as any)?.organization_id ?? data;
+  const orgId = data as string;
   if (orgId) {
     // Record onboarding completion timestamp in org settings
     const { data: org } = await supabase

@@ -43,12 +43,80 @@ export function CheckoutForm({
 
   const errors: CheckoutFieldErrors = state.fieldErrors ?? {};
 
-  // Redirect to Stripe if a URL was returned — validate it's actually Stripe before navigating
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
+
+  // Only redirect after customer explicitly confirms on the review screen
   useEffect(() => {
-    if (state.ok && state.stripeUrl?.startsWith("https://checkout.stripe.com/")) {
+    if (reviewConfirmed && state.stripeUrl?.startsWith("https://checkout.stripe.com/")) {
       window.location.href = state.stripeUrl;
     }
-  }, [state.ok, state.stripeUrl]);
+  }, [reviewConfirmed, state.stripeUrl]);
+
+  // Review screen: order created, show summary before sending to Stripe
+  if (state.ok && state.stripeUrl && state.summary && !reviewConfirmed) {
+    const s = state.summary;
+    return (
+      <div style={{ marginTop: 16 }} className="list">
+        <div className="order-card" style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}>
+          <div className="kicker" style={{ marginBottom: 8 }}>Review your order</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            <div className="order-row">
+              <span className="muted">Item</span>
+              <strong>{s.productName}</strong>
+            </div>
+            {s.eventDate && (
+              <div className="order-row">
+                <span className="muted">Event date</span>
+                <span>{s.eventDate}</span>
+              </div>
+            )}
+            {s.address && (
+              <div className="order-row">
+                <span className="muted">Delivery to</span>
+                <span style={{ textAlign: "right", maxWidth: "55%" }}>{s.address}</span>
+              </div>
+            )}
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8, display: "grid", gap: 6 }}>
+              <div className="order-row">
+                <span className="muted">Subtotal</span>
+                <span>{s.subtotal}</span>
+              </div>
+              <div className="order-row">
+                <span className="muted">Delivery fee</span>
+                <span>{s.deliveryFee}</span>
+              </div>
+              <div className="order-row" style={{ fontWeight: 600 }}>
+                <span>Total</span>
+                <span>{s.total}</span>
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8, display: "grid", gap: 6 }}>
+              <div className="order-row">
+                <span className="muted">Deposit due now</span>
+                <strong style={{ color: "var(--primary)" }}>{s.depositDue}</strong>
+              </div>
+              <div className="order-row">
+                <span className="muted">Balance due later</span>
+                <span>{s.balanceDue}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button
+            className="primary-btn storefront-search-btn"
+            type="button"
+            onClick={() => setReviewConfirmed(true)}
+          >
+            Confirm &amp; Pay Deposit ({s.depositDue})
+          </button>
+          <Link href="/inventory" className="secondary-btn">
+            Cancel
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (state.ok && state.message && !state.stripeUrl) {
     return (
@@ -74,17 +142,17 @@ export function CheckoutForm({
     );
   }
 
-  // Show a loading state while redirecting to Stripe
-  if (state.ok && state.stripeUrl) {
+  // Redirecting to Stripe after customer confirmed
+  if (state.ok && state.stripeUrl && reviewConfirmed) {
     return (
       <div style={{ marginTop: 16 }}>
         <div
           className="order-card"
           style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}
         >
-          <strong>Order created — redirecting to payment...</strong>
+          <strong>Redirecting to secure payment...</strong>
           <div className="muted" style={{ marginTop: 8 }}>
-            {state.message}
+            You&apos;ll be taken to Stripe to complete your deposit payment.
           </div>
         </div>
       </div>

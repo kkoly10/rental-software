@@ -35,6 +35,17 @@ export type CheckoutActionState = {
   orderNumber?: string;
   fieldErrors?: CheckoutFieldErrors;
   stripeUrl?: string;
+  // Order summary fields — populated on success so the form can show a review screen
+  summary?: {
+    productName: string;
+    eventDate: string;
+    address: string;
+    subtotal: string;
+    deliveryFee: string;
+    total: string;
+    depositDue: string;
+    balanceDue: string;
+  };
 };
 
 export async function createCheckoutOrder(
@@ -253,10 +264,11 @@ export async function createCheckoutOrder(
       productName = product.name ?? productSlug;
 
       const pricingModel = product.pricing_model ?? "flat_day";
-      if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate > eventDate) {
+      if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate >= eventDate) {
         const startMs = new Date(eventDate + "T00:00:00Z").getTime();
         const endMs = new Date(rentalEndDate + "T00:00:00Z").getTime();
-        const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)));
+        // Add 1 so both start and end dates are counted (Mon→Fri = 5 days, not 4).
+        const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
 
         const { data: rulesRows } = await supabase
           .from("pricing_rules")
@@ -722,11 +734,23 @@ export async function createCheckoutOrder(
       });
 
       if (session.url) {
+        const fmt = (n: number) => `$${n.toFixed(2)}`;
+        const addrParts = [line1, city, state, postalCode].filter(Boolean);
         return {
           ok: true,
-          message: `Order ${orderNumber} created! Redirecting to payment...`,
+          message: `Order ${orderNumber} created!`,
           orderNumber,
           stripeUrl: session.url,
+          summary: {
+            productName,
+            eventDate: eventDate ?? "",
+            address: addrParts.join(", "),
+            subtotal: fmt(subtotal),
+            deliveryFee: fmt(deliveryFee),
+            total: fmt(total),
+            depositDue: fmt(deposit),
+            balanceDue: fmt(balance),
+          },
         };
       }
     } catch (stripeError) {

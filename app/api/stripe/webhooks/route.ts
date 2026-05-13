@@ -161,6 +161,39 @@ export async function POST(request: NextRequest) {
                 .update({ expires_at: null })
                 .eq("source_order_id", orderId)
                 .eq("block_type", "checkout_hold");
+
+              // Send payment confirmation email — non-critical, never throws to outer handler
+              try {
+                const { data: orderData } = await admin
+                  .from("orders")
+                  .select("order_number, customer_id, balance_due_amount")
+                  .eq("id", orderId)
+                  .maybeSingle();
+
+                if (orderData?.customer_id) {
+                  const { data: customer } = await admin
+                    .from("customers")
+                    .select("first_name, email")
+                    .eq("id", orderData.customer_id)
+                    .maybeSingle();
+
+                  if (customer?.email) {
+                    const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
+                    await triggerPaymentReceivedEmail({
+                      organizationId: orgId,
+                      customerFirstName: customer.first_name ?? "there",
+                      customerEmail: customer.email,
+                      orderNumber: orderData.order_number,
+                      amount: amountPaid,
+                      paymentType,
+                      paymentMethod: "stripe",
+                      newBalance: financials?.remainingBalance ?? Number(orderData.balance_due_amount ?? 0),
+                    });
+                  }
+                }
+              } catch (emailErr) {
+                console.error("Stripe webhook: payment confirmation email failed:", emailErr);
+              }
             }
           }
         }

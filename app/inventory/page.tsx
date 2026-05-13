@@ -48,9 +48,10 @@ export default async function InventoryPage({
   const isDemo = await isCurrentTenantDemo();
 
   const params = await searchParams;
-  const [products, categoryItems] = await Promise.all([
+  const [products, categoryItems, settings] = await Promise.all([
     getCatalogList(),
     getCategoryGridItems().catch(() => []),
+    getOrganizationSettings(),
   ]);
 
   const categoryOptions = categoryItems.map((cat) => ({
@@ -127,6 +128,21 @@ export default async function InventoryPage({
               categories={categoryOptions}
             />
           </section>
+
+          {settings.serviceAreaLabel && settings.serviceAreaLabel !== "Your service area" && (
+            <div
+              style={{
+                padding: "10px 16px",
+                background: "var(--surface-muted)",
+                borderRadius: 10,
+                fontSize: 13,
+                color: "var(--text-soft)",
+                marginBottom: 4,
+              }}
+            >
+              We deliver to: <strong>{settings.serviceAreaLabel}</strong>. Enter your ZIP above to confirm availability.
+            </div>
+          )}
 
           {zipValid === false && zipMessage && (
             <div

@@ -44,7 +44,7 @@ export default async function ProductsPage({
               {productsPage.totalItems === 1 ? "" : "s"} found
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="action-row">
             <CsvImportButton />
             <Link href="/dashboard/products/new" className="primary-btn">
               Add product
