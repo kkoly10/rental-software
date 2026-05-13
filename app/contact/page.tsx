@@ -8,7 +8,7 @@ import { requirePublicOrg } from "@/lib/auth/require-public-org";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: `Contact Us — ${settings.businessName}`,
     description: `Get in touch with ${settings.businessName} for questions about rentals, bookings, or custom event packages.`,
     path: "/contact",

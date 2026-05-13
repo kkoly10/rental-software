@@ -20,14 +20,14 @@ import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { isTenantHost } from "@/lib/auth/org-context";
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { getContentSettings } from "@/lib/data/content-settings";
-import { buildPageMetadata } from "@/lib/seo/metadata";
+import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 
 export async function generateMetadata(): Promise<Metadata> {
   const isTenant = await isTenantHost();
   if (!isTenant) {
-    return buildPageMetadata({
+    return await buildPageMetadata({
       title: "Korent | Rental software for operators",
       description:
         "Korent helps rental operators run bookings, inventory, payments, delivery routes, and customer documents from one platform.",
@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
   await requirePublicOrg();
   const settings = await getOrganizationSettings();
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: settings.businessName,
     description: `${settings.businessName} offers rentals with delivery and setup${settings.serviceAreaLabel ? ` across ${settings.serviceAreaLabel}` : ""}. Check availability and book online.`,
     path: "/",
@@ -79,12 +79,13 @@ export default async function HomePage() {
 
   await requirePublicOrg();
 
-  const [featured, settings, geoAreas, contentSettings, isDemo] = await Promise.all([
+  const [featured, settings, geoAreas, contentSettings, isDemo, origin] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
     getServiceAreasGeo(),
     getContentSettings(),
     isCurrentTenantDemo(),
+    getRequestOrigin(),
   ]);
 
   const vis = contentSettings.sectionVisibility;
@@ -96,7 +97,7 @@ export default async function HomePage() {
   return (
     <>
       <PublicHeader />
-      <JsonLdScript data={organizationJsonLd({ ...settings, websiteMessage: settings.websiteMessage || undefined })} />
+      <JsonLdScript data={organizationJsonLd({ ...settings, websiteMessage: settings.websiteMessage || undefined }, origin)} />
       {vis.faq_section !== false && (
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}

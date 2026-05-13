@@ -602,7 +602,11 @@ export async function createCheckoutOrder(
   if (hasStripeEnv() && deposit > 0) {
     try {
       const stripe = getStripe();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      // Use the request origin so the customer is redirected back to the
+      // tenant subdomain / custom domain they checked out on, not the root
+      // marketing domain.
+      const { getRequestOrigin } = await import("@/lib/seo/metadata");
+      const siteUrl = await getRequestOrigin();
 
       const session = await stripe.checkout.sessions.create({
         mode: "payment",

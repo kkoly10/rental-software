@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 function normalizeBaseUrl(value?: string | null) {
   if (!value) return "http://localhost:3000";
@@ -25,20 +26,53 @@ export function getSiteBaseUrl() {
   );
 }
 
-export function getCanonicalUrl(path = "/") {
-  const base = getSiteBaseUrl();
-  return path === "/" ? base : `${base}${path}`;
+/**
+ * Resolve the absolute origin (proto://host) for the current incoming request.
+ * Use this instead of `getSiteBaseUrl()` whenever the URL must reflect the
+ * tenant subdomain or custom domain the visitor is actually on (canonical
+ * tags, sitemap, robots, Stripe redirect URLs, etc.).
+ */
+export async function getRequestOrigin(): Promise<string> {
+  try {
+    const h = await headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (host) return `${proto}://${host}`;
+  } catch {
+    // headers() is unavailable at build time — fall back to the static base.
+  }
+  return getSiteBaseUrl();
 }
 
-export function buildPageMetadata(options: {
+export function getCanonicalUrl(path = "/", base?: string) {
+  const root = base ?? getSiteBaseUrl();
+  return path === "/" ? root : `${root}${path}`;
+}
+
+export async function getRequestCanonicalUrl(path = "/") {
+  const origin = await getRequestOrigin();
+  return getCanonicalUrl(path, origin);
+}
+
+export async function buildPageMetadata(options: {
   title: string;
   description: string;
   path?: string;
   image?: string;
   noIndex?: boolean;
   siteName?: string;
-}) {
-  const canonical = getCanonicalUrl(options.path ?? "/");
+}): Promise<Metadata> {
+  const canonical = await getRequestCanonicalUrl(options.path ?? "/");
+
+  // Only fall back to "Korent" on the marketing/dashboard root domain.
+  // On tenant hosts (subdomain or custom domain) we omit siteName entirely
+  // rather than leak the operator's brand into Korent's.
+  let resolvedSiteName: string | undefined = options.siteName;
+  if (!resolvedSiteName) {
+    const { isTenantHost } = await import("@/lib/auth/org-context");
+    const tenant = await isTenantHost();
+    resolvedSiteName = tenant ? undefined : "Korent";
+  }
 
   const metadata: Metadata = {
     title: options.title,
@@ -50,7 +84,7 @@ export function buildPageMetadata(options: {
       title: options.title,
       description: options.description,
       url: canonical,
-      siteName: options.siteName ?? "Korent",
+      siteName: resolvedSiteName,
       type: "website",
       images: options.image ? [{ url: options.image }] : undefined,
     },

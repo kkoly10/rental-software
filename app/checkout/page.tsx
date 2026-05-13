@@ -29,7 +29,7 @@ export async function generateMetadata({
   const settings = await getOrganizationSettings();
   const productName = formatProductName(product);
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: productName
       ? `${productName} Checkout | ${settings.businessName}`
       : `Checkout | ${settings.businessName}`,

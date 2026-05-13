@@ -9,7 +9,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: `Order Status — ${settings.businessName}`,
     description: "View your rental order, documents, and balance through your secure portal link.",
     path: "/order-status",

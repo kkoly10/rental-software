@@ -5,12 +5,14 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { isTenantHost } from "@/lib/auth/org-context";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Privacy Policy — Korent",
-  description:
-    "How Korent collects, uses, and protects your personal information.",
-  path: "/privacy",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return await buildPageMetadata({
+    title: "Privacy Policy — Korent",
+    description:
+      "How Korent collects, uses, and protects your personal information.",
+    path: "/privacy",
+  });
+}
 
 export default async function PrivacyPage() {
   if (await isTenantHost()) notFound();

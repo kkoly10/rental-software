@@ -5,12 +5,14 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { isTenantHost } from "@/lib/auth/org-context";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Terms of Service — Korent",
-  description:
-    "Terms and conditions governing use of the Korent rental management platform.",
-  path: "/terms",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return await buildPageMetadata({
+    title: "Terms of Service — Korent",
+    description:
+      "Terms and conditions governing use of the Korent rental management platform.",
+    path: "/terms",
+  });
+}
 
 export default async function TermsPage() {
   if (await isTenantHost()) notFound();
