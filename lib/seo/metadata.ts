@@ -50,7 +50,7 @@ export function getCanonicalUrl(path = "/", base?: string) {
   return path === "/" ? root : `${root}${path}`;
 }
 
-export async function getRequestCanonicalUrl(path = "/") {
+async function getRequestCanonicalUrl(path = "/") {
   const origin = await getRequestOrigin();
   return getCanonicalUrl(path, origin);
 }
