@@ -173,8 +173,15 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Stop not found." };
   }
 
+  const MIME_TO_EXT: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/heic": "heic",
+  };
+  const ext = MIME_TO_EXT[file.type] ?? "jpg";
+
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
-  const ext = file.name.split(".").pop() ?? "jpg";
   const filePath = `proof-photos/${ctx.organizationId}/${stopId}-${Date.now()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
