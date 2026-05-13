@@ -14,6 +14,8 @@ import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
+import { calculatePrice } from "@/lib/pricing/engine";
+import type { PricingRule } from "@/lib/pricing/types";
 
 export type CheckoutFieldErrors = {
   firstName?: string;
@@ -66,6 +68,8 @@ export async function createCheckoutOrder(
     startTime: String(formData.get("start_time") ?? ""),
     endTime: String(formData.get("end_time") ?? ""),
     productSlug: String(formData.get("product_slug") ?? ""),
+    fulfillmentType: String(formData.get("fulfillment_type") ?? "delivery"),
+    rentalEndDate: String(formData.get("rental_end_date") ?? ""),
   });
 
   if (!parsed.success) {
@@ -111,6 +115,8 @@ export async function createCheckoutOrder(
     startTime,
     endTime,
     productSlug,
+    fulfillmentType,
+    rentalEndDate,
   } = parsed.data;
 
   try {
@@ -194,51 +200,96 @@ export async function createCheckoutOrder(
 
   const supabase = await createSupabaseServerClient();
 
-  const serviceArea = await resolveServiceAreaForAddress({
-    organizationId: orgId,
-    postalCode,
-    city,
-    state,
-  });
-
-  if (!serviceArea) {
-    await logAppEvent({
+  // Service area lookup is only required for delivery orders.
+  // Pickup orders skip it and carry zero delivery fee.
+  let serviceArea: Awaited<ReturnType<typeof resolveServiceAreaForAddress>> | null = null;
+  if (fulfillmentType === "delivery") {
+    if (!line1 || !city || !state || !postalCode) {
+      return { ok: false, message: "Delivery address is required for delivery orders." };
+    }
+    serviceArea = await resolveServiceAreaForAddress({
       organizationId: orgId,
-      source: "checkout.website",
-      action: "service_area_not_found",
-      status: "warning",
-      metadata: { postalCode, city, state },
+      postalCode,
+      city,
+      state,
     });
 
-    return {
-      ok: false,
-      message:
-        "We do not currently serve that delivery area. Please enter a ZIP code within a configured service area.",
-    };
+    if (!serviceArea) {
+      await logAppEvent({
+        organizationId: orgId,
+        source: "checkout.website",
+        action: "service_area_not_found",
+        status: "warning",
+        metadata: { postalCode, city, state },
+      });
+
+      return {
+        ok: false,
+        message:
+          "We do not currently serve that delivery area. Please enter a ZIP code within a configured service area.",
+      };
+    }
   }
 
   let subtotal = 225;
   let productId: string | null = null;
   let productName = "Rental booking";
+  let itemRentalDays: number | null = null;
+  let itemRatePerDay: number | null = null;
 
   if (productSlug) {
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, base_price")
+      .select("id, name, base_price, pricing_model")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .is("deleted_at", null)
       .maybeSingle();
 
     if (product) {
-      subtotal =
+      const ratePerDay =
         typeof product.base_price === "number" ? Number(product.base_price) : 225;
       productId = product.id;
       productName = product.name ?? productSlug;
+
+      const pricingModel = product.pricing_model ?? "flat_day";
+      if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate > eventDate) {
+        const startMs = new Date(eventDate + "T00:00:00Z").getTime();
+        const endMs = new Date(rentalEndDate + "T00:00:00Z").getTime();
+        const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)));
+
+        const { data: rulesRows } = await supabase
+          .from("pricing_rules")
+          .select("id, name, type, adjustment, conditions, is_active, priority")
+          .eq("organization_id", orgId);
+
+        const rules: PricingRule[] = (rulesRows ?? []).map((r) => ({
+          id: r.id as string,
+          name: r.name as string,
+          type: r.type as PricingRule["type"],
+          adjustment: r.adjustment as number,
+          conditions: (r.conditions ?? {}) as PricingRule["conditions"],
+          isActive: r.is_active as boolean,
+          priority: r.priority as number,
+        }));
+
+        const priceCalc = calculatePrice(ratePerDay, rules, {
+          eventDate,
+          bookingDate: new Date().toISOString().split("T")[0],
+          rentalDays: days,
+          pricingModel: "per_day",
+        });
+
+        subtotal = priceCalc.finalPrice;
+        itemRentalDays = days;
+        itemRatePerDay = ratePerDay;
+      } else {
+        subtotal = ratePerDay;
+      }
     }
   }
 
-  if (subtotal < serviceArea.minimumOrderAmount) {
+  if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
     await logAppEvent({
       organizationId: orgId,
       source: "checkout.website",
@@ -247,7 +298,7 @@ export async function createCheckoutOrder(
       metadata: {
         subtotal,
         minimumOrderAmount: serviceArea.minimumOrderAmount,
-        serviceAreaId: serviceArea.id,
+        serviceAreaId: serviceArea?.id ?? null,
       },
     });
 
@@ -390,39 +441,44 @@ export async function createCheckoutOrder(
     newCustomerId = customer.id;
   }
 
-  const { data: address, error: addressError } = await supabase
-    .from("customer_addresses")
-    .insert({
-      customer_id: customerId,
-      label: "Delivery",
-      line1,
-      city,
-      state,
-      postal_code: postalCode,
-      is_default_delivery: true,
-    })
-    .select("id")
-    .single();
+  let deliveryAddressId: string | null = null;
+  if (fulfillmentType === "delivery") {
+    const { data: address, error: addressError } = await supabase
+      .from("customer_addresses")
+      .insert({
+        customer_id: customerId,
+        label: "Delivery",
+        line1,
+        city,
+        state,
+        postal_code: postalCode,
+        is_default_delivery: true,
+      })
+      .select("id")
+      .single();
 
-  if (addressError || !address) {
-    if (newCustomerId) {
-      await supabase.from("customers").delete().eq("id", newCustomerId);
+    if (addressError || !address) {
+      if (newCustomerId) {
+        await supabase.from("customers").delete().eq("id", newCustomerId);
+      }
+
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout.website",
+        message: "Failed to create address during checkout",
+        context: { reason: addressError?.message, customerId },
+      });
+
+      return {
+        ok: false,
+        message: addressError?.message ?? "Unable to create address.",
+      };
     }
 
-    await logAppError({
-      organizationId: orgId,
-      source: "checkout.website",
-      message: "Failed to create address during checkout",
-      context: { reason: addressError?.message, customerId },
-    });
-
-    return {
-      ok: false,
-      message: addressError?.message ?? "Unable to create address.",
-    };
+    deliveryAddressId = address.id;
   }
 
-  const deliveryFee = serviceArea.deliveryFee;
+  const deliveryFee = serviceArea?.deliveryFee ?? 0;
   const total = Number((subtotal + deliveryFee).toFixed(2));
 
   // Compute deposit from the org's configurable booking policies
@@ -456,7 +512,9 @@ export async function createCheckoutOrder(
       event_date: eventDate ?? null,
       event_start_time: eventStartTime,
       event_end_time: eventEndTime,
-      delivery_address_id: address.id,
+      rental_end_date: rentalEndDate ?? null,
+      delivery_address_id: deliveryAddressId,
+      fulfillment_type: fulfillmentType,
       subtotal_amount: subtotal,
       delivery_fee_amount: deliveryFee,
       total_amount: total,
@@ -464,13 +522,15 @@ export async function createCheckoutOrder(
       balance_due_amount: balance,
       source_channel: "website",
       terms_accepted_at: new Date().toISOString(),
-      notes: `Service area: ${serviceArea.label}`,
+      notes: serviceArea ? `Service area: ${serviceArea.label}` : null,
     })
     .select("id")
     .single();
 
   if (orderError || !order) {
-    await supabase.from("customer_addresses").delete().eq("id", address.id);
+    if (deliveryAddressId) {
+      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+    }
     if (newCustomerId) {
       await supabase.from("customers").delete().eq("id", newCustomerId);
     }
@@ -494,14 +554,18 @@ export async function createCheckoutOrder(
       product_id: productId,
       line_type: "rental",
       quantity: 1,
-      unit_price: subtotal,
+      unit_price: itemRatePerDay ?? subtotal,
       line_total: subtotal,
       item_name_snapshot: productName,
+      rental_days: itemRentalDays,
+      rate_per_day: itemRatePerDay,
     });
 
     if (itemError) {
       await supabase.from("orders").delete().eq("id", order.id);
-      await supabase.from("customer_addresses").delete().eq("id", address.id);
+      if (deliveryAddressId) {
+        await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+      }
       if (newCustomerId) {
         await supabase.from("customers").delete().eq("id", newCustomerId);
       }
@@ -537,7 +601,9 @@ export async function createCheckoutOrder(
 
     if (!reserveResult.ok) {
       await supabase.from("orders").delete().eq("id", order.id);
-      await supabase.from("customer_addresses").delete().eq("id", address.id);
+      if (deliveryAddressId) {
+        await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+      }
       if (newCustomerId) {
         await supabase.from("customers").delete().eq("id", newCustomerId);
       }
@@ -572,7 +638,7 @@ export async function createCheckoutOrder(
       orderId: order.id,
       orderNumber,
       productId,
-      serviceAreaId: serviceArea.id,
+      serviceAreaId: serviceArea?.id ?? null,
       eventDate,
     },
   });

@@ -147,7 +147,8 @@ async function sendDayBeforeReminders(
       "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone), order_items(item_name_snapshot)"
     )
     .eq("event_date", tomorrow)
-    .in("order_status", ["confirmed", "scheduled"]);
+    .in("order_status", ["confirmed", "scheduled"])
+    .is("day_before_reminder_sent_at", null);
 
   if (!orders || orders.length === 0) return { sent, errors };
 
@@ -243,6 +244,12 @@ async function sendDayBeforeReminders(
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
+
+      await supabase
+        .from("orders")
+        .update({ day_before_reminder_sent_at: new Date().toISOString() })
+        .eq("id", order.id);
+
       sent++;
 
       // SMS reminder — must be awaited; fire-and-forget is killed by Lambda

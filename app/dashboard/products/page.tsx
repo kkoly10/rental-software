@@ -8,6 +8,7 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
+import { CsvImportButton } from "@/components/products/csv-import-button";
 
 export default async function ProductsPage({
   searchParams,
@@ -43,9 +44,12 @@ export default async function ProductsPage({
               {productsPage.totalItems === 1 ? "" : "s"} found
             </div>
           </div>
-          <Link href="/dashboard/products/new" className="primary-btn">
-            Add product
-          </Link>
+          <div style={{ display: "flex", gap: 10 }}>
+            <CsvImportButton />
+            <Link href="/dashboard/products/new" className="primary-btn">
+              Add product
+            </Link>
+          </div>
         </div>
 
         <ListSearchForm
