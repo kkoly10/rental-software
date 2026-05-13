@@ -48,11 +48,12 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
       const safeTextColor = darkenHex(brand.primaryColor, 0.7);
       cssVars.push(`--primary: ${brand.primaryColor};`);
       cssVars.push(`--primary-text: ${safeTextColor};`);
+      const s = "body:not(:has(.sidebar-layout))";
       safetyOverrides = `
-        .kicker, .public-logo, .nav-links a:hover, a:focus-visible,
-        .faq-trigger:hover { color: var(--primary-text); }
-        .primary-btn { background: var(--primary-text); }
-        .primary-btn:hover { background: var(--primary-text); filter: brightness(0.85); }
+        ${s} .kicker, ${s} .public-logo, ${s} .nav-links a:hover,
+        ${s} a:focus-visible, ${s} .faq-trigger:hover { color: var(--primary-text); }
+        ${s} .primary-btn { background: var(--primary-text); }
+        ${s} .primary-btn:hover { background: var(--primary-text); filter: brightness(0.85); }
       `;
     } else {
       cssVars.push(`--primary: ${brand.primaryColor};`);
@@ -77,8 +78,15 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
     );
   }
 
-  const styleContent = `:root { ${cssVars.join(" ")} }${
-    hasCustomFont ? ` body { font-family: var(--brand-font); }` : ""
+  // Scope brand vars to pages that do NOT contain the dashboard shell
+  // (.sidebar-layout is always present on every dashboard page).  This
+  // prevents tenant brand colors from bleeding into the operator UI when
+  // the dashboard is visited on the tenant's own subdomain/custom domain.
+  const scope = ":root:not(:has(.sidebar-layout))";
+  const bodyScope = "body:not(:has(.sidebar-layout))";
+
+  const styleContent = `${scope} { ${cssVars.join(" ")} }${
+    hasCustomFont ? ` ${bodyScope} { font-family: var(--brand-font); }` : ""
   }${safetyOverrides}`;
 
   const fontParam = hasCustomFont ? GOOGLE_FONT_MAP[brand.fontFamily] : null;
