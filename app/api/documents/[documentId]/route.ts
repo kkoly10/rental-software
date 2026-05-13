@@ -54,7 +54,7 @@ export async function GET(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, support_email")
+    .select("name, support_email, business_type")
     .eq("id", ctx.organizationId)
     .maybeSingle();
 
@@ -99,6 +99,7 @@ export async function GET(
     signerName: document.signer_name ?? null,
     signerIp: document.signer_ip ?? null,
     signatureDataUrl: document.signature_data_url ?? null,
+    businessType: org?.business_type ?? "inflatable",
   });
 
   const docTitle = document.document_type === "rental_agreement"

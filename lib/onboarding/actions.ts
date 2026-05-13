@@ -20,6 +20,11 @@ export async function completeOnboarding(
   const zipCode = String(formData.get("zip_code") ?? "").trim();
   const deliveryFee = parseFloat(String(formData.get("delivery_fee") ?? "25"));
   const minimumOrder = parseFloat(String(formData.get("minimum_order") ?? "100"));
+  const businessType = ["inflatable", "car", "equipment"].includes(
+    String(formData.get("business_type") ?? "")
+  )
+    ? String(formData.get("business_type"))
+    : "inflatable";
   let slugInput = String(formData.get("slug") ?? "").trim();
 
   if (!businessName) {
@@ -86,6 +91,7 @@ export async function completeOnboarding(
     p_zip_code: zipCode || null,
     p_delivery_fee: Number.isFinite(deliveryFee) ? deliveryFee : 25,
     p_minimum_order: Number.isFinite(minimumOrder) ? minimumOrder : 100,
+    p_business_type: businessType,
   });
 
   if (error) {

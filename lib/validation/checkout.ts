@@ -5,8 +5,6 @@ import {
   optionalSlugSchema,
   personNameSchema,
   requiredEmailSchema,
-  requiredPostalCodeSchema,
-  requiredText,
 } from "@/lib/validation/common";
 
 // Optional time in HH:MM format (24h)
@@ -24,14 +22,18 @@ export const checkoutOrderSchema = z.object({
   lastName: personNameSchema("Last name"),
   email: requiredEmailSchema,
   phone: optionalPhoneSchema,
-  line1: requiredText("Address line 1", 120),
-  city: requiredText("City", 80),
-  state: requiredText("State", 80),
-  postalCode: requiredPostalCodeSchema,
+  // Address fields are optional here — the checkout action enforces them
+  // when fulfillmentType === 'delivery'.
+  line1: z.string().trim().max(120).optional().default(""),
+  city: z.string().trim().max(80).optional().default(""),
+  state: z.string().trim().max(80).optional().default(""),
+  postalCode: z.string().trim().optional().default(""),
   eventDate: optionalDateSchema,
   startTime: optionalTimeSchema,
   endTime: optionalTimeSchema,
   productSlug: optionalSlugSchema,
+  fulfillmentType: z.enum(["delivery", "pickup"]).optional().default("delivery"),
+  rentalEndDate: optionalDateSchema,
 });
 
 export type CheckoutOrderInput = z.infer<typeof checkoutOrderSchema>;

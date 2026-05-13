@@ -8,6 +8,7 @@ import { resolveOrgFromHostname, getAppDomain } from "@/lib/auth/resolve-org";
 export type OrgContext = {
   userId: string;
   organizationId: string;
+  businessType: string;
 };
 
 /**
@@ -28,7 +29,7 @@ export async function getOrgContext(): Promise<OrgContext | null> {
 
   const { data: membership } = await supabase
     .from("organization_memberships")
-    .select("organization_id")
+    .select("organization_id, organizations!inner(business_type)")
     .eq("profile_id", user.id)
     .eq("status", "active")
     .order("created_at", { ascending: true })
@@ -37,9 +38,14 @@ export async function getOrgContext(): Promise<OrgContext | null> {
 
   if (!membership) return null;
 
+  const businessType =
+    (membership.organizations as unknown as { business_type: string } | null)
+      ?.business_type ?? "inflatable";
+
   return {
     userId: user.id,
     organizationId: membership.organization_id,
+    businessType,
   };
 }
 

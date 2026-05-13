@@ -8,8 +8,19 @@ export function calculatePrice(
     bookingDate?: string;
     rentalDays?: number;
     productId?: string;
+    pricingModel?: string; // 'flat_day' | 'per_day' | 'hourly'
   }
 ): PricingCalculation {
+  // Per-day pricing: multiply base price by rental duration before applying rules.
+  if (context.pricingModel === "per_day" && (context.rentalDays ?? 1) > 1) {
+    const days = context.rentalDays ?? 1;
+    const perDayResult = calculatePrice(
+      basePrice * days,
+      rules,
+      { ...context, pricingModel: "flat_day", rentalDays: days }
+    );
+    return { ...perDayResult, rentalDays: days };
+  }
   const activeRules = rules
     .filter((r) => r.isActive)
     .sort((a, b) => b.priority - a.priority);

@@ -1,21 +1,38 @@
-export const dashboardNavItems = [
-  { href: "/dashboard", label: "Dashboard", tourId: "dashboard-overview" },
-  { href: "/dashboard/orders", label: "Orders", tourId: "nav-orders" },
-  { href: "/dashboard/calendar", label: "Calendar", tourId: undefined },
-  { href: "/dashboard/products", label: "Products", tourId: "nav-products" },
-  { href: "/dashboard/pricing", label: "Pricing", tourId: "nav-pricing" },
-  { href: "/dashboard/customers", label: "Customers", tourId: undefined },
-  { href: "/dashboard/messages", label: "Messages", tourId: undefined },
-  { href: "/dashboard/payments", label: "Payments", tourId: "nav-payments" },
-  { href: "/dashboard/documents", label: "Documents", tourId: "nav-documents" },
-  { href: "/dashboard/deliveries", label: "Deliveries", tourId: "nav-deliveries" },
-  { href: "/dashboard/maintenance", label: "Maintenance", tourId: undefined },
-  { href: "/dashboard/service-areas", label: "Service Areas", tourId: undefined },
-  { href: "/dashboard/analytics", label: "Analytics", tourId: undefined },
-  { href: "/dashboard/website", label: "Website", tourId: "nav-website" },
-  { href: "/dashboard/settings", label: "Settings", tourId: undefined },
-  { href: "/dashboard/settings/billing", label: "Billing", tourId: undefined },
-  { href: "/dashboard/settings/team", label: "Team", tourId: undefined },
-  { href: "/dashboard/help", label: "Help Center", tourId: undefined },
-  { href: "/crew/today", label: "Crew Mobile", tourId: undefined },
-] as const;
+type NavItem = {
+  href: string;
+  label: string;
+  tourId: string | undefined;
+  // Verticals that show this item. Undefined = shown for all verticals.
+  verticals?: string[];
+};
+
+const ALL_NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard",                    label: "Dashboard",    tourId: "dashboard-overview" },
+  { href: "/dashboard/orders",             label: "Orders",       tourId: "nav-orders" },
+  { href: "/dashboard/calendar",           label: "Calendar",     tourId: undefined },
+  { href: "/dashboard/products",           label: "Products",     tourId: "nav-products" },
+  { href: "/dashboard/pricing",            label: "Pricing",      tourId: "nav-pricing" },
+  { href: "/dashboard/customers",          label: "Customers",    tourId: undefined },
+  { href: "/dashboard/messages",           label: "Messages",     tourId: undefined },
+  { href: "/dashboard/payments",           label: "Payments",     tourId: "nav-payments" },
+  { href: "/dashboard/documents",          label: "Documents",    tourId: "nav-documents" },
+  { href: "/dashboard/deliveries",         label: "Deliveries",   tourId: "nav-deliveries",  verticals: ["inflatable", "equipment"] },
+  { href: "/dashboard/maintenance",        label: "Maintenance",  tourId: undefined },
+  { href: "/dashboard/service-areas",      label: "Service Areas",tourId: undefined,         verticals: ["inflatable", "equipment"] },
+  { href: "/dashboard/analytics",          label: "Analytics",    tourId: undefined },
+  { href: "/dashboard/website",            label: "Website",      tourId: "nav-website" },
+  { href: "/dashboard/settings",           label: "Settings",     tourId: undefined },
+  { href: "/dashboard/settings/billing",   label: "Billing",      tourId: undefined },
+  { href: "/dashboard/settings/team",      label: "Team",         tourId: undefined },
+  { href: "/dashboard/help",               label: "Help Center",  tourId: undefined },
+  { href: "/crew/today",                   label: "Crew Mobile",  tourId: undefined,         verticals: ["inflatable", "equipment"] },
+];
+
+export function getNavItemsForVertical(businessType: string): NavItem[] {
+  return ALL_NAV_ITEMS.filter(
+    (item) => !item.verticals || item.verticals.includes(businessType)
+  );
+}
+
+// Backward-compatible static export for pages that don't yet have businessType context.
+export const dashboardNavItems = ALL_NAV_ITEMS;

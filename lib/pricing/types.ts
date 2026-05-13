@@ -27,4 +27,5 @@ export type PricingCalculation = {
   basePrice: number;
   adjustments: { ruleName: string; amount: number; percentage: number }[];
   finalPrice: number;
+  rentalDays?: number;
 };

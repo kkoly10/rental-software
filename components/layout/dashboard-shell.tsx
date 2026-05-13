@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState, useEffect, useRef, useCallback } from "react";
-import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
+import { getNavItemsForVertical } from "@/lib/navigation/dashboard-nav";
 import { CopilotLauncher } from "@/components/copilot/copilot-launcher";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
@@ -38,6 +38,7 @@ export function DashboardShell({
   const [subStatus, setSubStatus] = useState(initialSubscriptionStatus ?? null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState("/");
+  const [businessType, setBusinessType] = useState("inflatable");
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -63,6 +64,10 @@ export function DashboardShell({
       .then((url) => {
         if (url) setPublicSiteUrl(url);
       })
+      .catch(() => {});
+    fetch("/api/org-type")
+      .then(async (r) => (r.ok ? (await r.json() as { businessType?: string }) : null))
+      .then((data) => { if (data?.businessType) setBusinessType(data.businessType); })
       .catch(() => {});
   }, []);
 
@@ -128,7 +133,7 @@ export function DashboardShell({
           Korent
         </Link>
 
-        {dashboardNavItems.map((item) => (
+        {getNavItemsForVertical(businessType).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -230,7 +235,7 @@ export function DashboardShell({
               </button>
             </div>
             <nav className="mobile-menu-nav">
-              {dashboardNavItems.map((item) => (
+              {getNavItemsForVertical(businessType).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
