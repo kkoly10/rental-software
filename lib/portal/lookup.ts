@@ -6,7 +6,7 @@ import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getOrderFinancials } from "@/lib/payments/financials";
-import { hashPortalAccessToken, issuePortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, issuePortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 
 export type PortalOrder = {
   orderNumber: string;
@@ -152,7 +152,8 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
       id, order_number, order_status, event_date,
       event_start_time, event_end_time,
       subtotal_amount, delivery_fee_amount, total_amount,
-      deposit_due_amount, customer_id
+      deposit_due_amount, customer_id,
+      portal_access_token_created_at
     `)
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
@@ -160,6 +161,10 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
 
   if (!order) {
     return { ok: false, message: "This portal link is invalid or expired." };
+  }
+
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return { ok: false, message: "This portal link has expired. Contact us to receive a new one." };
   }
 
   const { data: customer } = await supabase

@@ -115,10 +115,13 @@ export async function createCheckoutSession(
       });
       customerId = customer.id;
 
-      await supabase
+      const { error: customerSaveError } = await supabase
         .from("organizations")
         .update({ stripe_customer_id: customerId })
         .eq("id", ctx.organizationId);
+      if (customerSaveError) {
+        console.error("[stripe] failed to persist stripe_customer_id:", customerSaveError.message);
+      }
     }
 
     const session = await stripe.checkout.sessions.create({

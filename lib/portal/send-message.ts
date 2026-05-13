@@ -7,7 +7,7 @@ import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { sendEmail } from "@/lib/email/send";
 import { blockDemoWrites } from "@/lib/demo/guard";
-import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 
 export type SendMessageState = {
   ok: boolean;
@@ -72,7 +72,7 @@ export async function sendCustomerMessage(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, customer_id, order_number")
+    .select("id, customer_id, order_number, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
@@ -82,6 +82,9 @@ export async function sendCustomerMessage(
       ok: false,
       message: "Invalid portal access. Please reopen your portal link.",
     };
+  }
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return { ok: false, message: "This portal link has expired. Contact us for a new one." };
   }
 
   const { data: customer } = await supabase

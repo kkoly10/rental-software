@@ -3,7 +3,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
-import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { getStripe, hasStripeEnv } from "@/lib/stripe/config";
 import { getSiteUrl } from "@/lib/site-url";
@@ -32,12 +32,15 @@ export async function createBalancePaymentSession(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_number, total_amount, customers!inner(email, first_name, last_name)")
+    .select("id, order_number, total_amount, portal_access_token_created_at, customers!inner(email, first_name, last_name)")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
 
   if (!order) return { ok: false, message: "Order not found." };
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return { ok: false, message: "This portal link has expired. Contact us for a new one." };
+  }
 
   const financials = await getOrderFinancials(order.id);
   const balance = financials?.remainingBalance ?? 0;

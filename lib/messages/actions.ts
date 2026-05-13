@@ -194,12 +194,13 @@ export async function markAllNotificationsRead(): Promise<{ ok: boolean }> {
   if (!ctx) return { ok: false };
 
   const supabase = await createSupabaseServerClient();
-  await supabase
+  const { error: markAllError } = await supabase
     .from("notifications")
     .update({ read: true })
     .eq("organization_id", ctx.organizationId)
     .eq("read", false);
 
+  if (markAllError) return { ok: false };
   revalidatePath("/dashboard");
   return { ok: true };
 }
@@ -213,12 +214,13 @@ export async function markNotificationRead(
   if (!ctx) return { ok: false };
 
   const supabase = await createSupabaseServerClient();
-  await supabase
+  const { error: markError } = await supabase
     .from("notifications")
     .update({ read: true })
     .eq("id", notificationId)
     .eq("organization_id", ctx.organizationId);
 
+  if (markError) return { ok: false };
   revalidatePath("/dashboard");
   return { ok: true };
 }

@@ -7,7 +7,7 @@ import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { blockDemoWrites } from "@/lib/demo/guard";
-import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 
 export type SignDocumentState = {
   ok: boolean;
@@ -86,7 +86,7 @@ export async function signDocument(
   const tokenHash = hashPortalAccessToken(portalToken);
   const { data: order } = await supabase
     .from("orders")
-    .select("id")
+    .select("id, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
@@ -96,6 +96,9 @@ export async function signDocument(
       ok: false,
       message: "Invalid portal access. Please reopen your portal link.",
     };
+  }
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return { ok: false, message: "This portal link has expired. Contact us for a new one." };
   }
 
   const { data: doc } = await supabase

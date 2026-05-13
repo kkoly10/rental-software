@@ -173,8 +173,15 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Stop not found." };
   }
 
+  const MIME_TO_EXT: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/heic": "heic",
+  };
+  const ext = MIME_TO_EXT[file.type] ?? "jpg";
+
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
-  const ext = file.name.split(".").pop() ?? "jpg";
   const filePath = `proof-photos/${ctx.organizationId}/${stopId}-${Date.now()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
@@ -230,10 +237,12 @@ export async function saveSignature(
     return { ok: false, message: "Stop not found." };
   }
 
-  await supabase
+  const { error: sigError } = await supabase
     .from("route_stops")
     .update({ signature_name: `${signerName} — ${new Date().toISOString()}` })
     .eq("id", stopId);
+
+  if (sigError) return { ok: false, message: "Failed to save signature." };
 
   revalidatePath("/crew/today");
   return { ok: true, message: `Signature saved for ${signerName}.` };

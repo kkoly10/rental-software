@@ -71,7 +71,7 @@ export async function updateDocumentStatus(
   };
 
   if (parsed.data.newStatus === "signed") {
-    updateData.signed_at = new Date().toISOString();
+    updateData.signed_date = new Date().toISOString();
   }
 
   const { error } = await supabase

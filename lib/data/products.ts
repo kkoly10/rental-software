@@ -164,20 +164,16 @@ export async function getCategories() {
   }
 
   const ctx = await getOrgContext();
+  if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
-  let query = supabase
+  const { data, error } = await supabase
     .from("categories")
     .select("id, name, slug")
+    .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
     .is("deleted_at", null)
     .order("sort_order", { ascending: true });
-
-  if (ctx) {
-    query = query.eq("organization_id", ctx.organizationId);
-  }
-
-  const { data, error } = await query;
 
   if (error || !data) {
     return [];

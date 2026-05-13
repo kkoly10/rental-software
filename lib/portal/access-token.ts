@@ -1,5 +1,12 @@
 import crypto from "node:crypto";
 
+const TOKEN_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
+
+export function isPortalTokenExpired(createdAt: string | null | undefined): boolean {
+  if (!createdAt) return false; // no timestamp = legacy token, allow through
+  return Date.now() - new Date(createdAt).getTime() > TOKEN_MAX_AGE_MS;
+}
+
 export function createPortalAccessToken(): string {
   return crypto.randomBytes(24).toString("base64url");
 }

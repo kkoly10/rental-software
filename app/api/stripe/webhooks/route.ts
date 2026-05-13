@@ -179,6 +179,18 @@ export async function POST(request: NextRequest) {
         const orgId = subscription.metadata?.organization_id;
 
         if (orgId) {
+          const cancelCustomerId = typeof subscription.customer === "string"
+            ? subscription.customer
+            : (subscription.customer as { id?: string })?.id;
+          const { data: cancelOrg } = await admin
+            .from("organizations")
+            .select("stripe_customer_id")
+            .eq("id", orgId)
+            .maybeSingle();
+          if (!cancelOrg || (cancelCustomerId && cancelOrg.stripe_customer_id !== cancelCustomerId)) {
+            console.warn("[webhook] subscription.deleted: customer mismatch, skipping", { orgId });
+            break;
+          }
           await admin
             .from("organizations")
             .update({
@@ -246,6 +258,28 @@ async function syncSubscription(
   if (!orgId) {
     console.warn("Subscription missing organization_id metadata:", subscription.id);
     return;
+  }
+
+  // Cross-reference: verify the org's stored Stripe customer matches this subscription's customer.
+  // Guards against metadata inconsistencies — the webhook signature already ensures the event
+  // came from our Stripe account, but this catches data drift or copy/paste errors.
+  const customerId = typeof subscription.customer === "string"
+    ? subscription.customer
+    : subscription.customer?.id;
+  if (customerId) {
+    const { data: org } = await admin
+      .from("organizations")
+      .select("stripe_customer_id")
+      .eq("id", orgId)
+      .maybeSingle();
+    if (!org || org.stripe_customer_id !== customerId) {
+      console.warn("[webhook] syncSubscription: customer mismatch, skipping", {
+        orgId,
+        expected: org?.stripe_customer_id,
+        got: customerId,
+      });
+      return;
+    }
   }
 
   const priceId = subscription.items.data[0]?.price?.id;
