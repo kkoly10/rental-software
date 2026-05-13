@@ -318,11 +318,14 @@ export async function createCheckoutOrder(
   }
 
   let customerId: string;
+  let newCustomerId: string | null = null; // set only when we INSERT a brand-new customer
+
   const { data: existingCustomer } = await supabase
     .from("customers")
     .select("id")
     .eq("organization_id", orgId)
     .eq("email", email)
+    .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
 
@@ -384,6 +387,7 @@ export async function createCheckoutOrder(
     }
 
     customerId = customer.id;
+    newCustomerId = customer.id;
   }
 
   const { data: address, error: addressError } = await supabase
@@ -401,6 +405,10 @@ export async function createCheckoutOrder(
     .single();
 
   if (addressError || !address) {
+    if (newCustomerId) {
+      await supabase.from("customers").delete().eq("id", newCustomerId);
+    }
+
     await logAppError({
       organizationId: orgId,
       source: "checkout.website",
@@ -462,6 +470,11 @@ export async function createCheckoutOrder(
     .single();
 
   if (orderError || !order) {
+    await supabase.from("customer_addresses").delete().eq("id", address.id);
+    if (newCustomerId) {
+      await supabase.from("customers").delete().eq("id", newCustomerId);
+    }
+
     await logAppError({
       organizationId: orgId,
       source: "checkout.website",
@@ -488,6 +501,10 @@ export async function createCheckoutOrder(
 
     if (itemError) {
       await supabase.from("orders").delete().eq("id", order.id);
+      await supabase.from("customer_addresses").delete().eq("id", address.id);
+      if (newCustomerId) {
+        await supabase.from("customers").delete().eq("id", newCustomerId);
+      }
 
       await logAppError({
         organizationId: orgId,
@@ -520,6 +537,10 @@ export async function createCheckoutOrder(
 
     if (!reserveResult.ok) {
       await supabase.from("orders").delete().eq("id", order.id);
+      await supabase.from("customer_addresses").delete().eq("id", address.id);
+      if (newCustomerId) {
+        await supabase.from("customers").delete().eq("id", newCustomerId);
+      }
 
       await logAppError({
         organizationId: orgId,
@@ -602,7 +623,11 @@ export async function createCheckoutOrder(
   if (hasStripeEnv() && deposit > 0) {
     try {
       const stripe = getStripe();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      // Use the request origin so the customer is redirected back to the
+      // tenant subdomain / custom domain they checked out on, not the root
+      // marketing domain.
+      const { getRequestOrigin } = await import("@/lib/seo/metadata");
+      const siteUrl = await getRequestOrigin();
 
       const session = await stripe.checkout.sessions.create({
         mode: "payment",

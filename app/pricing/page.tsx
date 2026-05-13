@@ -6,12 +6,14 @@ import { PricingGrid } from "@/components/public/pricing-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { isTenantHost } from "@/lib/auth/org-context";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing — Korent",
-  description:
-    "Simple, transparent pricing for party rental businesses. Start your 14-day free trial today.",
-  path: "/pricing",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return await buildPageMetadata({
+    title: "Pricing — Korent",
+    description:
+      "Simple, transparent pricing for party rental businesses. Start your 14-day free trial today.",
+    path: "/pricing",
+  });
+}
 
 export default async function PricingPage() {
   if (await isTenantHost()) {

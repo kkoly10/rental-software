@@ -14,7 +14,7 @@ import { requirePublicOrg } from "@/lib/auth/require-public-org";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: `Booking Confirmed — ${settings.businessName}`,
     description: "Your rental booking has been submitted successfully.",
     path: "/order-confirmation",

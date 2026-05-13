@@ -8,6 +8,7 @@ import { RegisterSW } from "@/components/pwa/register-sw";
 import { DemoModeBanner } from "@/components/layout/demo-mode-banner";
 import { ProductionEnvGuard } from "@/components/layout/production-env-guard";
 import { isTenantHost } from "@/lib/auth/org-context";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -16,21 +17,10 @@ export const viewport: Viewport = {
   themeColor: "#e8590c",
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getSiteBaseUrl()),
-  title: "Korent",
-  description:
-    "Korent is a rental software platform with a public storefront, operator dashboard, and crew workflow support.",
-  applicationName: "Korent",
-  manifest: "/manifest.json",
-  keywords: [
-    "rental software",
-    "party rental software",
-    "equipment rental software",
-    "online rental booking",
-    "equipment rental platform",
-  ],
-  icons: {
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await isTenantHost();
+
+  const icons: Metadata["icons"] = {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon.ico", sizes: "32x32" },
@@ -38,29 +28,77 @@ export const metadata: Metadata = {
       { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Korent",
-  },
-  openGraph: {
-    title: "Korent",
-    description:
-      "Inflatable-first rental software with storefront, operations dashboard, and crew workflows.",
-    siteName: "Korent",
-    type: "website",
-    url: getSiteBaseUrl(),
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Korent" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Korent",
-    description:
-      "Inflatable-first rental software with storefront, operations dashboard, and crew workflows.",
-    images: ["/og-image.png"],
-  },
-};
+  };
+
+  if (!tenant) {
+    const base = getSiteBaseUrl();
+    return {
+      metadataBase: new URL(base),
+      title: "Korent",
+      description:
+        "Korent is a rental software platform with a public storefront, operator dashboard, and crew workflow support.",
+      applicationName: "Korent",
+      manifest: "/manifest.json",
+      keywords: [
+        "rental software",
+        "party rental software",
+        "equipment rental software",
+        "online rental booking",
+        "equipment rental platform",
+      ],
+      icons,
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "Korent",
+      },
+      openGraph: {
+        title: "Korent",
+        description:
+          "Rental software with storefront, operations dashboard, and crew workflows.",
+        siteName: "Korent",
+        type: "website",
+        url: base,
+        images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Korent" }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Korent",
+        description:
+          "Rental software with storefront, operations dashboard, and crew workflows.",
+        images: ["/og-image.png"],
+      },
+    };
+  }
+
+  // Tenant subdomain / custom domain — brand with the operator's business name.
+  const settings = await getOrganizationSettings();
+  const businessName = settings.businessName || "Rentals";
+
+  return {
+    metadataBase: new URL(getSiteBaseUrl()),
+    title: businessName,
+    description: `${businessName} — book rentals online with real-time availability.`,
+    applicationName: businessName,
+    manifest: "/manifest.webmanifest",
+    icons,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: businessName,
+    },
+    openGraph: {
+      title: businessName,
+      description: `${businessName} — book rentals online with real-time availability.`,
+      siteName: businessName,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: businessName,
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

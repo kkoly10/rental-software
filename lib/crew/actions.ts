@@ -179,7 +179,7 @@ export async function uploadProofPhoto(
 
   const { error: uploadError } = await supabase.storage
     .from(bucket)
-    .upload(filePath, file, { cacheControl: "3600", upsert: true, contentType: file.type });
+    .upload(filePath, file, { cacheControl: "3600", upsert: false, contentType: file.type });
 
   if (uploadError) {
     return { ok: false, message: uploadError.message };
@@ -187,10 +187,16 @@ export async function uploadProofPhoto(
 
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
 
-  await supabase
+  const { error: dbError } = await supabase
     .from("route_stops")
     .update({ proof_photo_url: urlData.publicUrl })
     .eq("id", stopId);
+
+  if (dbError) {
+    // Storage file is now orphaned but that is recoverable manually; surface the
+    // error so the crew member doesn't assume the photo was saved.
+    return { ok: false, message: "Photo uploaded but could not be linked to stop. Please try again." };
+  }
 
   revalidatePath("/crew/today");
   return { ok: true, message: "Photo saved." };

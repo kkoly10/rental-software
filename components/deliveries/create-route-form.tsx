@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createRoute, type RouteActionState } from "@/lib/routes/actions";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -9,13 +9,14 @@ const initial: RouteActionState = { ok: false, message: "" };
 
 export function CreateRouteForm({
   teamMembers,
-  defaultDate,
 }: {
   teamMembers: { id: string; name: string }[];
-  defaultDate?: string;
 }) {
   const [state, action, pending] = useActionState(createRoute, initial);
   const router = useRouter();
+  // Compute today in the browser's local timezone to avoid UTC-date mismatch
+  // that occurs when the server generates toISOString().slice(0, 10) at midnight.
+  const [localToday] = useState(() => new Date().toLocaleDateString("en-CA"));
 
   useEffect(() => {
     if (state.ok && state.routeId) {
@@ -41,7 +42,7 @@ export function CreateRouteForm({
             name="route_date"
             type="date"
             required
-            defaultValue={defaultDate}
+            defaultValue={localToday}
             style={{ marginTop: 8, width: "100%" }}
           />
         </label>

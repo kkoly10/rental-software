@@ -18,7 +18,6 @@ export default async function DeliveriesPage() {
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
-  const todayDate = new Date().toISOString().slice(0, 10);
   const enhancedRoute = board.primaryRoute
     ? await getRouteDetailEnhanced(board.primaryRoute.id)
     : null;
@@ -35,7 +34,7 @@ export default async function DeliveriesPage() {
       <section className="panel" style={{ marginBottom: 20 }}>
         <div className="kicker">Dispatch</div>
         <h2 className="page-title-sm" style={{ marginTop: 6 }}>Create a route</h2>
-        <CreateRouteForm teamMembers={teamMembers} defaultDate={todayDate} />
+        <CreateRouteForm teamMembers={teamMembers} />
       </section>
 
       <div className="delivery-board">

@@ -9,7 +9,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
-import { buildPageMetadata } from "@/lib/seo/metadata";
+import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { productJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 
@@ -24,7 +24,7 @@ export async function generateMetadata({
     getOrganizationSettings(),
   ]);
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: `${product.name} | ${settings.businessName}`,
     description: product.description,
     path: `/inventory/${product.slug}`,
@@ -45,7 +45,10 @@ export default async function ProductDetailPage({
 
   const { slug } = await params;
   const { date, zip } = await searchParams;
-  const product = await getCatalogDetail(slug);
+  const [product, origin] = await Promise.all([
+    getCatalogDetail(slug),
+    getRequestOrigin(),
+  ]);
 
   const checkoutParams = new URLSearchParams();
   checkoutParams.set("product", product.slug);
@@ -57,15 +60,18 @@ export default async function ProductDetailPage({
       ? product.galleryImages
       : ["", "", "", ""];
 
-  const jsonLd = productJsonLd({
-    name: product.name,
-    slug: product.slug,
-    description: product.description,
-    price: product.price,
-    category: product.category,
-    imageUrl: product.imageUrl,
-    status: "Available",
-  });
+  const jsonLd = productJsonLd(
+    {
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      price: product.price,
+      category: product.category,
+      imageUrl: product.imageUrl,
+      status: "Available",
+    },
+    origin
+  );
 
   return (
     <>

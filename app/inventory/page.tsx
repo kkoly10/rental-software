@@ -27,7 +27,7 @@ function formatCategoryLabel(value?: string) {
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
 
-  return buildPageMetadata({
+  return await buildPageMetadata({
     title: `${settings.businessName} Inventory`,
     description: `Browse rentals from ${settings.businessName}. Serving ${settings.serviceAreaLabel}.`,
     path: "/inventory",

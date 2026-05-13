@@ -104,15 +104,17 @@ export async function addOrderToRoute(
     return { ok: false, message: "This order is already assigned to another route." };
   }
 
-  // Get next sequence number
-  const { data: existing } = await supabase
+  // Derive the next sequence number from the current count of stops on this
+  // route.  Using COUNT rather than MAX(stop_sequence)+1 avoids a null-handling
+  // edge case when the route has no stops yet.  A true uniqueness guarantee
+  // requires a DB unique constraint on (route_id, stop_sequence); that
+  // migration is tracked separately.
+  const { count: stopCount } = await supabase
     .from("route_stops")
-    .select("stop_sequence")
-    .eq("route_id", routeId)
-    .order("stop_sequence", { ascending: false })
-    .limit(1);
+    .select("id", { count: "exact", head: true })
+    .eq("route_id", routeId);
 
-  const nextSequence = ((existing?.[0]?.stop_sequence ?? 0) + 1);
+  const nextSequence = (stopCount ?? 0) + 1;
 
   let scheduledWindowStart: string | null = null;
   if (scheduledTime && routeDate) {
