@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { isTenantHost } from "@/lib/auth/org-context";
 
 function normalizeBaseUrl(value?: string | null) {
   if (!value) return "http://localhost:3000";
@@ -69,7 +70,6 @@ export async function buildPageMetadata(options: {
   // rather than leak the operator's brand into Korent's.
   let resolvedSiteName: string | undefined = options.siteName;
   if (!resolvedSiteName) {
-    const { isTenantHost } = await import("@/lib/auth/org-context");
     const tenant = await isTenantHost();
     resolvedSiteName = tenant ? undefined : "Korent";
   }

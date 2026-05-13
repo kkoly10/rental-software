@@ -105,9 +105,10 @@ export async function addOrderToRoute(
   }
 
   // Derive the next sequence number from the current count of stops on this
-  // route rather than MAX(stop_sequence)+1.  COUNT is always non-negative and
-  // avoids the SELECT-then-INSERT race where two concurrent requests both read
-  // the same MAX and produce duplicate sequence numbers.
+  // route.  Using COUNT rather than MAX(stop_sequence)+1 avoids a null-handling
+  // edge case when the route has no stops yet.  A true uniqueness guarantee
+  // requires a DB unique constraint on (route_id, stop_sequence); that
+  // migration is tracked separately.
   const { count: stopCount } = await supabase
     .from("route_stops")
     .select("id", { count: "exact", head: true })

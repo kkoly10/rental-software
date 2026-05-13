@@ -501,6 +501,10 @@ export async function createCheckoutOrder(
 
     if (itemError) {
       await supabase.from("orders").delete().eq("id", order.id);
+      await supabase.from("customer_addresses").delete().eq("id", address.id);
+      if (newCustomerId) {
+        await supabase.from("customers").delete().eq("id", newCustomerId);
+      }
 
       await logAppError({
         organizationId: orgId,
@@ -533,6 +537,10 @@ export async function createCheckoutOrder(
 
     if (!reserveResult.ok) {
       await supabase.from("orders").delete().eq("id", order.id);
+      await supabase.from("customer_addresses").delete().eq("id", address.id);
+      if (newCustomerId) {
+        await supabase.from("customers").delete().eq("id", newCustomerId);
+      }
 
       await logAppError({
         organizationId: orgId,
