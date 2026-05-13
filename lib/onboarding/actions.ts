@@ -87,6 +87,7 @@ export async function completeOnboarding(
 
   const { data, error } = await supabase.rpc("bootstrap_organization", {
     p_business_name: businessName,
+    p_slug: slugInput,
     p_timezone: timezone,
     p_zip_code: zipCode || null,
     p_delivery_fee: Number.isFinite(deliveryFee) ? deliveryFee : 25,
@@ -98,7 +99,7 @@ export async function completeOnboarding(
     if (error.code === "23505") {
       return {
         ok: false,
-        message: "An organization with that name already exists.",
+        message: "That storefront URL is already taken. Please choose a different one.",
       };
     }
 
@@ -115,21 +116,8 @@ export async function completeOnboarding(
     };
   }
 
-  // Update the slug to the user's chosen one (the RPC generates a temporary one)
   const orgId = typeof data === "string" ? data : (data as any)?.organization_id ?? data;
   if (orgId) {
-    const { error: slugError } = await supabase
-      .from("organizations")
-      .update({ slug: slugInput })
-      .eq("id", orgId);
-
-    if (slugError) {
-      return {
-        ok: false,
-        message: "Organization created but failed to set your chosen URL slug. Please try updating it from Settings > Domain.",
-      };
-    }
-
     // Record onboarding completion timestamp in org settings
     const { data: org } = await supabase
       .from("organizations")
