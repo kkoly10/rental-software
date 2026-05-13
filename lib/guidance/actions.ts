@@ -58,23 +58,9 @@ async function upsertGuidance(updates: Record<string, unknown>) {
 
   const supabase = await createSupabaseServerClient();
 
-  // Try update first, then insert if no row exists
-  const { data: existing } = await supabase
+  await supabase
     .from("user_guidance_state")
-    .select("profile_id")
-    .eq("profile_id", userId)
-    .maybeSingle();
-
-  if (existing) {
-    await supabase
-      .from("user_guidance_state")
-      .update(updates)
-      .eq("profile_id", userId);
-  } else {
-    await supabase
-      .from("user_guidance_state")
-      .insert({ profile_id: userId, ...updates });
-  }
+    .upsert({ profile_id: userId, ...updates }, { onConflict: "profile_id" });
 }
 
 export async function markWelcomeSeen() {

@@ -44,7 +44,7 @@ export function RecordPaymentForm({ orderId }: { orderId: string }) {
       <div className="grid grid-3">
         <label className="order-card">
           <strong>Date paid</strong>
-          <input name="paid_at" type="date" defaultValue={new Date().toISOString().split("T")[0]} style={{ marginTop: 8, width: "100%" }} />
+          <input name="paid_at" type="date" defaultValue={new Date().toLocaleDateString("en-CA")} style={{ marginTop: 8, width: "100%" }} />
         </label>
 
         <label className="order-card" style={{ gridColumn: "span 2" }}>

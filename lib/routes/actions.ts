@@ -163,7 +163,9 @@ export async function removeStopFromRoute(
 
   if (!stop) return { ok: false, message: "Stop not found." };
 
-  await supabase.from("route_stops").delete().eq("id", stopId);
+  const { error: deleteError } = await supabase.from("route_stops").delete().eq("id", stopId);
+
+  if (deleteError) return { ok: false, message: deleteError.message };
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
   return { ok: true, message: "Stop removed." };

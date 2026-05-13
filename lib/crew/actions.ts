@@ -230,10 +230,12 @@ export async function saveSignature(
     return { ok: false, message: "Stop not found." };
   }
 
-  await supabase
+  const { error: sigError } = await supabase
     .from("route_stops")
     .update({ signature_name: `${signerName} — ${new Date().toISOString()}` })
     .eq("id", stopId);
+
+  if (sigError) return { ok: false, message: "Failed to save signature." };
 
   revalidatePath("/crew/today");
   return { ok: true, message: `Signature saved for ${signerName}.` };

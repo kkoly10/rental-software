@@ -19,7 +19,7 @@ export function PayBalanceButton({
     if (state.ok && state.stripeUrl) {
       window.location.href = state.stripeUrl;
     }
-  }, [state]);
+  }, [state.ok, state.stripeUrl]);
 
   if (balance <= 0) return null;
 

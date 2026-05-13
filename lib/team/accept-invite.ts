@@ -74,11 +74,14 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     return { ok: false, message: memberError.message };
   }
 
-  // Mark invite as accepted
+  // Mark invite as accepted — non-fatal if this update fails; member row is already created
   await supabase
     .from("team_invites")
     .update({ status: "accepted", accepted_at: new Date().toISOString() })
-    .eq("id", invite.id);
+    .eq("id", invite.id)
+    .then(({ error }) => {
+      if (error) console.error("[accept-invite] failed to mark invite accepted:", error.message);
+    });
 
   // Get org name for confirmation
   const { data: org } = await supabase
