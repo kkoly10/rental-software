@@ -14,6 +14,7 @@ import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { checkProductAvailability } from "@/lib/availability/check";
 import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
+import { checkPlanLimit } from "@/lib/stripe/gate";
 
 export type OrderActionState = {
   ok: boolean;
@@ -124,6 +125,25 @@ export async function createOrder(
   } = parsed.data;
 
   const supabase = await createSupabaseServerClient();
+
+  // Plan limit: count orders created this calendar month against the cap.
+  // Customer-initiated orders (website checkout) bypass this check —
+  // operators shouldn't lose external bookings to a plan ceiling.
+  // Soft-deleted orders are excluded so deletions free up the quota.
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const { count: monthOrderCount } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", ctx.organizationId)
+    .gte("created_at", monthStart.toISOString())
+    .is("deleted_at", null);
+
+  const orderGate = await checkPlanLimit("ordersPerMonth", monthOrderCount ?? 0);
+  if (!orderGate.allowed) {
+    return { ok: false, message: orderGate.reason ?? "Monthly order limit reached." };
+  }
 
   let resolvedSubtotal = subtotal;
   let resolvedDeliveryFee = deliveryFee;

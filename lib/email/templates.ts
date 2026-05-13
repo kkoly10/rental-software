@@ -73,7 +73,7 @@ export type OrderConfirmationData = {
   deliveryFee: string;
   total: string;
   depositDue: string;
-  supportEmail: string;
+  supportEmail: string | null;
   siteUrl: string;
   portalUrl: string;
 };
@@ -106,7 +106,7 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
     ${button("Open Secure Customer Portal", data.portalUrl)}
 
     <p style="font-size:14px;color:#55708f;">
-      Questions? Reply to this email or contact us at ${esc(data.supportEmail)}.
+      Questions? Reply to this email${data.supportEmail ? ` or contact us at ${esc(data.supportEmail)}` : ""}.
     </p>
     `
   );
@@ -159,7 +159,7 @@ export type PaymentReceivedData = {
   paymentType: string;
   paymentMethod: string;
   newBalance: string;
-  supportEmail: string;
+  supportEmail: string | null;
 };
 
 export function paymentReceivedEmail(data: PaymentReceivedData): string {
@@ -192,9 +192,9 @@ export function paymentReceivedEmail(data: PaymentReceivedData): string {
         </p>`
     }
 
-    <p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
       Questions? Contact us at ${esc(data.supportEmail)}.
-    </p>
+    </p>` : ""}
     `
   );
 }
@@ -206,7 +206,7 @@ export type RefundProcessedData = {
   customerFirstName: string;
   orderNumber: string;
   amount: string;
-  supportEmail: string;
+  supportEmail: string | null;
 };
 
 export function refundProcessedEmail(data: RefundProcessedData): string {
@@ -224,8 +224,7 @@ export function refundProcessedEmail(data: RefundProcessedData): string {
     ])}
 
     <p style="font-size:14px;color:#55708f;">
-      The refund may take 5-10 business days to appear on your statement.
-      Contact us at ${esc(data.supportEmail)} with any questions.
+      The refund may take 5-10 business days to appear on your statement.${data.supportEmail ? ` Contact us at ${esc(data.supportEmail)} with any questions.` : ""}
     </p>
     `
   );
@@ -239,7 +238,7 @@ export type OrderStatusUpdateData = {
   orderNumber: string;
   newStatus: string;
   eventDate: string;
-  supportEmail: string;
+  supportEmail: string | null;
   deliveryTimeWindow?: string;
   crewName?: string;
 };
@@ -302,9 +301,9 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
 
     <p style="font-size:14px;margin:16px 0;">${esc(msg.body)}</p>
 
-    <p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
       Questions? Contact us at ${esc(data.supportEmail)}.
-    </p>
+    </p>` : ""}
     `
   );
 }
@@ -316,7 +315,7 @@ export type DocumentsReadyData = {
   customerFirstName: string;
   orderNumber: string;
   documentTypes: string[];
-  supportEmail: string;
+  supportEmail: string | null;
 };
 
 export function documentsReadyEmail(data: DocumentsReadyData): string {
@@ -336,8 +335,7 @@ export function documentsReadyEmail(data: DocumentsReadyData): string {
     </p>
 
     <p style="font-size:14px;">
-      Our team will send you the documents for signing. If you have questions,
-      contact us at ${esc(data.supportEmail)}.
+      Our team will send you the documents for signing.${data.supportEmail ? ` If you have questions, contact us at ${esc(data.supportEmail)}.` : ""}
     </p>
     `
   );
@@ -354,7 +352,7 @@ export type EventReminderData = {
   deliveryTime?: string;
   deliveryAddress?: string;
   setupInstructions?: string;
-  supportEmail: string;
+  supportEmail: string | null;
 };
 
 export function eventReminderEmail(data: EventReminderData): string {
@@ -388,9 +386,9 @@ export function eventReminderEmail(data: EventReminderData): string {
     <p style="font-size:14px;color:#55708f;">
       Please ensure the setup area is accessible and clear of obstacles. Our crew will handle everything else!
     </p>
-    <p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
       Questions? Contact us at ${esc(data.supportEmail)}.
-    </p>
+    </p>` : ""}
     `
   );
 }
@@ -466,7 +464,7 @@ export type PostEventFollowUpData = {
   eventDate: string;
   reviewUrl?: string;
   storefrontUrl: string;
-  supportEmail: string;
+  supportEmail: string | null;
 };
 
 export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
@@ -499,9 +497,9 @@ export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
       ${button("Book Again", data.storefrontUrl)}
     </div>
 
-    <p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
       Questions or feedback? Contact us at ${esc(data.supportEmail)}.
-    </p>
+    </p>` : ""}
     `
   );
 }
@@ -514,7 +512,7 @@ export function quoteSentEmail(data: {
   total: string;
   depositRequired: string;
   portalUrl: string;
-  supportEmail: string;
+  supportEmail: string | null;
 }): string {
   return layout(
     data.businessName,
@@ -537,8 +535,8 @@ export function quoteSentEmail(data: {
     </div>
 
     <p style="font-size:13px;color:#55708f;text-align:center;">
-      This quote is not a confirmed booking. Pay your deposit to reserve your date.<br>
-      Questions? Contact us at ${esc(data.supportEmail)}.
+      This quote is not a confirmed booking. Pay your deposit to reserve your date.${data.supportEmail ? `<br>
+      Questions? Contact us at ${esc(data.supportEmail)}.` : ""}
     </p>
     `
   );

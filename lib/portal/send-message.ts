@@ -174,27 +174,43 @@ export async function sendCustomerMessage(
     .eq("id", orgId)
     .maybeSingle();
 
-  const supportEmail = org?.support_email ?? "support@korent.app";
+  // Fall back to the org owner's profile email so customer messages still
+  // reach the operator when support_email is unset.
+  let recipientEmail = org?.support_email ?? null;
+  if (!recipientEmail) {
+    const { data: ownerMembership } = await supabase
+      .from("organization_memberships")
+      .select("profiles(email)")
+      .eq("organization_id", orgId)
+      .eq("role", "owner")
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    recipientEmail = (ownerMembership as { profiles?: { email?: string | null } | null } | null)
+      ?.profiles?.email ?? null;
+  }
 
-  const safeBody = escapeHtml(body).replace(/\n/g, "<br />");
-  const safeEmail = escapeHtml(senderEmail);
-  const safeOrderNumber = escapeHtml(order.order_number);
-  const safeSubject = escapeHtml(subject);
+  if (recipientEmail) {
+    const safeBody = escapeHtml(body).replace(/\n/g, "<br />");
+    const safeEmail = escapeHtml(senderEmail);
+    const safeOrderNumber = escapeHtml(order.order_number);
+    const safeSubject = escapeHtml(subject);
 
-  await sendEmail({
-    to: supportEmail,
-    subject: `[Customer Portal] ${subject} — Order #${order.order_number}`,
-    html: `
-      <h2>New message from customer portal</h2>
-      <p><strong>Order:</strong> #${safeOrderNumber}</p>
-      <p><strong>Customer email:</strong> ${safeEmail}</p>
-      <p><strong>Subject:</strong> ${safeSubject}</p>
-      <hr />
-      <p>${safeBody}</p>
-    `,
-    replyTo: senderEmail,
-    organizationId: orgId,
-  });
+    await sendEmail({
+      to: recipientEmail,
+      subject: `[Customer Portal] ${subject} — Order #${order.order_number}`,
+      html: `
+        <h2>New message from customer portal</h2>
+        <p><strong>Order:</strong> #${safeOrderNumber}</p>
+        <p><strong>Customer email:</strong> ${safeEmail}</p>
+        <p><strong>Subject:</strong> ${safeSubject}</p>
+        <hr />
+        <p>${safeBody}</p>
+      `,
+      replyTo: senderEmail,
+      organizationId: orgId,
+    });
+  }
 
   return {
     ok: true,

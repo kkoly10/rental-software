@@ -134,7 +134,7 @@ export async function sendReply(
       .maybeSingle();
 
     const businessName = org?.name ?? "Rental Company";
-    const supportEmail = org?.support_email ?? "support@korent.app";
+    const supportEmail = org?.support_email ?? null;
 
     const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
     const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
@@ -149,11 +149,11 @@ export async function sendReply(
           <p style="color:#10233f;font-size:14px;line-height:1.6;">${escapeHtml(body).replace(/\n/g, "<br />")}</p>
           <hr style="border:none;border-top:1px solid #dbe6f4;margin:24px 0;" />
           <p style="color:#55708f;font-size:13px;">
-            Sent by ${escapeHtml(profile?.full_name ?? businessName)} · Reply to this email or contact us at ${escapeHtml(supportEmail)}
+            Sent by ${escapeHtml(profile?.full_name ?? businessName)}${supportEmail ? ` · Reply to this email or contact us at ${escapeHtml(supportEmail)}` : " · Reply to this email"}
           </p>
         </div>
       `,
-      replyTo: supportEmail,
+      replyTo: supportEmail ?? undefined,
       organizationId: ctx.organizationId,
     });
   } catch {

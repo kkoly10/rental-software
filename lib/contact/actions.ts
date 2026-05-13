@@ -18,21 +18,33 @@ export type ContactState = {
   message: string;
 };
 
-const PLATFORM_FALLBACK_EMAIL = "support@korent.app";
-
-async function resolveOperatorEmail(orgId: string | null): Promise<string> {
-  if (!orgId || !hasSupabaseEnv()) return PLATFORM_FALLBACK_EMAIL;
+async function resolveOperatorEmail(orgId: string | null): Promise<string | null> {
+  if (!orgId || !hasSupabaseEnv()) return null;
 
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const supabase = await createSupabaseServerClient();
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("support_email, name")
+    .select("support_email")
     .eq("id", orgId)
     .maybeSingle();
 
-  return org?.support_email || PLATFORM_FALLBACK_EMAIL;
+  if (org?.support_email) return org.support_email;
+
+  // Fall back to the org owner's profile email so contact submissions
+  // still reach the operator when support_email is unset.
+  const { data: ownerMembership } = await supabase
+    .from("organization_memberships")
+    .select("profiles(email)")
+    .eq("organization_id", orgId)
+    .eq("role", "owner")
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  return (ownerMembership as { profiles?: { email?: string | null } | null } | null)
+    ?.profiles?.email ?? null;
 }
 
 export async function submitContactForm(
@@ -75,22 +87,26 @@ export async function submitContactForm(
 
   const operatorEmail = await resolveOperatorEmail(orgId);
 
-  // Send contact form email to the operator (non-blocking)
-  try {
-    const { sendEmail } = await import("@/lib/email/send");
-    await sendEmail({
-      to: operatorEmail,
-      subject: `Contact form: ${parsed.data.name}`,
-      replyTo: parsed.data.email,
-      html: `
-        <p><strong>From:</strong> ${escapeHtml(parsed.data.name)} (${escapeHtml(parsed.data.email)})</p>
-        <hr />
-        <p>${escapeHtml(parsed.data.message).replace(/\n/g, "<br />")}</p>
-      `,
-      organizationId: orgId ?? undefined,
-    });
-  } catch {
-    // Email delivery is non-blocking
+  // Send contact form email to the operator (non-blocking).
+  // If we have no destination email, the submission is still recorded in
+  // the DB (where applicable) — operators can reach the customer via reply.
+  if (operatorEmail) {
+    try {
+      const { sendEmail } = await import("@/lib/email/send");
+      await sendEmail({
+        to: operatorEmail,
+        subject: `Contact form: ${parsed.data.name}`,
+        replyTo: parsed.data.email,
+        html: `
+          <p><strong>From:</strong> ${escapeHtml(parsed.data.name)} (${escapeHtml(parsed.data.email)})</p>
+          <hr />
+          <p>${escapeHtml(parsed.data.message).replace(/\n/g, "<br />")}</p>
+        `,
+        organizationId: orgId ?? undefined,
+      });
+    } catch {
+      // Email delivery is non-blocking
+    }
   }
 
   return {
