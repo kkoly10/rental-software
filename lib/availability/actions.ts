@@ -156,9 +156,11 @@ export async function releaseOrderAvailability(
 
   const supabase = await createSupabaseServerClient();
 
-  await supabase
+  const { error } = await supabase
     .from("availability_blocks")
     .delete()
     .eq("organization_id", organizationId)
     .eq("source_order_id", orderId);
+
+  if (error) throw new Error(`Failed to release availability blocks: ${error.message}`);
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -89,6 +90,8 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     .select("name")
     .eq("id", invite.organization_id)
     .maybeSingle();
+
+  revalidatePath("/dashboard/settings/team");
 
   return {
     ok: true,
