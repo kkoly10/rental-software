@@ -158,7 +158,11 @@ export async function sendReply(
     });
   } catch {
     console.error("[messages] Failed to send reply email to", customerEmail);
-    return { ok: false, message: "Reply saved but email delivery failed. Please try again." };
+    // Message row is already saved — returning ok:false here would prompt the
+    // operator to retry, creating a duplicate row.  Return ok:true so the UI
+    // closes the form, but surface the delivery warning in the toast.
+    revalidatePath("/dashboard/messages");
+    return { ok: true, message: "Reply saved, but email delivery failed. Check your email provider settings." };
   }
 
   revalidatePath("/dashboard/messages");
@@ -215,5 +219,6 @@ export async function markNotificationRead(
     .eq("id", notificationId)
     .eq("organization_id", ctx.organizationId);
 
+  revalidatePath("/dashboard");
   return { ok: true };
 }

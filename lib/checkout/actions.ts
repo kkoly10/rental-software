@@ -318,11 +318,14 @@ export async function createCheckoutOrder(
   }
 
   let customerId: string;
+  let newCustomerId: string | null = null; // set only when we INSERT a brand-new customer
+
   const { data: existingCustomer } = await supabase
     .from("customers")
     .select("id")
     .eq("organization_id", orgId)
     .eq("email", email)
+    .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
 
@@ -384,6 +387,7 @@ export async function createCheckoutOrder(
     }
 
     customerId = customer.id;
+    newCustomerId = customer.id;
   }
 
   const { data: address, error: addressError } = await supabase
@@ -401,6 +405,10 @@ export async function createCheckoutOrder(
     .single();
 
   if (addressError || !address) {
+    if (newCustomerId) {
+      await supabase.from("customers").delete().eq("id", newCustomerId);
+    }
+
     await logAppError({
       organizationId: orgId,
       source: "checkout.website",
@@ -462,6 +470,11 @@ export async function createCheckoutOrder(
     .single();
 
   if (orderError || !order) {
+    await supabase.from("customer_addresses").delete().eq("id", address.id);
+    if (newCustomerId) {
+      await supabase.from("customers").delete().eq("id", newCustomerId);
+    }
+
     await logAppError({
       organizationId: orgId,
       source: "checkout.website",

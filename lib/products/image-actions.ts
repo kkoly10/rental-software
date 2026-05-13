@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
@@ -115,8 +116,11 @@ export async function uploadProductImage(
     return { ok: false, message: insertError.message };
   }
 
+  revalidatePath(`/dashboard/products/${productId}`);
+  revalidatePath("/dashboard/products");
+
   return {
     ok: true,
-    message: "Image uploaded successfully. Refresh the page if the new image is not visible yet.",
+    message: "Image uploaded successfully.",
   };
 }
