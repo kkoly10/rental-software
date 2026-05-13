@@ -19,8 +19,9 @@ export default async function DeliveriesPage() {
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
   const todayDate = new Date().toISOString().slice(0, 10);
-  const primaryRouteId = board.primaryRoute?.id ?? "route_1";
-  const enhancedRoute = await getRouteDetailEnhanced(primaryRouteId);
+  const enhancedRoute = board.primaryRoute
+    ? await getRouteDetailEnhanced(board.primaryRoute.id)
+    : null;
 
   return (
     <DashboardShell
@@ -128,20 +129,28 @@ export default async function DeliveriesPage() {
         <aside className="map-card">
           <div className="kicker">Route detail</div>
           <h2 className="page-title-sm" style={{ marginTop: 8 }}>
-            {board.primaryRoute ? board.primaryRoute.name : "No route selected"}
+            {enhancedRoute ? enhancedRoute.name : "No route selected"}
           </h2>
-          <DeliveryStats route={enhancedRoute} />
-          <RouteMapWrapper stops={enhancedRoute.stops} height="320px" />
-          <div className="list" style={{ marginTop: 12 }}>
-            {enhancedRoute.stops.map((stop) => (
-              <div key={stop.id} className="order-card">
-                <strong>#{stop.sequence} {stop.customerName ?? "Stop"}</strong>
-                <div className="muted">
-                  {stop.scheduledTime ?? "TBD"} · {stop.type === "pickup" ? "Pickup" : "Delivery"}
-                </div>
+          {enhancedRoute ? (
+            <>
+              <DeliveryStats route={enhancedRoute} />
+              <RouteMapWrapper stops={enhancedRoute.stops} height="320px" />
+              <div className="list" style={{ marginTop: 12 }}>
+                {enhancedRoute.stops.map((stop) => (
+                  <div key={stop.id} className="order-card">
+                    <strong>#{stop.sequence} {stop.customerName ?? "Stop"}</strong>
+                    <div className="muted">
+                      {stop.scheduledTime ?? "TBD"} · {stop.type === "pickup" ? "Pickup" : "Delivery"}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="muted" style={{ marginTop: 12, fontSize: 14 }}>
+              Create your first route above to see stop details and the map here.
+            </div>
+          )}
         </aside>
       </div>
     </DashboardShell>
