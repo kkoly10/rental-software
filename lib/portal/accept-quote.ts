@@ -3,7 +3,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
-import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { blockDemoWrites } from "@/lib/demo/guard";
@@ -48,12 +48,15 @@ export async function acceptQuote(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status")
+    .select("id, order_status, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
 
   if (!order) return { ok: false, message: "Order not found." };
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return { ok: false, message: "This portal link has expired. Contact us for a new one." };
+  }
 
   if (order.order_status !== "quote_sent") {
     return { ok: false, message: "This quote has already been actioned or is no longer pending." };

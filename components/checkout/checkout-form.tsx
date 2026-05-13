@@ -43,9 +43,9 @@ export function CheckoutForm({
 
   const errors: CheckoutFieldErrors = state.fieldErrors ?? {};
 
-  // Redirect to Stripe if a URL was returned
+  // Redirect to Stripe if a URL was returned — validate it's actually Stripe before navigating
   useEffect(() => {
-    if (state.ok && state.stripeUrl) {
+    if (state.ok && state.stripeUrl?.startsWith("https://checkout.stripe.com/")) {
       window.location.href = state.stripeUrl;
     }
   }, [state.ok, state.stripeUrl]);

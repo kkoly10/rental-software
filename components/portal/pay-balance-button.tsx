@@ -16,7 +16,7 @@ export function PayBalanceButton({
   const [state, action, pending] = useActionState(createBalancePaymentSession, initial);
 
   useEffect(() => {
-    if (state.ok && state.stripeUrl) {
+    if (state.ok && state.stripeUrl?.startsWith("https://checkout.stripe.com/")) {
       window.location.href = state.stripeUrl;
     }
   }, [state.ok, state.stripeUrl]);
