@@ -22,6 +22,8 @@ export async function sendSmsNotification(
   organizationId?: string,
   context?: { orderId?: string; customerId?: string }
 ): Promise<void> {
+  if (!customerPhone?.trim()) return;
+
   const settings = await getSmsSettings(organizationId);
 
   if (!settings.enabled) {

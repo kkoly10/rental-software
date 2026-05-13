@@ -111,11 +111,15 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
     return fallbackStops;
   }
 
+  const ctx = await getOrgContext();
+  if (!ctx) return [];
+
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
     .from("route_stops")
-    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, orders(order_number, customers(first_name, last_name))")
+    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, routes!inner(organization_id), orders(order_number, customers(first_name, last_name))")
     .eq("route_id", routeId)
+    .eq("routes.organization_id", ctx.organizationId)
     .order("stop_sequence", { ascending: true });
 
   if (error) {

@@ -22,6 +22,11 @@ const DEFAULT_FROM_ADDRESS = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? "noreply@ko
  * Logs to communication_log for operator audit trail.
  */
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
+  if (!payload.to?.trim()) {
+    console.warn("[email] sendEmail called with empty recipient — skipping");
+    return false;
+  }
+
   if (!hasResendEnv()) {
     console.log(`[email-skip] No RESEND_API_KEY — would send to ${payload.to}: ${payload.subject}`);
     return false;
