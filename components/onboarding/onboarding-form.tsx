@@ -63,29 +63,7 @@ export function OnboardingForm() {
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
-      <div className="order-card">
-        <strong>What type of rental business do you run?</strong>
-        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          This sets up your dashboard, starter categories, and document templates.
-        </div>
-        <div className="grid grid-3" style={{ marginTop: 12 }}>
-          {[
-            { value: "inflatable", label: "Party & Inflatables", hint: "Bounce houses, slides, combos" },
-            { value: "car",        label: "Car & Vehicle Rental", hint: "Cars, trucks, vans, SUVs" },
-            { value: "equipment",  label: "Equipment Rental",     hint: "Tools, generators, lifts" },
-          ].map(({ value, label, hint }) => (
-            <label
-              key={value}
-              className="order-card"
-              style={{ cursor: "pointer", textAlign: "center" }}
-            >
-              <input type="radio" name="business_type" value={value} defaultChecked={value === "inflatable"} style={{ marginBottom: 6 }} />
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{label}</div>
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{hint}</div>
-            </label>
-          ))}
-        </div>
-      </div>
+      <input type="hidden" name="business_type" value="inflatable" />
 
       <label className="order-card">
         <strong>Business name</strong>
