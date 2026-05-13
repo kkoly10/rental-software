@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
               try {
                 const { data: orderData } = await admin
                   .from("orders")
-                  .select("order_number, customer_id")
+                  .select("order_number, customer_id, balance_due_amount")
                   .eq("id", orderId)
                   .maybeSingle();
 
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
                       amount: amountPaid,
                       paymentType,
                       paymentMethod: "stripe",
-                      newBalance: financials?.remainingBalance ?? 0,
+                      newBalance: financials?.remainingBalance ?? Number(orderData.balance_due_amount ?? 0),
                     });
                   }
                 }
