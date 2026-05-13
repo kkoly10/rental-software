@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { logAppError } from "@/lib/observability/server";
 
 export type CsvImportResult = {
   ok: boolean;
@@ -17,13 +18,10 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-// Normalise header strings to lowercase alphanumeric so "Product Name",
-// "product_name", and "productname" all resolve to the same key.
 function normaliseHeader(h: string): string {
   return h.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// Accept common variations operators might use in their own spreadsheets.
 const HEADER_MAP: Record<string, string> = {
   name: "name", productname: "name", itemname: "name", title: "name",
   price: "price", baseprice: "price", rentalprice: "price",
@@ -31,6 +29,15 @@ const HEADER_MAP: Record<string, string> = {
   category: "category", categoryname: "category", type: "category",
   description: "description", shortdescription: "description",
   desc: "description", details: "description", notes: "description",
+};
+
+type ValidRow = {
+  rowNum: number;
+  name: string;
+  slug: string;
+  price: number;
+  categoryName: string;
+  description: string | null;
 };
 
 export async function importProductsFromCsv(
@@ -72,7 +79,6 @@ export async function importProductsFromCsv(
 
   const supabase = await createSupabaseServerClient();
 
-  // Load existing categories and product slugs in one round-trip each.
   const [{ data: existingCats }, { data: existingProducts }] = await Promise.all([
     supabase.from("categories").select("id, name").eq("organization_id", ctx.organizationId),
     supabase.from("products").select("slug").eq("organization_id", ctx.organizationId).is("deleted_at", null),
@@ -84,14 +90,16 @@ export async function importProductsFromCsv(
   const existingSlugs = new Set((existingProducts ?? []).map((p) => p.slug));
 
   const errors: CsvImportResult["errors"] = [];
-  let imported = 0;
   let skipped = 0;
+
+  // ── Phase 1: validate all rows and collect unique new category names ────────
+  const validRows: ValidRow[] = [];
+  const seenSlugs = new Set<string>(); // track within-file slug collisions
 
   for (let i = 0; i < rawRows.length; i++) {
     const raw = rawRows[i];
-    const rowNum = i + 2; // account for header row
+    const rowNum = i + 2;
 
-    // Remap the normalised headers to our internal field names.
     const row: Record<string, string> = {};
     for (const [key, val] of Object.entries(raw)) {
       const mapped = HEADER_MAP[key];
@@ -117,53 +125,104 @@ export async function importProductsFromCsv(
       continue;
     }
 
+    // Skip products that already exist in the catalog.
     if (existingSlugs.has(slug)) {
       skipped++;
       continue;
     }
 
-    // Resolve category by name, creating it if it doesn't exist yet.
-    let categoryId: string | null = null;
-    const categoryName = (row.category ?? "").trim();
-    if (categoryName) {
-      const key = categoryName.toLowerCase();
-      if (categoryMap.has(key)) {
-        categoryId = categoryMap.get(key)!;
-      } else {
-        const { data: newCat } = await supabase
-          .from("categories")
-          .insert({ organization_id: ctx.organizationId, name: categoryName, slug: slugify(categoryName), sort_order: 99 })
-          .select("id")
-          .single();
-        if (newCat) {
-          categoryId = newCat.id;
-          categoryMap.set(key, newCat.id);
-        }
-      }
+    // Within-file duplicate: two rows with the same effective slug.
+    if (seenSlugs.has(slug)) {
+      errors.push({ row: rowNum, name, reason: `Duplicate of another row in this file (same URL slug "${slug}").` });
+      continue;
     }
+    seenSlugs.add(slug);
 
-    const shortDescription = (row.description ?? "").slice(0, 300) || null;
-
-    const { error: insertError } = await supabase.from("products").insert({
-      organization_id: ctx.organizationId,
+    validRows.push({
+      rowNum,
       name,
       slug,
-      base_price: price,
-      short_description: shortDescription,
-      category_id: categoryId,
-      is_active: true,
-      visibility: "public",
+      price,
+      categoryName: (row.category ?? "").trim(),
+      description: (row.description ?? "").slice(0, 300) || null,
     });
+  }
+
+  // ── Phase 2: batch-create any categories that don't exist yet ──────────────
+  const newCategoryNames = [
+    ...new Set(
+      validRows
+        .map((r) => r.categoryName)
+        .filter((n) => n && !categoryMap.has(n.toLowerCase()))
+    ),
+  ];
+
+  if (newCategoryNames.length > 0) {
+    const { data: newCats, error: catError } = await supabase
+      .from("categories")
+      .insert(
+        newCategoryNames.map((catName) => ({
+          organization_id: ctx.organizationId,
+          name: catName,
+          slug: slugify(catName),
+          sort_order: 99,
+        }))
+      )
+      .select("id, name");
+
+    if (catError) {
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "products.csv_import",
+        message: "Failed to batch-create categories",
+        context: { reason: catError.message },
+      });
+    }
+
+    for (const cat of newCats ?? []) {
+      categoryMap.set(cat.name.toLowerCase(), cat.id);
+    }
+  }
+
+  // ── Phase 3: batch-insert products in chunks of 100 ───────────────────────
+  const productRows = validRows.map((r) => ({
+    organization_id: ctx.organizationId,
+    name: r.name,
+    slug: r.slug,
+    base_price: r.price,
+    short_description: r.description,
+    category_id: r.categoryName ? (categoryMap.get(r.categoryName.toLowerCase()) ?? null) : null,
+    is_active: true,
+    visibility: "public",
+  }));
+
+  const CHUNK = 100;
+  let imported = 0;
+
+  for (let offset = 0; offset < productRows.length; offset += CHUNK) {
+    const chunk = productRows.slice(offset, offset + CHUNK);
+    const chunkRows = validRows.slice(offset, offset + CHUNK);
+
+    const { error: insertError } = await supabase.from("products").insert(chunk);
 
     if (insertError) {
-      if (insertError.code === "23505") {
-        skipped++;
-      } else {
-        errors.push({ row: rowNum, name, reason: insertError.message });
+      // Batch failed — fall back to individual inserts to identify the bad rows.
+      for (let j = 0; j < chunk.length; j++) {
+        const { error: rowError } = await supabase.from("products").insert(chunk[j]);
+        if (rowError) {
+          errors.push({
+            row: chunkRows[j].rowNum,
+            name: chunkRows[j].name,
+            reason: rowError.code === "23505"
+              ? `A product with a similar name already exists (slug conflict: "${chunkRows[j].slug}").`
+              : rowError.message,
+          });
+        } else {
+          imported++;
+        }
       }
     } else {
-      existingSlugs.add(slug);
-      imported++;
+      imported += chunk.length;
     }
   }
 
@@ -171,13 +230,20 @@ export async function importProductsFromCsv(
     try {
       const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
       await markSetupStep(ctx.organizationId, "has_products");
-    } catch { /* non-critical */ }
+    } catch (err) {
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "products.csv_import",
+        message: "Failed to mark setup step after CSV import",
+        error: err,
+      });
+    }
   }
 
   const total = rawRows.length;
   const parts: string[] = [];
   if (imported > 0) parts.push(`${imported} imported`);
-  if (skipped > 0) parts.push(`${skipped} skipped (already exist)`);
+  if (skipped > 0) parts.push(`${skipped} skipped (already in catalog)`);
   if (errors.length > 0) parts.push(`${errors.length} failed`);
   const message = parts.length > 0
     ? `${parts.join(", ")} out of ${total} rows.`

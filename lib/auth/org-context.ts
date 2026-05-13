@@ -38,9 +38,8 @@ export async function getOrgContext(): Promise<OrgContext | null> {
 
   if (!membership) return null;
 
-  const businessType =
-    (membership.organizations as unknown as { business_type: string } | null)
-      ?.business_type ?? "inflatable";
+  const orgs = membership.organizations as unknown as { business_type: string } | null;
+  const businessType = orgs?.business_type ?? "inflatable";
 
   return {
     userId: user.id,
