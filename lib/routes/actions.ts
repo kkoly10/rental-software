@@ -156,7 +156,7 @@ export async function removeStopFromRoute(
   // Verify the stop belongs to a route owned by this org before deleting
   const { data: stop } = await supabase
     .from("route_stops")
-    .select("id, stop_sequence, routes!inner(organization_id)")
+    .select("id, routes!inner(organization_id)")
     .eq("id", stopId)
     .eq("routes.organization_id", ctx.organizationId)
     .maybeSingle();

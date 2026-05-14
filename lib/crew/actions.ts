@@ -119,7 +119,7 @@ export async function updateStopStatus(
           };
         }).orders;
         const customer = order?.customers;
-        if (customer?.phone) {
+        if (customer?.phone && customer?.sms_opt_in) {
           const { data: org } = await supabase
             .from("organizations")
             .select("name")
