@@ -369,7 +369,6 @@ export async function createOrder(
     const { data: addrRow, error: addrErr } = await supabase
       .from("customer_addresses")
       .insert({
-        organization_id: ctx.organizationId,
         customer_id: customerId,
         line1: deliveryLine1,
         line2: deliveryLine2 ?? null,

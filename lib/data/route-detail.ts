@@ -242,7 +242,7 @@ export async function getRouteDetailEnhanced(
   const { data: rawStops } = await supabase
     .from("route_stops")
     .select(
-      "id, order_id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, order_status, delivery_address_id, customers(first_name, last_name), customer_addresses(id, line1, city, state, postal_code, latitude, longitude))"
+      "id, order_id, stop_sequence, stop_type, scheduled_window_start, scheduled_window_end, stop_status, orders(order_number, order_status, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(id, line1, city, state, postal_code, latitude, longitude))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true });
