@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 
 /**
@@ -65,46 +66,44 @@ export function SaasLanding() {
 
       <main>
         {/* ── Hero ───────────────────────────────────────────────── */}
-        <section
-          style={{
-            textAlign: "center",
-            padding: "80px 24px 48px",
-            maxWidth: 760,
-            margin: "0 auto",
-          }}
-        >
-          <div className="kicker" style={{ marginBottom: 12 }}>
-            Party &amp; event rental software
-          </div>
-          <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", lineHeight: 1.15, margin: "0 0 20px" }}>
-            Stop answering availability calls. Start taking bookings online.
-          </h1>
-          <p
-            className="muted"
-            style={{ fontSize: "1.15rem", maxWidth: 580, margin: "0 auto 32px" }}
-          >
-            Korent gives your rental business an online storefront, real-time availability,
-            automated reminders, and delivery routing — so you can run more events with less chaos.
-          </p>
+        <section className="saas-hero-grid">
+          <div className="saas-hero-copy">
+            <div className="kicker">Party &amp; event rental software</div>
+            <h1>
+              Stop answering availability calls. Start taking bookings online.
+            </h1>
+            <p className="muted">
+              Korent gives your rental business an online storefront, real-time availability,
+              automated reminders, and delivery routing — so you can run more events with less chaos.
+            </p>
 
-          {/* Single primary CTA */}
-          <Link
-            href="/signup"
-            className="primary-btn"
-            style={{ fontSize: "1.1rem", padding: "14px 36px", display: "inline-block" }}
-          >
-            Start Free — No Credit Card
-          </Link>
-
-          {/* Demo as a lower-friction secondary link */}
-          <div style={{ marginTop: 14 }}>
-            <a
-              href={demoUrl}
-              rel="noopener noreferrer"
-              style={{ color: "var(--primary, #2563eb)", fontWeight: 500, fontSize: "0.95rem" }}
+            <Link
+              href="/signup"
+              className="primary-btn"
+              style={{ fontSize: "1.1rem", padding: "14px 36px", display: "inline-block" }}
             >
-              or see the live demo storefront →
-            </a>
+              Start Free — No Credit Card
+            </Link>
+
+            <div style={{ marginTop: 14 }}>
+              <a
+                href={demoUrl}
+                rel="noopener noreferrer"
+                style={{ color: "var(--primary, #2563eb)", fontWeight: 500, fontSize: "0.95rem" }}
+              >
+                or see the live demo storefront →
+              </a>
+            </div>
+          </div>
+
+          <div className="saas-hero-image">
+            <Image
+              src="/home/operator-with-ipad.jpg"
+              alt="Rental operator using the Korent dashboard on a tablet next to a branded delivery trailer"
+              fill
+              priority
+              sizes="(max-width: 860px) 100vw, 540px"
+            />
           </div>
         </section>
 
@@ -165,12 +164,12 @@ export function SaasLanding() {
               {
                 icon: "📞",
                 pain: "Availability calls at 9pm",
-                desc: "You&rsquo;re checking the calendar on your phone while watching TV, then texting back one-by-one.",
+                desc: "You're checking the calendar on your phone while watching TV, then texting back one-by-one.",
               },
               {
                 icon: "😬",
                 pain: "Double-bookings happen",
-                desc: "Two customers show up for the same rental on the same Saturday. Someone&rsquo;s event gets ruined.",
+                desc: "Two customers show up for the same rental on the same Saturday. Someone's event gets ruined.",
               },
               {
                 icon: "📋",
@@ -190,7 +189,7 @@ export function SaasLanding() {
               {
                 icon: "📵",
                 pain: "No time to grow",
-                desc: "You&rsquo;re so busy managing existing bookings you can&rsquo;t think about adding more inventory or new event types.",
+                desc: "You're so busy managing existing bookings you can't think about adding more inventory or new event types.",
               },
             ].map((item) => (
               <div
@@ -200,15 +199,31 @@ export function SaasLanding() {
               >
                 <div style={{ fontSize: "1.8rem", marginBottom: 10 }}>{item.icon}</div>
                 <strong style={{ fontSize: "0.95rem" }}>{item.pain}</strong>
-                <p
-                  className="muted"
-                  style={{ marginTop: 6, fontSize: "0.88rem" }}
-                  dangerouslySetInnerHTML={{ __html: item.desc }}
-                />
+                <p className="muted" style={{ marginTop: 6, fontSize: "0.88rem" }}>
+                  {item.desc}
+                </p>
               </div>
             ))}
           </div>
         </section>
+
+        {/* ── Banner: pain → solution transition ─────────────────── */}
+        <div className="saas-banner">
+          <div className="saas-banner-frame">
+            <Image
+              src="/home/event-setup.jpg"
+              alt="Crew member anchoring a bounce house at a backyard event while kids wait to play"
+              fill
+              sizes="(max-width: 1200px) 100vw, 1140px"
+            />
+            <div className="saas-banner-overlay">
+              <div>
+                <div className="kicker">From chaos to confidence</div>
+                <h2>Run real events without the Saturday-morning scramble</h2>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ── How it works ───────────────────────────────────────── */}
         <section
@@ -317,6 +332,49 @@ export function SaasLanding() {
           </div>
         </section>
 
+        {/* ── Feature showcase: customer + crew ──────────────────── */}
+        <section style={{ padding: "60px 24px", maxWidth: 1100, margin: "0 auto" }}>
+          <div className="saas-feature-row">
+            <div className="saas-feature-image">
+              <Image
+                src="/home/customer-booking-phone.jpg"
+                alt="A customer reserving a Castle Bounce House on their phone using the Korent storefront"
+                fill
+                sizes="(max-width: 860px) 100vw, 540px"
+              />
+            </div>
+            <div className="saas-feature-copy">
+              <div className="kicker">Customer-facing storefront</div>
+              <h3>Customers book themselves — even at 11pm</h3>
+              <p className="muted">
+                Your branded site shows real-time availability by date and ZIP. Customers pick rentals,
+                enter delivery info, and pay a deposit in about three minutes. You wake up to confirmed
+                orders instead of voicemails.
+              </p>
+            </div>
+          </div>
+
+          <div className="saas-feature-row reverse">
+            <div className="saas-feature-image">
+              <Image
+                src="/home/crew-loading-trailer.jpg"
+                alt="Two crew members in branded shirts loading an inflatable into a delivery trailer"
+                fill
+                sizes="(max-width: 860px) 100vw, 540px"
+              />
+            </div>
+            <div className="saas-feature-copy">
+              <div className="kicker">Delivery &amp; routing</div>
+              <h3>Drivers know exactly where to go</h3>
+              <p className="muted">
+                Build optimized delivery routes in the dashboard. Each crew member gets a mobile-ready
+                stop list with the address, contact, gate code, and setup notes — no more 6am text
+                threads asking which house is first.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* ── Dashboard preview ──────────────────────────────────── */}
         <section
           style={{
@@ -331,6 +389,15 @@ export function SaasLanding() {
             <p className="muted" style={{ maxWidth: 560, margin: "8px auto 0" }}>
               Every tool you need to run your rental business, in one dashboard.
             </p>
+          </div>
+
+          <div className="saas-dashboard-hero">
+            <Image
+              src="/home/dashboard-tablet.jpg"
+              alt="The Korent operator dashboard open on a tablet showing an order with delivery route and timeline"
+              fill
+              sizes="(max-width: 980px) 100vw, 940px"
+            />
           </div>
 
           <div className="grid grid-2 two-col-responsive" style={{ gap: 24 }}>
@@ -941,6 +1008,24 @@ export function SaasLanding() {
             ))}
           </div>
         </section>
+
+        {/* ── Banner: inventory readiness ────────────────────────── */}
+        <div className="saas-banner">
+          <div className="saas-banner-frame">
+            <Image
+              src="/home/inventory-warehouse.jpg"
+              alt="A well-organized rental warehouse with neatly stacked inflatables, blowers, and equipment"
+              fill
+              sizes="(max-width: 1200px) 100vw, 1140px"
+            />
+            <div className="saas-banner-overlay">
+              <div>
+                <div className="kicker">Built for real operations</div>
+                <h2>From your first bounce house to your hundredth booking</h2>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ── Final CTA ──────────────────────────────────────────── */}
         <section

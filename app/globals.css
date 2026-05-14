@@ -3955,3 +3955,188 @@ textarea[aria-invalid="true"] {
 .offline-retry:hover {
   background: var(--primary-strong);
 }
+
+/* ── SaaS landing imagery ─────────────────────────────────────────── */
+
+.saas-hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 56px;
+  align-items: center;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 72px 24px 56px;
+}
+
+.saas-hero-copy {
+  text-align: left;
+}
+
+.saas-hero-copy h1 {
+  font-size: clamp(2rem, 4.4vw, 3rem);
+  line-height: 1.12;
+  margin: 12px 0 18px;
+}
+
+.saas-hero-copy p {
+  font-size: 1.1rem;
+  max-width: 540px;
+  margin: 0 0 28px;
+}
+
+.saas-hero-image {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px -20px rgba(15, 23, 42, 0.35);
+}
+
+.saas-hero-image img {
+  object-fit: cover;
+}
+
+.saas-banner {
+  position: relative;
+  max-width: 1140px;
+  margin: 32px auto;
+  padding: 0 24px;
+}
+
+.saas-banner-frame {
+  position: relative;
+  aspect-ratio: 16 / 7;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px -24px rgba(15, 23, 42, 0.4);
+}
+
+.saas-banner-frame img {
+  object-fit: cover;
+}
+
+.saas-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.2) 60%, rgba(15, 23, 42, 0) 100%);
+  display: flex;
+  align-items: center;
+  padding: 32px clamp(24px, 5vw, 56px);
+}
+
+.saas-banner-overlay > div {
+  max-width: 460px;
+  color: #fff;
+}
+
+.saas-banner-overlay h2 {
+  margin: 6px 0 0;
+  color: #fff;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.saas-banner-overlay .kicker {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.saas-feature-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+  padding: 24px 0;
+}
+
+.saas-feature-row.reverse {
+  direction: rtl;
+}
+
+.saas-feature-row.reverse > * {
+  direction: ltr;
+}
+
+.saas-feature-image {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px -22px rgba(15, 23, 42, 0.35);
+}
+
+.saas-feature-image img {
+  object-fit: cover;
+}
+
+.saas-feature-copy h3 {
+  margin: 8px 0 12px;
+  font-size: 1.35rem;
+}
+
+.saas-feature-copy p {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.saas-dashboard-hero {
+  position: relative;
+  max-width: 940px;
+  margin: 0 auto 40px;
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px -28px rgba(15, 23, 42, 0.4);
+}
+
+.saas-dashboard-hero img {
+  object-fit: cover;
+}
+
+@media (max-width: 860px) {
+  .saas-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-top: 48px;
+  }
+
+  .saas-hero-copy {
+    text-align: center;
+  }
+
+  .saas-hero-copy p {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .saas-hero-image {
+    aspect-ratio: 5 / 4;
+    max-width: 520px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .saas-banner-frame {
+    aspect-ratio: 4 / 3;
+  }
+
+  .saas-banner-overlay {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.78) 70%);
+    align-items: flex-end;
+    padding: 24px;
+  }
+
+  .saas-feature-row,
+  .saas-feature-row.reverse {
+    grid-template-columns: 1fr;
+    direction: ltr;
+    gap: 20px;
+  }
+
+  .saas-feature-image {
+    aspect-ratio: 5 / 4;
+    max-width: 520px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
