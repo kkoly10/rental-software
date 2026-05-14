@@ -457,7 +457,7 @@ export function SaasLanding() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
                 {[
                   { label: "Confirmed", count: 5, color: "#059669" },
-                  { label: "Scheduled", count: 3, color: "#2563eb" },
+                  { label: "Scheduled", count: 3, color: "var(--primary, #e8590c)" },
                   { label: "Out for Delivery", count: 2, color: "#d97706" },
                   { label: "Delivered", count: 1, color: "#7c3aed" },
                 ].map((stage) => (
