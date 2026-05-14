@@ -75,13 +75,13 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       | { id: string; document_type: string; document_status: string }[]
       | null) ?? [];
 
-  const addressRows = (data as Record<string, unknown>).customer_addresses as {
+  // many-to-one FK (orders → customer_addresses) — PostgREST embeds a single object, not an array
+  const address = (data as Record<string, unknown>).customer_addresses as {
     line1: string;
     city: string;
     state: string;
     postal_code: string;
-  }[] | null;
-  const address = addressRows?.[0] ?? null;
+  } | null;
 
   const status = (data.order_status ?? "inquiry")
     .replace(/_/g, " ")
@@ -127,11 +127,11 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     deliveryLabel: address
       ? `${address.line1}, ${address.city}, ${address.state} ${address.postal_code}`
       : "No delivery address on file",
-    deliverySurfaceType: (data as Record<string, unknown>).delivery_surface_type as string | undefined ?? undefined,
-    deliveryGateCode: (data as Record<string, unknown>).delivery_gate_code as string | undefined ?? undefined,
-    deliveryContactName: (data as Record<string, unknown>).delivery_contact_name as string | undefined ?? undefined,
-    deliveryContactPhone: (data as Record<string, unknown>).delivery_contact_phone as string | undefined ?? undefined,
-    deliverySetupNotes: (data as Record<string, unknown>).delivery_setup_notes as string | undefined ?? undefined,
+    deliverySurfaceType: ((data as Record<string, unknown>).delivery_surface_type as string | null) ?? undefined,
+    deliveryGateCode: ((data as Record<string, unknown>).delivery_gate_code as string | null) ?? undefined,
+    deliveryContactName: ((data as Record<string, unknown>).delivery_contact_name as string | null) ?? undefined,
+    deliveryContactPhone: ((data as Record<string, unknown>).delivery_contact_phone as string | null) ?? undefined,
+    deliverySetupNotes: ((data as Record<string, unknown>).delivery_setup_notes as string | null) ?? undefined,
     documents:
       docs.length > 0
         ? docs.map(

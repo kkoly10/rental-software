@@ -353,10 +353,19 @@ export async function createOrder(
       .select("id")
       .single();
 
-    if (!addrErr && addrRow) {
+    if (addrErr) {
+      console.error("[orders] Failed to create delivery address:", addrErr.message);
+    } else if (addrRow) {
       deliveryAddressId = addrRow.id;
     }
   }
+
+  // Helper to clean up the address row if the order creation fails
+  const rollbackAddress = async () => {
+    if (deliveryAddressId) {
+      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+    }
+  };
 
   const { data: createdOrder, error: orderError } = await supabase
     .from("orders")
@@ -386,6 +395,7 @@ export async function createOrder(
     .single();
 
   if (orderError || !createdOrder) {
+    await rollbackAddress();
     return {
       ok: false,
       message: orderError?.message ?? "Unable to create order.",
@@ -405,6 +415,7 @@ export async function createOrder(
 
     if (itemError) {
       await supabase.from("orders").delete().eq("id", createdOrder.id);
+      await rollbackAddress();
       return {
         ok: false,
         message: itemError.message,
@@ -424,6 +435,7 @@ export async function createOrder(
 
     if (!reserveResult.ok) {
       await supabase.from("orders").delete().eq("id", createdOrder.id);
+      await rollbackAddress();
       return {
         ok: false,
         message:
