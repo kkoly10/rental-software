@@ -13,6 +13,7 @@ const settingsMap: Record<TemplateKey, keyof Awaited<ReturnType<typeof getSmsSet
   deliveryCompleted: "deliveryUpdates",
   weatherAlert: "weatherAlerts",
   paymentReceived: "paymentConfirmation",
+  orderCancelled: "orderConfirmation",
 };
 
 export async function sendSmsNotification(

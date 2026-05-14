@@ -21,4 +21,7 @@ export const smsTemplates = {
 
   paymentReceived: (p: { amount: string; orderNumber: string; businessName: string }) =>
     `${p.businessName}: Payment of $${p.amount} received for order #${p.orderNumber}. Thank you!`,
+
+  orderCancelled: (p: { orderNumber: string; businessName: string }) =>
+    `${p.businessName}: Order #${p.orderNumber} has been cancelled. Contact us if you have any questions.`,
 };

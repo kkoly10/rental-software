@@ -16,10 +16,7 @@ function verifyCronSecret(request: NextRequest): boolean {
   if (!secret) return false; // no secret configured → block all
 
   const authHeader = request.headers.get("authorization");
-  if (authHeader === `Bearer ${secret}`) return true;
-
-  const url = new URL(request.url);
-  return url.searchParams.get("cron_secret") === secret;
+  return authHeader === `Bearer ${secret}`;
 }
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
@@ -144,7 +141,7 @@ async function sendDayBeforeReminders(
   const { data: orders } = await supabase
     .from("orders")
     .select(
-      "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone), order_items(item_name_snapshot)"
+      "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone, sms_opt_in), order_items(item_name_snapshot)"
     )
     .eq("event_date", tomorrow)
     .in("order_status", ["confirmed", "scheduled"])
@@ -201,6 +198,7 @@ async function sendDayBeforeReminders(
       first_name: string | null;
       email: string | null;
       phone: string | null;
+      sms_opt_in: boolean | null;
     } | null;
 
     if (!customer?.email) continue;
@@ -254,7 +252,7 @@ async function sendDayBeforeReminders(
 
       // SMS reminder — must be awaited; fire-and-forget is killed by Lambda
       // before the import resolves. Failure is non-critical (email already sent).
-      if (customer.phone) {
+      if (customer.phone && customer.sms_opt_in) {
         try {
           const { sendSmsNotification } = await import("@/lib/sms/send-notification");
           await sendSmsNotification(

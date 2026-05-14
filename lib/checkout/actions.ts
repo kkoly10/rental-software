@@ -391,7 +391,7 @@ export async function createCheckoutOrder(
     .from("customers")
     .select("id")
     .eq("organization_id", orgId)
-    .eq("email", email)
+    .ilike("email", email)
     .is("deleted_at", null)
     .limit(1)
     .maybeSingle();

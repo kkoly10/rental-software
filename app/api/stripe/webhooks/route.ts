@@ -273,6 +273,16 @@ export async function POST(request: NextRequest) {
             .from("orders")
             .update({ balance_due_amount: refundFinancials.remainingBalance })
             .eq("id", originalPayment.order_id);
+
+          // When all payments have been refunded (net paid ≤ 0), mark the order refunded.
+          // Only advance non-terminal statuses — don't overwrite "cancelled".
+          if (refundFinancials.totalPaid <= 0) {
+            await admin
+              .from("orders")
+              .update({ order_status: "refunded" })
+              .eq("id", originalPayment.order_id)
+              .not("order_status", "in", '("cancelled","refunded")');
+          }
         }
         break;
       }
