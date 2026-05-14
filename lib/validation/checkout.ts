@@ -25,6 +25,7 @@ export const checkoutOrderSchema = z.object({
   // Address fields are optional here — the checkout action enforces them
   // when fulfillmentType === 'delivery'.
   line1: z.string().trim().max(120).optional().default(""),
+  line2: z.string().trim().max(100).optional().default(""),
   city: z.string().trim().max(80).optional().default(""),
   state: z.string().trim().max(80).optional().default(""),
   postalCode: z.string().trim().optional().default(""),

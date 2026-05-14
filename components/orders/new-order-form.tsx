@@ -97,6 +97,36 @@ export function NewOrderForm({
         </label>
       </div>
 
+      <label className="order-card">
+        <strong>Rental end date</strong>
+        <input
+          name="rental_end_date"
+          type="date"
+          style={{ marginTop: 10, width: "100%" }}
+        />
+        <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          Optional — leave blank for single-day rentals. Set for multi-day events.
+        </div>
+      </label>
+
+      <label
+        className="order-card"
+        style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
+      >
+        <input
+          name="sms_opt_in"
+          type="checkbox"
+          value="true"
+          style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
+        />
+        <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
+          <strong style={{ color: "var(--text)" }}>Customer consents to SMS updates</strong>
+          <br />
+          Check only if the customer has explicitly agreed to receive text notifications
+          (order confirmation, delivery reminders, status updates).
+        </span>
+      </label>
+
       <div className="grid grid-3">
         <label className="order-card">
           <strong>Order status</strong>
@@ -204,6 +234,15 @@ export function NewOrderForm({
               name="delivery_line1"
               type="text"
               placeholder="123 Main St"
+              style={{ width: "100%" }}
+            />
+          </label>
+          <label className="field-stack">
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Apt / Suite / Unit (optional)</span>
+            <input
+              name="delivery_line2"
+              type="text"
+              placeholder="Apt 4B"
               style={{ width: "100%" }}
             />
           </label>

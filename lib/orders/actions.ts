@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -60,6 +61,9 @@ export async function createOrder(
     deliveryContactName: String(formData.get("delivery_contact_name") ?? ""),
     deliveryContactPhone: String(formData.get("delivery_contact_phone") ?? ""),
     deliverySetupNotes: String(formData.get("delivery_setup_notes") ?? ""),
+    deliveryLine2: String(formData.get("delivery_line2") ?? ""),
+    rentalEndDate: String(formData.get("rental_end_date") ?? ""),
+    smsOptIn: formData.get("sms_opt_in") === "true",
   });
 
   if (!parsed.success) {
@@ -140,7 +144,16 @@ export async function createOrder(
     deliveryContactName,
     deliveryContactPhone,
     deliverySetupNotes,
+    deliveryLine2,
+    rentalEndDate,
+    smsOptIn,
   } = parsed.data;
+
+  const requestHeaders = await headers();
+  const clientIp =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    requestHeaders.get("x-real-ip") ??
+    null;
 
   const supabase = await createSupabaseServerClient();
 
@@ -272,6 +285,13 @@ export async function createOrder(
           first_name: firstName,
           last_name: lastName,
           phone: phone ?? null,
+          ...(smsOptIn
+            ? {
+                sms_opt_in: true,
+                sms_opt_in_at: new Date().toISOString(),
+                sms_opt_in_ip: clientIp,
+              }
+            : {}),
         })
         .eq("id", customerId)
         .eq("organization_id", ctx.organizationId)
@@ -289,6 +309,9 @@ export async function createOrder(
           last_name: lastName,
           email,
           phone: phone ?? null,
+          sms_opt_in: smsOptIn,
+          sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
+          sms_opt_in_ip: smsOptIn ? clientIp : null,
         })
         .select("id")
         .single();
@@ -310,6 +333,9 @@ export async function createOrder(
         first_name: firstName,
         last_name: lastName,
         phone: phone ?? null,
+        sms_opt_in: smsOptIn,
+        sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
+        sms_opt_in_ip: smsOptIn ? clientIp : null,
       })
       .select("id")
       .single();
@@ -346,6 +372,7 @@ export async function createOrder(
         organization_id: ctx.organizationId,
         customer_id: customerId,
         line1: deliveryLine1,
+        line2: deliveryLine2 ?? null,
         city: deliveryCity,
         state: deliveryState ?? null,
         postal_code: deliveryZip ?? null,
@@ -375,6 +402,7 @@ export async function createOrder(
       order_number: orderNumber,
       order_status: orderStatus,
       event_date: eventDate ?? null,
+      rental_end_date: rentalEndDate ?? null,
       event_start_time: eventStartTime,
       event_end_time: eventEndTime,
       subtotal_amount: resolvedSubtotal,
