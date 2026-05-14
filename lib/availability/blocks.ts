@@ -33,22 +33,27 @@ export async function reserveProductAvailabilityBlock(options: {
     ? new Date(Date.now() + 30 * 60 * 1000).toISOString()
     : null;
 
-  const { error } = await supabase.from("availability_blocks").insert({
-    organization_id: options.organizationId,
-    product_id: options.productId,
-    block_type: isCheckout ? "checkout_hold" : "order_hold",
-    starts_at: window.startsAt,
-    ends_at: window.endsAt,
-    reason: isCheckout ? "Temporary hold during checkout" : "Reserved through dashboard",
-    source_order_id: options.orderId,
-    expires_at: expiresAt,
+  // Atomic check-and-insert via DB function: advisory lock on (org, product)
+  // eliminates the TOCTOU race between the JS-level availability check and
+  // the actual block insert.
+  const { data, error } = await supabase.rpc("reserve_availability_if_available", {
+    p_organization_id: options.organizationId,
+    p_product_id: options.productId,
+    p_block_type: isCheckout ? "checkout_hold" : "order_hold",
+    p_starts_at: window.startsAt,
+    p_ends_at: window.endsAt,
+    p_reason: isCheckout ? "Temporary hold during checkout" : "Reserved through dashboard",
+    p_source_order_id: options.orderId,
+    p_expires_at: expiresAt,
   });
 
   if (error) {
-    return {
-      ok: false,
-      message: error.message,
-    } as const;
+    return { ok: false, message: error.message } as const;
+  }
+
+  const result = data as { ok: boolean; reason?: string };
+  if (!result.ok) {
+    return { ok: false, message: result.reason ?? "Unable to reserve availability." } as const;
   }
 
   return { ok: true } as const;

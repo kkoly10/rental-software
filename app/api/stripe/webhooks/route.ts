@@ -200,6 +200,64 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "charge.refunded": {
+        // Operator issued a refund in the Stripe dashboard — mirror it in the payments table
+        // so balance_due_amount stays correct and the dashboard shows the refund.
+        const charge = event.data.object as Stripe.Charge;
+        const piRef = charge.payment_intent;
+        const paymentIntentId =
+          typeof piRef === "string" ? piRef : (piRef as { id?: string })?.id ?? null;
+
+        if (!paymentIntentId) break;
+
+        const { data: originalPayment } = await admin
+          .from("payments")
+          .select("id, order_id")
+          .eq("provider_payment_id", paymentIntentId)
+          .eq("provider", "stripe")
+          .maybeSingle();
+
+        if (!originalPayment) break;
+
+        // Process each individual refund object; each has a unique id for dedup
+        const refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
+        for (const refund of refunds) {
+          const refundKey = `refund_${refund.id}`;
+          const { count: existing } = await admin
+            .from("payments")
+            .select("id", { count: "exact", head: true })
+            .eq("order_id", originalPayment.order_id)
+            .eq("provider_payment_id", refundKey);
+
+          if ((existing ?? 0) > 0) continue;
+
+          const { error: refundErr } = await admin.from("payments").insert({
+            order_id: originalPayment.order_id,
+            payment_type: "refund",
+            payment_status: "paid",
+            amount: refund.amount / 100,
+            provider: "stripe",
+            provider_payment_id: refundKey,
+            paid_at: new Date().toISOString(),
+          });
+
+          if (refundErr && refundErr.code !== "23505") {
+            console.error("[webhook] charge.refunded: insert failed", refundErr.message);
+          }
+        }
+
+        // Recompute and sync cached balance
+        const { getOrderFinancialsAdmin } = await import("@/lib/payments/financials");
+        const refundFinancials = await getOrderFinancialsAdmin(admin, originalPayment.order_id);
+        if (refundFinancials) {
+          await admin
+            .from("orders")
+            .update({ balance_due_amount: refundFinancials.remainingBalance })
+            .eq("id", originalPayment.order_id);
+        }
+        break;
+      }
+
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;

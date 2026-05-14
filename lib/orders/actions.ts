@@ -551,6 +551,41 @@ export async function updateOrderStatus(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Enforce state machine — only allow transitions that make business sense.
+  // Automatic transitions (e.g. awaiting_deposit → confirmed on payment) bypass
+  // this action and update the DB directly, so they are not affected here.
+  const VALID_TRANSITIONS: Record<string, string[]> = {
+    inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled"],
+    quote_sent:       ["awaiting_deposit", "confirmed", "cancelled"],
+    awaiting_deposit: ["confirmed", "cancelled"],
+    confirmed:        ["scheduled", "out_for_delivery", "cancelled"],
+    scheduled:        ["out_for_delivery", "confirmed", "cancelled"],
+    out_for_delivery: ["delivered", "cancelled"],
+    delivered:        ["completed"],
+    completed:        [],
+    cancelled:        [],
+  };
+
+  const { data: currentOrder } = await supabase
+    .from("orders")
+    .select("order_status")
+    .eq("id", parsed.data.orderId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  if (!currentOrder) {
+    return { ok: false, message: "Order not found." };
+  }
+
+  const allowed = VALID_TRANSITIONS[currentOrder.order_status] ?? [];
+  if (!allowed.includes(parsed.data.newStatus)) {
+    return {
+      ok: false,
+      message: `Cannot move an order from "${currentOrder.order_status}" to "${parsed.data.newStatus}".`,
+    };
+  }
+
   const { error } = await supabase
     .from("orders")
     .update({ order_status: parsed.data.newStatus })
