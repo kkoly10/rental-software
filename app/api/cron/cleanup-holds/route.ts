@@ -30,12 +30,15 @@ export async function GET(request: NextRequest) {
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
 
-  // Find expired holds (checkout_hold blocks past their expiration)
+  // Find expired holds for orders that are still awaiting payment.
+  // Blocks whose orders have already advanced (e.g. manually confirmed by the operator)
+  // are intentionally excluded — only the webhook/payment action should promote those.
   const { data: expiredBlocks, error: fetchError } = await admin
     .from("availability_blocks")
-    .select("id, source_order_id")
+    .select("id, source_order_id, orders!inner(order_status)")
     .eq("block_type", "checkout_hold")
-    .lt("expires_at", now);
+    .lt("expires_at", now)
+    .eq("orders.order_status", "awaiting_deposit");
 
   if (fetchError) {
     console.error("Failed to fetch expired holds:", fetchError.message);

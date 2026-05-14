@@ -7,6 +7,7 @@ import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { blockDemoWrites } from "@/lib/demo/guard";
+import { revalidatePath } from "next/cache";
 
 export type AcceptQuoteState = { ok: boolean; message: string };
 
@@ -70,5 +71,6 @@ export async function acceptQuote(
 
   if (error) return { ok: false, message: "Failed to accept quote. Please try again." };
 
+  revalidatePath("/order-status");
   return { ok: true, message: "Quote accepted! Please pay your deposit to confirm your booking." };
 }

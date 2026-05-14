@@ -268,6 +268,49 @@ export async function updateStopStatus(
     } catch {
       // Non-fatal — stop is already marked complete
     }
+
+    // Clear tracking token so expired links can't be replayed
+    await supabase
+      .from("route_stops")
+      .update({ tracking_token_hash: null, tracking_token_expires_at: null })
+      .eq("id", stopId);
+  }
+
+  // When operator marks en_route via dashboard, issue tracking token + send SMS
+  // so the customer receives the same notification as when crew app is used.
+  if (status === "en_route") {
+    try {
+      const { issueTrackingToken } = await import("@/lib/tracking/access-token");
+      const { getSiteUrl } = await import("@/lib/site-url");
+      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+      const token = await issueTrackingToken({ supabase, stopId });
+      const siteUrl = await getSiteUrl();
+      const trackingUrl = `${siteUrl}/track/${token}`;
+
+      const { data: stopWithOrder } = await supabase
+        .from("route_stops")
+        .select("orders!inner(id, order_number, customer_id, customers!inner(phone, first_name, sms_opt_in))")
+        .eq("id", stopId)
+        .maybeSingle();
+
+      if (stopWithOrder) {
+        const order = (stopWithOrder as unknown as {
+          orders: { id: string; order_number: string; customer_id: string; customers: { phone: string; first_name: string; sms_opt_in: boolean } };
+        }).orders;
+        const customer = order?.customers;
+        if (customer?.phone && customer?.sms_opt_in) {
+          const { data: org } = await supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle();
+          await sendSmsNotification("deliveryEnRoute", customer.phone, {
+            orderNumber: order.order_number,
+            eta: "shortly",
+            businessName: org?.name ?? "Your delivery",
+            trackingUrl,
+          }, ctx.organizationId, { orderId: order.id, customerId: order.customer_id });
+        }
+      }
+    } catch (err) {
+      console.error("[routes] Failed to issue tracking token or send SMS:", err);
+    }
   }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);

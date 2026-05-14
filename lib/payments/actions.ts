@@ -125,6 +125,7 @@ export async function recordPayment(
   // Insert the payment record — this is the source of truth
   const { error } = await supabase.from("payments").insert({
     order_id: orderId,
+    provider: "manual",
     payment_type: paymentType,
     payment_status: "paid",
     amount,
@@ -175,6 +176,7 @@ export async function recordPayment(
 
   revalidatePath("/dashboard/payments");
   revalidatePath(`/dashboard/orders/${orderId}`);
+  revalidatePath("/order-status");
 
   try {
     const [{ triggerPaymentReceivedEmail }, orderResult, orgResult] = await Promise.all([

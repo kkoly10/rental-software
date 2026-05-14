@@ -79,6 +79,12 @@ export async function updateStopStatus(
         // Non-fatal — stop is already marked complete
       }
     }
+
+    // Clear tracking token so the link can't be replayed after delivery
+    await supabase
+      .from("route_stops")
+      .update({ tracking_token_hash: null, tracking_token_expires_at: null })
+      .eq("id", stopId);
   }
 
   // If stop is en_route or in_progress, set route to in_progress

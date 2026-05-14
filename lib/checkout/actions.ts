@@ -256,6 +256,8 @@ export async function createCheckoutOrder(
       .select("id, name, base_price, pricing_model")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
+      .eq("is_active", true)
+      .eq("visibility", "public")
       .is("deleted_at", null)
       .maybeSingle();
 
