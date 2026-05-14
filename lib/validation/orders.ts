@@ -70,6 +70,9 @@ export const createOrderSchema = z
     deliveryContactName: optionalText("On-site contact name", 100),
     deliveryContactPhone: optionalPhoneSchema,
     deliverySetupNotes: optionalText("Setup notes", 1000),
+    deliveryLine2: optionalText("Apt / Suite / Unit", 100),
+    rentalEndDate: optionalDateSchema,
+    smsOptIn: z.boolean().optional().default(false),
   })
   .superRefine(({ subtotal, deliveryFee, depositAmount }, ctx) => {
     const total = subtotal + deliveryFee;

@@ -104,9 +104,16 @@ export type OrderDetail = {
 export type CustomerDetail = {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   addressLabel: string;
+  addressLine1: string;
+  addressLine2: string;
+  addressCity: string;
+  addressState: string;
+  addressZip: string;
   notes: string;
   orders: string[];
 };

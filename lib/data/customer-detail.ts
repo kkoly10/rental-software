@@ -7,10 +7,17 @@ import type { CustomerDetail } from "@/lib/types";
 const fallbackCustomerDetail: CustomerDetail = {
   id: "cust_1001",
   name: "Ashley Johnson",
+  firstName: "Ashley",
+  lastName: "Johnson",
   email: "ashley@example.com",
   phone: "(540) 555-0102",
   notes: "Repeat customer. Prefers early setup window and text reminders.",
-  addressLabel: "123 Oak Lane, Stafford, VA 22554",
+  addressLabel: "123 Oak Lane · Stafford, VA 22554",
+  addressLine1: "123 Oak Lane",
+  addressLine2: "",
+  addressCity: "Stafford",
+  addressState: "VA",
+  addressZip: "22554",
   orders: [
     "Johnson Birthday Setup · Confirmed · $245",
     "Neighborhood Cookout · Completed · $190",
@@ -35,7 +42,7 @@ export async function getCustomerDetail(
     .from("customers")
     .select(`
       id, first_name, last_name, email, phone, notes,
-      customer_addresses(line1, city, state, postal_code, is_default_delivery),
+      customer_addresses(line1, line2, city, state, postal_code, is_default_delivery),
       orders(id, order_number, order_status, total_amount, event_date)
     `)
     .eq("id", customerId)
@@ -50,6 +57,7 @@ export async function getCustomerDetail(
     ((data as Record<string, unknown>).customer_addresses as
       | {
           line1: string;
+          line2: string | null;
           city: string;
           state: string;
           postal_code: string;
@@ -75,12 +83,22 @@ export async function getCustomerDetail(
     id: data.id,
     name:
       `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "Customer",
+    firstName: data.first_name ?? "",
+    lastName: data.last_name ?? "",
     email: data.email ?? "",
     phone: data.phone ?? "",
     notes: data.notes ?? "",
     addressLabel: defaultAddr
-      ? `${defaultAddr.line1}, ${defaultAddr.city}, ${defaultAddr.state} ${defaultAddr.postal_code}`
+      ? [
+          defaultAddr.line2 ? `${defaultAddr.line1}, ${defaultAddr.line2}` : defaultAddr.line1,
+          `${defaultAddr.city}, ${defaultAddr.state} ${defaultAddr.postal_code}`,
+        ].join(" · ")
       : "No saved address",
+    addressLine1: defaultAddr?.line1 ?? "",
+    addressLine2: defaultAddr?.line2 ?? "",
+    addressCity: defaultAddr?.city ?? "",
+    addressState: defaultAddr?.state ?? "",
+    addressZip: defaultAddr?.postal_code ?? "",
     orders:
       orders.length > 0
         ? orders.map((o) => {

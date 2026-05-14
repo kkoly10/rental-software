@@ -294,6 +294,13 @@ export function CheckoutForm({
           style={{ marginTop: 10, width: "100%" }}
         />
         <FieldError id="err-line1" message={errors.line1} />
+        <input
+          name="line2"
+          type="text"
+          autoComplete="address-line2"
+          placeholder="Apt / Suite / Unit (optional)"
+          style={{ marginTop: 8, width: "100%" }}
+        />
       </label>
 
       <div className="grid grid-3">

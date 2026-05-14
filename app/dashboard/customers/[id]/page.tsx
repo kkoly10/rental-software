@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getCustomerDetail } from "@/lib/data/customer-detail";
 import { CommunicationList } from "@/components/communications/communication-list";
 import { getCustomerCommunications } from "@/lib/data/communication-history";
+import { EditCustomerForm } from "@/components/customers/edit-customer-form";
 
 export default async function CustomerDetailPage({
   params,
@@ -49,6 +50,10 @@ export default async function CustomerDetailPage({
               <strong>Notes</strong>
               <div className="muted">{customer.notes || "No notes yet."}</div>
             </div>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <EditCustomerForm customer={customer} />
           </div>
         </section>
 

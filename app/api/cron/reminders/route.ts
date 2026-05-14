@@ -175,7 +175,7 @@ async function sendDayBeforeReminders(
   // Fetch delivery addresses
   const { data: addressOrders } = await supabase
     .from("orders")
-    .select("id, delivery_address_id, customer_addresses(line1, city, state, postal_code)")
+    .select("id, delivery_address_id, customer_addresses!delivery_address_id(line1, city, state, postal_code)")
     .in("id", orderIds)
     .not("delivery_address_id", "is", null);
 

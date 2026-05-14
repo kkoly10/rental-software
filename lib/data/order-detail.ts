@@ -48,7 +48,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       customers(first_name, last_name, email, phone),
       order_items(item_name_snapshot, line_total),
       documents(id, document_type, document_status),
-      customer_addresses!delivery_address_id(line1, city, state, postal_code)
+      customer_addresses!delivery_address_id(line1, line2, city, state, postal_code)
     `)
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
@@ -78,6 +78,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   // many-to-one FK (orders → customer_addresses) — PostgREST embeds a single object, not an array
   const address = (data as Record<string, unknown>).customer_addresses as {
     line1: string;
+    line2: string | null;
     city: string;
     state: string;
     postal_code: string;
@@ -125,7 +126,10 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
         ? items.map((i) => i.item_name_snapshot ?? "Item")
         : ["No items added"],
     deliveryLabel: address
-      ? `${address.line1}, ${address.city}, ${address.state} ${address.postal_code}`
+      ? [
+          address.line2 ? `${address.line1}, ${address.line2}` : address.line1,
+          `${address.city}, ${address.state} ${address.postal_code}`,
+        ].join(" · ")
       : "No delivery address on file",
     deliverySurfaceType: ((data as Record<string, unknown>).delivery_surface_type as string | null) ?? undefined,
     deliveryGateCode: ((data as Record<string, unknown>).delivery_gate_code as string | null) ?? undefined,
