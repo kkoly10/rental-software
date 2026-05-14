@@ -86,6 +86,11 @@ export type OrderDetail = {
   eventEndTime?: string;
   items: string[];
   deliveryLabel: string;
+  deliverySurfaceType?: string;
+  deliveryGateCode?: string;
+  deliveryContactName?: string;
+  deliveryContactPhone?: string;
+  deliverySetupNotes?: string;
   documents: string[];
   documentObjects: { id: string; type: string; status: string }[];
   subtotal: string;

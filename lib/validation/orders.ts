@@ -9,6 +9,12 @@ import {
   uuidSchema,
 } from "@/lib/validation/common";
 
+const optionalSurfaceType = z
+  .string()
+  .transform((v) => v.trim())
+  .refine((v) => v === "" || ["grass", "concrete", "asphalt", "other"].includes(v), "Invalid surface type.")
+  .transform((v) => (v as "grass" | "concrete" | "asphalt" | "other") || undefined);
+
 const optionalUuidSchema = z
   .string()
   .trim()
@@ -55,6 +61,15 @@ export const createOrderSchema = z
     deliveryFee: moneySchema("Delivery fee"),
     depositAmount: moneySchema("Deposit amount"),
     notes: optionalText("Notes", 2000),
+    deliveryLine1: optionalText("Street address", 200),
+    deliveryCity: optionalText("City", 100),
+    deliveryState: optionalText("State", 3),
+    deliveryZip: optionalText("ZIP code", 10),
+    deliverySurfaceType: optionalSurfaceType,
+    deliveryGateCode: optionalText("Gate code", 100),
+    deliveryContactName: optionalText("On-site contact name", 100),
+    deliveryContactPhone: optionalPhoneSchema,
+    deliverySetupNotes: optionalText("Setup notes", 1000),
   })
   .superRefine(({ subtotal, deliveryFee, depositAmount }, ctx) => {
     const total = subtotal + deliveryFee;

@@ -259,6 +259,20 @@ a:focus-visible {
   gap: 12px;
   margin-bottom: 18px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.section-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.section-header .action-row-inline {
+  flex-shrink: 0;
+}
+
+.section-header .action-row-inline > * {
+  white-space: nowrap;
 }
 
 .section-header h2 {
@@ -952,6 +966,7 @@ textarea[aria-invalid="true"] {
   .action-row > *,
   .action-row-inline > * {
     width: 100%;
+    white-space: normal;
   }
 
   .inline-form-actions {
@@ -3343,6 +3358,20 @@ textarea[aria-invalid="true"] {
   padding: 14px 18px;
   margin-top: 8px;
   font-size: 1.1rem;
+}
+
+.pricing-final .order-row > span:first-child,
+.pricing-final .order-row > strong:first-child {
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pricing-final .order-row > span:last-child,
+.pricing-final .order-row > strong:last-child {
+  flex-shrink: 0;
 }
 
 /* ── SMS Settings ─────────────────────────── */

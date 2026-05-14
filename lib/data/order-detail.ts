@@ -43,10 +43,12 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       event_start_time, event_end_time, notes,
       subtotal_amount, delivery_fee_amount, total_amount,
       deposit_due_amount, balance_due_amount,
+      delivery_surface_type, delivery_gate_code,
+      delivery_contact_name, delivery_contact_phone, delivery_setup_notes,
       customers(first_name, last_name, email, phone),
       order_items(item_name_snapshot, line_total),
       documents(id, document_type, document_status),
-      customer_addresses(line1, city, state, postal_code)
+      customer_addresses!delivery_address_id(line1, city, state, postal_code)
     `)
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
@@ -73,13 +75,13 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       | { id: string; document_type: string; document_status: string }[]
       | null) ?? [];
 
-  const addressRows = (data as Record<string, unknown>).customer_addresses as {
+  // many-to-one FK (orders → customer_addresses) — PostgREST embeds a single object, not an array
+  const address = (data as Record<string, unknown>).customer_addresses as {
     line1: string;
     city: string;
     state: string;
     postal_code: string;
-  }[] | null;
-  const address = addressRows?.[0] ?? null;
+  } | null;
 
   const status = (data.order_status ?? "inquiry")
     .replace(/_/g, " ")
@@ -125,6 +127,11 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     deliveryLabel: address
       ? `${address.line1}, ${address.city}, ${address.state} ${address.postal_code}`
       : "No delivery address on file",
+    deliverySurfaceType: ((data as Record<string, unknown>).delivery_surface_type as string | null) ?? undefined,
+    deliveryGateCode: ((data as Record<string, unknown>).delivery_gate_code as string | null) ?? undefined,
+    deliveryContactName: ((data as Record<string, unknown>).delivery_contact_name as string | null) ?? undefined,
+    deliveryContactPhone: ((data as Record<string, unknown>).delivery_contact_phone as string | null) ?? undefined,
+    deliverySetupNotes: ((data as Record<string, unknown>).delivery_setup_notes as string | null) ?? undefined,
     documents:
       docs.length > 0
         ? docs.map(
