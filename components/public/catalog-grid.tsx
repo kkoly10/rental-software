@@ -3,8 +3,12 @@ import type { CatalogProduct } from "@/lib/types";
 
 export function CatalogGrid({
   products,
+  date,
+  zip,
 }: {
   products: CatalogProduct[];
+  date?: string;
+  zip?: string;
 }) {
   return (
     <div className="grid grid-4">
@@ -18,6 +22,8 @@ export function CatalogGrid({
           description={product.description}
           status={product.status}
           imageUrl={product.imageUrl}
+          date={date}
+          zip={zip}
         />
       ))}
     </div>

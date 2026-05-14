@@ -155,18 +155,18 @@ export async function POST(request: NextRequest) {
                   .eq("organization_id", orgId);
               }
 
-              // Convert temporary availability hold to permanent (remove expiration)
+              // Convert temporary checkout hold to permanent order hold
               await admin
                 .from("availability_blocks")
-                .update({ expires_at: null })
+                .update({ expires_at: null, block_type: "order_hold" })
                 .eq("source_order_id", orderId)
                 .eq("block_type", "checkout_hold");
 
-              // Send payment confirmation email — non-critical, never throws to outer handler
+              // Send confirmation emails — non-critical, never throws to outer handler
               try {
                 const { data: orderData } = await admin
                   .from("orders")
-                  .select("order_number, customer_id, balance_due_amount")
+                  .select("order_number, customer_id, balance_due_amount, event_date, subtotal_amount, delivery_fee_amount, total_amount, deposit_due_amount, order_items(item_name_snapshot)")
                   .eq("id", orderId)
                   .maybeSingle();
 
@@ -178,7 +178,26 @@ export async function POST(request: NextRequest) {
                     .maybeSingle();
 
                   if (customer?.email) {
-                    const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
+                    const { triggerPaymentReceivedEmail, triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
+
+                    // Order confirmation email (deferred from checkout since Stripe payment was required)
+                    if (paymentType === "deposit") {
+                      const items = (orderData.order_items as { item_name_snapshot: string }[] | null) ?? [];
+                      const productName = items[0]?.item_name_snapshot ?? "Rental";
+                      await triggerOrderConfirmationEmail({
+                        organizationId: orgId,
+                        customerFirstName: customer.first_name ?? "there",
+                        customerEmail: customer.email,
+                        orderNumber: orderData.order_number,
+                        productName,
+                        eventDate: orderData.event_date ?? "",
+                        subtotal: Number(orderData.subtotal_amount ?? 0),
+                        deliveryFee: Number(orderData.delivery_fee_amount ?? 0),
+                        total: Number(orderData.total_amount ?? 0),
+                        depositDue: Number(orderData.deposit_due_amount ?? 0),
+                      }).catch((e: unknown) => console.error("Stripe webhook: order confirmation email failed:", e));
+                    }
+
                     await triggerPaymentReceivedEmail({
                       organizationId: orgId,
                       customerFirstName: customer.first_name ?? "there",

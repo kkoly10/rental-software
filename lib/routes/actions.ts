@@ -167,6 +167,24 @@ export async function removeStopFromRoute(
 
   if (deleteError) return { ok: false, message: deleteError.message };
 
+  // Resequence remaining stops to close the gap left by the deleted stop
+  const { data: remaining } = await supabase
+    .from("route_stops")
+    .select("id, stop_sequence")
+    .eq("route_id", routeId)
+    .order("stop_sequence", { ascending: true });
+
+  if (remaining && remaining.length > 0) {
+    await Promise.all(
+      remaining.map((s, idx) =>
+        supabase
+          .from("route_stops")
+          .update({ stop_sequence: idx + 1 })
+          .eq("id", s.id)
+      )
+    );
+  }
+
   revalidatePath(`/dashboard/deliveries/${routeId}`);
   return { ok: true, message: "Stop removed." };
 }
@@ -220,13 +238,15 @@ export async function updateStopStatus(
   // Verify the stop belongs to a route owned by this org before updating
   const { data: stop } = await supabase
     .from("route_stops")
-    .select("id, routes!inner(organization_id)")
+    .select("id, stop_type, order_id, routes!inner(organization_id)")
     .eq("id", stopId)
     .maybeSingle();
 
   if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
     return { ok: false, message: "Stop not found." };
   }
+
+  const resolvedOrderId = orderId ?? (stop.order_id as string | null) ?? null;
 
   const { error } = await supabase
     .from("route_stops")
@@ -238,13 +258,58 @@ export async function updateStopStatus(
 
   if (error) return { ok: false, message: error.message };
 
-  // Sync order status when delivery stop is completed
-  if (orderId && status === "completed") {
+  // Sync order status when a delivery stop (not pickup) is completed
+  if (resolvedOrderId && status === "completed" && stop.stop_type === "delivery") {
     try {
       const { updateOrderStatus } = await import("@/lib/orders/actions");
-      await updateOrderStatus(orderId, "delivered");
+      // Two-step: advance through out_for_delivery if needed, then to delivered
+      await updateOrderStatus(resolvedOrderId, "out_for_delivery").catch(() => {});
+      await updateOrderStatus(resolvedOrderId, "delivered");
     } catch {
       // Non-fatal — stop is already marked complete
+    }
+
+    // Clear tracking token so expired links can't be replayed
+    await supabase
+      .from("route_stops")
+      .update({ tracking_token_hash: null, tracking_token_expires_at: null })
+      .eq("id", stopId);
+  }
+
+  // When operator marks en_route via dashboard, issue tracking token + send SMS
+  // so the customer receives the same notification as when crew app is used.
+  if (status === "en_route") {
+    try {
+      const { issueTrackingToken } = await import("@/lib/tracking/access-token");
+      const { getSiteUrl } = await import("@/lib/site-url");
+      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+      const token = await issueTrackingToken({ supabase, stopId });
+      const siteUrl = await getSiteUrl();
+      const trackingUrl = `${siteUrl}/track/${token}`;
+
+      const { data: stopWithOrder } = await supabase
+        .from("route_stops")
+        .select("orders!inner(id, order_number, customer_id, customers!inner(phone, first_name, sms_opt_in))")
+        .eq("id", stopId)
+        .maybeSingle();
+
+      if (stopWithOrder) {
+        const order = (stopWithOrder as unknown as {
+          orders: { id: string; order_number: string; customer_id: string; customers: { phone: string; first_name: string; sms_opt_in: boolean } };
+        }).orders;
+        const customer = order?.customers;
+        if (customer?.phone && customer?.sms_opt_in) {
+          const { data: org } = await supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle();
+          await sendSmsNotification("deliveryEnRoute", customer.phone, {
+            orderNumber: order.order_number,
+            eta: "shortly",
+            businessName: org?.name ?? "Your delivery",
+            trackingUrl,
+          }, ctx.organizationId, { orderId: order.id, customerId: order.customer_id });
+        }
+      }
+    } catch (err) {
+      console.error("[routes] Failed to issue tracking token or send SMS:", err);
     }
   }
 

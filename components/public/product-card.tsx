@@ -11,6 +11,8 @@ export function ProductCard({
   description,
   status,
   imageUrl,
+  date,
+  zip,
 }: {
   name: string;
   slug: string;
@@ -19,6 +21,8 @@ export function ProductCard({
   description: string;
   status: string;
   imageUrl?: string;
+  date?: string;
+  zip?: string;
 }) {
   const isUnavailable = status.startsWith("Unavailable");
 
@@ -57,7 +61,7 @@ export function ProductCard({
         </p>
         <div className="price-row action-row-inline">
           <strong>{price}</strong>
-          <Link href={`/inventory/${slug}`} className="secondary-btn">
+          <Link href={`/inventory/${slug}${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`} className="secondary-btn">
             View Details
           </Link>
         </div>

@@ -174,7 +174,7 @@ export default async function InventoryPage({
             </div>
 
             {sortedProducts.length > 0 ? (
-              <CatalogGrid products={sortedProducts} />
+              <CatalogGrid products={sortedProducts} date={params.date} zip={params.zip} />
             ) : (
               <div className="panel storefront-empty-state">
                 <div className="kicker">No direct matches</div>

@@ -472,11 +472,12 @@ export async function createOrder(
     }
   }
 
-  // Check if this is the operator's first order
+  // Check if this is the operator's first order (exclude soft-deleted)
   const { count: existingOrderCount } = await supabase
     .from("orders")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", ctx.organizationId);
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null);
 
   const isFirstOrder = (existingOrderCount ?? 0) <= 1;
 

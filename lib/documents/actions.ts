@@ -74,6 +74,14 @@ export async function updateDocumentStatus(
     updateData.signed_date = new Date().toISOString();
   }
 
+  // Fetch the order_id before updating so we can revalidate the order detail page
+  const { data: docRecord } = await supabase
+    .from("documents")
+    .select("order_id")
+    .eq("id", parsed.data.documentId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("documents")
     .update(updateData)
@@ -85,6 +93,9 @@ export async function updateDocumentStatus(
   }
 
   revalidatePath("/dashboard/documents");
+  if (docRecord?.order_id) {
+    revalidatePath(`/dashboard/orders/${docRecord.order_id}`);
+  }
   return {
     ok: true,
     message: `Document marked as ${parsed.data.newStatus}.`,

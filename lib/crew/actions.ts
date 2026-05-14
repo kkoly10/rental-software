@@ -31,7 +31,7 @@ export async function updateStopStatus(
   // Verify the stop belongs to this organization via the parent route
   const { data: stop } = await supabase
     .from("route_stops")
-    .select("route_id, routes!inner(organization_id)")
+    .select("route_id, stop_type, order_id, routes!inner(organization_id)")
     .eq("id", stopId)
     .maybeSingle();
 
@@ -67,6 +67,24 @@ export async function updateStopStatus(
         .update({ route_status: "completed" })
         .eq("id", stop.route_id);
     }
+
+    // Sync order status when a delivery stop (not pickup) is completed
+    const stopOrderId = stop.order_id as string | null;
+    if (stopOrderId && stop.stop_type === "delivery") {
+      try {
+        const { updateOrderStatus } = await import("@/lib/orders/actions");
+        await updateOrderStatus(stopOrderId, "out_for_delivery").catch(() => {});
+        await updateOrderStatus(stopOrderId, "delivered");
+      } catch {
+        // Non-fatal — stop is already marked complete
+      }
+    }
+
+    // Clear tracking token so the link can't be replayed after delivery
+    await supabase
+      .from("route_stops")
+      .update({ tracking_token_hash: null, tracking_token_expires_at: null })
+      .eq("id", stopId);
   }
 
   // If stop is en_route or in_progress, set route to in_progress
@@ -101,7 +119,7 @@ export async function updateStopStatus(
           };
         }).orders;
         const customer = order?.customers;
-        if (customer?.phone) {
+        if (customer?.phone && customer?.sms_opt_in) {
           const { data: org } = await supabase
             .from("organizations")
             .select("name")
@@ -128,6 +146,7 @@ export async function updateStopStatus(
 
   revalidatePath("/crew/today");
   revalidatePath("/dashboard/deliveries");
+  revalidatePath(`/dashboard/deliveries/${stop.route_id}`);
 
   return { ok: true, message: `Stop marked as ${newStatus.replace(/_/g, " ")}.` };
 }

@@ -256,6 +256,8 @@ export async function createCheckoutOrder(
       .select("id, name, base_price, pricing_model")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
+      .eq("is_active", true)
+      .eq("visibility", "public")
       .is("deleted_at", null)
       .maybeSingle();
 
@@ -663,27 +665,31 @@ export async function createCheckoutOrder(
     await markSetupStep(orgId, "has_first_order");
   } catch { /* non-critical */ }
 
-  // Send order confirmation email — awaited so customers reliably receive their booking proof
-  try {
-    const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
-    await triggerOrderConfirmationEmail({
-      organizationId: orgId,
-      customerFirstName: firstName,
-      customerEmail: email,
-      orderNumber,
-      productName,
-      eventDate: eventDate ?? "",
-      subtotal,
-      deliveryFee,
-      total,
-      depositDue: deposit,
-    });
-  } catch {
-    // Non-fatal — order is already created; log but don't block the success response
-    console.error("[checkout] Confirmation email failed for order", orderNumber);
+  // Send order confirmation email only when no Stripe deposit is required.
+  // When Stripe handles the deposit, the webhook sends a payment confirmation
+  // after checkout.session.completed to avoid emailing before the customer pays.
+  const stripeWillHandlePayment = hasStripeEnv() && deposit > 0;
+  if (!stripeWillHandlePayment) {
+    try {
+      const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
+      await triggerOrderConfirmationEmail({
+        organizationId: orgId,
+        customerFirstName: firstName,
+        customerEmail: email,
+        orderNumber,
+        productName,
+        eventDate: eventDate ?? "",
+        subtotal,
+        deliveryFee,
+        total,
+        depositDue: deposit,
+      });
+    } catch {
+      console.error("[checkout] Confirmation email failed for order", orderNumber);
+    }
   }
 
-  if (phone) {
+  if (phone && smsOptIn) {
     try {
       const { sendSmsNotification } = await import("@/lib/sms/send-notification");
       const { createSupabaseServerClient: createSB } = await import("@/lib/supabase/server");
@@ -765,7 +771,24 @@ export async function createCheckoutOrder(
         context: { orderNumber, deposit },
         error: stripeError,
       });
-      // Fall through to non-Stripe confirmation
+      // Stripe failed — send confirmation email now as fallback so customer isn't left without any receipt
+      try {
+        const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
+        await triggerOrderConfirmationEmail({
+          organizationId: orgId,
+          customerFirstName: firstName,
+          customerEmail: email,
+          orderNumber,
+          productName,
+          eventDate: eventDate ?? "",
+          subtotal,
+          deliveryFee,
+          total,
+          depositDue: deposit,
+        });
+      } catch {
+        console.error("[checkout] Fallback confirmation email failed for order", orderNumber);
+      }
     }
   }
 

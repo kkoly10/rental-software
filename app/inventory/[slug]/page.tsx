@@ -5,6 +5,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
+import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { DemoBanner } from "@/components/demo/demo-banner";
@@ -50,6 +51,20 @@ export default async function ProductDetailPage({
     getRequestOrigin(),
   ]);
 
+  // Enrich with real availability for the selected date/zip
+  const productAsListing = {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    category: product.category,
+    price: product.price,
+    description: product.description,
+    status: "Available",
+    imageUrl: product.imageUrl,
+  };
+  const { products: enriched } = await enrichCatalogAvailability([productAsListing], date, zip);
+  const availabilityStatus = enriched[0]?.status ?? "Available";
+
   const checkoutParams = new URLSearchParams();
   checkoutParams.set("product", product.slug);
   if (date) checkoutParams.set("date", date);
@@ -68,7 +83,7 @@ export default async function ProductDetailPage({
       price: product.price,
       category: product.category,
       imageUrl: product.imageUrl,
-      status: "Available",
+      status: availabilityStatus,
     },
     origin
   );
@@ -115,7 +130,16 @@ export default async function ProductDetailPage({
             <aside className="panel storefront-summary-card">
               <div className="price-row" style={{ marginTop: 0 }}>
                 <div className="kicker">{product.category}</div>
-                <StatusBadge label="Available" tone="success" />
+                <StatusBadge
+                  label={availabilityStatus}
+                  tone={
+                    availabilityStatus.startsWith("Unavailable")
+                      ? "danger"
+                      : availabilityStatus === "Limited"
+                        ? "warning"
+                        : "success"
+                  }
+                />
               </div>
 
               <h1 style={{ margin: "10px 0 8px" }}>{product.name}</h1>
@@ -141,7 +165,10 @@ export default async function ProductDetailPage({
                 >
                   Reserve Now
                 </Link>
-                <Link href="/inventory" className="secondary-btn">
+                <Link
+                  href={`/inventory${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`}
+                  className="secondary-btn"
+                >
                   Back
                 </Link>
               </div>
