@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -74,7 +75,7 @@ const fallbackProducts: Record<string, CatalogDetail> = {
   },
 };
 
-export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
+export const getCatalogDetail = cache(async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
   if (!hasSupabaseEnv()) {
     return (
       fallbackProducts[slug] ?? fallbackProducts["mega-splash-water-slide"]
@@ -96,6 +97,8 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
+    .eq("is_active", true)
+    .eq("visibility", "public")
     .is("deleted_at", null)
     .maybeSingle();
 
@@ -183,4 +186,4 @@ export async function getCatalogDetail(slug: string): Promise<CatalogDetail> {
         ? sortedImages.map((image) => image.image_url).filter(Boolean)
         : fallbackGallery,
   };
-}
+});

@@ -96,6 +96,7 @@ export type OrderDetail = {
   subtotal: string;
   deliveryFee: string;
   depositPaid: string;
+  depositDue?: string;
   balanceDue: string;
   total: string;
   notes: string;

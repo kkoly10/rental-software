@@ -156,7 +156,7 @@ export async function removeStopFromRoute(
   // Verify the stop belongs to a route owned by this org before deleting
   const { data: stop } = await supabase
     .from("route_stops")
-    .select("id, routes!inner(organization_id)")
+    .select("id, stop_sequence, routes!inner(organization_id)")
     .eq("id", stopId)
     .eq("routes.organization_id", ctx.organizationId)
     .maybeSingle();
@@ -166,6 +166,24 @@ export async function removeStopFromRoute(
   const { error: deleteError } = await supabase.from("route_stops").delete().eq("id", stopId);
 
   if (deleteError) return { ok: false, message: deleteError.message };
+
+  // Resequence remaining stops to close the gap left by the deleted stop
+  const { data: remaining } = await supabase
+    .from("route_stops")
+    .select("id, stop_sequence")
+    .eq("route_id", routeId)
+    .order("stop_sequence", { ascending: true });
+
+  if (remaining && remaining.length > 0) {
+    await Promise.all(
+      remaining.map((s, idx) =>
+        supabase
+          .from("route_stops")
+          .update({ stop_sequence: idx + 1 })
+          .eq("id", s.id)
+      )
+    );
+  }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
   return { ok: true, message: "Stop removed." };
@@ -220,13 +238,15 @@ export async function updateStopStatus(
   // Verify the stop belongs to a route owned by this org before updating
   const { data: stop } = await supabase
     .from("route_stops")
-    .select("id, routes!inner(organization_id)")
+    .select("id, stop_type, order_id, routes!inner(organization_id)")
     .eq("id", stopId)
     .maybeSingle();
 
   if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
     return { ok: false, message: "Stop not found." };
   }
+
+  const resolvedOrderId = orderId ?? (stop.order_id as string | null) ?? null;
 
   const { error } = await supabase
     .from("route_stops")
@@ -238,11 +258,13 @@ export async function updateStopStatus(
 
   if (error) return { ok: false, message: error.message };
 
-  // Sync order status when delivery stop is completed
-  if (orderId && status === "completed") {
+  // Sync order status when a delivery stop (not pickup) is completed
+  if (resolvedOrderId && status === "completed" && stop.stop_type === "delivery") {
     try {
       const { updateOrderStatus } = await import("@/lib/orders/actions");
-      await updateOrderStatus(orderId, "delivered");
+      // Two-step: advance through out_for_delivery if needed, then to delivered
+      await updateOrderStatus(resolvedOrderId, "out_for_delivery").catch(() => {});
+      await updateOrderStatus(resolvedOrderId, "delivered");
     } catch {
       // Non-fatal — stop is already marked complete
     }

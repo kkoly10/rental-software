@@ -8,7 +8,7 @@ const fallbackRoutes: RouteSummary[] = [
   { id: "route_2", name: "Crew B Afternoon Route", date: "May 24, 2026", status: "in_progress", stops: 2 },
 ];
 
-export async function getRoutes(): Promise<RouteSummary[]> {
+export async function getRoutes(date?: string): Promise<RouteSummary[]> {
   if (!hasSupabaseEnv()) {
     return fallbackRoutes;
   }
@@ -17,12 +17,18 @@ export async function getRoutes(): Promise<RouteSummary[]> {
   if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("routes")
     .select("id, name, route_date, route_status, route_stops(id)")
     .eq("organization_id", ctx.organizationId)
     .order("route_date", { ascending: false })
     .limit(50);
+
+  if (date) {
+    query = query.eq("route_date", date);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[routes] Query failed:", error.message);

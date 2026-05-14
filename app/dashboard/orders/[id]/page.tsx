@@ -14,10 +14,11 @@ function extractZip(address: string): string | undefined {
   return match ? match[1] : undefined;
 }
 
-function statusTone(status: string): "default" | "success" | "warning" {
+function statusTone(status: string): "default" | "success" | "warning" | "danger" {
   const lower = status.toLowerCase();
   if (lower === "confirmed" || lower === "completed" || lower === "delivered") return "success";
   if (lower.includes("awaiting") || lower.includes("quote") || lower.includes("pending")) return "warning";
+  if (lower === "cancelled" || lower === "refunded") return "danger";
   return "default";
 }
 
@@ -184,7 +185,13 @@ export default async function OrderDetailPage({
             </div>
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Deposit due</span>
+                <span className="muted">Deposit required</span>
+                <strong>{order.depositDue ?? "—"}</strong>
+              </div>
+            </div>
+            <div className="order-card">
+              <div className="order-row">
+                <span className="muted">Amount paid</span>
                 <strong>{order.depositPaid}</strong>
               </div>
             </div>

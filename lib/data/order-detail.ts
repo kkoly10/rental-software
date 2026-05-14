@@ -150,11 +150,12 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       type: d.document_type ?? "",
       status: d.document_status ?? "pending",
     })),
-    subtotal: `$${data.subtotal_amount ?? 0}`,
-    deliveryFee: `$${data.delivery_fee_amount ?? 0}`,
+    subtotal: `$${Number(data.subtotal_amount ?? 0).toFixed(2)}`,
+    deliveryFee: `$${Number(data.delivery_fee_amount ?? 0).toFixed(2)}`,
     depositPaid: `$${totalPaid.toFixed(2)}`,
+    depositDue: `$${Number(data.deposit_due_amount ?? 0).toFixed(2)}`,
     balanceDue: `$${remainingBalance.toFixed(2)}`,
-    total: `$${data.total_amount ?? 0}`,
+    total: `$${Number(data.total_amount ?? 0).toFixed(2)}`,
     notes: data.notes ?? "",
   };
 }

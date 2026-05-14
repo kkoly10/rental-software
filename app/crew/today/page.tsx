@@ -8,7 +8,8 @@ import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export default async function CrewTodayPage() {
-  const routes = await getRoutes();
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const routes = await getRoutes(today);
   const activeRoute = routes.find((r) => r.status === "in_progress") ?? routes[0];
   const routeDetail = activeRoute ? await getRouteDetail(activeRoute.id) : null;
   const stops = activeRoute ? await getRouteStops(activeRoute.id) : [];
