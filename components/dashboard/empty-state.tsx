@@ -50,8 +50,8 @@ const illustrations: Record<IconKey, ReactNode> = {
       <circle cx="60" cy="60" r="50" fill="var(--primary-bg, #fff1e8)" />
       <circle cx="60" cy="48" r="12" fill="rgba(232, 89, 12, 0.12)" />
       <ellipse cx="60" cy="78" rx="22" ry="12" fill="var(--primary, #e8590c)" opacity="0.25" />
-      <circle cx="38" cy="54" r="8" fill="rgba(232, 89, 12, 0.12)" opacity="0.7" />
-      <circle cx="82" cy="54" r="8" fill="rgba(232, 89, 12, 0.12)" opacity="0.7" />
+      <circle cx="38" cy="54" r="8" fill="rgba(232, 89, 12, 0.22)" />
+      <circle cx="82" cy="54" r="8" fill="rgba(232, 89, 12, 0.22)" />
     </svg>
   ),
   documents: (
