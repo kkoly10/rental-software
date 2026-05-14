@@ -40,7 +40,7 @@ export async function GET(
       subtotal_amount, delivery_fee_amount, total_amount, deposit_due_amount,
       customers!inner(first_name, last_name, email, phone),
       order_items(item_name_snapshot, quantity, unit_price, line_total),
-      customer_addresses(line1, city, state, postal_code)
+      customer_addresses!delivery_address_id(line1, city, state, postal_code)
     `)
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
