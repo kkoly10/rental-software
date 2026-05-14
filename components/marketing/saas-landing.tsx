@@ -98,7 +98,7 @@ export function SaasLanding() {
 
           <div className="saas-hero-image">
             <Image
-              src="/home/operator-with-ipad.png"
+              src="/home/operator-with-ipad.jpg"
               alt="Rental operator using the Korent dashboard on a tablet next to a branded delivery trailer"
               fill
               priority
@@ -164,12 +164,12 @@ export function SaasLanding() {
               {
                 icon: "📞",
                 pain: "Availability calls at 9pm",
-                desc: "You&rsquo;re checking the calendar on your phone while watching TV, then texting back one-by-one.",
+                desc: "You're checking the calendar on your phone while watching TV, then texting back one-by-one.",
               },
               {
                 icon: "😬",
                 pain: "Double-bookings happen",
-                desc: "Two customers show up for the same rental on the same Saturday. Someone&rsquo;s event gets ruined.",
+                desc: "Two customers show up for the same rental on the same Saturday. Someone's event gets ruined.",
               },
               {
                 icon: "📋",
@@ -189,7 +189,7 @@ export function SaasLanding() {
               {
                 icon: "📵",
                 pain: "No time to grow",
-                desc: "You&rsquo;re so busy managing existing bookings you can&rsquo;t think about adding more inventory or new event types.",
+                desc: "You're so busy managing existing bookings you can't think about adding more inventory or new event types.",
               },
             ].map((item) => (
               <div
@@ -199,11 +199,9 @@ export function SaasLanding() {
               >
                 <div style={{ fontSize: "1.8rem", marginBottom: 10 }}>{item.icon}</div>
                 <strong style={{ fontSize: "0.95rem" }}>{item.pain}</strong>
-                <p
-                  className="muted"
-                  style={{ marginTop: 6, fontSize: "0.88rem" }}
-                  dangerouslySetInnerHTML={{ __html: item.desc }}
-                />
+                <p className="muted" style={{ marginTop: 6, fontSize: "0.88rem" }}>
+                  {item.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -213,7 +211,7 @@ export function SaasLanding() {
         <div className="saas-banner">
           <div className="saas-banner-frame">
             <Image
-              src="/home/event-setup.png"
+              src="/home/event-setup.jpg"
               alt="Crew member anchoring a bounce house at a backyard event while kids wait to play"
               fill
               sizes="(max-width: 1200px) 100vw, 1140px"
@@ -335,11 +333,11 @@ export function SaasLanding() {
         </section>
 
         {/* ── Feature showcase: customer + crew ──────────────────── */}
-        <section style={{ padding: "16px 24px 8px", maxWidth: 1100, margin: "0 auto" }}>
+        <section style={{ padding: "60px 24px", maxWidth: 1100, margin: "0 auto" }}>
           <div className="saas-feature-row">
             <div className="saas-feature-image">
               <Image
-                src="/home/customer-booking-phone.png"
+                src="/home/customer-booking-phone.jpg"
                 alt="A customer reserving a Castle Bounce House on their phone using the Korent storefront"
                 fill
                 sizes="(max-width: 860px) 100vw, 540px"
@@ -359,7 +357,7 @@ export function SaasLanding() {
           <div className="saas-feature-row reverse">
             <div className="saas-feature-image">
               <Image
-                src="/home/crew-loading-trailer.png"
+                src="/home/crew-loading-trailer.jpg"
                 alt="Two crew members in branded shirts loading an inflatable into a delivery trailer"
                 fill
                 sizes="(max-width: 860px) 100vw, 540px"
@@ -395,7 +393,7 @@ export function SaasLanding() {
 
           <div className="saas-dashboard-hero">
             <Image
-              src="/home/dashboard-tablet.png"
+              src="/home/dashboard-tablet.jpg"
               alt="The Korent operator dashboard open on a tablet showing an order with delivery route and timeline"
               fill
               sizes="(max-width: 980px) 100vw, 940px"
@@ -1015,7 +1013,7 @@ export function SaasLanding() {
         <div className="saas-banner">
           <div className="saas-banner-frame">
             <Image
-              src="/home/inventory-warehouse.png"
+              src="/home/inventory-warehouse.jpg"
               alt="A well-organized rental warehouse with neatly stacked inflatables, blowers, and equipment"
               fill
               sizes="(max-width: 1200px) 100vw, 1140px"
