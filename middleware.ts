@@ -106,9 +106,13 @@ export async function middleware(request: NextRequest) {
 
   // ── Standard auth flow (root domain / localhost / preview) ──
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Supabase auth unavailable — treat as unauthenticated; protected routes will redirect to login
+  }
 
   if (!user && isProtectedPath(pathname)) {
     const url = request.nextUrl.clone();

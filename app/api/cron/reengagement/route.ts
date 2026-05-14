@@ -11,10 +11,7 @@ function verifyCronSecret(request: NextRequest): boolean {
   if (!secret) return false;
 
   const authHeader = request.headers.get("authorization");
-  if (authHeader === `Bearer ${secret}`) return true;
-
-  const url = new URL(request.url);
-  return url.searchParams.get("cron_secret") === secret;
+  return authHeader === `Bearer ${secret}`;
 }
 
 // ─── Date helpers ──────────────────────────────────────────────────────────

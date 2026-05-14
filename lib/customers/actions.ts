@@ -115,7 +115,6 @@ export async function updateCustomer(
       .from("customer_addresses")
       .select("id")
       .eq("customer_id", customerId)
-      .eq("organization_id", ctx.organizationId)
       .eq("is_default_delivery", true)
       .is("deleted_at", null)
       .maybeSingle();
@@ -141,7 +140,6 @@ export async function updateCustomer(
       const { error: addrErr } = await supabase
         .from("customer_addresses")
         .insert({
-          organization_id: ctx.organizationId,
           customer_id: customerId,
           is_default_delivery: true,
           ...addressPayload,

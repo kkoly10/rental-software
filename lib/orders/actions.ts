@@ -674,6 +674,11 @@ export async function updateOrderStatus(
             orderNumber: order.order_number,
             businessName,
           }, ctx.organizationId, smsContext);
+        } else if (status === "cancelled") {
+          await sendSmsNotification("orderCancelled", customer.phone, {
+            orderNumber: order.order_number,
+            businessName,
+          }, ctx.organizationId, smsContext);
         }
       }
     }
