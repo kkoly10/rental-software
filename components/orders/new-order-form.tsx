@@ -214,7 +214,7 @@ export function NewOrderForm({
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>State</span>
-              <input name="delivery_state" type="text" placeholder="VA" maxLength={2} style={{ width: "100%" }} />
+              <input name="delivery_state" type="text" placeholder="VA" maxLength={3} style={{ width: "100%" }} />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>ZIP</span>

@@ -13,8 +13,7 @@ const optionalSurfaceType = z
   .string()
   .transform((v) => v.trim())
   .refine((v) => v === "" || ["grass", "concrete", "asphalt", "other"].includes(v), "Invalid surface type.")
-  .transform((v) => (v as "grass" | "concrete" | "asphalt" | "other") || undefined)
-  .optional();
+  .transform((v) => (v as "grass" | "concrete" | "asphalt" | "other") || undefined);
 
 const optionalUuidSchema = z
   .string()
@@ -64,7 +63,7 @@ export const createOrderSchema = z
     notes: optionalText("Notes", 2000),
     deliveryLine1: optionalText("Street address", 200),
     deliveryCity: optionalText("City", 100),
-    deliveryState: optionalText("State", 50),
+    deliveryState: optionalText("State", 3),
     deliveryZip: optionalText("ZIP code", 10),
     deliverySurfaceType: optionalSurfaceType,
     deliveryGateCode: optionalText("Gate code", 100),

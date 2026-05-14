@@ -966,6 +966,7 @@ textarea[aria-invalid="true"] {
   .action-row > *,
   .action-row-inline > * {
     width: 100%;
+    white-space: normal;
   }
 
   .inline-form-actions {
