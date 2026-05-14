@@ -78,8 +78,35 @@ export default async function OrderDetailPage({
             </div>
 
             <div className="order-card">
-              <strong>Delivery</strong>
+              <strong>Delivery address</strong>
               <div className="muted">{order.deliveryLabel}</div>
+              {(order.deliverySurfaceType || order.deliveryGateCode || order.deliveryContactName || order.deliverySetupNotes) && (
+                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                  {order.deliverySurfaceType && (
+                    <div className="order-row" style={{ fontSize: 13 }}>
+                      <span className="muted">Surface</span>
+                      <span style={{ textTransform: "capitalize" }}>{order.deliverySurfaceType}</span>
+                    </div>
+                  )}
+                  {order.deliveryGateCode && (
+                    <div className="order-row" style={{ fontSize: 13 }}>
+                      <span className="muted">Gate / access code</span>
+                      <span style={{ fontFamily: "monospace" }}>{order.deliveryGateCode}</span>
+                    </div>
+                  )}
+                  {order.deliveryContactName && (
+                    <div className="order-row" style={{ fontSize: 13 }}>
+                      <span className="muted">On-site contact</span>
+                      <span>{order.deliveryContactName}{order.deliveryContactPhone ? ` · ${order.deliveryContactPhone}` : ""}</span>
+                    </div>
+                  )}
+                  {order.deliverySetupNotes && (
+                    <div style={{ marginTop: 4, fontSize: 13, color: "var(--text-soft)" }}>
+                      Setup notes: {order.deliverySetupNotes}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="order-card">

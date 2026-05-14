@@ -74,7 +74,7 @@ export async function getOrdersPage(options?: {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses(postal_code)"
+      "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses!delivery_address_id(postal_code)"
     )
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false })

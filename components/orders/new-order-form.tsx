@@ -195,11 +195,87 @@ export function NewOrderForm({
         </div>
       </div>
 
+      <div className="order-card" style={{ paddingBottom: 4 }}>
+        <strong style={{ display: "block", marginBottom: 14 }}>Delivery address</strong>
+        <div style={{ display: "grid", gap: 10 }}>
+          <label className="field-stack">
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Street address</span>
+            <input
+              name="delivery_line1"
+              type="text"
+              placeholder="123 Main St"
+              style={{ width: "100%" }}
+            />
+          </label>
+          <div className="grid grid-3">
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>City</span>
+              <input name="delivery_city" type="text" placeholder="Springfield" style={{ width: "100%" }} />
+            </label>
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>State</span>
+              <input name="delivery_state" type="text" placeholder="VA" maxLength={2} style={{ width: "100%" }} />
+            </label>
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>ZIP</span>
+              <input name="delivery_zip" type="text" placeholder="22150" maxLength={10} style={{ width: "100%" }} />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="order-card" style={{ paddingBottom: 4 }}>
+        <strong style={{ display: "block", marginBottom: 14 }}>Delivery details</strong>
+        <div style={{ display: "grid", gap: 10 }}>
+          <div className="grid grid-3">
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Surface type</span>
+              <select name="delivery_surface_type" defaultValue="" style={{ width: "100%" }}>
+                <option value="">Not specified</option>
+                <option value="grass">Grass</option>
+                <option value="concrete">Concrete</option>
+                <option value="asphalt">Asphalt</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Gate / access code</span>
+              <input name="delivery_gate_code" type="text" placeholder="e.g. #1234" style={{ width: "100%" }} />
+            </label>
+          </div>
+          <div className="grid grid-3">
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>On-site contact name</span>
+              <input name="delivery_contact_name" type="text" placeholder="Jane Smith" style={{ width: "100%" }} />
+            </label>
+            <label className="field-stack">
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>On-site contact phone</span>
+              <input name="delivery_contact_phone" type="tel" placeholder="(540) 555-0100" style={{ width: "100%" }} />
+            </label>
+          </div>
+          <label className="field-stack">
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Setup notes</span>
+            <textarea
+              name="delivery_setup_notes"
+              placeholder="Backyard access, slope, low-hanging wires, HOA rules, etc."
+              rows={2}
+              style={{
+                width: "100%",
+                fontFamily: "inherit",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                padding: 12,
+              }}
+            />
+          </label>
+        </div>
+      </div>
+
       <label className="order-card">
-        <strong>Notes</strong>
+        <strong>Internal notes</strong>
         <textarea
           name="notes"
-          placeholder="Special instructions, setup details, etc."
+          placeholder="Internal notes for your team."
           rows={3}
           style={{
             marginTop: 10,

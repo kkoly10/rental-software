@@ -43,10 +43,12 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       event_start_time, event_end_time, notes,
       subtotal_amount, delivery_fee_amount, total_amount,
       deposit_due_amount, balance_due_amount,
+      delivery_surface_type, delivery_gate_code,
+      delivery_contact_name, delivery_contact_phone, delivery_setup_notes,
       customers(first_name, last_name, email, phone),
       order_items(item_name_snapshot, line_total),
       documents(id, document_type, document_status),
-      customer_addresses(line1, city, state, postal_code)
+      customer_addresses!delivery_address_id(line1, city, state, postal_code)
     `)
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
@@ -125,6 +127,11 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     deliveryLabel: address
       ? `${address.line1}, ${address.city}, ${address.state} ${address.postal_code}`
       : "No delivery address on file",
+    deliverySurfaceType: (data as Record<string, unknown>).delivery_surface_type as string | undefined ?? undefined,
+    deliveryGateCode: (data as Record<string, unknown>).delivery_gate_code as string | undefined ?? undefined,
+    deliveryContactName: (data as Record<string, unknown>).delivery_contact_name as string | undefined ?? undefined,
+    deliveryContactPhone: (data as Record<string, unknown>).delivery_contact_phone as string | undefined ?? undefined,
+    deliverySetupNotes: (data as Record<string, unknown>).delivery_setup_notes as string | undefined ?? undefined,
     documents:
       docs.length > 0
         ? docs.map(

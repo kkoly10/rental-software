@@ -51,6 +51,15 @@ export async function createOrder(
     deliveryFee: String(formData.get("delivery_fee") ?? "0"),
     depositAmount: String(formData.get("deposit_amount") ?? "0"),
     notes: String(formData.get("notes") ?? ""),
+    deliveryLine1: String(formData.get("delivery_line1") ?? ""),
+    deliveryCity: String(formData.get("delivery_city") ?? ""),
+    deliveryState: String(formData.get("delivery_state") ?? ""),
+    deliveryZip: String(formData.get("delivery_zip") ?? ""),
+    deliverySurfaceType: String(formData.get("delivery_surface_type") ?? ""),
+    deliveryGateCode: String(formData.get("delivery_gate_code") ?? ""),
+    deliveryContactName: String(formData.get("delivery_contact_name") ?? ""),
+    deliveryContactPhone: String(formData.get("delivery_contact_phone") ?? ""),
+    deliverySetupNotes: String(formData.get("delivery_setup_notes") ?? ""),
   });
 
   if (!parsed.success) {
@@ -122,6 +131,15 @@ export async function createOrder(
     deliveryFee,
     depositAmount,
     notes,
+    deliveryLine1,
+    deliveryCity,
+    deliveryState,
+    deliveryZip,
+    deliverySurfaceType,
+    deliveryGateCode,
+    deliveryContactName,
+    deliveryContactPhone,
+    deliverySetupNotes,
   } = parsed.data;
 
   const supabase = await createSupabaseServerClient();
@@ -319,6 +337,27 @@ export async function createOrder(
       ? new Date(`${eventDate}T${endTime}:00.000Z`).toISOString()
       : null;
 
+  // Create delivery address record if street + city provided
+  let deliveryAddressId: string | null = null;
+  if (deliveryLine1 && deliveryCity) {
+    const { data: addrRow, error: addrErr } = await supabase
+      .from("customer_addresses")
+      .insert({
+        organization_id: ctx.organizationId,
+        customer_id: customerId,
+        line1: deliveryLine1,
+        city: deliveryCity,
+        state: deliveryState ?? null,
+        postal_code: deliveryZip ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (!addrErr && addrRow) {
+      deliveryAddressId = addrRow.id;
+    }
+  }
+
   const { data: createdOrder, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -336,6 +375,12 @@ export async function createOrder(
       balance_due_amount: balance,
       notes: resolvedNotes || null,
       source_channel: "dashboard",
+      delivery_address_id: deliveryAddressId,
+      delivery_surface_type: deliverySurfaceType ?? null,
+      delivery_gate_code: deliveryGateCode ?? null,
+      delivery_contact_name: deliveryContactName ?? null,
+      delivery_contact_phone: deliveryContactPhone ?? null,
+      delivery_setup_notes: deliverySetupNotes ?? null,
     })
     .select("id")
     .single();
