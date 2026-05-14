@@ -769,7 +769,24 @@ export async function createCheckoutOrder(
         context: { orderNumber, deposit },
         error: stripeError,
       });
-      // Fall through to non-Stripe confirmation
+      // Stripe failed — send confirmation email now as fallback so customer isn't left without any receipt
+      try {
+        const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
+        await triggerOrderConfirmationEmail({
+          organizationId: orgId,
+          customerFirstName: firstName,
+          customerEmail: email,
+          orderNumber,
+          productName,
+          eventDate: eventDate ?? "",
+          subtotal,
+          deliveryFee,
+          total,
+          depositDue: deposit,
+        });
+      } catch {
+        console.error("[checkout] Fallback confirmation email failed for order", orderNumber);
+      }
     }
   }
 

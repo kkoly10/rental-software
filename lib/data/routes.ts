@@ -25,7 +25,13 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
     .limit(50);
 
   if (date) {
-    query = query.eq("route_date", date);
+    // Include yesterday (UTC) as lower bound to cover US timezones where local date
+    // may lag UTC by up to ~12 hours (e.g. at 8 PM Eastern, UTC is already tomorrow).
+    const dateObj = new Date(date + "T00:00:00Z");
+    const yesterday = new Date(dateObj);
+    yesterday.setUTCDate(dateObj.getUTCDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    query = query.gte("route_date", yesterdayStr).lte("route_date", date);
   }
 
   const { data, error } = await query;
