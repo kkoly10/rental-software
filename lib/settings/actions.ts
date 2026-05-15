@@ -5,6 +5,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 
+async function getUserRole(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  profileId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("profile_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+  return data?.role ?? null;
+}
+
 export type SettingsActionState = {
   ok: boolean;
   message: string;
@@ -35,6 +50,11 @@ export async function updateBusinessProfile(
   }
 
   const supabase = await createSupabaseServerClient();
+  const role = await getUserRole(supabase, ctx.organizationId, ctx.userId);
+  if (role !== "owner" && role !== "admin") {
+    return { ok: false, message: "Only owners and admins can update business settings." };
+  }
+
   const { error } = await supabase
     .from("organizations")
     .update({
@@ -73,6 +93,10 @@ export async function updateWebsiteSettings(
   }
 
   const supabase = await createSupabaseServerClient();
+  const role = await getUserRole(supabase, ctx.organizationId, ctx.userId);
+  if (role !== "owner" && role !== "admin") {
+    return { ok: false, message: "Only owners and admins can update website settings." };
+  }
 
   // Read existing settings
   const { data: org } = await supabase
@@ -148,6 +172,10 @@ export async function updateBookingPolicies(
   }
 
   const supabase = await createSupabaseServerClient();
+  const role = await getUserRole(supabase, ctx.organizationId, ctx.userId);
+  if (role !== "owner") {
+    return { ok: false, message: "Only the organization owner can update booking policies." };
+  }
 
   const { data: org } = await supabase
     .from("organizations")

@@ -27,6 +27,13 @@ export async function createBalancePaymentSession(
   const orgId = await getPublicOrgId();
   if (!orgId) return { ok: false, message: "Service unavailable." };
 
+  // Verify the org's plan allows Stripe payments
+  const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+  const stripeGate = await checkFeatureAccess("stripe_payments");
+  if (!stripeGate.allowed) {
+    return { ok: false, message: "Online payments are not available. Please contact us to pay your balance." };
+  }
+
   const supabase = await createSupabaseServerClient();
   const tokenHash = hashPortalAccessToken(token);
 

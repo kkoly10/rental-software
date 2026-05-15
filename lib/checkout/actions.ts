@@ -709,6 +709,16 @@ export async function createCheckoutOrder(
   // Attempt Stripe Checkout for deposit payment
   if (hasStripeEnv() && deposit > 0) {
     try {
+      // Verify the org's plan allows Stripe payments before creating a session
+      const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+      const stripeGate = await checkFeatureAccess("stripe_payments");
+      if (!stripeGate.allowed) {
+        return {
+          ok: false,
+          message: stripeGate.reason ?? "Online payments are not available on your current plan.",
+        };
+      }
+
       const stripe = getStripe();
       // Use the request origin so the customer is redirected back to the
       // tenant subdomain / custom domain they checked out on, not the root

@@ -67,6 +67,15 @@ export async function POST(request: NextRequest) {
           const orderId = session.metadata?.order_id;
           const orgId = session.metadata?.organization_id;
 
+          if (!orderId || !orgId) {
+            console.error("Stripe webhook: checkout.session.completed missing required metadata", {
+              sessionId: session.id,
+              hasOrderId: !!orderId,
+              hasOrgId: !!orgId,
+            });
+            break;
+          }
+
           if (orderId && orgId) {
             // Verify the order actually belongs to the claimed org (don't trust client metadata)
             const { data: orderRecord } = await admin

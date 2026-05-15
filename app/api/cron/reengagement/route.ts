@@ -65,7 +65,8 @@ function day3NudgeEmail(businessName: string, dashboardUrl: string): string {
         </tr>
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #dbe6f4;color:#55708f;font-size:13px;">
-            <p style="margin:0;">Sent by <span style="color:#1e5dcf;font-weight:600;">Korent</span> — rental business software</p>
+            <p style="margin:0 0 6px;">Sent by <span style="color:#1e5dcf;font-weight:600;">Korent</span> — rental business software</p>
+            <p style="margin:0;font-size:12px;">Korent, 1234 Market St, Suite 100, San Francisco, CA 94103 &bull; <a href="mailto:support@korent.app?subject=Unsubscribe" style="color:#55708f;">Unsubscribe from product tips</a></p>
           </td>
         </tr>
       </table>
@@ -116,7 +117,8 @@ function day7NudgeEmail(businessName: string, dashboardUrl: string): string {
         </tr>
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #dbe6f4;color:#55708f;font-size:13px;">
-            <p style="margin:0;">Sent by <span style="color:#1e5dcf;font-weight:600;">Korent</span> — rental business software</p>
+            <p style="margin:0 0 6px;">Sent by <span style="color:#1e5dcf;font-weight:600;">Korent</span> — rental business software</p>
+            <p style="margin:0;font-size:12px;">Korent, 1234 Market St, Suite 100, San Francisco, CA 94103 &bull; <a href="mailto:support@korent.app?subject=Unsubscribe" style="color:#55708f;">Unsubscribe from product tips</a></p>
           </td>
         </tr>
       </table>
