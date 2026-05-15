@@ -73,7 +73,9 @@ export async function addOrderToRoute(
 
   const routeId = String(formData.get("route_id") ?? "");
   const orderId = String(formData.get("order_id") ?? "");
-  const stopType = String(formData.get("stop_type") ?? "delivery");
+  const rawStopType = String(formData.get("stop_type") ?? "delivery");
+  const VALID_STOP_TYPES = ["delivery", "pickup"];
+  const stopType = VALID_STOP_TYPES.includes(rawStopType) ? rawStopType : "delivery";
   const scheduledTime = String(formData.get("scheduled_time") ?? "").trim() || null;
   const routeDate = String(formData.get("route_date") ?? "").trim();
 
