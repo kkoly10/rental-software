@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useCallback, useEffect } from "react";
 import { completeOnboarding } from "@/lib/onboarding/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "", storefrontUrl: "" };
 
@@ -19,6 +20,7 @@ function getAppDomain() {
 }
 
 export function OnboardingForm() {
+  const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
   const appDomain = getAppDomain();
 
@@ -59,22 +61,23 @@ export function OnboardingForm() {
     slugStatus === "invalid" ||
     slugStatus === "checking";
 
+  const f = m.onboarding.form;
+
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       <input type="hidden" name="business_type" value="inflatable" />
 
-      {/* ── Section 1: Your business ─────────────────────────────────── */}
       <div style={{ marginBottom: 4 }}>
-        <div className="kicker">Step 1</div>
-        <strong style={{ fontSize: 15 }}>Your business</strong>
+        <div className="kicker">{f.step1}</div>
+        <strong style={{ fontSize: 15 }}>{f.yourBusiness}</strong>
       </div>
 
       <label className="order-card">
-        <strong>Business name</strong>
+        <strong>{f.businessName}</strong>
         <input
           name="business_name"
           type="text"
-          placeholder="e.g. Premier Party Rentals"
+          placeholder={f.businessNamePlaceholder}
           required
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}
@@ -83,9 +86,9 @@ export function OnboardingForm() {
       </label>
 
       <div className="order-card">
-        <strong>Storefront URL</strong>
+        <strong>{f.storefrontUrl}</strong>
         <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          The web address customers use to find and book your rentals.
+          {f.storefrontHint}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10 }}>
           <input
@@ -104,48 +107,47 @@ export function OnboardingForm() {
           <span className="muted" style={{ fontSize: 14 }}>.{appDomain}</span>
         </div>
         {slugStatus === "checking" && (
-          <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>Checking...</div>
+          <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>{f.slugStatus.checking}</div>
         )}
         {slugStatus === "available" && (
-          <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>&#10003; Available</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>{f.slugStatus.available}</div>
         )}
         {slugStatus === "taken" && (
-          <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>Already taken — try a different one.</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>{f.slugStatus.taken}</div>
         )}
         {slugStatus === "invalid" && (
           <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>
-            Must be 3+ lowercase letters, numbers, and hyphens.
+            {f.slugStatus.invalid}
           </div>
         )}
       </div>
 
       <label className="order-card">
-        <strong>Timezone</strong>
+        <strong>{f.timezone}</strong>
         <select name="timezone" defaultValue="America/New_York" style={{ marginTop: 10, width: "100%" }}>
-          <option value="America/New_York">Eastern (ET)</option>
-          <option value="America/Chicago">Central (CT)</option>
-          <option value="America/Denver">Mountain (MT)</option>
-          <option value="America/Los_Angeles">Pacific (PT)</option>
+          <option value="America/New_York">{f.timezoneOptions.eastern}</option>
+          <option value="America/Chicago">{f.timezoneOptions.central}</option>
+          <option value="America/Denver">{f.timezoneOptions.mountain}</option>
+          <option value="America/Los_Angeles">{f.timezoneOptions.pacific}</option>
         </select>
       </label>
 
-      {/* ── Section 2: Your delivery area ────────────────────────────── */}
       <div style={{ marginTop: 8, marginBottom: 4 }}>
-        <div className="kicker">Step 2</div>
-        <strong style={{ fontSize: 15 }}>Where do you deliver?</strong>
+        <div className="kicker">{f.step2}</div>
+        <strong style={{ fontSize: 15 }}>{f.whereDoYouDeliver}</strong>
         <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          Customers can only place online orders within your service area. You can add more delivery zones from your dashboard later.
+          {f.deliveryBlurb}
         </div>
       </div>
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>Primary ZIP code</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Required to accept online orders</div>
+          <strong>{f.primaryZip}</strong>
+          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.primaryZipHint}</div>
           <input
             name="zip_code"
             type="text"
-            placeholder="e.g. 22554"
+            placeholder={f.primaryZipPlaceholder}
             required
             inputMode="numeric"
             style={{ marginTop: 10, width: "100%" }}
@@ -153,8 +155,8 @@ export function OnboardingForm() {
         </label>
 
         <label className="order-card">
-          <strong>Default delivery fee</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Charged per order</div>
+          <strong>{f.defaultDeliveryFee}</strong>
+          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.defaultDeliveryFeeHint}</div>
           <input
             name="delivery_fee"
             type="number"
@@ -166,8 +168,8 @@ export function OnboardingForm() {
         </label>
 
         <label className="order-card">
-          <strong>Minimum order ($)</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Orders below this are blocked</div>
+          <strong>{f.orderMinimum}</strong>
+          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.orderMinimumHint}</div>
           <input
             name="minimum_order"
             type="number"
@@ -190,9 +192,9 @@ export function OnboardingForm() {
           className="panel"
           style={{ padding: "20px 24px", background: "#f0fdf4", borderLeft: "4px solid #22c55e" }}
         >
-          <strong style={{ fontSize: 16, color: "#166534" }}>Your rental site is live!</strong>
+          <strong style={{ fontSize: 16, color: "#166534" }}>{f.siteLive}</strong>
           <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
-            Customers can find you at:
+            {f.customersCanFindYou}
           </div>
           <div style={{ marginTop: 6 }}>
             <a
@@ -205,16 +207,16 @@ export function OnboardingForm() {
             </a>
           </div>
           <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>
-            Bookmark this URL or share it with customers. You can change it later from Website settings.
+            {f.bookmarkHint}
           </div>
           <div style={{ marginTop: 16 }}>
-            <a href="/dashboard" className="primary-btn">Go to Dashboard</a>
+            <a href="/dashboard" className="primary-btn">{f.goToDashboard}</a>
           </div>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 12 }}>
           <button className="primary-btn" type="submit" disabled={submitDisabled}>
-            {pending ? "Setting up..." : "Create Business & Continue"}
+            {pending ? f.submitting : f.submit}
           </button>
         </div>
       )}

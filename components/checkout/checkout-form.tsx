@@ -4,6 +4,8 @@ import { useActionState, useState, useEffect } from "react";
 import Link from "next/link";
 import { createCheckoutOrder, type CheckoutActionState, type CheckoutFieldErrors } from "@/lib/checkout/actions";
 import { WeatherBadge } from "@/components/weather/weather-badge";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const initialState: CheckoutActionState = {
   ok: false,
@@ -34,6 +36,7 @@ export function CheckoutForm({
   maxDate?: string;
   cancellationPolicy?: string;
 }) {
+  const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
     initialState
@@ -58,45 +61,45 @@ export function CheckoutForm({
     return (
       <div style={{ marginTop: 16 }} className="list">
         <div className="order-card" style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}>
-          <div className="kicker" style={{ marginBottom: 8 }}>Review your order</div>
+          <div className="kicker" style={{ marginBottom: 8 }}>{m.checkout.review.kicker}</div>
           <div style={{ display: "grid", gap: 8 }}>
             <div className="order-row">
-              <span className="muted">Item</span>
+              <span className="muted">{m.checkout.review.item}</span>
               <strong>{s.productName}</strong>
             </div>
             {s.eventDate && (
               <div className="order-row">
-                <span className="muted">Event date</span>
+                <span className="muted">{m.checkout.review.eventDate}</span>
                 <span>{s.eventDate}</span>
               </div>
             )}
             {s.address && (
               <div className="order-row">
-                <span className="muted">Delivery to</span>
+                <span className="muted">{m.checkout.review.deliveryTo}</span>
                 <span style={{ textAlign: "right", maxWidth: "55%" }}>{s.address}</span>
               </div>
             )}
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8, display: "grid", gap: 6 }}>
               <div className="order-row">
-                <span className="muted">Subtotal</span>
+                <span className="muted">{m.checkout.review.subtotal}</span>
                 <span>{s.subtotal}</span>
               </div>
               <div className="order-row">
-                <span className="muted">Delivery fee</span>
+                <span className="muted">{m.checkout.review.deliveryFee}</span>
                 <span>{s.deliveryFee}</span>
               </div>
               <div className="order-row" style={{ fontWeight: 600 }}>
-                <span>Total</span>
+                <span>{m.checkout.review.total}</span>
                 <span>{s.total}</span>
               </div>
             </div>
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8, display: "grid", gap: 6 }}>
               <div className="order-row">
-                <span className="muted">Deposit due now</span>
+                <span className="muted">{m.checkout.review.depositDueNow}</span>
                 <strong style={{ color: "var(--primary)" }}>{s.depositDue}</strong>
               </div>
               <div className="order-row">
-                <span className="muted">Balance due later</span>
+                <span className="muted">{m.checkout.review.balanceDueLater}</span>
                 <span>{s.balanceDue}</span>
               </div>
             </div>
@@ -109,10 +112,10 @@ export function CheckoutForm({
             disabled={reviewConfirmed}
             onClick={() => setReviewConfirmed(true)}
           >
-            Confirm &amp; Pay Deposit ({s.depositDue})
+            {formatMessage(m.checkout.review.confirm, { amount: s.depositDue })}
           </button>
           <Link href="/inventory" className="secondary-btn">
-            Cancel
+            {m.checkout.review.cancel}
           </Link>
         </div>
       </div>
@@ -126,17 +129,17 @@ export function CheckoutForm({
           className="order-card"
           style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}
         >
-          <strong>Booking submitted!</strong>
+          <strong>{m.checkout.submitted.title}</strong>
           <div className="muted" style={{ marginTop: 8 }}>
             {state.message}
           </div>
         </div>
         <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Link href={`/order-confirmation?order=${state.orderNumber ?? ""}&status=unpaid`} className="primary-btn">
-            View order details
+            {m.checkout.submitted.viewDetails}
           </Link>
           <Link href="/inventory" className="secondary-btn">
-            Browse more rentals
+            {m.checkout.submitted.browseMore}
           </Link>
         </div>
       </div>
@@ -151,9 +154,9 @@ export function CheckoutForm({
           className="order-card"
           style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}
         >
-          <strong>Redirecting to secure payment...</strong>
+          <strong>{m.checkout.redirecting.title}</strong>
           <div className="muted" style={{ marginTop: 8 }}>
-            You&apos;ll be taken to Stripe to complete your deposit payment.
+            {m.checkout.redirecting.body}
           </div>
         </div>
       </div>
@@ -168,12 +171,12 @@ export function CheckoutForm({
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>First name</strong>
+          <strong>{m.checkout.form.firstName}</strong>
           <input
             name="first_name"
             type="text"
             autoComplete="given-name"
-            placeholder="First name"
+            placeholder={m.checkout.form.firstName}
             required
             aria-invalid={!!errors.firstName || undefined}
             aria-describedby={errors.firstName ? "err-first-name" : undefined}
@@ -183,12 +186,12 @@ export function CheckoutForm({
         </label>
 
         <label className="order-card">
-          <strong>Last name</strong>
+          <strong>{m.checkout.form.lastName}</strong>
           <input
             name="last_name"
             type="text"
             autoComplete="family-name"
-            placeholder="Last name"
+            placeholder={m.checkout.form.lastName}
             required
             aria-invalid={!!errors.lastName || undefined}
             aria-describedby={errors.lastName ? "err-last-name" : undefined}
@@ -198,7 +201,7 @@ export function CheckoutForm({
         </label>
 
         <label className="order-card">
-          <strong>Phone</strong>
+          <strong>{m.checkout.form.phone}</strong>
           <input
             name="phone"
             type="tel"
@@ -222,17 +225,17 @@ export function CheckoutForm({
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
-          Text me order updates (confirmation, delivery reminders, status). Msg &amp; data rates may apply. Reply STOP to opt out.
+          {m.checkout.form.smsOptIn}
         </span>
       </label>
 
       <label className="order-card">
-        <strong>Email</strong>
+        <strong>{m.checkout.form.email}</strong>
         <input
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder={m.checkout.form.emailPlaceholder}
           required
           aria-invalid={!!errors.email || undefined}
           aria-describedby={errors.email ? "err-email" : undefined}
@@ -242,7 +245,7 @@ export function CheckoutForm({
       </label>
 
       <label className="order-card">
-        <strong>Event date</strong>
+        <strong>{m.checkout.form.eventDate}</strong>
         <input
           name="event_date"
           type="date"
@@ -265,7 +268,7 @@ export function CheckoutForm({
 
       <div className="grid grid-2">
         <label className="order-card">
-          <strong>Start time</strong>
+          <strong>{m.checkout.form.startTime}</strong>
           <input
             name="start_time"
             type="time"
@@ -274,7 +277,7 @@ export function CheckoutForm({
         </label>
 
         <label className="order-card">
-          <strong>End time</strong>
+          <strong>{m.checkout.form.endTime}</strong>
           <input
             name="end_time"
             type="time"
@@ -284,12 +287,12 @@ export function CheckoutForm({
       </div>
 
       <label className="order-card">
-        <strong>Delivery address</strong>
+        <strong>{m.checkout.form.deliveryAddress}</strong>
         <input
           name="line1"
           type="text"
           autoComplete="street-address"
-          placeholder="Street address"
+          placeholder={m.checkout.form.streetAddress}
           required
           aria-invalid={!!errors.line1 || undefined}
           aria-describedby={errors.line1 ? "err-line1" : undefined}
@@ -300,19 +303,19 @@ export function CheckoutForm({
           name="line2"
           type="text"
           autoComplete="address-line2"
-          placeholder="Apt / Suite / Unit (optional)"
+          placeholder={m.checkout.form.line2Placeholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>City</strong>
+          <strong>{m.checkout.form.city}</strong>
           <input
             name="city"
             type="text"
             autoComplete="address-level2"
-            placeholder="City"
+            placeholder={m.checkout.form.cityPlaceholder}
             required
             aria-invalid={!!errors.city || undefined}
             aria-describedby={errors.city ? "err-city" : undefined}
@@ -322,12 +325,12 @@ export function CheckoutForm({
         </label>
 
         <label className="order-card">
-          <strong>State</strong>
+          <strong>{m.checkout.form.state}</strong>
           <input
             name="state"
             type="text"
             autoComplete="address-level1"
-            placeholder="VA"
+            placeholder={m.checkout.form.statePlaceholder}
             required
             aria-invalid={!!errors.state || undefined}
             aria-describedby={errors.state ? "err-state" : undefined}
@@ -337,12 +340,12 @@ export function CheckoutForm({
         </label>
 
         <label className="order-card">
-          <strong>ZIP code</strong>
+          <strong>{m.checkout.form.zip}</strong>
           <input
             name="postal_code"
             type="text"
             autoComplete="postal-code"
-            placeholder="22554"
+            placeholder={m.checkout.form.zipPlaceholder}
             required
             defaultValue={initialZip}
             onChange={(e) => setEnteredZip(e.target.value)}
@@ -366,8 +369,8 @@ export function CheckoutForm({
         />
         <span style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-soft)" }}>
           {cancellationPolicy
-            ? `I agree to the rental terms and cancellation policy: "${cancellationPolicy}"`
-            : "I understand that this booking is subject to the rental operator's terms and policies"}
+            ? formatMessage(m.checkout.form.termsAgreePolicy, { policy: cancellationPolicy })
+            : m.checkout.form.termsAgree}
         </span>
       </label>
 
@@ -379,7 +382,7 @@ export function CheckoutForm({
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <button className="primary-btn storefront-search-btn" type="submit" disabled={pending}>
-          {pending ? "Creating Order..." : "Place Booking"}
+          {pending ? m.checkout.form.submitting : m.checkout.form.submit}
         </button>
       </div>
     </form>

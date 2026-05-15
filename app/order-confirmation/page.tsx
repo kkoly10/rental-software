@@ -11,6 +11,7 @@ import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { getTranslator } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -127,11 +128,15 @@ export default async function OrderConfirmationPage({
   const { order, session_id } = await searchParams;
 
   // Server-verified payment status — URL params are NOT trusted
-  const { status } = await resolvePaymentStatus(order, session_id);
-  const portalUrl = await getPortalAccessUrl(order);
+  const [{ status }, portalUrl, { messages: m, t }] = await Promise.all([
+    resolvePaymentStatus(order, session_id),
+    getPortalAccessUrl(order),
+    getTranslator(),
+  ]);
 
   const isPaid = status === "paid";
   const isProcessing = status === "processing";
+  const stateKey = isPaid ? "paid" : isProcessing ? "processing" : "submitted";
 
   return (
     <>
@@ -164,18 +169,10 @@ export default async function OrderConfirmationPage({
             </div>
 
             <div className="kicker">
-              {isPaid
-                ? "Payment confirmed"
-                : isProcessing
-                ? "Payment processing"
-                : "Booking submitted"}
+              {m.orderConfirmation.kicker[stateKey]}
             </div>
             <h1 style={{ margin: "8px 0 12px" }}>
-              {isPaid
-                ? "You're all set!"
-                : isProcessing
-                ? "Almost there!"
-                : "Thank you for your booking!"}
+              {m.orderConfirmation.title[stateKey]}
             </h1>
 
             {order && (
@@ -190,42 +187,38 @@ export default async function OrderConfirmationPage({
                   marginBottom: 16,
                 }}
               >
-                Order {order}
+                {t(m.orderConfirmation.orderLabel, { value: order })}
               </div>
             )}
 
             <p className="muted" style={{ maxWidth: 440, margin: "0 auto 24px" }}>
-              {isPaid
-                ? "Your deposit has been received. We'll confirm your delivery details and send you an agreement shortly."
-                : isProcessing
-                ? "Your payment is being processed — you'll receive a confirmation email shortly. This usually takes just a moment."
-                : "Your order has been created. The operator will contact you about payment and confirm delivery details."}
+              {m.orderConfirmation.description[stateKey]}
             </p>
 
             <div className="list" style={{ textAlign: "left", marginBottom: 24 }}>
               <div className="order-card">
-                <strong>What happens next</strong>
+                <strong>{m.orderConfirmation.cards.whatHappensNext}</strong>
                 <div className="muted" style={{ marginTop: 6 }}>
-                  Our team will review your booking, confirm the event date, and send you setup and safety details.
+                  {m.orderConfirmation.cards.whatHappensNextBody}
                 </div>
               </div>
               <div className="order-card">
-                <strong>Track your order</strong>
+                <strong>{m.orderConfirmation.cards.trackYourOrder}</strong>
                 <div className="muted" style={{ marginTop: 6 }}>
-                  Open your secure portal link to check status, view documents, and message the operator.
+                  {m.orderConfirmation.cards.trackYourOrderBody}
                 </div>
               </div>
             </div>
 
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <Link href={portalUrl ?? "/order-status"} className="primary-btn">
-                Open Customer Portal
+                {m.orderConfirmation.actions.portal}
               </Link>
               <Link href="/inventory" className="secondary-btn">
-                Browse More Rentals
+                {m.orderConfirmation.actions.browseMore}
               </Link>
               <Link href="/" className="ghost-btn">
-                Back to Home
+                {m.orderConfirmation.actions.backHome}
               </Link>
             </div>
           </section>

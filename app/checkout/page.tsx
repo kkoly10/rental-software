@@ -11,6 +11,7 @@ import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getCheckoutPricing } from "@/lib/data/checkout-pricing";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { hasStripeEnv } from "@/lib/stripe/config";
+import { getTranslator } from "@/lib/i18n/server";
 
 function formatProductName(value?: string) {
   if (!value) return undefined;
@@ -52,10 +53,11 @@ export default async function CheckoutPage({
   const { product, date, zip } = await searchParams;
   const productName = formatProductName(product);
 
-  const [pricing, policies, settings] = await Promise.all([
+  const [pricing, policies, settings, { messages: m, t }] = await Promise.all([
     getCheckoutPricing(product, zip, date),
     getBookingPolicies(),
     getOrganizationSettings(),
+    getTranslator(),
   ]);
   const stripeEnabled = hasStripeEnv();
 
@@ -74,20 +76,18 @@ export default async function CheckoutPage({
         <div className="container">
           <div className="storefront-context-pills" style={{ marginBottom: 18 }}>
             {productName ? (
-              <span className="storefront-context-pill">Rental: {productName}</span>
+              <span className="storefront-context-pill">{t(m.checkout.pillRental, { value: productName })}</span>
             ) : null}
-            {date ? <span className="storefront-context-pill">Date: {date}</span> : null}
-            {zip ? <span className="storefront-context-pill">ZIP: {zip}</span> : null}
+            {date ? <span className="storefront-context-pill">{t(m.checkout.pillDate, { value: date })}</span> : null}
+            {zip ? <span className="storefront-context-pill">{t(m.checkout.pillZip, { value: zip })}</span> : null}
           </div>
 
           <div className="storefront-checkout-shell">
             <section className="panel">
-              <div className="kicker">Checkout</div>
-              <h1 style={{ margin: "8px 0 10px" }}>Complete your booking request</h1>
+              <div className="kicker">{m.checkout.kicker}</div>
+              <h1 style={{ margin: "8px 0 10px" }}>{m.checkout.title}</h1>
               <div className="muted">
-                Enter your event and delivery details to reserve your rental.
-                We will confirm availability, setup timing, and agreement details
-                after submission.
+                {m.checkout.description}
               </div>
 
               {settings.bookingMessage && (
