@@ -22,12 +22,17 @@ export async function GET(
   }
 
   // Rate limiting: 10 per 15 min per user
-  const { allowed } = await enforceRateLimit({
-    scope: "api:invoices:user",
-    actor: ctx.userId,
-    limit: 10,
-    windowSeconds: 900,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:invoices:user",
+      actor: ctx.userId,
+      limit: 10,
+      windowSeconds: 900,
+    }));
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
 
   if (!allowed) {
     return NextResponse.json(
@@ -55,6 +60,7 @@ export async function GET(
       `)
       .eq("id", orderId)
       .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle(),
     supabase
       .from("order_items")

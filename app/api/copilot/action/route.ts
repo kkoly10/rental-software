@@ -74,12 +74,17 @@ export async function POST(request: NextRequest) {
   }
 
   // Rate limiting: 30 per 15 min per user
-  const { allowed } = await enforceRateLimit({
-    scope: "api:copilot:action:user",
-    actor: access.userId,
-    limit: 30,
-    windowSeconds: 900,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:copilot:action:user",
+      actor: access.userId,
+      limit: 30,
+      windowSeconds: 900,
+    }));
+  } catch {
+    return jsonResponse({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
 
   if (!allowed) {
     return jsonResponse(

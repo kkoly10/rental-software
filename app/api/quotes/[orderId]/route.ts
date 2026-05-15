@@ -21,12 +21,17 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { allowed } = await enforceRateLimit({
-    scope: "api:quotes:user",
-    actor: ctx.userId,
-    limit: 10,
-    windowSeconds: 900,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:quotes:user",
+      actor: ctx.userId,
+      limit: 10,
+      windowSeconds: 900,
+    }));
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Please wait before trying again." }, { status: 429 });
   }
@@ -44,6 +49,7 @@ export async function GET(
     `)
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {
