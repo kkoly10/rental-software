@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateSocialLinks } from "@/lib/settings/brand-upload-actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
@@ -16,49 +17,51 @@ export function SocialLinksForm({
   };
 }) {
   const [state, formAction, pending] = useActionState(updateSocialLinks, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.socialLinks;
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
       <label className="order-card">
-        <strong>Facebook</strong>
+        <strong>{m.facebookLabel}</strong>
         <input
           name="social_facebook"
           type="url"
           defaultValue={defaults.facebook}
-          placeholder="https://facebook.com/yourbusiness"
+          placeholder={m.facebookPlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Instagram</strong>
+        <strong>{m.instagramLabel}</strong>
         <input
           name="social_instagram"
           type="url"
           defaultValue={defaults.instagram}
-          placeholder="https://instagram.com/yourbusiness"
+          placeholder={m.instagramPlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>TikTok</strong>
+        <strong>{m.tiktokLabel}</strong>
         <input
           name="social_tiktok"
           type="url"
           defaultValue={defaults.tiktok}
-          placeholder="https://tiktok.com/@yourbusiness"
+          placeholder={m.tiktokPlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Google Business Profile</strong>
+        <strong>{m.googleBusinessLabel}</strong>
         <input
           name="social_google_business"
           type="url"
           defaultValue={defaults.googleBusiness}
-          placeholder="https://g.page/yourbusiness"
+          placeholder={m.googleBusinessPlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
@@ -71,7 +74,7 @@ export function SocialLinksForm({
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save Social Links"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>
