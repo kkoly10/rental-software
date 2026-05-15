@@ -121,6 +121,20 @@ export async function createProduct(
     return { ok: false, message: gate.reason ?? "Product limit reached." };
   }
 
+  // Validate that the supplied categoryId belongs to this organization
+  if (categoryId) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", categoryId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!cat) {
+      return { ok: false, message: "Invalid category." };
+    }
+  }
+
   const slug = slugify(name);
 
   const { data: inserted, error } = await supabase.from("products").insert({
@@ -221,6 +235,20 @@ export async function updateProduct(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Validate that the supplied categoryId belongs to this organization
+  if (parsed.data.categoryId) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", parsed.data.categoryId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!cat) {
+      return { ok: false, message: "Invalid category." };
+    }
+  }
 
   const { error } = await supabase
     .from("products")
