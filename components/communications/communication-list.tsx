@@ -1,11 +1,6 @@
 import type { CommunicationEntry } from "@/lib/data/communication-history";
-
-const CHANNEL_LABELS: Record<string, string> = {
-  email: "Email",
-  sms: "SMS",
-  portal_message: "Message",
-  system: "System",
-};
+import { getMessages } from "@/lib/i18n/server";
+import { formatMessage } from "@/lib/i18n/format";
 
 const CHANNEL_COLORS: Record<string, string> = {
   email: "var(--primary)",
@@ -25,17 +20,25 @@ function formatTimestamp(iso: string): string {
   });
 }
 
-export function CommunicationList({
+export async function CommunicationList({
   entries,
   showOrderNumber,
 }: {
   entries: CommunicationEntry[];
   showOrderNumber?: boolean;
 }) {
+  const m = await getMessages();
+  const CHANNEL_LABELS: Record<string, string> = {
+    email: m.communications.channels.email,
+    sms: m.communications.channels.sms,
+    portal_message: m.communications.channels.portalMessage,
+    system: m.communications.channels.system,
+  };
+
   if (entries.length === 0) {
     return (
       <div className="order-card" style={{ textAlign: "center", padding: 24 }}>
-        <div className="muted">No communications recorded yet.</div>
+        <div className="muted">{m.communications.empty}</div>
       </div>
     );
   }
@@ -72,7 +75,7 @@ export function CommunicationList({
               )}
               {entry.status === "failed" && (
                 <span className="badge warning" style={{ fontSize: 11, padding: "2px 6px" }}>
-                  Failed
+                  {m.communications.failed}
                 </span>
               )}
             </div>
@@ -85,7 +88,7 @@ export function CommunicationList({
             <div style={{ marginTop: 6 }}>
               {showOrderNumber && entry.orderNumber && (
                 <div style={{ fontSize: 12, color: "var(--text-soft)" }}>
-                  Order #{entry.orderNumber}
+                  {formatMessage(m.communications.orderPrefix, { number: entry.orderNumber })}
                 </div>
               )}
               {entry.subject && (

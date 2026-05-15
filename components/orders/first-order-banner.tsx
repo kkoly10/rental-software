@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function FirstOrderBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const { messages: m } = useI18n();
 
   if (dismissed) return null;
 
@@ -32,39 +34,39 @@ export function FirstOrderBanner() {
           cursor: "pointer",
           lineHeight: 1,
         }}
-        aria-label="Dismiss"
+        aria-label={m.common.dismiss}
       >
         &times;
       </button>
 
       <strong style={{ fontSize: 15, color: "#16a34a" }}>
-        Your first order is live!
+        {m.firstOrderBanner.title}
       </strong>
       <div className="muted" style={{ marginTop: 8, lineHeight: 1.8 }}>
-        Here&apos;s what to do next:
+        {m.firstOrderBanner.intro}
       </div>
       <ol style={{ margin: "8px 0 0", paddingLeft: 20, lineHeight: 2, fontSize: 14 }}>
         <li>
-          Record a deposit payment &rarr;{" "}
+          {m.firstOrderBanner.recordDeposit} &rarr;{" "}
           <Link href="/dashboard/payments" style={{ fontWeight: 600 }}>
-            Go to Payments
+            {m.firstOrderBanner.goToPayments}
           </Link>
         </li>
         <li>
-          Generate rental documents &rarr;{" "}
+          {m.firstOrderBanner.generateDocuments} &rarr;{" "}
           <Link href="/dashboard/documents" style={{ fontWeight: 600 }}>
-            Go to Documents
+            {m.firstOrderBanner.goToDocuments}
           </Link>
         </li>
         <li>
-          Check delivery planning &rarr;{" "}
+          {m.firstOrderBanner.checkDelivery} &rarr;{" "}
           <Link href="/dashboard/deliveries" style={{ fontWeight: 600 }}>
-            Go to Deliveries
+            {m.firstOrderBanner.goToDeliveries}
           </Link>
         </li>
       </ol>
       <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>
-        These steps help you practice the full booking workflow before real customers arrive.
+        {m.firstOrderBanner.practiceNote}
       </div>
     </div>
   );

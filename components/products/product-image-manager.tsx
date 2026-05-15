@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { uploadProductImage } from "@/lib/products/image-actions";
 import type { ProductImageRecord } from "@/lib/data/product-images";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = {
   ok: false,
@@ -16,30 +17,31 @@ export function ProductImageManager({
   productId: string;
   images: ProductImageRecord[];
 }) {
+  const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(uploadProductImage, initialState);
 
   return (
     <div className="list">
       <article className="order-card">
-        <strong>Upload product image</strong>
+        <strong>{m.productImage.uploadTitle}</strong>
         <div className="muted" style={{ marginTop: 6 }}>
-          Upload a hero image for the public catalog. The first uploaded image becomes the primary image by default.
+          {m.productImage.uploadBody}
         </div>
 
         <form action={formAction} className="list" style={{ marginTop: 14 }}>
           <input type="hidden" name="product_id" value={productId} />
 
           <label>
-            <div className="muted" style={{ marginBottom: 6 }}>Image file</div>
+            <div className="muted" style={{ marginBottom: 6 }}>{m.productImage.imageFile}</div>
             <input name="image_file" type="file" accept="image/*" />
           </label>
 
           <label>
-            <div className="muted" style={{ marginBottom: 6 }}>Alt text</div>
+            <div className="muted" style={{ marginBottom: 6 }}>{m.productImage.altText}</div>
             <input
               name="alt_text"
               type="text"
-              placeholder="Describe the image (e.g., front view of the product)"
+              placeholder={m.productImage.altPlaceholder}
               style={{ width: "100%" }}
             />
           </label>
@@ -52,16 +54,16 @@ export function ProductImageManager({
 
           <div>
             <button className="primary-btn" type="submit" disabled={pending}>
-              {pending ? "Uploading..." : "Upload Image"}
+              {pending ? m.productImage.uploading : m.productImage.uploadButton}
             </button>
           </div>
         </form>
       </article>
 
       <article className="order-card">
-        <strong>Current gallery</strong>
+        <strong>{m.productImage.currentGallery}</strong>
         <div className="muted" style={{ marginTop: 6 }}>
-          Existing images will appear here when available.
+          {m.productImage.galleryBody}
         </div>
 
         {images.length > 0 ? (
@@ -79,16 +81,16 @@ export function ProductImageManager({
                   }}
                 />
                 <div style={{ marginTop: 10 }}>
-                  <strong>{image.isPrimary ? "Primary image" : "Gallery image"}</strong>
+                  <strong>{image.isPrimary ? m.productImage.primaryImage : m.productImage.galleryImage}</strong>
                   <div className="muted" style={{ marginTop: 6 }}>
-                    {image.altText || "Product image"}
+                    {image.altText || m.productImage.defaultAlt}
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="muted" style={{ marginTop: 14 }}>No images uploaded yet.</div>
+          <div className="muted" style={{ marginTop: 14 }}>{m.productImage.noImages}</div>
         )}
       </article>
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { WeatherForecast } from "@/lib/weather/api";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function WeatherAlert({
   eventDate,
@@ -10,6 +11,7 @@ export function WeatherAlert({
   eventDate: string;
   zipCode?: string;
 }) {
+  const { messages: m } = useI18n();
   const [forecast, setForecast] = useState<WeatherForecast | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,10 +53,10 @@ export function WeatherAlert({
 
   const message =
     forecast.riskLevel === "high"
-      ? "Weather alert \u2014 high winds or storms forecasted, consider rescheduling"
+      ? m.weatherAlert.highRisk
       : forecast.riskLevel === "moderate"
-        ? "Some weather concerns \u2014 rain possible, consider backup plans"
-        : "Clear skies expected \u2014 great day for an event!";
+        ? m.weatherAlert.moderateRisk
+        : m.weatherAlert.clear;
 
   return (
     <div className={`weather-alert weather-alert-${forecast.riskLevel}`}>
@@ -64,19 +66,19 @@ export function WeatherAlert({
       </div>
       <div className="weather-details">
         <div className="weather-stat">
-          <span className="weather-stat-label">Temperature</span>
+          <span className="weather-stat-label">{m.weatherAlert.temperature}</span>
           <span className="weather-stat-value">
             {forecast.tempLow}&deg;F &ndash; {forecast.tempHigh}&deg;F
           </span>
         </div>
         <div className="weather-stat">
-          <span className="weather-stat-label">Precipitation</span>
+          <span className="weather-stat-label">{m.weatherAlert.precipitation}</span>
           <span className="weather-stat-value">
             {forecast.precipitationChance}%
           </span>
         </div>
         <div className="weather-stat">
-          <span className="weather-stat-label">Wind</span>
+          <span className="weather-stat-label">{m.weatherAlert.wind}</span>
           <span className="weather-stat-value">{forecast.windSpeed} mph</span>
         </div>
       </div>

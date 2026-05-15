@@ -6,6 +6,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/messages/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 function NotificationIcon({ type }: { type: NotificationType }) {
   switch (type) {
@@ -71,6 +72,7 @@ export function NotificationCenter({
 }: {
   initialNotifications: Notification[];
 }) {
+  const { messages: m } = useI18n();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>(initialNotifications);
   const ref = useRef<HTMLDivElement>(null);
@@ -111,7 +113,7 @@ export function NotificationCenter({
         type="button"
         className="notif-bell-btn"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label="Notifications"
+        aria-label={m.notifications.ariaLabel}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -124,14 +126,14 @@ export function NotificationCenter({
 
       <div className={`notif-dropdown ${open ? "notif-dropdown-open" : ""}`}>
         <div className="notif-dropdown-header">
-          <span className="notif-dropdown-title">Notifications</span>
+          <span className="notif-dropdown-title">{m.notifications.title}</span>
           {unreadCount > 0 && (
             <button
               type="button"
               className="notif-mark-all-btn"
               onClick={handleMarkAllRead}
             >
-              Mark all as read
+              {m.notifications.markAllRead}
             </button>
           )}
         </div>
@@ -143,7 +145,7 @@ export function NotificationCenter({
                 <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <p>You&apos;re all caught up!</p>
+              <p>{m.notifications.empty}</p>
             </div>
           ) : (
             items.map((item) => {

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createBillingPortalSession } from "@/lib/stripe/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function BillingPortalButton() {
   const [state, formAction, pending] = useActionState(
@@ -10,6 +11,7 @@ export function BillingPortalButton() {
     },
     { ok: true, message: "" }
   );
+  const { messages: m } = useI18n();
 
   return (
     <form action={formAction}>
@@ -19,7 +21,7 @@ export function BillingPortalButton() {
         disabled={pending}
         style={{ marginTop: 8 }}
       >
-        {pending ? "Opening..." : "Manage Billing & Payment Method"}
+        {pending ? m.forms.billingPortal.opening : m.forms.billingPortal.manage}
       </button>
       {!state.ok && state.message && (
         <div className="badge warning" style={{ marginTop: 8 }}>

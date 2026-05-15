@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function CopilotInput({
   onSend,
@@ -9,6 +10,7 @@ export function CopilotInput({
   onSend: (message: string) => void;
   disabled: boolean;
 }) {
+  const { messages: m } = useI18n();
   const [value, setValue] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
@@ -25,7 +27,7 @@ export function CopilotInput({
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Ask a question..."
+        placeholder={m.copilot.placeholder}
         disabled={disabled}
         style={{ flex: 1 }}
       />
@@ -35,7 +37,7 @@ export function CopilotInput({
         disabled={disabled || !value.trim()}
         style={{ padding: "8px 14px", fontSize: 13 }}
       >
-        Send
+        {m.copilot.send}
       </button>
     </form>
   );

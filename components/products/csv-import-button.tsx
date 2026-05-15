@@ -2,8 +2,10 @@
 
 import { useRef, useState, useTransition } from "react";
 import { importProductsFromCsv, type CsvImportResult } from "@/lib/products/csv-import";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
+  const { messages: m, t } = useI18n();
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<CsvImportResult | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -33,7 +35,7 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
         className="secondary-btn"
         onClick={() => setOpen(true)}
       >
-        Import CSV
+        {m.csvImport.button}
       </button>
 
       {open && (
@@ -54,11 +56,11 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <strong style={{ fontSize: 16 }}>Import products from CSV</strong>
+              <strong style={{ fontSize: 16 }}>{m.csvImport.modalTitle}</strong>
               <button
                 type="button"
                 onClick={handleClose}
-                aria-label="Close"
+                aria-label={m.csvImport.closeAria}
                 style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#666", fontSize: 20, lineHeight: 1 }}
               >
                 &#x2715;
@@ -69,11 +71,11 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
               <>
                 <div className="order-card" style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-                    <strong>How it works</strong>
+                    <strong>{m.csvImport.howItWorks}</strong>
                     <ol style={{ margin: "8px 0 0", paddingLeft: 18, color: "#55708f" }}>
-                      <li>Download the template below and open it in Excel or Google Sheets.</li>
-                      <li>Fill in your products — one per row.</li>
-                      <li>Save as CSV and upload it here.</li>
+                      <li>{m.csvImport.step1}</li>
+                      <li>{m.csvImport.step2}</li>
+                      <li>{m.csvImport.step3}</li>
                     </ol>
                   </div>
                   <a
@@ -82,14 +84,14 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
                     className="secondary-btn"
                     style={{ display: "inline-block", marginTop: 12, fontSize: 13 }}
                   >
-                    Download template
+                    {m.csvImport.downloadTemplate}
                   </a>
                 </div>
 
                 <form ref={formRef} onSubmit={handleSubmit}>
                   <div className="order-card" style={{ marginBottom: 16 }}>
                     <label style={{ display: "block" }}>
-                      <strong style={{ fontSize: 14 }}>Upload your CSV file</strong>
+                      <strong style={{ fontSize: 14 }}>{m.csvImport.uploadLabel}</strong>
                       <input
                         ref={fileRef}
                         name="csv_file"
@@ -100,16 +102,16 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
                       />
                     </label>
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-                      Max 500 rows, 2 MB. Existing products are skipped automatically.
+                      {m.csvImport.uploadHelp}
                     </div>
                   </div>
 
                   <div style={{ display: "flex", gap: 10 }}>
                     <button type="submit" className="primary-btn" disabled={isPending}>
-                      {isPending ? "Importing..." : "Import products"}
+                      {isPending ? m.csvImport.importing : m.csvImport.importProducts}
                     </button>
                     <button type="button" className="ghost-btn" onClick={handleClose}>
-                      Cancel
+                      {m.csvImport.cancel}
                     </button>
                   </div>
                 </form>
@@ -124,14 +126,14 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
                   }}
                 >
                   <strong style={{ fontSize: 14 }}>
-                    {result.imported > 0 ? "Import complete" : "Nothing imported"}
+                    {result.imported > 0 ? m.csvImport.importComplete : m.csvImport.nothingImported}
                   </strong>
                   <div className="muted" style={{ marginTop: 6, fontSize: 14 }}>{result.message}</div>
                 </div>
 
                 {result.errors.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <strong style={{ fontSize: 13 }}>Rows with errors</strong>
+                    <strong style={{ fontSize: 13 }}>{m.csvImport.rowsWithErrors}</strong>
                     <div
                       style={{
                         marginTop: 8, maxHeight: 160, overflowY: "auto",
@@ -140,7 +142,7 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
                     >
                       {result.errors.map((e) => (
                         <div key={e.row} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #f5e0e0", color: "#991b1b" }}>
-                          <strong>Row {e.row}</strong> — {e.name}: {e.reason}
+                          <strong>{t(m.csvImport.rowLabel, { row: e.row })}</strong> — {e.name}: {e.reason}
                         </div>
                       ))}
                     </div>
@@ -150,16 +152,16 @@ export function CsvImportButton({ onComplete }: { onComplete?: () => void }) {
                 <div style={{ display: "flex", gap: 10 }}>
                   {result.imported > 0 ? (
                     <button type="button" className="primary-btn" onClick={handleClose}>
-                      Done
+                      {m.csvImport.done}
                     </button>
                   ) : (
                     <button type="button" className="primary-btn" onClick={() => setResult(null)}>
-                      Try again
+                      {m.csvImport.tryAgain}
                     </button>
                   )}
                   {result.imported > 0 && (
                     <button type="button" className="ghost-btn" onClick={() => setResult(null)}>
-                      Import more
+                      {m.csvImport.importMore}
                     </button>
                   )}
                 </div>

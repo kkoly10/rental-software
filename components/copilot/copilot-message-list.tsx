@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { renderSafeRichText } from "@/lib/rendering/safe-rich-text";
+import { useI18n } from "@/lib/i18n/provider";
 
 export type CopilotMessage = {
   role: "user" | "assistant";
@@ -9,6 +10,7 @@ export type CopilotMessage = {
 };
 
 export function CopilotMessageList({ messages }: { messages: CopilotMessage[] }) {
+  const { messages: m } = useI18n();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,9 +21,9 @@ export function CopilotMessageList({ messages }: { messages: CopilotMessage[] })
     return (
       <div className="copilot-empty">
         <div style={{ fontSize: 28, marginBottom: 8 }}>&#9889;</div>
-        <strong style={{ fontSize: 14 }}>Operator Copilot</strong>
+        <strong style={{ fontSize: 14 }}>{m.copilot.emptyTitle}</strong>
         <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Ask me about workflows, features, or what to do next.
+          {m.copilot.emptyBody}
         </div>
       </div>
     );

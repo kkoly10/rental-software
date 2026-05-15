@@ -38,11 +38,11 @@ export default async function ContactPage() {
             {(settings.phone || settings.supportEmail) && (
               <div style={{ marginBottom: 24, padding: "16px 20px", borderRadius: 12, background: "var(--surface-muted)" }}>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-                  Reach {settings.businessName} directly
+                  {settings.businessName}
                 </div>
                 {settings.phone && settings.phone !== "(555) 000-0000" && (
                   <div style={{ fontSize: 14, marginBottom: 4 }}>
-                    <span className="muted">Phone: </span>
+                    <span className="muted">{m.common.phone}: </span>
                     <a href={`tel:${settings.phone}`} style={{ color: "var(--primary)", fontWeight: 500 }}>
                       {settings.phone}
                     </a>
@@ -50,7 +50,7 @@ export default async function ContactPage() {
                 )}
                 {settings.supportEmail && settings.supportEmail !== "hello@example.com" && (
                   <div style={{ fontSize: 14 }}>
-                    <span className="muted">Email: </span>
+                    <span className="muted">{m.common.email}: </span>
                     <a href={`mailto:${settings.supportEmail}`} style={{ color: "var(--primary)", fontWeight: 500 }}>
                       {settings.supportEmail}
                     </a>

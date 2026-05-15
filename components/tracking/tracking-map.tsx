@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface DriverPosition {
   lat: number;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
+  const { messages: m } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -45,7 +47,7 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
       try {
         L = (await import("leaflet")).default as unknown as typeof import("leaflet");
       } catch {
-        if (!cancelled) setMapError("Map failed to load. Please check your connection and refresh.");
+        if (!cancelled) setMapError(m.trackingMap.mapFailed);
         return;
       }
       if (cancelled || !containerRef.current || mapRef.current) return;
@@ -132,12 +134,12 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
 
   const statusMsg =
     initialStatus === "completed"
-      ? "Delivered!"
+      ? m.trackingMap.delivered
       : connectionState === "live"
-      ? "Driver location is live"
+      ? m.trackingMap.locationLive
       : connectionState === "offline"
-      ? "Waiting for location update…"
-      : "Connecting…";
+      ? m.trackingMap.waitingForLocation
+      : m.trackingMap.connecting;
 
   if (mapError) {
     return (

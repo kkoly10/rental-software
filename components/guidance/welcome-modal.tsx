@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { markWelcomeSeen } from "@/lib/guidance/actions";
 import type { MiniTour } from "@/lib/guidance/tour-config";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 export function WelcomeModal({
   businessName,
@@ -15,6 +17,7 @@ export function WelcomeModal({
 }) {
   const [open, setOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const { messages: m } = useI18n();
 
   function close() {
     setOpen(false);
@@ -31,8 +34,8 @@ export function WelcomeModal({
   if (!open) return null;
 
   const greeting = businessName
-    ? `Welcome to ${businessName}!`
-    : "Welcome to Your Dashboard!";
+    ? formatMessage(m.welcomeModal.greetingBusiness, { business: businessName })
+    : m.welcomeModal.greetingDefault;
 
   return (
     <div className="welcome-overlay" onClick={close}>
@@ -43,14 +46,13 @@ export function WelcomeModal({
             {greeting}
           </h2>
           <p className="muted" style={{ maxWidth: 440, margin: "0 auto" }}>
-            Your rental business is ready. Pick a quick tour below, or jump
-            straight in — you can always start a tour later from the Help Center.
+            {m.welcomeModal.intro}
           </p>
         </div>
 
         <div className="welcome-tour-picks">
           <div className="kicker" style={{ marginBottom: 10, fontSize: 11 }}>
-            What do you want to do first?
+            {m.welcomeModal.pickFirst}
           </div>
 
           {miniTours.map((tour) => (
@@ -68,11 +70,11 @@ export function WelcomeModal({
 
         <div className="welcome-alt-actions">
           <a href="/dashboard/help" className="welcome-alt-link" onClick={close}>
-            Help Center
+            {m.welcomeModal.helpCenter}
           </a>
-          <span className="muted">or</span>
+          <span className="muted">{m.welcomeModal.or}</span>
           <a href="/dashboard/settings" className="welcome-alt-link" onClick={close}>
-            Complete your profile
+            {m.welcomeModal.completeProfile}
           </a>
         </div>
 
@@ -82,7 +84,7 @@ export function WelcomeModal({
           disabled={isPending}
           style={{ marginTop: 12, width: "100%", textAlign: "center" }}
         >
-          Skip — I&rsquo;ll explore on my own
+          {m.welcomeModal.skip}
         </button>
       </div>
     </div>

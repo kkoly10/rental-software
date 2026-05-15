@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getMessages } from "@/lib/i18n/server";
 
 export type CheckoutPricing = {
   basePrice: number;
@@ -9,7 +10,7 @@ export type CheckoutPricing = {
   deposit: number | null;
 };
 
-export function CheckoutSummaryCard({
+export async function CheckoutSummaryCard({
   productName,
   pricing,
   stripeEnabled,
@@ -20,14 +21,15 @@ export function CheckoutSummaryCard({
   stripeEnabled?: boolean;
   cancellationPolicy?: string;
 }) {
+  const m = await getMessages();
   const hasPricing = pricing && pricing.subtotal > 0;
   const hasAdjustments = pricing && pricing.adjustments.length > 0;
 
   return (
     <aside className="panel storefront-summary-card">
-      <div className="kicker">Reservation summary</div>
+      <div className="kicker">{m.checkoutSummary.kicker}</div>
       <h2 style={{ margin: "8px 0 10px" }}>
-        {productName ?? "Your rental reservation"}
+        {productName ?? m.checkoutSummary.defaultTitle}
       </h2>
 
       {hasPricing ? (
@@ -36,7 +38,7 @@ export function CheckoutSummaryCard({
             <div style={{ display: "grid", gap: 8 }}>
               {hasAdjustments && (
                 <div className="order-row">
-                  <span className="muted">Base price</span>
+                  <span className="muted">{m.checkoutSummary.basePrice}</span>
                   <span>${pricing.basePrice.toFixed(2)}</span>
                 </div>
               )}
@@ -58,16 +60,16 @@ export function CheckoutSummaryCard({
                   </div>
                 ))}
               <div className="order-row">
-                <span className="muted">{hasAdjustments ? "Adjusted subtotal" : "Subtotal"}</span>
+                <span className="muted">{hasAdjustments ? m.checkoutSummary.adjustedSubtotal : m.checkoutSummary.subtotal}</span>
                 <span>${pricing.subtotal.toFixed(2)}</span>
               </div>
               <div className="order-row">
-                <span className="muted">Delivery fee</span>
+                <span className="muted">{m.checkoutSummary.deliveryFee}</span>
                 <span>
                   {pricing.deliveryFee === null
-                    ? "TBD"
+                    ? m.checkoutSummary.deliveryTBD
                     : pricing.deliveryFee === 0
-                      ? "Free"
+                      ? m.checkoutSummary.deliveryFree
                       : `$${pricing.deliveryFee.toFixed(2)}`}
                 </span>
               </div>
@@ -76,14 +78,14 @@ export function CheckoutSummaryCard({
                   className="order-row"
                   style={{ borderTop: "1px solid var(--border)", paddingTop: 8 }}
                 >
-                  <strong>Total</strong>
+                  <strong>{m.checkoutSummary.total}</strong>
                   <strong>${pricing.total.toFixed(2)}</strong>
                 </div>
               )}
               {pricing.deposit !== null && pricing.deposit > 0 && (
                 <div className="order-row">
                   <span style={{ color: "var(--primary)", fontWeight: 600 }}>
-                    Deposit due
+                    {m.checkoutSummary.depositDue}
                   </span>
                   <span style={{ color: "var(--primary)", fontWeight: 600 }}>
                     ${pricing.deposit.toFixed(2)}
@@ -96,29 +98,29 @@ export function CheckoutSummaryCard({
       ) : (
         <div className="muted" style={{ marginTop: 8 }}>
           {productName
-            ? "Enter a delivery ZIP code to see your total with delivery fee."
-            : "Select a product to see pricing."}
+            ? m.checkoutSummary.enterZipMessage
+            : m.checkoutSummary.selectProductMessage}
         </div>
       )}
 
       <div className="list" style={{ marginTop: 16 }}>
         <div className="order-card">
-          <strong>What happens next</strong>
+          <strong>{m.checkoutSummary.whatHappensNext}</strong>
           <div className="muted" style={{ marginTop: 6 }}>
             {stripeEnabled
-              ? "After placing your booking, you'll be directed to our secure payment page to pay the deposit."
-              : "After submission, we confirm availability and send agreement details. The operator will contact you about payment."}
+              ? m.checkoutSummary.nextStripeBody
+              : m.checkoutSummary.nextNoStripeBody}
           </div>
         </div>
         <div className="order-card">
-          <strong>Delivery and setup</strong>
+          <strong>{m.checkoutSummary.deliverySetup}</strong>
           <div className="muted" style={{ marginTop: 6 }}>
-            We deliver, set up, review safety basics, and return for pickup.
+            {m.checkoutSummary.deliverySetupBody}
           </div>
         </div>
         {cancellationPolicy && (
           <div className="order-card">
-            <strong>Cancellation policy</strong>
+            <strong>{m.checkoutSummary.cancellationPolicy}</strong>
             <div className="muted" style={{ marginTop: 6 }}>
               {cancellationPolicy}
             </div>
@@ -128,7 +130,7 @@ export function CheckoutSummaryCard({
 
       <div style={{ marginTop: 18 }}>
         <Link href="/inventory" className="secondary-btn">
-          Back to catalog
+          {m.checkoutSummary.backToCatalog}
         </Link>
       </div>
     </aside>

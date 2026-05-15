@@ -1,6 +1,7 @@
 "use client";
 
 import type { RouteStopEnhanced } from "@/lib/types";
+import { useI18n } from "@/lib/i18n/provider";
 
 type Props = {
   stops: RouteStopEnhanced[];
@@ -24,6 +25,7 @@ function statusTone(status: string): string {
 }
 
 export function RouteTimeline({ stops }: Props) {
+  const { messages: m } = useI18n();
   const sorted = [...stops].sort((a, b) => a.sequence - b.sequence);
   const activeIndex = sorted.findIndex(
     (s) => s.status === "in_progress" || s.status === "en_route"
@@ -74,7 +76,7 @@ export function RouteTimeline({ stops }: Props) {
                 )}
                 <div className="route-stop-meta">
                   <span className="route-stop-type">
-                    {stop.type === "pickup" ? "Pickup" : "Delivery"}
+                    {stop.type === "pickup" ? m.crew.pickup : m.crew.delivery}
                   </span>
                   {stop.scheduledTime && (
                     <span className="route-stop-time">{stop.scheduledTime}</span>

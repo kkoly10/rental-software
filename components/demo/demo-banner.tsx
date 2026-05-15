@@ -1,10 +1,13 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n/provider";
+
 /**
  * Sticky banner shown on demo storefront pages.
  * Drives visitors to sign up for their own storefront.
  */
 export function DemoBanner() {
+  const { messages: m } = useI18n();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app";
   const signupUrl = siteUrl
@@ -34,7 +37,7 @@ export function DemoBanner() {
       }}
     >
       <span>
-        This is a sample storefront powered by <strong>Korent</strong>.
+        {m.demoBanner.poweredBy} <strong>{m.common.appName}</strong>.
       </span>
       <a
         href={signupUrl}
@@ -50,7 +53,7 @@ export function DemoBanner() {
           whiteSpace: "nowrap",
         }}
       >
-        Create your own free storefront
+        {m.demoBanner.createOwn}
       </a>
     </div>
   );

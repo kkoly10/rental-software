@@ -7,7 +7,7 @@ import { RouteDetailTimeline } from "./route-detail-timeline";
 import { RouteStatusControls, StopStatusButton, RemoveStopButton } from "@/components/deliveries/route-controls";
 import { AddStopForm } from "@/components/deliveries/add-stop-form";
 import { getUnroutedOrdersForDate } from "@/lib/data/unrouted-orders";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function DeliveryDetailPage({
   params,
@@ -16,9 +16,9 @@ export default async function DeliveryDetailPage({
 }) {
   const { id } = await params;
   const route = await getRouteDetailEnhanced(id);
-  const [unroutedOrders, m] = await Promise.all([
+  const [unroutedOrders, { messages: m, t }] = await Promise.all([
     getUnroutedOrdersForDate(route.routeDateRaw),
-    getMessages(),
+    getTranslator(),
   ]);
 
   return (
@@ -38,29 +38,29 @@ export default async function DeliveryDetailPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Route overview</div>
+              <div className="kicker">{m.dashboard.deliveries.detail.kicker}</div>
               <h2 style={{ margin: "6px 0 0" }}>{route.name}</h2>
             </div>
           </div>
 
           <div className="list">
             <div className="order-card">
-              <strong>Date</strong>
+              <strong>{m.dashboard.deliveries.detail.labels.date}</strong>
               <div className="muted">{route.routeDate}</div>
             </div>
 
             <div className="order-card">
-              <strong>Assigned crew</strong>
+              <strong>{m.dashboard.deliveries.detail.labels.assignedCrew}</strong>
               <div className="muted">{route.crewLabel}</div>
             </div>
 
             <div className="order-card">
-              <strong>Vehicle</strong>
+              <strong>{m.dashboard.deliveries.detail.labels.vehicle}</strong>
               <div className="muted">{route.vehicleLabel}</div>
             </div>
 
             <div className="order-card">
-              <strong>Status</strong>
+              <strong>{m.dashboard.deliveries.detail.labels.status}</strong>
               <div className="muted" style={{ marginBottom: 10 }}>
                 {route.routeStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
               </div>
@@ -68,9 +68,9 @@ export default async function DeliveryDetailPage({
             </div>
 
             <div className="order-card">
-              <strong>Stops</strong>
+              <strong>{m.dashboard.deliveries.detail.labels.stops}</strong>
               <div className="muted">
-                {route.completedStops} of {route.totalStops} completed
+                {t(m.dashboard.deliveries.detail.completedOf, { done: route.completedStops, total: route.totalStops })}
               </div>
             </div>
           </div>
@@ -79,21 +79,21 @@ export default async function DeliveryDetailPage({
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Stop list</div>
-              <h2 style={{ margin: "6px 0 0" }}>Today&apos;s sequence</h2>
+              <div className="kicker">{m.dashboard.deliveries.detail.sectionStops}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.deliveries.detail.sectionSequence}</h2>
             </div>
           </div>
 
           <div className="list" style={{ marginTop: 12 }}>
             {route.stops.length === 0 ? (
-              <div className="muted" style={{ fontSize: 13 }}>No stops yet. Add orders below.</div>
+              <div className="muted" style={{ fontSize: 13 }}>{m.dashboard.deliveries.detail.noStops}</div>
             ) : (
               route.stops.map((stop) => (
                 <div key={stop.id} className="order-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                   <div>
-                    <strong>#{stop.sequence} {stop.customerName ?? "Stop"}</strong>
+                    <strong>#{stop.sequence} {stop.customerName ?? m.dashboard.deliveries.detail.stopFallback}</strong>
                     <div className="muted" style={{ fontSize: 13 }}>
-                      {stop.scheduledTime ?? "TBD"} · {stop.type === "pickup" ? "Pickup" : "Delivery"}
+                      {stop.scheduledTime ?? m.dashboard.deliveries.detail.tbd} · {stop.type === "pickup" ? m.crew.pickup : m.crew.delivery}
                     </div>
                     {stop.address && (
                       <div className="muted" style={{ fontSize: 12 }}>{stop.address}</div>
@@ -116,7 +116,7 @@ export default async function DeliveryDetailPage({
           </div>
 
           <div className="panel" style={{ marginTop: 16, background: "var(--primary-bg)" }}>
-            <div className="kicker">Add stop</div>
+            <div className="kicker">{m.dashboard.deliveries.detail.addStop}</div>
             <AddStopForm
               routeId={id}
               routeDate={route.routeDateRaw}
@@ -142,7 +142,7 @@ export default async function DeliveryDetailPage({
                   className="secondary-btn"
                   style={{ display: "inline-block" }}
                 >
-                  Open route in Google Maps
+                  {m.dashboard.deliveries.detail.openRouteInMaps}
                 </a>
               </div>
             );

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { sendReply, type ReplyActionState } from "@/lib/messages/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: ReplyActionState = { ok: false, message: "" };
 
@@ -17,6 +18,7 @@ export function ReplyForm({
   orderNumber: string | null;
 }) {
   const [state, action, pending] = useActionState(sendReply, initialState);
+  const { messages: m } = useI18n();
 
   return (
     <form action={action}>
@@ -27,7 +29,7 @@ export function ReplyForm({
 
       <textarea
         name="body"
-        placeholder="Type your reply..."
+        placeholder={m.forms.replyMessage.placeholder}
         required
         rows={4}
         style={{
@@ -64,12 +66,12 @@ export function ReplyForm({
         disabled={pending || !customerEmail}
         style={{ marginTop: 12 }}
       >
-        {pending ? "Sending..." : "Send Reply"}
+        {pending ? m.forms.replyMessage.sending : m.forms.replyMessage.send}
       </button>
 
       {!customerEmail && (
         <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-          No customer email available for this conversation.
+          {m.forms.replyMessage.noEmail}
         </div>
       )}
     </form>

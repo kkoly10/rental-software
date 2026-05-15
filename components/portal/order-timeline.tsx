@@ -1,13 +1,6 @@
 "use client";
 
-const STEPS = [
-  { key: "inquiry", label: "Inquiry" },
-  { key: "confirmed", label: "Confirmed" },
-  { key: "scheduled", label: "Scheduled" },
-  { key: "delivering", label: "Delivering" },
-  { key: "delivered", label: "Delivered" },
-  { key: "completed", label: "Completed" },
-];
+import { useI18n } from "@/lib/i18n/provider";
 
 const STATUS_MAP: Record<string, number> = {
   Inquiry: 0,
@@ -21,22 +14,32 @@ const STATUS_MAP: Record<string, number> = {
 };
 
 export function OrderTimeline({ currentStatus }: { currentStatus: string }) {
+  const { messages: m } = useI18n();
+  const STEPS = [
+    { key: "inquiry", label: m.orderTimeline.steps.inquiry },
+    { key: "confirmed", label: m.orderTimeline.steps.confirmed },
+    { key: "scheduled", label: m.orderTimeline.steps.scheduled },
+    { key: "delivering", label: m.orderTimeline.steps.delivering },
+    { key: "delivered", label: m.orderTimeline.steps.delivered },
+    { key: "completed", label: m.orderTimeline.steps.completed },
+  ];
+
   const isCancelled = currentStatus === "Cancelled";
   const currentIndex = STATUS_MAP[currentStatus] ?? -1;
 
   if (isCancelled) {
     return (
-      <div className="portal-timeline" role="progressbar" aria-label="Order cancelled">
+      <div className="portal-timeline" role="progressbar" aria-label={m.orderTimeline.cancelledLabel}>
         <div className="portal-timeline-cancelled">
           <span className="portal-timeline-cancel-icon" aria-hidden="true">&#10007;</span>
-          <span>This order has been cancelled</span>
+          <span>{m.orderTimeline.cancelledMessage}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="portal-timeline" role="progressbar" aria-label="Order progress">
+    <div className="portal-timeline" role="progressbar" aria-label={m.orderTimeline.progressLabel}>
       {STEPS.map((step, i) => {
         const isCompleted = i < currentIndex;
         const isCurrent = i === currentIndex;

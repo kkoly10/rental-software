@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { getArticleBySlug } from "@/lib/help/articles";
+import { getMessages } from "@/lib/i18n/server";
 
-export function HelpArticleView({ slug }: { slug: string }) {
+export async function HelpArticleView({ slug }: { slug: string }) {
+  const m = await getMessages();
   const article = getArticleBySlug(slug);
 
   if (!article) {
     return (
       <div className="panel" style={{ textAlign: "center", padding: 32 }}>
-        <h2>Article not found</h2>
-        <div className="muted">This help article doesn&rsquo;t exist.</div>
+        <h2>{m.helpArticle.notFound}</h2>
+        <div className="muted">{m.helpArticle.notFoundBody}</div>
         <Link href="/dashboard/help" className="primary-btn" style={{ marginTop: 16, display: "inline-flex" }}>
-          Back to Help Center
+          {m.helpArticle.backToHelp}
         </Link>
       </div>
     );
@@ -50,7 +52,7 @@ export function HelpArticleView({ slug }: { slug: string }) {
   return (
     <div>
       <Link href="/dashboard/help" className="ghost-btn" style={{ marginBottom: 12, display: "inline-flex", fontSize: 13 }}>
-        &larr; Back to Help Center
+        &larr; {m.helpArticle.backToHelp}
       </Link>
 
       <div className="panel">
@@ -64,7 +66,7 @@ export function HelpArticleView({ slug }: { slug: string }) {
 
       {article.related.length > 0 && (
         <div style={{ marginTop: 18 }}>
-          <h3 style={{ margin: "0 0 10px", fontSize: "1rem" }}>Related articles</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: "1rem" }}>{m.helpArticle.relatedArticles}</h3>
           <div className="list">
             {article.related.map((relSlug) => {
               const rel = getArticleBySlug(relSlug);

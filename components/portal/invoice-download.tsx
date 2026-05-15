@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import type { PortalOrder } from "@/lib/portal/lookup";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function InvoiceDownload({ order }: { order: PortalOrder }) {
   const [generating, setGenerating] = useState(false);
+  const { messages: m } = useI18n();
 
   async function handleDownload() {
     setGenerating(true);
@@ -108,7 +110,7 @@ export function InvoiceDownload({ order }: { order: PortalOrder }) {
       onClick={handleDownload}
       disabled={generating}
     >
-      {generating ? "Generating..." : "Download Invoice"}
+      {generating ? m.portal.invoice.generating : m.portal.invoice.download}
     </button>
   );
 }

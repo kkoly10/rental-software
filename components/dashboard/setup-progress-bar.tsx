@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function SetupProgressBar({
   completed,
@@ -11,6 +12,7 @@ export function SetupProgressBar({
   total: number;
   allDone: boolean;
 }) {
+  const { messages: m, t } = useI18n();
   const [dismissed, setDismissed] = useState(false);
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -32,9 +34,9 @@ export function SetupProgressBar({
         }}
       >
         <div>
-          <strong style={{ fontSize: 16 }}>Setup Complete!</strong>
+          <strong style={{ fontSize: 16 }}>{m.setupProgress.completeTitle}</strong>
           <div style={{ fontSize: 14, opacity: 0.9, marginTop: 4 }}>
-            Your rental business is fully configured and ready for customers.
+            {m.setupProgress.completeBody}
           </div>
         </div>
         <button
@@ -52,7 +54,7 @@ export function SetupProgressBar({
             whiteSpace: "nowrap",
           }}
         >
-          Dismiss
+          {m.setupProgress.dismiss}
         </button>
       </div>
     );
@@ -61,9 +63,9 @@ export function SetupProgressBar({
   return (
     <div className="panel" style={{ padding: "16px 20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <strong style={{ fontSize: 14 }}>Setup progress</strong>
+        <strong style={{ fontSize: 14 }}>{m.setupProgress.title}</strong>
         <span style={{ fontSize: 13, color: "var(--text-soft)" }}>
-          {completed}/{total} steps · {percent}%
+          {t(m.setupProgress.counter, { completed, total, percent })}
         </span>
       </div>
       <div

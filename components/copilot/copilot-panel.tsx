@@ -7,13 +7,14 @@ import { CopilotSuggestedPrompts } from "./copilot-suggested-prompts";
 import { CopilotActionPreview } from "./copilot-action-preview";
 import { getSuggestedPrompts } from "@/lib/copilot/suggested-prompts";
 import type { CopilotAction } from "@/lib/copilot/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
   }
 
-  return "Something went wrong. Please try again.";
+  return fallback;
 }
 
 /**
@@ -62,6 +63,7 @@ export function CopilotPanel({
   currentRoute: string;
   onClose: () => void;
 }) {
+  const { messages: i18n } = useI18n();
   const [messages, setMessages] = useState<CopilotMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
@@ -100,10 +102,10 @@ export function CopilotPanel({
       throw new Error(
         typeof data?.message === "string"
           ? data.message
-          : "Failed to apply changes."
+          : i18n.copilot.failedToApply
       );
     }
-  }, []);
+  }, [i18n.copilot.failedToApply]);
 
   const handleDismissAction = useCallback((messageIndex: number) => {
     setPendingActions((prev) =>
@@ -133,14 +135,14 @@ export function CopilotPanel({
           throw new Error(
             typeof data?.error === "string"
               ? data.error
-              : "Copilot could not process your request."
+              : i18n.copilot.couldNotProcess
           );
         }
 
         const rawContent =
           typeof data?.response === "string"
             ? data.response
-            : "Sorry, I couldn't process that request.";
+            : i18n.copilot.sorryNoProcess;
 
         const { text, action } = parseActionFromResponse(rawContent);
 
@@ -164,23 +166,23 @@ export function CopilotPanel({
           ...prev,
           {
             role: "assistant",
-            content: getErrorMessage(error),
+            content: getErrorMessage(error, i18n.copilot.genericError),
           },
         ]);
       } finally {
         setLoading(false);
       }
     },
-    [currentRoute]
+    [currentRoute, i18n.copilot.genericError, i18n.copilot.couldNotProcess, i18n.copilot.sorryNoProcess]
   );
 
   return (
     <div className="copilot-panel">
       <div className="copilot-panel-header">
         <div>
-          <strong style={{ fontSize: 14 }}>Operator Copilot</strong>
+          <strong style={{ fontSize: 14 }}>{i18n.copilot.title}</strong>
           <div className="muted" style={{ fontSize: 12 }}>
-            AI-powered assistant
+            {i18n.copilot.subtitle}
           </div>
         </div>
         <button
@@ -215,7 +217,7 @@ export function CopilotPanel({
           className="muted"
           style={{ textAlign: "center", padding: "6px 0", fontSize: 12 }}
         >
-          Thinking...
+          {i18n.copilot.thinking}
         </div>
       )}
     </div>

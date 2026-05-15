@@ -3,18 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CalendarEvent } from "@/lib/data/calendar";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 type Props = {
   year: number;
   month: number;
   events: CalendarEvent[];
 };
-
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -24,8 +20,24 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
+function getDayNames(locale: string): string[] {
+  // Sunday-first
+  const base = new Date(2024, 0, 7); // 2024-01-07 is a Sunday
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    return d.toLocaleDateString(locale, { weekday: "short" });
+  });
+}
+
+function getMonthName(locale: string, monthOneBased: number): string {
+  const d = new Date(2024, monthOneBased - 1, 1);
+  return d.toLocaleDateString(locale, { month: "long" });
+}
+
 export function MonthGrid({ year, month, events }: Props) {
   const router = useRouter();
+  const { locale, messages: m } = useI18n();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfWeek(year, month);
   const today = new Date();
@@ -67,17 +79,17 @@ export function MonthGrid({ year, month, events }: Props) {
           className="ghost-btn"
           onClick={() => nav(prevMonth.y, prevMonth.m)}
         >
-          &larr; Prev
+          &larr; {m.common.back}
         </button>
         <h2 style={{ margin: 0 }}>
-          {MONTH_NAMES[month - 1]} {year}
+          {getMonthName(locale, month)} {year}
         </h2>
         <button
           type="button"
           className="ghost-btn"
           onClick={() => nav(nextMonth.y, nextMonth.m)}
         >
-          Next &rarr;
+          {m.common.next} &rarr;
         </button>
       </div>
 
@@ -91,7 +103,7 @@ export function MonthGrid({ year, month, events }: Props) {
           overflow: "hidden",
         }}
       >
-        {DAY_NAMES.map((d) => (
+        {getDayNames(locale).map((d) => (
           <div
             key={d}
             style={{
@@ -187,7 +199,7 @@ export function MonthGrid({ year, month, events }: Props) {
                         paddingLeft: 5,
                       }}
                     >
-                      +{dayEvents.length - 3} more
+                      {formatMessage(m.calendar.moreEvents, { count: dayEvents.length - 3 })}
                     </div>
                   )}
                 </>

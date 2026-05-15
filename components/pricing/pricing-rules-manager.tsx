@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { savePricingRules } from "@/lib/pricing/actions";
 import type { PricingRule } from "@/lib/pricing/types";
 import { PricingRuleForm } from "./pricing-rule-form";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
@@ -12,6 +13,7 @@ export function PricingRulesManager({
 }: {
   initialRules: PricingRule[];
 }) {
+  const { messages: m } = useI18n();
   const [rules, setRules] = useState<PricingRule[]>(initialRules);
   const [state, formAction, pending] = useActionState(savePricingRules, initialState);
 
@@ -42,11 +44,11 @@ export function PricingRulesManager({
     <section className="panel">
       <div className="section-header">
         <div>
-          <div className="kicker">Configuration</div>
-          <h2 className="page-title-sm">Pricing Rules</h2>
+          <div className="kicker">{m.pricingRulesManager.kicker}</div>
+          <h2 className="page-title-sm">{m.pricingRulesManager.title}</h2>
         </div>
         <button type="button" className="primary-btn" onClick={addRule}>
-          + Add Rule
+          {m.pricingRulesManager.addRule}
         </button>
       </div>
 
@@ -55,14 +57,14 @@ export function PricingRulesManager({
 
         {rules.length === 0 ? (
           <div className="muted" style={{ padding: 20, textAlign: "center" }}>
-            No pricing rules yet. Click &quot;+ Add Rule&quot; to create one.
+            {m.pricingRulesManager.noRules}
           </div>
         ) : (
           <div className="list">
             {rules.map((rule, index) => (
               <div key={rule.id} className="pricing-rule-card">
                 <div className="pricing-rule-card-header" style={{ flexWrap: "wrap", gap: 8 }}>
-                  <strong>{rule.name || "Untitled Rule"}</strong>
+                  <strong>{rule.name || m.pricingRulesManager.untitledRule}</strong>
                   <span
                     className={
                       rule.adjustment >= 0
@@ -95,7 +97,7 @@ export function PricingRulesManager({
 
         <div className="action-row-end">
           <button className="primary-btn" type="submit" disabled={pending}>
-            {pending ? "Saving..." : "Save All Rules"}
+            {pending ? m.pricingRulesManager.saving : m.pricingRulesManager.saveAll}
           </button>
         </div>
       </form>

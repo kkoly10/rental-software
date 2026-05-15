@@ -1,34 +1,36 @@
-const painPoints = [
-  {
-    before: "Phone tag with customers",
-    after: "Customers book online 24/7",
-  },
-  {
-    before: "Spreadsheets to track bookings",
-    after: "One dashboard for orders, payments, and delivery",
-  },
-  {
-    before: "Double-bookings and missed dates",
-    after: "Real-time availability prevents conflicts",
-  },
-  {
-    before: "Chasing deposits via text",
-    after: "Automatic invoices and payment tracking",
-  },
-];
+import { getMessages } from "@/lib/i18n/server";
 
-export function PainSection() {
+export async function PainSection() {
+  const m = await getMessages();
+  const painPoints = [
+    {
+      before: m.painSection.points.phoneBefore,
+      after: m.painSection.points.phoneAfter,
+    },
+    {
+      before: m.painSection.points.spreadsheetBefore,
+      after: m.painSection.points.spreadsheetAfter,
+    },
+    {
+      before: m.painSection.points.doubleBookBefore,
+      after: m.painSection.points.doubleBookAfter,
+    },
+    {
+      before: m.painSection.points.depositBefore,
+      after: m.painSection.points.depositAfter,
+    },
+  ];
+
   return (
     <section className="section pain-section">
       <div className="container">
         <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 32px" }}>
-          <div className="kicker">Sound familiar?</div>
+          <div className="kicker">{m.painSection.kicker}</div>
           <h2 style={{ margin: "8px 0 12px" }}>
-            Still running your rental business from a spreadsheet?
+            {m.painSection.title}
           </h2>
           <p className="muted" style={{ fontSize: "1.05rem" }}>
-            You started this business to make events amazing — not to drown in
-            admin. Here&apos;s what changes when you switch.
+            {m.painSection.description}
           </p>
         </div>
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { dismissHelpBanner } from "@/lib/guidance/actions";
 import type { PageHelpConfig } from "@/lib/help/page-help";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function ContextHelpBanner({
   config,
@@ -14,6 +15,7 @@ export function ContextHelpBanner({
 }) {
   const [hidden, setHidden] = useState(initialDismissed);
   const [, startTransition] = useTransition();
+  const { messages: m } = useI18n();
 
   if (hidden) return null;
 
@@ -50,7 +52,7 @@ export function ContextHelpBanner({
         onClick={handleDismiss}
         className="ghost-btn"
         style={{ padding: "4px 10px", fontSize: 18, lineHeight: 1, alignSelf: "flex-start" }}
-        aria-label="Dismiss"
+        aria-label={m.common.dismiss}
       >
         &times;
       </button>

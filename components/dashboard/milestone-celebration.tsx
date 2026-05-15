@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 type MilestoneKey =
   | "first_product"
@@ -10,38 +11,16 @@ type MilestoneKey =
   | "setup_complete"
   | "ten_orders";
 
-const MILESTONE_CONFIG: Record<
+const MILESTONE_KEY_MAP: Record<
   MilestoneKey,
-  { title: string; description: string }
+  "firstProduct" | "firstOrder" | "firstPayment" | "firstDelivery" | "setupComplete" | "tenOrders"
 > = {
-  first_product: {
-    title: "First product added!",
-    description: "Your rental catalog is live. Customers can now browse it.",
-  },
-  first_order: {
-    title: "First order received!",
-    description:
-      "Your first booking is in. This is a big deal — you're officially open for business.",
-  },
-  first_payment: {
-    title: "First payment recorded!",
-    description: "Money is flowing. Your invoicing workflow is up and running.",
-  },
-  first_delivery: {
-    title: "First delivery scheduled!",
-    description:
-      "Your crew has a route. Delivery day logistics are dialed in.",
-  },
-  setup_complete: {
-    title: "Setup complete!",
-    description:
-      "You've finished every step. Your storefront is fully operational.",
-  },
-  ten_orders: {
-    title: "10 orders milestone!",
-    description:
-      "Double digits! Your rental business is building real momentum.",
-  },
+  first_product: "firstProduct",
+  first_order: "firstOrder",
+  first_payment: "firstPayment",
+  first_delivery: "firstDelivery",
+  setup_complete: "setupComplete",
+  ten_orders: "tenOrders",
 };
 
 export function MilestoneCelebration({
@@ -51,7 +30,9 @@ export function MilestoneCelebration({
 }) {
   const [visible, setVisible] = useState(true);
   const [exiting, setExiting] = useState(false);
-  const config = MILESTONE_CONFIG[milestoneKey];
+  const { messages: m } = useI18n();
+  const mappedKey = MILESTONE_KEY_MAP[milestoneKey];
+  const config = mappedKey ? m.milestones[mappedKey] : null;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -101,7 +82,7 @@ export function MilestoneCelebration({
       <button
         onClick={handleDismiss}
         className="milestone-close"
-        aria-label="Dismiss"
+        aria-label={m.common.dismiss}
       >
         &times;
       </button>

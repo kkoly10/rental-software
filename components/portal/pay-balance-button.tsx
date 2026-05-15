@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect } from "react";
 import { createBalancePaymentSession, type PayBalanceState } from "@/lib/portal/pay-balance";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const initial: PayBalanceState = { ok: false, message: "" };
 
@@ -14,6 +16,7 @@ export function PayBalanceButton({
 }) {
   const balance = parseFloat(balanceDue.replace(/[^0-9.]/g, ""));
   const [state, action, pending] = useActionState(createBalancePaymentSession, initial);
+  const { messages: m } = useI18n();
 
   useEffect(() => {
     if (state.ok && state.stripeUrl?.startsWith("https://checkout.stripe.com/")) {
@@ -33,7 +36,9 @@ export function PayBalanceButton({
           disabled={pending}
           style={{ fontWeight: 600 }}
         >
-          {pending ? "Preparing payment…" : `Pay balance ${balanceDue}`}
+          {pending
+            ? m.portal.payBalance.preparing
+            : formatMessage(m.portal.payBalance.payBalance, { amount: balanceDue })}
         </button>
       </form>
       {state.message && !state.ok && (
