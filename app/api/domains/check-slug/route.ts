@@ -8,12 +8,17 @@ export async function GET(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
     "unknown";
-  const { allowed } = await enforceRateLimit({
-    scope: "api:domains:check-slug:ip",
-    actor: clientIp,
-    limit: 20,
-    windowSeconds: 900,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:domains:check-slug:ip",
+      actor: clientIp,
+      limit: 20,
+      windowSeconds: 900,
+    }));
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
 
   if (!allowed) {
     return NextResponse.json(

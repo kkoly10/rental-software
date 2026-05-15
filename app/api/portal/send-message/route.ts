@@ -46,22 +46,27 @@ export async function POST(request: NextRequest) {
   }
 
   const clientIp = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
-  const [ipLimit, tokenLimit] = await Promise.all([
-    enforceRateLimit({
-      scope: "api:portal:send-message:ip",
-      actor: clientIp,
-      limit: 5,
-      windowSeconds: 600,
-      strict: true,
-    }),
-    enforceRateLimit({
-      scope: "api:portal:send-message:token",
-      actor: hashPortalAccessToken(portalToken),
-      limit: 3,
-      windowSeconds: 600,
-      strict: true,
-    }),
-  ]);
+  let ipLimit: { allowed: boolean }, tokenLimit: { allowed: boolean };
+  try {
+    [ipLimit, tokenLimit] = await Promise.all([
+      enforceRateLimit({
+        scope: "api:portal:send-message:ip",
+        actor: clientIp,
+        limit: 5,
+        windowSeconds: 600,
+        strict: true,
+      }),
+      enforceRateLimit({
+        scope: "api:portal:send-message:token",
+        actor: hashPortalAccessToken(portalToken),
+        limit: 3,
+        windowSeconds: 600,
+        strict: true,
+      }),
+    ]);
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
 
   if (!ipLimit.allowed || !tokenLimit.allowed) {
     return NextResponse.json(
@@ -107,6 +112,8 @@ export async function POST(request: NextRequest) {
     .from("customers")
     .select("email")
     .eq("id", order.customer_id)
+    .eq("organization_id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const senderEmail = customer?.email;
@@ -118,6 +125,7 @@ export async function POST(request: NextRequest) {
     .from("organizations")
     .select("name, support_email")
     .eq("id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const supportEmail = org?.support_email;
