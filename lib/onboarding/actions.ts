@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { generateSlug, isSlugAvailable, isValidSlugFormat, getAppDomain } from "@/lib/auth/resolve-org";
+import { escapeHtml } from "@/lib/maps/escape-html";
 
 export type OnboardingActionState = {
   ok: boolean;
@@ -164,6 +165,7 @@ export async function completeOnboarding(
 }
 
 function welcomeEmailHtml(businessName: string, storefrontUrl: string, dashboardUrl: string): string {
+  const safeName = escapeHtml(businessName);
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -178,7 +180,7 @@ function welcomeEmailHtml(businessName: string, storefrontUrl: string, dashboard
         </tr>
         <tr>
           <td style="padding:32px;">
-            <h1 style="margin:0 0 16px;font-size:22px;color:#10233f;">Welcome aboard, ${businessName}!</h1>
+            <h1 style="margin:0 0 16px;font-size:22px;color:#10233f;">Welcome aboard, ${safeName}!</h1>
             <p style="color:#55708f;font-size:15px;">Your rental site is live and ready for customers. Here's how to get started:</p>
 
             <div style="margin:24px 0;padding:20px;background:#f4f7fb;border-radius:12px;">

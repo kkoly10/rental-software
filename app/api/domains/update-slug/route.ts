@@ -80,7 +80,11 @@ export async function POST(request: NextRequest) {
     .eq("id", ctx.organizationId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[update-slug] DB update failed:", error.message);
+    const message = error.code === "23505"
+      ? "That subdomain is already taken. Please choose a different one."
+      : "Unable to update subdomain. Please try again.";
+    return NextResponse.json({ error: message }, { status: error.code === "23505" ? 409 : 500 });
   }
 
   revalidatePath("/dashboard/website");
