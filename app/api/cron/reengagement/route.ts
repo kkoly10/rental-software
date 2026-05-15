@@ -280,7 +280,8 @@ export async function GET(request: NextRequest) {
           });
         } catch { /* non-critical */ }
       }
-    } catch {
+    } catch (err) {
+      console.error(`[reengagement] day3 nudge failed for org ${org.id}:`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
@@ -339,7 +340,8 @@ export async function GET(request: NextRequest) {
           });
         } catch { /* non-critical */ }
       }
-    } catch {
+    } catch (err) {
+      console.error(`[reengagement] day7 nudge failed for org ${org.id}:`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
