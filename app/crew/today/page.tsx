@@ -6,10 +6,11 @@ import { ProofPhotoUpload } from "@/components/crew/proof-photo-upload";
 import { SignaturePad } from "@/components/crew/signature-pad";
 import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function CrewTodayPage() {
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-  const routes = await getRoutes(today);
+  const [routes, m] = await Promise.all([getRoutes(today), getMessages()]);
   const activeRoute = routes.find((r) => r.status === "in_progress") ?? routes[0];
   const [routeDetail, stops] = activeRoute
     ? await Promise.all([getRouteDetail(activeRoute.id), getRouteStops(activeRoute.id)])
@@ -21,28 +22,28 @@ export default async function CrewTodayPage() {
         <div className="mobile-frame">
           <div className="mobile-screen">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div className="kicker">Crew mobile</div>
+              <div className="kicker">{m.crew.kicker}</div>
               <Link href="/dashboard/deliveries" style={{ fontSize: 12, color: "var(--primary)" }}>
-                Dashboard
+                {m.crew.dashboard}
               </Link>
             </div>
             <h1 style={{ margin: "6px 0 12px", fontSize: "1.6rem" }}>
-              {routeDetail?.name ?? "Today's Stops"}
+              {routeDetail?.name ?? m.crew.todayStops}
             </h1>
 
             {routeDetail ? (
               <>
                 <div className="list">
                   <div className="mobile-card">
-                    <strong>Vehicle</strong>
+                    <strong>{m.crew.vehicle}</strong>
                     <div className="muted">{routeDetail.vehicleLabel}</div>
                   </div>
                   <div className="mobile-card">
-                    <strong>Crew</strong>
+                    <strong>{m.crew.crew}</strong>
                     <div className="muted">{routeDetail.crewLabel}</div>
                   </div>
                   <div className="mobile-card">
-                    <strong>Summary</strong>
+                    <strong>{m.crew.summary}</strong>
                     <div className="muted">{routeDetail.summaryLabel}</div>
                   </div>
                 </div>
@@ -53,14 +54,14 @@ export default async function CrewTodayPage() {
                   </div>
                 )}
 
-                <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>Stop sequence</h2>
+                <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>{m.crew.stopSequence}</h2>
                 <div className="list">
                   {stops.map((stop) => (
                     <div key={stop.id} className="mobile-card">
                       <div className="order-row">
                         <div>
                           <strong>{stop.sequence}. {stop.label}</strong>
-                          <div className="muted">{stop.time} · {stop.type}</div>
+                          <div className="muted">{stop.time} · {stop.type === "pickup" ? m.crew.pickup : m.crew.delivery}</div>
                           {stop.productName && (
                             <div className="muted" style={{ fontSize: 12 }}>{stop.productName}</div>
                           )}
@@ -83,7 +84,7 @@ export default async function CrewTodayPage() {
                             <SignaturePad stopId={stop.id} />
                           ) : (
                             <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-soft)" }}>
-                              <span className="badge success" style={{ fontSize: 11, marginRight: 6 }}>Signed</span>
+                              <span className="badge success" style={{ fontSize: 11, marginRight: 6 }}>{m.crew.signed}</span>
                               {stop.signatureName}
                             </div>
                           )}
@@ -96,9 +97,9 @@ export default async function CrewTodayPage() {
             ) : (
               <div className="list">
                 <div className="mobile-card" style={{ textAlign: "center", padding: 24 }}>
-                  <strong>No routes today</strong>
+                  <strong>{m.crew.noRoutesToday}</strong>
                   <div className="muted" style={{ marginTop: 8 }}>
-                    Routes will appear here when deliveries are scheduled.
+                    {m.crew.noRoutesTodayBody}
                   </div>
                 </div>
               </div>
@@ -106,12 +107,12 @@ export default async function CrewTodayPage() {
 
             {routes.length > 1 && (
               <>
-                <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>Other routes</h2>
+                <h2 style={{ fontSize: "1.1rem", margin: "18px 0 10px" }}>{m.crew.otherRoutes}</h2>
                 <div className="list">
                   {routes.filter((r) => r.id !== activeRoute?.id).map((route) => (
                     <div key={route.id} className="mobile-card">
                       <strong>{route.name}</strong>
-                      <div className="muted">{route.date} · {route.stops} stops · {route.status}</div>
+                      <div className="muted">{route.date} · {route.stops} {m.crew.stops} · {route.status}</div>
                     </div>
                   ))}
                 </div>
