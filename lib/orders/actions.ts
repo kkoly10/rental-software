@@ -625,7 +625,7 @@ export async function updateOrderStatus(
     const { sendSmsNotification } = await import("@/lib/sms/send-notification");
     const { data: order } = await supabase
       .from("orders")
-      .select("order_number, event_date, customer_id")
+      .select("order_number, event_date, customer_id, deposit_due_amount")
       .eq("id", parsed.data.orderId)
       .eq("organization_id", ctx.organizationId)
       .maybeSingle();
@@ -651,7 +651,7 @@ export async function updateOrderStatus(
         if (status === "awaiting_deposit") {
           await sendSmsNotification("depositReminder", customer.phone, {
             orderNumber: order.order_number,
-            amount: "your deposit",
+            amount: Number(order.deposit_due_amount ?? 0).toFixed(2),
             businessName,
           }, ctx.organizationId, smsContext);
         } else if (status === "confirmed") {

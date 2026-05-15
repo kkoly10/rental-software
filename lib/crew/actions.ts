@@ -68,16 +68,18 @@ export async function updateStopStatus(
         .eq("id", stop.route_id);
     }
 
-    // Sync order status when a delivery stop (not pickup) is completed
+    // Sync order status when a delivery stop (not pickup) is completed.
+    // Direct DB update rather than updateOrderStatus() to avoid operator-session
+    // auth checks and rate limiting; org isolation is already enforced above via
+    // the routes!inner join check.
     const stopOrderId = stop.order_id as string | null;
     if (stopOrderId && stop.stop_type === "delivery") {
-      try {
-        const { updateOrderStatus } = await import("@/lib/orders/actions");
-        await updateOrderStatus(stopOrderId, "out_for_delivery").catch(() => {});
-        await updateOrderStatus(stopOrderId, "delivered");
-      } catch {
-        // Non-fatal — stop is already marked complete
-      }
+      await supabase
+        .from("orders")
+        .update({ order_status: "delivered" })
+        .eq("id", stopOrderId)
+        .eq("organization_id", ctx.organizationId)
+        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
     }
 
     // Clear tracking token so the link can't be replayed after delivery
@@ -169,7 +171,7 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Choose a photo first." };
   }
 
-  const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+  const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const MAX_PHOTO_SIZE = 20 * 1024 * 1024; // 20 MB — allow large mobile photos
 
   if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {

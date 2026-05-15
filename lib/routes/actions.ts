@@ -258,16 +258,16 @@ export async function updateStopStatus(
 
   if (error) return { ok: false, message: error.message };
 
-  // Sync order status when a delivery stop (not pickup) is completed
+  // Sync order status when a delivery stop (not pickup) is completed.
+  // Direct DB update rather than updateOrderStatus() to avoid state-machine
+  // failures when the order skips the scheduled/out_for_delivery steps.
   if (resolvedOrderId && status === "completed" && stop.stop_type === "delivery") {
-    try {
-      const { updateOrderStatus } = await import("@/lib/orders/actions");
-      // Two-step: advance through out_for_delivery if needed, then to delivered
-      await updateOrderStatus(resolvedOrderId, "out_for_delivery").catch(() => {});
-      await updateOrderStatus(resolvedOrderId, "delivered");
-    } catch {
-      // Non-fatal — stop is already marked complete
-    }
+    await supabase
+      .from("orders")
+      .update({ order_status: "delivered" })
+      .eq("id", resolvedOrderId)
+      .eq("organization_id", ctx.organizationId)
+      .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
 
     // Clear tracking token so expired links can't be replayed
     await supabase

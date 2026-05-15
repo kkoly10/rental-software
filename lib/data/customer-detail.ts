@@ -43,7 +43,7 @@ export async function getCustomerDetail(
     .select(`
       id, first_name, last_name, email, phone, notes,
       customer_addresses(line1, line2, city, state, postal_code, is_default_delivery),
-      orders(id, order_number, order_status, total_amount, event_date)
+      orders(id, order_number, order_status, total_amount, event_date, deleted_at)
     `)
     .eq("id", customerId)
     .eq("organization_id", ctx.organizationId)
@@ -66,15 +66,16 @@ export async function getCustomerDetail(
       | null) ?? [];
 
   const orders =
-    ((data as Record<string, unknown>).orders as
+    (((data as Record<string, unknown>).orders as
       | {
           id: string;
           order_number: string;
           order_status: string;
           total_amount: number;
           event_date: string;
+          deleted_at: string | null;
         }[]
-      | null) ?? [];
+      | null) ?? []).filter((o) => !o.deleted_at);
 
   const defaultAddr =
     addresses.find((a) => a.is_default_delivery) ?? addresses[0];
