@@ -2,23 +2,27 @@
 
 import { useState } from "react";
 import { updateStopStatus } from "@/lib/crew/actions";
-
-const STATUS_FLOW: Record<string, { next: string; label: string }[]> = {
-  assigned: [{ next: "en_route", label: "En Route" }],
-  en_route: [{ next: "completed", label: "Mark Complete" }],
-  in_progress: [{ next: "completed", label: "Mark Complete" }],
-  completed: [],
-};
+import { useI18n } from "@/lib/i18n/provider";
 
 export function StopActionButtons({ stopId, currentStatus }: { stopId: string; currentStatus: string }) {
+  const { messages } = useI18n();
+  const t = messages.forms.crew.stopActions;
+
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState(currentStatus);
   const [error, setError] = useState<string | null>(null);
 
-  const actions = STATUS_FLOW[status] ?? [{ next: "completed", label: "Mark Complete" }];
+  const STATUS_FLOW: Record<string, { next: string; label: string }[]> = {
+    assigned: [{ next: "en_route", label: t.markEnRoute }],
+    en_route: [{ next: "completed", label: t.markCompleted }],
+    in_progress: [{ next: "completed", label: t.markCompleted }],
+    completed: [],
+  };
+
+  const actions = STATUS_FLOW[status] ?? [{ next: "completed", label: t.markCompleted }];
 
   if (actions.length === 0) {
-    return <span className="badge success" style={{ fontSize: 11 }}>Done</span>;
+    return <span className="badge success" style={{ fontSize: 11 }}>{t.done}</span>;
   }
 
   async function handleAction(nextStatus: string) {
@@ -28,7 +32,7 @@ export function StopActionButtons({ stopId, currentStatus }: { stopId: string; c
     if (result.ok) {
       setStatus(nextStatus);
     } else {
-      setError(result.message ?? "Failed to update stop status.");
+      setError(result.message ?? t.updateFailed);
     }
     setPending(false);
   }
@@ -44,7 +48,7 @@ export function StopActionButtons({ stopId, currentStatus }: { stopId: string; c
             onClick={() => handleAction(action.next)}
             disabled={pending}
           >
-            {pending ? "Updating..." : action.label}
+            {pending ? t.updating : action.label}
           </button>
         ))}
       </div>
