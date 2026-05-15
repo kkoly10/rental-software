@@ -126,7 +126,7 @@ export async function completeOnboarding(
       .maybeSingle();
 
     const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-    await supabase
+    const { error: tsError } = await supabase
       .from("organizations")
       .update({
         settings: {
@@ -135,6 +135,10 @@ export async function completeOnboarding(
         },
       })
       .eq("id", orgId);
+
+    if (tsError) {
+      console.error("[onboarding] Failed to record onboarding_completed_at:", tsError.message);
+    }
 
     const storefrontUrl = `https://${slugInput}.${getAppDomain()}`;
     const dashboardUrl = `https://${getAppDomain()}/dashboard`;

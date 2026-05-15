@@ -5,6 +5,10 @@ import { hasSupabaseEnv } from "@/lib/env";
  * Update a single setup_progress flag in the organization settings.
  * Called from product creation, service area creation, order creation, etc.
  * Non-blocking — never throws.
+ *
+ * Uses the mark_org_setup_step Postgres function for an atomic jsonb_set()
+ * update to avoid the read-modify-write lost-update race that would occur
+ * if two server actions set different flags simultaneously.
  */
 export async function markSetupStep(
   organizationId: string,
@@ -14,31 +18,10 @@ export async function markSetupStep(
 
   try {
     const supabase = await createSupabaseServerClient();
-
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("settings")
-      .eq("id", organizationId)
-      .maybeSingle();
-
-    const settings = (org?.settings as Record<string, unknown>) ?? {};
-    const progress = (settings.setup_progress as Record<string, unknown>) ?? {};
-
-    // Skip if already marked
-    if (progress[flag] === true) return;
-
-    await supabase
-      .from("organizations")
-      .update({
-        settings: {
-          ...settings,
-          setup_progress: {
-            ...progress,
-            [flag]: true,
-          },
-        },
-      })
-      .eq("id", organizationId);
+    await supabase.rpc("mark_org_setup_step", {
+      p_org_id: organizationId,
+      p_step: flag,
+    });
   } catch {
     // Non-blocking
   }
