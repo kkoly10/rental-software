@@ -9,6 +9,7 @@ import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { CsvImportButton } from "@/components/products/csv-import-button";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function ProductsPage({
   searchParams,
@@ -16,16 +17,17 @@ export default async function ProductsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [productsPage, guidanceState] = await Promise.all([
+  const [productsPage, guidanceState, m] = await Promise.all([
     getProductsPage({ query: params.q, page: params.page }),
     getGuidanceState(),
+    getMessages(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/products"];
 
   return (
     <DashboardShell
-      title="Products"
-      description="Manage public catalog items, pricing, categories, and rental readiness."
+      title={m.dashboard.products.title}
+      description={m.dashboard.products.description}
     >
       {helpConfig && (
         <ContextHelpBanner

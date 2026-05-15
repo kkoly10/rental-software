@@ -2,26 +2,28 @@
 
 import { useActionState } from "react";
 import { submitContactForm, type ContactState } from "@/lib/contact/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initial: ContactState = { ok: false, message: "" };
 
 export function ContactForm() {
+  const { messages: m } = useI18n();
   const [state, action, isPending] = useActionState(submitContactForm, initial);
 
   return (
     <form action={action} className="contact-form">
       <label className="storefront-field">
-        <span>Your Name</span>
+        <span>{m.contact.name}</span>
         <input name="name" type="text" required maxLength={100} />
       </label>
 
       <label className="storefront-field">
-        <span>Email Address</span>
+        <span>{m.contact.email}</span>
         <input name="email" type="email" required />
       </label>
 
       <label className="storefront-field">
-        <span>Message</span>
+        <span>{m.contact.message}</span>
         <textarea
           name="message"
           required
@@ -38,7 +40,7 @@ export function ContactForm() {
         disabled={isPending}
         style={{ width: "100%", minHeight: 48 }}
       >
-        {isPending ? "Sending..." : "Send Message"}
+        {isPending ? m.contact.sending : m.contact.submit}
       </button>
 
       {state.message && (

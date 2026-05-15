@@ -1,26 +1,16 @@
-const steps = [
-  {
-    title: "Choose Your Rentals",
-    description: "Browse available rentals and add-ons that fit your event.",
-  },
-  {
-    title: "Select Date, Time & Delivery Area",
-    description: "Enter your event date/time and ZIP code so we can confirm availability and delivery.",
-  },
-  {
-    title: "Reserve Online & Get Ready",
-    description: "Reserve in minutes, then our team delivers, sets up safely, and handles pickup after the event.",
-  },
-] as const;
+import { getMessages } from "@/lib/i18n/server";
 
-export function HowItWorks() {
+export async function HowItWorks() {
+  const m = await getMessages();
+  const steps = m.storefront.howItWorks.steps;
+
   return (
     <section className="section">
       <div className="container">
         <div className="section-header">
           <div>
-            <div className="kicker">How it works</div>
-            <h2>Fast booking without the guesswork</h2>
+            <div className="kicker">{m.storefront.howItWorks.kicker}</div>
+            <h2>{m.storefront.howItWorks.title}</h2>
           </div>
         </div>
 

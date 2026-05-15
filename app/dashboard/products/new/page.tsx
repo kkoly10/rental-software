@@ -2,19 +2,21 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ProductForm } from "@/components/products/product-form";
 import { getCategories } from "@/lib/data/products";
 import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function NewProductPage() {
-  const [categories, snapshot] = await Promise.all([
+  const [categories, snapshot, m] = await Promise.all([
     getCategories(),
     getGuidanceSnapshot(),
+    getMessages(),
   ]);
 
   const isFirstProduct = snapshot.productsCount === 0;
 
   return (
     <DashboardShell
-      title="Add Product"
-      description="Create a new rentable item for the public catalog and booking flow."
+      title={m.dashboard.newProduct.title}
+      description={m.dashboard.newProduct.description}
     >
       {isFirstProduct && (
         <div

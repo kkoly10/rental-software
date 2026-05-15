@@ -4,6 +4,7 @@ import { getCustomerDetail } from "@/lib/data/customer-detail";
 import { CommunicationList } from "@/components/communications/communication-list";
 import { getCustomerCommunications } from "@/lib/data/communication-history";
 import { EditCustomerForm } from "@/components/customers/edit-customer-form";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function CustomerDetailPage({
   params,
@@ -11,15 +12,16 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [customer, communications] = await Promise.all([
+  const [customer, communications, m] = await Promise.all([
     getCustomerDetail(id),
     getCustomerCommunications(id),
+    getMessages(),
   ]);
 
   return (
     <DashboardShell
-      title="Customer Detail"
-      description="View contact details, booking history, notes, and saved addresses."
+      title={m.dashboard.customerDetail.title}
+      description={m.dashboard.customerDetail.description}
     >
       <div className="dashboard-grid">
         <section className="panel">

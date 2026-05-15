@@ -5,18 +5,20 @@ import { getSubscriptionInfo } from "@/lib/stripe/subscription";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function BillingPage() {
-  const [subscription, guidanceState] = await Promise.all([
+  const [subscription, guidanceState, m] = await Promise.all([
     getSubscriptionInfo(),
     getGuidanceState(),
+    getMessages(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/settings"];
 
   return (
     <DashboardShell
-      title="Billing"
-      description="Manage your subscription plan and payment method."
+      title={m.dashboard.billing.title}
+      description={m.dashboard.billing.description}
     >
       {helpConfig && (
         <ContextHelpBanner

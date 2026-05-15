@@ -3,14 +3,15 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { HelpSearch } from "@/components/help/help-search";
 import { HelpArticleList } from "@/components/help/help-article-list";
 import { getGuidanceState } from "@/lib/guidance/actions";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function HelpCenterPage() {
-  const guidanceState = await getGuidanceState();
+  const [guidanceState, m] = await Promise.all([getGuidanceState(), getMessages()]);
 
   return (
     <DashboardShell
-      title="Help Center"
-      description="Guides, articles, and answers for running your rental business."
+      title={m.dashboard.help.title}
+      description={m.dashboard.help.description}
     >
       <div className="dashboard-grid">
         <div>

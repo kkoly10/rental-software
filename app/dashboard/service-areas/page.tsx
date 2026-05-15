@@ -3,17 +3,19 @@ import { getServiceAreaAdminRecords } from "@/lib/data/service-areas-admin";
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { ServiceAreaManager } from "@/components/service-areas/service-area-manager";
 import { ServiceAreaMapPanel } from "@/components/service-areas/service-area-map-panel";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function ServiceAreasPage() {
-  const [areas, geoAreas] = await Promise.all([
+  const [areas, geoAreas, m] = await Promise.all([
     getServiceAreaAdminRecords(),
     getServiceAreasGeo(),
+    getMessages(),
   ]);
 
   return (
     <DashboardShell
-      title="Service Areas"
-      description="Manage delivery coverage, ZIP rules, fees, and minimum order requirements."
+      title={m.dashboard.serviceAreas.title}
+      description={m.dashboard.serviceAreas.description}
     >
       <section className="panel">
         <div className="section-header">

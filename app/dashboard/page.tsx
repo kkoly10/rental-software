@@ -20,9 +20,10 @@ import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 import { getDomainSettings } from "@/lib/data/domain-settings";
 import { buildStorefrontUrl } from "@/lib/storefront/url";
 import { headers } from "next/headers";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function DashboardPage() {
-  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList] =
+  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList, { messages: m, t }] =
     await Promise.all([
       getDashboardSummary(),
       getGuidanceSnapshot(),
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
       getSubscriptionStatus(),
       getDomainSettings(),
       headers(),
+      getTranslator(),
     ]);
 
   const checklist = computeChecklist(snapshot);
@@ -45,8 +47,8 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell
-      title="Operator Dashboard"
-      description="Daily overview for bookings, deliveries, payments, and tasks."
+      title={m.dashboard.overview.title}
+      description={m.dashboard.overview.description}
       notifications={notifications}
       subscriptionStatus={subscriptionStatus}
     >
@@ -75,24 +77,24 @@ export default async function DashboardPage() {
       <div data-tour="dashboard-overview">
         <div className="stats-row">
           <StatCard
-            label="Today's bookings"
+            label={m.dashboard.overview.stats.todayBookings}
             value={String(summary.todayBookings)}
-            meta="Live order pipeline"
+            meta={m.dashboard.overview.stats.todayBookingsMeta}
           />
           <StatCard
-            label="Upcoming deliveries"
+            label={m.dashboard.overview.stats.upcomingDeliveries}
             value={String(summary.upcomingDeliveries)}
-            meta="Route-ready bookings"
+            meta={m.dashboard.overview.stats.upcomingDeliveriesMeta}
           />
           <StatCard
-            label="Active products"
+            label={m.dashboard.overview.stats.activeProducts}
             value={String(summary.activeProducts)}
-            meta="Catalog items online"
+            meta={m.dashboard.overview.stats.activeProductsMeta}
           />
           <StatCard
-            label="Payment items"
+            label={m.dashboard.overview.stats.paymentItems}
             value={String(summary.recentPaymentsCount)}
-            meta="Last 30 days"
+            meta={m.dashboard.overview.stats.paymentItemsMeta}
           />
         </div>
       </div>
@@ -118,20 +120,20 @@ export default async function DashboardPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Today</div>
-              <h2 className="page-title-sm">Recent orders</h2>
+              <div className="kicker">{m.dashboard.overview.sections.today}</div>
+              <h2 className="page-title-sm">{m.dashboard.overview.sections.recentOrders}</h2>
             </div>
             <Link href="/dashboard/orders" className="ghost-btn">
-              View all
+              {m.dashboard.overview.sections.viewAll}
             </Link>
           </div>
 
           {summary.recentOrders.length === 0 ? (
             <EmptyState
               icon="orders"
-              title="No orders yet"
-              description="When customers book through your storefront or you create a manual order, they'll appear here."
-              actionLabel="Create first order"
+              title={m.dashboard.overview.empty.noOrdersTitle}
+              description={m.dashboard.overview.empty.noOrdersDescription}
+              actionLabel={m.dashboard.overview.empty.createFirst}
               actionHref="/dashboard/orders/new"
             />
           ) : (
@@ -163,8 +165,8 @@ export default async function DashboardPage() {
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Quick actions</div>
-              <h2 className="page-title-sm">Get things done</h2>
+              <div className="kicker">{m.dashboard.overview.sections.quickActions}</div>
+              <h2 className="page-title-sm">{m.dashboard.overview.sections.getThingsDone}</h2>
             </div>
           </div>
 
@@ -174,9 +176,9 @@ export default async function DashboardPage() {
               className="order-card"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <strong>Create new order</strong>
+              <strong>{m.dashboard.overview.quickLinks.newOrder}</strong>
               <div className="muted">
-                Manual booking, quote, or reservation
+                {m.dashboard.overview.quickLinks.newOrderDesc}
               </div>
             </Link>
             <Link
@@ -184,9 +186,9 @@ export default async function DashboardPage() {
               className="order-card"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <strong>Add product</strong>
+              <strong>{m.dashboard.overview.quickLinks.addProduct}</strong>
               <div className="muted">
-                New product for the public catalog
+                {m.dashboard.overview.quickLinks.addProductDesc}
               </div>
             </Link>
             <Link
@@ -194,17 +196,17 @@ export default async function DashboardPage() {
               className="order-card"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <strong>Delivery board</strong>
-              <div className="muted">Route management and crew dispatch</div>
+              <strong>{m.dashboard.overview.quickLinks.deliveryBoard}</strong>
+              <div className="muted">{m.dashboard.overview.quickLinks.deliveryBoardDesc}</div>
             </Link>
             <Link
               href="/dashboard/analytics"
               className="order-card"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <strong>Analytics</strong>
+              <strong>{m.dashboard.overview.quickLinks.analytics}</strong>
               <div className="muted">
-                Revenue, orders, and product performance
+                {m.dashboard.overview.quickLinks.analyticsDesc}
               </div>
             </Link>
             <Link
@@ -212,8 +214,8 @@ export default async function DashboardPage() {
               className="order-card"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <strong>Help Center</strong>
-              <div className="muted">Guides and articles for every feature</div>
+              <strong>{m.dashboard.overview.quickLinks.helpCenter}</strong>
+              <div className="muted">{m.dashboard.overview.quickLinks.helpCenterDesc}</div>
             </Link>
             {storefrontUrl ? (
               <a
@@ -223,13 +225,13 @@ export default async function DashboardPage() {
                 className="order-card"
                 style={{ textDecoration: "none", color: "inherit" }}
               >
-                <strong>View my storefront &#8599;</strong>
-                <div className="muted">See what customers see when they visit your site</div>
+                <strong>{m.dashboard.overview.quickLinks.viewStorefront} &#8599;</strong>
+                <div className="muted">{m.dashboard.overview.quickLinks.viewStorefrontDesc}</div>
               </a>
             ) : (
               <Link href="/dashboard/website" className="order-card" style={{ textDecoration: "none", color: "inherit" }}>
-                <strong>Set up your storefront URL</strong>
-                <div className="muted">Choose your subdomain in Website settings</div>
+                <strong>{m.dashboard.overview.quickLinks.setupStorefront}</strong>
+                <div className="muted">{m.dashboard.overview.quickLinks.setupStorefrontDesc}</div>
               </Link>
             )}
           </div>
@@ -245,20 +247,7 @@ export default async function DashboardPage() {
               textAlign: "center",
             }}
           >
-            Press{" "}
-            <kbd
-              style={{
-                padding: "2px 6px",
-                borderRadius: 5,
-                background: "white",
-                border: "1px solid var(--border)",
-                fontSize: 11,
-                fontWeight: 600,
-              }}
-            >
-              Cmd+K
-            </kbd>{" "}
-            to search anything
+            {t(m.dashboard.overview.searchHint, { key: "Cmd+K" })}
           </div>
         </aside>
       </div>

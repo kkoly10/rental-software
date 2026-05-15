@@ -9,6 +9,8 @@ import { DemoModeBanner } from "@/components/layout/demo-mode-banner";
 import { ProductionEnvGuard } from "@/components/layout/production-env-guard";
 import { isTenantHost } from "@/lib/auth/org-context";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getLocale } from "@/lib/i18n/server";
+import { I18nProvider } from "@/lib/i18n/provider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -110,9 +112,10 @@ export default async function RootLayout({
   // individual tenant brand overrides.
   const tenantHost = await isTenantHost();
   const brand = tenantHost ? await getBrandSettings() : null;
+  const locale = await getLocale();
 
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -124,10 +127,12 @@ export default async function RootLayout({
       <body>
         {brand && <BrandStyleInjector brand={brand} />}
         <RegisterSW />
-        <ProductionEnvGuard>
-          <DemoModeBanner />
-          {children}
-        </ProductionEnvGuard>
+        <I18nProvider locale={locale}>
+          <ProductionEnvGuard>
+            <DemoModeBanner />
+            {children}
+          </ProductionEnvGuard>
+        </I18nProvider>
       </body>
     </html>
   );

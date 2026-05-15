@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { getTranslator } from "@/lib/i18n/server";
 
 /**
  * SaaS marketing landing page for the root domain (korent.app without a subdomain).
@@ -24,10 +26,11 @@ import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
  * 13. Final CTA — single focus with trust signals
  * 14. Footer
  */
-export function SaasLanding() {
+export async function SaasLanding() {
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app";
   const isLocalDev = appDomain.startsWith("localhost") || appDomain.startsWith("127.0.0.1");
   const demoUrl = isLocalDev ? "#" : `https://demo.${appDomain}`;
+  const { locale, messages: m } = await getTranslator();
 
   return (
     <>
@@ -45,22 +48,25 @@ export function SaasLanding() {
         <img src="/logo.svg" alt="Korent" style={{ height: 36, width: "auto", display: "block" }} />
         <nav className="saas-header-nav">
           <a href="#pain" className="ghost-btn">Why Korent</a>
-          <a href="#features" className="ghost-btn">Features</a>
-          <a href="#pricing" className="ghost-btn">Pricing</a>
-          <a href="#faq" className="ghost-btn">FAQ</a>
-          <Link href="/login" className="secondary-btn">Log In</Link>
-          <Link href="/signup" className="primary-btn">Start Free</Link>
+          <a href="#features" className="ghost-btn">{m.saasLanding.nav.features}</a>
+          <a href="#pricing" className="ghost-btn">{m.saasLanding.nav.pricing}</a>
+          <a href="#faq" className="ghost-btn">{m.saasLanding.nav.faq}</a>
+          <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
+          <Link href="/login" className="secondary-btn">{m.common.signIn}</Link>
+          <Link href="/signup" className="primary-btn">{m.common.getStarted}</Link>
         </nav>
         <MobileMenuToggle
           isOperator={false}
           navLinks={[
             { key: "why_korent", label: "Why Korent", href: "#pain" },
-            { key: "features", label: "Features", href: "#features" },
-            { key: "pricing", label: "Pricing", href: "#pricing" },
-            { key: "faq", label: "FAQ", href: "#faq" },
+            { key: "features", label: m.saasLanding.nav.features, href: "#features" },
+            { key: "pricing", label: m.saasLanding.nav.pricing, href: "#pricing" },
+            { key: "faq", label: m.saasLanding.nav.faq, href: "#faq" },
           ]}
-          cta={{ label: "Start Free", href: "/signup" }}
-          authLabel="Log In"
+          cta={{ label: m.common.getStarted, href: "/signup" }}
+          authLabel={m.common.signIn}
+          currentLocale={locale}
+          languageLabel={m.language.label}
         />
       </header>
 

@@ -11,6 +11,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { getTranslator } from "@/lib/i18n/server";
 
 function normalizeCategory(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, "-");
@@ -48,10 +49,11 @@ export default async function InventoryPage({
   const isDemo = await isCurrentTenantDemo();
 
   const params = await searchParams;
-  const [products, categoryItems, settings] = await Promise.all([
+  const [products, categoryItems, settings, { messages: m, t }] = await Promise.all([
     getCatalogList(),
     getCategoryGridItems().catch(() => []),
     getOrganizationSettings(),
+    getTranslator(),
   ]);
 
   const categoryOptions = categoryItems.map((cat) => ({
@@ -92,29 +94,28 @@ export default async function InventoryPage({
           <section className="panel" style={{ padding: 24 }}>
             <div className="section-header">
               <div>
-                <div className="kicker">Catalog</div>
+                <div className="kicker">{m.inventory.title}</div>
                 <h1 className="page-title">
-                  Browse rentals by event type
+                  {m.inventory.browseByEventType}
                 </h1>
                 <div className="muted">
-                  Search by date, delivery ZIP, and category to narrow down the
-                  best fits for your party.
+                  {m.inventory.filterIntro}
                 </div>
 
                 <div className="storefront-context-pills">
                   {params.date ? (
                     <span className="storefront-context-pill">
-                      Date: {params.date}
+                      {t(m.inventory.pillDate, { value: params.date })}
                     </span>
                   ) : null}
                   {params.zip ? (
                     <span className="storefront-context-pill">
-                      ZIP: {params.zip}
+                      {t(m.inventory.pillZip, { value: params.zip })}
                     </span>
                   ) : null}
                   {params.category ? (
                     <span className="storefront-context-pill">
-                      Category: {formatCategoryLabel(params.category)}
+                      {t(m.inventory.pillCategory, { value: formatCategoryLabel(params.category) })}
                     </span>
                   ) : null}
                 </div>
@@ -140,7 +141,7 @@ export default async function InventoryPage({
                 marginBottom: 4,
               }}
             >
-              We deliver to: <strong>{settings.serviceAreaLabel}</strong>. Enter your ZIP above to confirm availability.
+              {t(m.inventory.deliversTo, { area: settings.serviceAreaLabel })}
             </div>
           )}
 
@@ -163,12 +164,14 @@ export default async function InventoryPage({
             <div className="section-header">
               <div>
                 <div className="kicker">
-                  {params.date ? "Availability results" : "Available rentals"}
+                  {params.date ? m.inventory.availabilityResults : m.inventory.availableRentals}
                 </div>
                 <h2>
                   {params.date
-                    ? `${availableCount} available, ${sortedProducts.length} total for your event`
-                    : `${sortedProducts.length} option${sortedProducts.length === 1 ? "" : "s"} for your event`}
+                    ? t(m.inventory.availabilityCount, { available: availableCount, total: sortedProducts.length })
+                    : sortedProducts.length === 1
+                      ? m.inventory.optionSingle
+                      : t(m.inventory.optionsCount, { count: sortedProducts.length })}
                 </h2>
               </div>
             </div>
@@ -177,14 +180,12 @@ export default async function InventoryPage({
               <CatalogGrid products={sortedProducts} date={params.date} zip={params.zip} />
             ) : (
               <div className="panel storefront-empty-state">
-                <div className="kicker">No direct matches</div>
+                <div className="kicker">{m.inventory.noMatchesKicker}</div>
                 <h2 className="card-title-tight">
-                  Try broadening your filters
+                  {m.inventory.noMatchesTitle}
                 </h2>
                 <div className="muted">
-                  We could not find rentals that matched the current category
-                  and availability filters. Adjust the date, ZIP, or category
-                  and try again.
+                  {m.inventory.noMatchesBody}
                 </div>
               </div>
             )}

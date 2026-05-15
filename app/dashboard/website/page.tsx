@@ -20,15 +20,17 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { buildStorefrontUrl } from "@/lib/storefront/url";
 import { headers } from "next/headers";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function WebsitePage() {
-  const [data, editableSettings, brandSettings, contentSettings, domainSettings, headersList] = await Promise.all([
+  const [data, editableSettings, brandSettings, contentSettings, domainSettings, headersList, m] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
     getBrandSettings(),
     getContentSettings(),
     getDomainSettings(),
     headers(),
+    getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
   const requestHost = headersList.get("host") ?? undefined;
@@ -45,8 +47,8 @@ export default async function WebsitePage() {
 
   return (
     <DashboardShell
-      title="Website"
-      description="Manage homepage messaging, highlighted inventory, and storefront presentation."
+      title={m.dashboard.website.title}
+      description={m.dashboard.website.description}
     >
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />

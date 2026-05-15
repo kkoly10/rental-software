@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getPlaceholderImage } from "@/lib/utils/placeholders";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function ProductCard({
   name,
@@ -24,6 +27,7 @@ export function ProductCard({
   date?: string;
   zip?: string;
 }) {
+  const { messages: m } = useI18n();
   const isUnavailable = status.startsWith("Unavailable");
 
   const tone =
@@ -62,7 +66,7 @@ export function ProductCard({
         <div className="price-row action-row-inline">
           <strong>{price}</strong>
           <Link href={`/inventory/${slug}${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`} className="secondary-btn">
-            View Details
+            {m.inventory.viewDetails}
           </Link>
         </div>
       </div>

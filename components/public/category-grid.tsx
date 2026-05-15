@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { getPlaceholderImage } from "@/lib/utils/placeholders";
+import { getTranslator } from "@/lib/i18n/server";
 
 export async function CategoryGrid() {
-  const categories = await getCategoryGridItems();
+  const [categories, { messages: m, t }] = await Promise.all([
+    getCategoryGridItems(),
+    getTranslator(),
+  ]);
 
   if (categories.length === 0) return null;
 
@@ -12,10 +16,10 @@ export async function CategoryGrid() {
       <div className="container">
         <div className="section-header">
           <div>
-            <div className="kicker">Explore by category</div>
-            <h2>Find the right party setup faster</h2>
+            <div className="kicker">{m.storefront.categoryGrid.kicker}</div>
+            <h2>{m.storefront.categoryGrid.title}</h2>
             <div className="muted">
-              Browse by type before diving into specific rentals.
+              {m.storefront.categoryGrid.description}
             </div>
           </div>
         </div>
@@ -39,7 +43,7 @@ export async function CategoryGrid() {
                 <h3>{category.name}</h3>
                 {category.startingPrice != null && (
                   <p className="category-starting-price">
-                    Starting ${category.startingPrice}
+                    {t(m.storefront.categoryGrid.startingPrice, { amount: category.startingPrice })}
                   </p>
                 )}
               </div>

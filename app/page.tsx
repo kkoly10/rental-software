@@ -23,6 +23,7 @@ import { getContentSettings } from "@/lib/data/content-settings";
 import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
+import { getTranslator } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const isTenant = await isTenantHost();
@@ -46,29 +47,6 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-const defaultFaqItems = [
-  {
-    question: "How does booking work?",
-    answer:
-      "Choose your date, event window, and delivery ZIP, then reserve your rentals online in a few minutes.",
-  },
-  {
-    question: "Do you deliver and set everything up?",
-    answer:
-      "Yes. Our crew delivers, anchors, and sets up your rentals before your event, then returns for takedown and pickup.",
-  },
-  {
-    question: "What if weather changes?",
-    answer:
-      "If rain or unsafe weather is expected, we offer flexible rescheduling to a new available date.",
-  },
-  {
-    question: "How far ahead should I reserve?",
-    answer:
-      "Weekend dates and school-event weekends book quickly, so reserving 1-2 weeks ahead is recommended.",
-  },
-];
-
 export default async function HomePage() {
   // Root domain (no tenant resolved) → SaaS marketing page for operators
   // Tenant subdomains/custom domains → operator's storefront for end customers
@@ -79,20 +57,22 @@ export default async function HomePage() {
 
   await requirePublicOrg();
 
-  const [featured, settings, geoAreas, contentSettings, isDemo, origin] = await Promise.all([
+  const [featured, settings, geoAreas, contentSettings, isDemo, origin, { messages, t }] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
     getServiceAreasGeo(),
     getContentSettings(),
     isCurrentTenantDemo(),
     getRequestOrigin(),
+    getTranslator(),
   ]);
 
+  const m = messages;
   const vis = contentSettings.sectionVisibility;
   const faqItems =
     contentSettings.customFaq && contentSettings.customFaq.length > 0
       ? contentSettings.customFaq
-      : defaultFaqItems;
+      : m.storefront.faq.defaults.map((f) => ({ question: f.question, answer: f.answer }));
 
   return (
     <>
@@ -127,24 +107,23 @@ export default async function HomePage() {
               )}
 
               <h1>
-                {settings.heroHeadline || "Party rentals delivered, set up, and ready for fun"}
+                {settings.heroHeadline || m.storefront.hero.defaultHeadline}
               </h1>
 
               <p>
-                {settings.websiteMessage || "Perfect for birthdays, school events, church gatherings, and neighborhood celebrations."}{" "}
-                Check availability by date, time, and ZIP code for delivery across{" "}
-                {settings.serviceAreaLabel}.
+                {settings.websiteMessage || m.storefront.hero.defaultMessage}{" "}
+                {t(m.storefront.hero.checkAvailabilityAcross, { area: settings.serviceAreaLabel ?? "" })}
               </p>
 
               <form action="/inventory" className="storefront-search-card">
                 <div className="storefront-search-grid">
                   <label className="storefront-field">
-                    <span>Event Date</span>
+                    <span>{m.storefront.hero.eventDate}</span>
                     <input name="date" type="date" />
                   </label>
 
                   <label className="storefront-field">
-                    <span>Delivery ZIP</span>
+                    <span>{m.storefront.hero.deliveryZip}</span>
                     <input
                       name="zip"
                       type="text"
@@ -157,7 +136,7 @@ export default async function HomePage() {
                     type="submit"
                     className="primary-btn storefront-search-btn"
                   >
-                    Check Availability
+                    {m.storefront.hero.checkAvailability}
                   </button>
                 </div>
               </form>
@@ -178,15 +157,15 @@ export default async function HomePage() {
           <div className="container">
             <div className="section-header">
               <div>
-                <div className="kicker">Explore by rentals</div>
-                <h2>Popular Rentals</h2>
+                <div className="kicker">{m.storefront.popularRentals.kicker}</div>
+                <h2>{m.storefront.popularRentals.title}</h2>
                 <div className="muted">
-                  Browse our most popular rentals and check availability for your event date.
+                  {m.storefront.popularRentals.description}
                 </div>
               </div>
 
               <Link href="/inventory" className="ghost-btn">
-                Browse all
+                {m.storefront.popularRentals.browseAll}
               </Link>
             </div>
 
