@@ -13,6 +13,7 @@ import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { productJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
+import { getTranslator } from "@/lib/i18n/server";
 
 export async function generateMetadata({
   params,
@@ -46,9 +47,10 @@ export default async function ProductDetailPage({
 
   const { slug } = await params;
   const { date, zip } = await searchParams;
-  const [product, origin] = await Promise.all([
+  const [product, origin, { messages: m, t }] = await Promise.all([
     getCatalogDetail(slug),
     getRequestOrigin(),
+    getTranslator(),
   ]);
 
   // Enrich with real availability for the selected date/zip
@@ -97,9 +99,9 @@ export default async function ProductDetailPage({
         <div className="container">
           <div className="storefront-context-pills" style={{ marginBottom: 18 }}>
             {date ? (
-              <span className="storefront-context-pill">Date: {date}</span>
+              <span className="storefront-context-pill">{t(m.inventory.pillDate, { value: date })}</span>
             ) : null}
-            {zip ? <span className="storefront-context-pill">ZIP: {zip}</span> : null}
+            {zip ? <span className="storefront-context-pill">{t(m.inventory.pillZip, { value: zip })}</span> : null}
           </div>
 
           <div className="storefront-detail-shell">
@@ -163,13 +165,13 @@ export default async function ProductDetailPage({
                   href={`/checkout?${checkoutParams.toString()}`}
                   className="primary-btn"
                 >
-                  Reserve Now
+                  {m.inventoryDetail.bookNow}
                 </Link>
                 <Link
                   href={`/inventory${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`}
                   className="secondary-btn"
                 >
-                  Back
+                  {m.common.back}
                 </Link>
               </div>
             </aside>

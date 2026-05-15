@@ -14,6 +14,7 @@ import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { getMessages } from "@/lib/i18n/server";
+import { formatMessage } from "@/lib/i18n/format";
 
 export default async function SettingsPage() {
   const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, m] = await Promise.all([
@@ -40,8 +41,8 @@ export default async function SettingsPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Business settings</div>
-              <h2 style={{ margin: "6px 0 0" }}>Business profile</h2>
+              <div className="kicker">{m.dashboard.settings.kickerBusiness}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.sections.profile}</h2>
             </div>
           </div>
 
@@ -58,55 +59,62 @@ export default async function SettingsPage() {
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Current snapshot</div>
-              <h2 style={{ margin: "6px 0 0" }}>Active configuration</h2>
+              <div className="kicker">{m.dashboard.settings.kickerSnapshot}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.activeConfiguration}</h2>
             </div>
           </div>
 
           <div className="list">
             <article className="order-card">
-              <strong>Regional defaults</strong>
+              <strong>{m.dashboard.settings.regionalDefaultsCardTitle}</strong>
               <div className="muted" style={{ marginTop: 6 }}>
-                Timezone: {orgSettings.timezone}
+                {formatMessage(m.dashboard.settings.timezoneLabel, { value: orgSettings.timezone })}
               </div>
-              <div className="muted">Currency: {orgSettings.currency}</div>
+              <div className="muted">{formatMessage(m.dashboard.settings.currencyLabel, { value: orgSettings.currency })}</div>
               <div className="muted">
-                Service areas: {orgSettings.serviceAreaLabel}
+                {formatMessage(m.dashboard.settings.serviceAreasLabel, { value: orgSettings.serviceAreaLabel })}
               </div>
             </article>
 
             <article className="order-card">
-              <strong>Booking policies</strong>
+              <strong>{m.dashboard.settings.bookingPoliciesCardTitle}</strong>
               <div className="muted" style={{ marginTop: 6 }}>
-                Deposit: {bookingPolicies.depositPercentage}%
-                {bookingPolicies.depositMinimum ? ` (min $${bookingPolicies.depositMinimum})` : ""}
+                {formatMessage(m.dashboard.settings.depositLabel, { value: bookingPolicies.depositPercentage })}
+                {bookingPolicies.depositMinimum
+                  ? formatMessage(m.dashboard.settings.depositMinSuffix, { value: bookingPolicies.depositMinimum })
+                  : ""}
               </div>
               <div className="muted">
-                Lead time: {bookingPolicies.bookingLeadTimeHours}h · Max advance: {bookingPolicies.maxAdvanceBookingDays} days
+                {formatMessage(m.dashboard.settings.leadTimeAndMaxAdvance, {
+                  leadTime: bookingPolicies.bookingLeadTimeHours,
+                  maxAdvance: bookingPolicies.maxAdvanceBookingDays,
+                })}
               </div>
               <div className="muted">
-                {bookingPolicies.requireDepositToConfirm ? "Deposit required to confirm" : "Auto-confirm on booking"}
+                {bookingPolicies.requireDepositToConfirm
+                  ? m.dashboard.settings.depositRequiredToConfirm
+                  : m.dashboard.settings.autoConfirmOnBooking}
               </div>
             </article>
           </div>
 
           <div className="section-header" style={{ marginTop: 18 }}>
             <div>
-              <div className="kicker">Quick links</div>
+              <div className="kicker">{m.dashboard.settings.kickerLinks}</div>
             </div>
           </div>
           <div className="list">
             <a href="/dashboard/settings/team" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
-              <strong>Team access</strong>
-              <div className="muted">Invite members and manage roles: owner, admin, dispatcher, crew, viewer.</div>
+              <strong>{m.dashboard.settings.teamAccessTitle}</strong>
+              <div className="muted">{m.dashboard.settings.teamAccessBody}</div>
             </a>
             <a href="/dashboard/settings/billing" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
-              <strong>Billing</strong>
-              <div className="muted">Manage your subscription plan and payment method.</div>
+              <strong>{m.dashboard.settings.billingTitle}</strong>
+              <div className="muted">{m.dashboard.settings.billingBody}</div>
             </a>
             <a href="#sms-notifications" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
-              <strong>SMS Notifications</strong>
-              <div className="muted">Configure text message alerts for customers.</div>
+              <strong>{m.dashboard.settings.smsNotificationsLinkTitle}</strong>
+              <div className="muted">{m.dashboard.settings.smsNotificationsLinkBody}</div>
             </a>
           </div>
         </aside>
@@ -116,8 +124,8 @@ export default async function SettingsPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Policies</div>
-              <h2 style={{ margin: "6px 0 0" }}>Booking Policies</h2>
+              <div className="kicker">{m.dashboard.settings.kickerPolicies}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.bookingPoliciesTitle}</h2>
             </div>
           </div>
 
@@ -129,8 +137,8 @@ export default async function SettingsPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Notifications</div>
-              <h2 style={{ margin: "6px 0 0" }}>SMS Notifications</h2>
+              <div className="kicker">{m.dashboard.settings.kickerNotifications}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.smsNotificationsTitle}</h2>
             </div>
           </div>
 
@@ -140,8 +148,8 @@ export default async function SettingsPage() {
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Activity</div>
-              <h2 style={{ margin: "6px 0 0" }}>Recent SMS messages</h2>
+              <div className="kicker">{m.dashboard.settings.kickerActivity}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.recentSmsMessages}</h2>
             </div>
           </div>
 

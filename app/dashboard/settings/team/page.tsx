@@ -3,10 +3,10 @@ import { getTeamData } from "@/lib/team/data";
 import { InviteMemberForm } from "@/components/team/invite-member-form";
 import { TeamMemberCard } from "@/components/team/team-member-card";
 import { PendingInviteCard } from "@/components/team/pending-invite-card";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function TeamPage() {
-  const [team, m] = await Promise.all([getTeamData(), getMessages()]);
+  const [team, { messages: m, t }] = await Promise.all([getTeamData(), getTranslator()]);
   const canManage = team.currentUserRole === "owner" || team.currentUserRole === "admin";
 
   return (
@@ -20,8 +20,8 @@ export default async function TeamPage() {
             <div className="panel" style={{ marginBottom: 18 }}>
               <div className="section-header">
                 <div>
-                  <div className="kicker">Add member</div>
-                  <h2 className="page-title-sm">Invite a team member</h2>
+                  <div className="kicker">{m.dashboard.team.kickerAdd}</div>
+                  <h2 className="page-title-sm">{m.dashboard.team.sectionInvite}</h2>
                 </div>
               </div>
               <InviteMemberForm />
@@ -31,9 +31,9 @@ export default async function TeamPage() {
           <div className="panel">
             <div className="section-header">
               <div>
-                <div className="kicker">Active members</div>
+                <div className="kicker">{m.dashboard.team.kickerActive}</div>
                 <h2 className="page-title-sm">
-                  Team ({team.members.length})
+                  {t(m.dashboard.team.teamCount, { count: team.members.length })}
                 </h2>
               </div>
             </div>
@@ -54,13 +54,13 @@ export default async function TeamPage() {
           <div className="panel">
             <div className="section-header">
               <div>
-                <div className="kicker">Pending</div>
-                <h2 className="page-title-sm">Invites</h2>
+                <div className="kicker">{m.dashboard.team.kickerPending}</div>
+                <h2 className="page-title-sm">{m.dashboard.team.invitesTitle}</h2>
               </div>
             </div>
 
             {team.invites.length === 0 ? (
-              <div className="muted">No pending invites.</div>
+              <div className="muted">{m.dashboard.team.pendingNone}</div>
             ) : (
               <div className="list">
                 {team.invites.map((invite) => (
@@ -77,30 +77,30 @@ export default async function TeamPage() {
           <div className="panel" style={{ marginTop: 18 }}>
             <div className="section-header">
               <div>
-                <div className="kicker">Roles guide</div>
-                <h2 className="page-title-sm">Permissions</h2>
+                <div className="kicker">{m.dashboard.team.kickerRoles}</div>
+                <h2 className="page-title-sm">{m.dashboard.team.sectionPermissions}</h2>
               </div>
             </div>
             <div className="list">
               <div className="order-card">
-                <strong>Owner</strong>
-                <div className="muted">Full access. Billing, team, settings, all data.</div>
+                <strong>{m.dashboard.team.roles.owner}</strong>
+                <div className="muted">{m.dashboard.team.roles.ownerBody}</div>
               </div>
               <div className="order-card">
-                <strong>Admin</strong>
-                <div className="muted">Everything except billing and ownership transfer.</div>
+                <strong>{m.dashboard.team.roles.admin}</strong>
+                <div className="muted">{m.dashboard.team.roles.adminBody}</div>
               </div>
               <div className="order-card">
-                <strong>Dispatcher</strong>
-                <div className="muted">Orders, deliveries, calendar, customers. No settings.</div>
+                <strong>{m.dashboard.team.roles.dispatcher}</strong>
+                <div className="muted">{m.dashboard.team.roles.dispatcherBody}</div>
               </div>
               <div className="order-card">
-                <strong>Crew</strong>
-                <div className="muted">Crew mobile view only. Delivery stops and checklists.</div>
+                <strong>{m.dashboard.team.roles.crew}</strong>
+                <div className="muted">{m.dashboard.team.roles.crewBody}</div>
               </div>
               <div className="order-card">
-                <strong>Viewer</strong>
-                <div className="muted">Read-only access to orders, products, and customers.</div>
+                <strong>{m.dashboard.team.roles.viewer}</strong>
+                <div className="muted">{m.dashboard.team.roles.viewerBody}</div>
               </div>
             </div>
           </div>

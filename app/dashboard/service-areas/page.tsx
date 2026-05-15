@@ -20,11 +20,10 @@ export default async function ServiceAreasPage() {
       <section className="panel">
         <div className="section-header">
           <div>
-            <div className="kicker">Delivery coverage</div>
-            <h2 style={{ margin: "6px 0 0" }}>Configured service areas</h2>
+            <div className="kicker">{m.dashboard.serviceAreas.kicker}</div>
+            <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.serviceAreas.sectionTitle}</h2>
             <div className="muted" style={{ marginTop: 8 }}>
-              Service areas are organization-specific. Each rental business can
-              configure its own U.S. delivery ZIPs, fees, and minimum order rules.
+              {m.dashboard.serviceAreas.sectionBody}
             </div>
           </div>
         </div>

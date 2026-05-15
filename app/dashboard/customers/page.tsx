@@ -6,7 +6,7 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportCustomers } from "@/lib/export/csv";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function CustomersPage({
   searchParams,
@@ -14,9 +14,9 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [customersPage, m] = await Promise.all([
+  const [customersPage, { messages: m, t }] = await Promise.all([
     getCustomersPage({ query: params.q, page: params.page }),
-    getMessages(),
+    getTranslator(),
   ]);
 
   return (
@@ -27,33 +27,32 @@ export default async function CustomersPage({
       <section className="panel">
         <div className="section-header">
           <div>
-            <div className="kicker">Customer records</div>
-            <h2 style={{ margin: "6px 0 0" }}>All customers</h2>
+            <div className="kicker">{m.dashboard.customers.kicker}</div>
+            <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.customers.sectionTitle}</h2>
             <div className="muted" style={{ marginTop: 8 }}>
-              {customersPage.totalItems} matching customer
-              {customersPage.totalItems === 1 ? "" : "s"} found
+              {t(customersPage.totalItems === 1 ? m.dashboard.customers.matchingFound : m.dashboard.customers.matchingFoundPlural, { count: customersPage.totalItems })}
             </div>
           </div>
-          <ExportCsvButton exportAction={exportCustomers} label="Export CSV" />
+          <ExportCsvButton exportAction={exportCustomers} label={m.common.exportCsv} />
         </div>
 
         <ListSearchForm
-          placeholder="Search by name, email, phone, or latest booking"
+          placeholder={m.dashboard.customers.searchPlaceholder}
           initialQuery={customersPage.query}
         />
 
         {customersPage.items.length === 0 ? (
           customersPage.query ? (
             <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>No customers found</strong>
-              <div className="muted" style={{ marginTop: 8 }}>Try a different search term.</div>
+              <strong>{m.dashboard.customers.noCustomersFound}</strong>
+              <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
             </div>
           ) : (
             <EmptyState
               icon="customers"
-              title="No customers yet"
-              description="Customers are created automatically when orders come in through checkout or the dashboard."
-              actionLabel="Create an order"
+              title={m.dashboard.customers.noCustomersYet}
+              description={m.dashboard.customers.noCustomersYetDescription}
+              actionLabel={m.dashboard.orders.createOrder}
               actionHref="/dashboard/orders/new"
             />
           )

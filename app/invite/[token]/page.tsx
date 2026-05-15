@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { acceptTeamInvite } from "@/lib/team/accept-invite";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function AcceptInvitePage({
   params,
@@ -7,7 +8,7 @@ export default async function AcceptInvitePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const result = await acceptTeamInvite(token);
+  const [result, m] = await Promise.all([acceptTeamInvite(token), getMessages()]);
 
   return (
     <div
@@ -39,26 +40,26 @@ export default async function AcceptInvitePage({
             color: "white",
           }}
         >
-          {result.ok ? "\u2713" : "!"}
+          {result.ok ? "✓" : "!"}
         </div>
 
         <h1 style={{ margin: "0 0 8px", fontSize: "1.5rem" }}>
-          {result.ok ? "You're in!" : "Invite issue"}
+          {result.ok ? m.invite.successTitle : m.invite.errorTitle}
         </h1>
 
         <p className="muted" style={{ marginBottom: 24 }}>{result.message}</p>
 
         {result.ok ? (
           <Link href="/dashboard" className="primary-btn">
-            Go to Dashboard
+            {m.invite.goToDashboard}
           </Link>
         ) : (
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
             <Link href="/login" className="primary-btn">
-              Sign In
+              {m.invite.signIn}
             </Link>
             <Link href="/signup" className="secondary-btn">
-              Create Account
+              {m.invite.createAccount}
             </Link>
           </div>
         )}

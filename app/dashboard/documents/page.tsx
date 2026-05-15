@@ -8,7 +8,7 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function DocumentsPage({
   searchParams,
@@ -16,10 +16,10 @@ export default async function DocumentsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [documentsPage, guidanceState, m] = await Promise.all([
+  const [documentsPage, guidanceState, { messages: m, t }] = await Promise.all([
     getDocumentsDetailedPage({ query: params.q, page: params.page }),
     getGuidanceState(),
-    getMessages(),
+    getTranslator(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/documents"];
 
@@ -37,27 +37,31 @@ export default async function DocumentsPage({
       <section className="panel">
         <div className="section-header">
           <div>
-            <div className="kicker">Document status</div>
-            <h2 style={{ margin: "6px 0 0" }}>Order paperwork</h2>
+            <div className="kicker">{m.dashboard.documents.kicker}</div>
+            <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.documents.sectionTitle}</h2>
             <div className="muted" style={{ marginTop: 8 }}>
-              {documentsPage.totalItems} matching order
-              {documentsPage.totalItems === 1 ? "" : "s"} found
+              {t(
+                documentsPage.totalItems === 1
+                  ? m.dashboard.documents.matchingFound
+                  : m.dashboard.documents.matchingFoundPlural,
+                { count: documentsPage.totalItems },
+              )}
             </div>
           </div>
         </div>
 
         <ListSearchForm
-          placeholder="Search by customer, order, agreement, or waiver status"
+          placeholder={m.dashboard.documents.searchPlaceholder}
           initialQuery={documentsPage.query}
         />
 
         {documentsPage.items.length === 0 ? (
           <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-            <strong>No documents found</strong>
+            <strong>{m.dashboard.documents.noDocumentsFound}</strong>
             <div className="muted" style={{ marginTop: 8 }}>
               {documentsPage.query
-                ? "Try a different search term."
-                : 'Open an order detail page and click "Generate Documents" to create rental agreements and safety waivers.'}
+                ? m.common.tryDifferentSearch
+                : m.dashboard.documents.noDocumentsYetDescription}
             </div>
           </div>
         ) : (

@@ -34,8 +34,8 @@ export default async function DeliveriesPage() {
       )}
 
       <section className="panel" style={{ marginBottom: 20 }}>
-        <div className="kicker">Dispatch</div>
-        <h2 className="page-title-sm" style={{ marginTop: 6 }}>Create a route</h2>
+        <div className="kicker">{m.dashboard.deliveries.kickerDispatch}</div>
+        <h2 className="page-title-sm" style={{ marginTop: 6 }}>{m.dashboard.deliveries.sectionCreateRoute}</h2>
         <CreateRouteForm teamMembers={teamMembers} />
       </section>
 
@@ -43,15 +43,15 @@ export default async function DeliveriesPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Operations</div>
-              <h2 className="page-title-sm">Today&apos;s route board</h2>
+              <div className="kicker">{m.dashboard.deliveries.kickerOperations}</div>
+              <h2 className="page-title-sm">{m.dashboard.deliveries.sectionBoard}</h2>
             </div>
             <StatusBadge label="Live" tone="success" />
           </div>
 
           <div className="board-columns">
             <div className="column">
-              <h3>Assigned</h3>
+              <h3>{m.dashboard.deliveries.columns.assigned}</h3>
               <div className="list">
                 {board.assigned.length ? (
                   board.assigned.map((route) => (
@@ -64,19 +64,19 @@ export default async function DeliveriesPage() {
                           href={`/dashboard/deliveries/${route.id}`}
                           className="ghost-btn"
                         >
-                          Open route
+                          {m.dashboard.deliveries.openRoute}
                         </Link>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="delivery-card">No assigned routes</div>
+                  <div className="delivery-card">{m.dashboard.deliveries.noRoutesYet}</div>
                 )}
               </div>
             </div>
 
             <div className="column">
-              <h3>Out for Delivery</h3>
+              <h3>{m.dashboard.deliveries.columns.outForDelivery}</h3>
               <div className="list">
                 {board.inProgress.length ? (
                   board.inProgress.map((route) => (
@@ -89,19 +89,19 @@ export default async function DeliveriesPage() {
                           href={`/dashboard/deliveries/${route.id}`}
                           className="ghost-btn"
                         >
-                          Open route
+                          {m.dashboard.deliveries.openRoute}
                         </Link>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="delivery-card">No active routes</div>
+                  <div className="delivery-card">{m.dashboard.deliveries.noRoutesYet}</div>
                 )}
               </div>
             </div>
 
             <div className="column">
-              <h3>Completed</h3>
+              <h3>{m.dashboard.deliveries.columns.completed}</h3>
               <div className="list">
                 {board.completed.length ? (
                   board.completed.map((route) => (
@@ -114,13 +114,13 @@ export default async function DeliveriesPage() {
                           href={`/dashboard/deliveries/${route.id}`}
                           className="ghost-btn"
                         >
-                          Open route
+                          {m.dashboard.deliveries.openRoute}
                         </Link>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="delivery-card">No completed routes</div>
+                  <div className="delivery-card">{m.dashboard.deliveries.noRoutesYet}</div>
                 )}
               </div>
             </div>
@@ -130,7 +130,7 @@ export default async function DeliveriesPage() {
         <aside className="map-card">
           <div className="kicker">Route detail</div>
           <h2 className="page-title-sm" style={{ marginTop: 8 }}>
-            {enhancedRoute ? enhancedRoute.name : "No route selected"}
+            {enhancedRoute ? enhancedRoute.name : m.dashboard.deliveries.noRoutesYet}
           </h2>
           {enhancedRoute ? (
             <>
@@ -149,7 +149,7 @@ export default async function DeliveriesPage() {
             </>
           ) : (
             <div className="muted" style={{ marginTop: 12, fontSize: 14 }}>
-              Create your first route above to see stop details and the map here.
+              {m.dashboard.deliveries.noRoutesYetDescription}
             </div>
           )}
         </aside>

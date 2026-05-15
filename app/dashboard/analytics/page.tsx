@@ -18,17 +18,16 @@ export default async function AnalyticsPage() {
     >
       {isEmpty ? (
         <section className="panel" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <h2 style={{ margin: "0 0 8px", fontSize: 20 }}>No data yet</h2>
+          <h2 style={{ margin: "0 0 8px", fontSize: 20 }}>{m.dashboard.analytics.emptyTitle}</h2>
           <p className="muted" style={{ maxWidth: 400, margin: "0 auto 20px" }}>
-            Complete your first booking to start seeing analytics here. Add
-            products, set up a service area, and create your first order.
+            {m.dashboard.analytics.emptyBody}
           </p>
           <a
             href="/dashboard/orders/new"
             className="ghost-btn"
             style={{ display: "inline-block" }}
           >
-            Create first order
+            {m.dashboard.analytics.createFirstOrder}
           </a>
         </section>
       ) : (
@@ -36,22 +35,22 @@ export default async function AnalyticsPage() {
           {/* Financial metrics */}
           <div className="stats-row">
             <StatCard
-              label="Total revenue"
+              label={m.dashboard.analytics.stats.totalRevenue}
               value={formatMoney(data.totalRevenue)}
               meta="All-time collected payments"
             />
             <StatCard
-              label="Revenue this month"
+              label={m.dashboard.analytics.stats.revenueThisMonth}
               value={formatMoney(data.revenueThisMonth)}
               meta="Current calendar month"
             />
             <StatCard
-              label="Outstanding balance"
+              label={m.dashboard.analytics.stats.outstandingBalance}
               value={formatMoney(data.outstandingBalance)}
               meta="Across active orders"
             />
             <StatCard
-              label="Avg order value"
+              label={m.dashboard.analytics.stats.avgOrderValue}
               value={formatMoney(data.averageOrderValue)}
               meta="Per paid order"
             />
@@ -60,22 +59,22 @@ export default async function AnalyticsPage() {
           {/* Order & conversion metrics */}
           <div className="stats-row" style={{ marginTop: 18 }}>
             <StatCard
-              label="Total orders"
+              label={m.dashboard.analytics.stats.totalOrders}
               value={String(data.totalOrders)}
               meta={`${data.ordersThisMonth} this month · ${data.ordersThisWeek} this week`}
             />
             <StatCard
-              label="Conversion rate"
+              label={m.dashboard.analytics.stats.conversionRate}
               value={`${data.conversionRate}%`}
               meta={`${data.confirmedOrders} confirmed · ${data.cancelledOrders} cancelled`}
             />
             <StatCard
-              label="Deposit collection"
+              label={m.dashboard.analytics.stats.depositCollection}
               value={`${data.depositCollectionRate}%`}
               meta="Orders with deposit fulfilled"
             />
             <StatCard
-              label="Total customers"
+              label={m.dashboard.analytics.stats.totalCustomers}
               value={String(data.totalCustomers)}
               meta={`${data.repeatCustomers} repeat · ${data.newCustomersThisMonth} new this month`}
             />

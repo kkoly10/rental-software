@@ -23,16 +23,16 @@ export default async function MaintenancePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Asset readiness</div>
-              <h2 style={{ margin: "6px 0 0" }}>Maintenance queue</h2>
+              <div className="kicker">{m.dashboard.maintenance.kicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.maintenance.sectionQueue}</h2>
             </div>
           </div>
 
           {records.length === 0 ? (
             <div className="order-card" style={{ textAlign: "center", padding: "32px 16px" }}>
-              <strong>No maintenance records</strong>
+              <strong>{m.dashboard.maintenance.noRecords}</strong>
               <div className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-                Use the form to log the first service, repair, or inspection.
+                {m.dashboard.maintenance.noRecordsBody}
               </div>
             </div>
           ) : (
@@ -45,7 +45,7 @@ export default async function MaintenancePage() {
                       <div className="muted" style={{ fontSize: 13 }}>{record.status}</div>
                       {record.note && <div className="muted" style={{ fontSize: 12 }}>{record.note}</div>}
                       <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                        Opened: {record.openedAt} · Cost: {record.costLabel}
+                        {m.dashboard.maintenance.opened}: {record.openedAt} · {m.dashboard.maintenance.cost}: {record.costLabel}
                       </div>
                     </div>
                     <MaintenanceStatusButton recordId={record.id} currentStatus={record.status} />
@@ -59,13 +59,13 @@ export default async function MaintenancePage() {
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">New record</div>
-              <h2 style={{ margin: "6px 0 0" }}>Log maintenance</h2>
+              <div className="kicker">{m.dashboard.maintenance.sectionNewRecordKicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.maintenance.sectionNewRecord}</h2>
             </div>
           </div>
           {products.length === 0 ? (
             <div className="order-card" style={{ padding: 16, fontSize: 13, color: "var(--text-soft)" }}>
-              Add products to your catalog before logging maintenance.
+              {m.dashboard.maintenance.addProductsFirst}
             </div>
           ) : (
             <LogMaintenanceForm products={products} />

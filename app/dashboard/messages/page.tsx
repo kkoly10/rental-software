@@ -1,27 +1,32 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getConversations } from "@/lib/data/messages";
-import { getMessages as getI18nMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
+import { formatMessage } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/dictionaries";
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, m: Messages, locale: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 1) return m.dashboard.messages.relativeTime.justNow;
+  if (diffMin < 60) return formatMessage(m.dashboard.messages.relativeTime.minutesAgo, { n: diffMin });
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffHr < 24) return formatMessage(m.dashboard.messages.relativeTime.hoursAgo, { n: diffHr });
   const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  if (diffDay < 7) return formatMessage(m.dashboard.messages.relativeTime.daysAgo, { n: diffDay });
+  return new Date(dateStr).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
   });
 }
 
 export default async function MessagesPage() {
-  const [conversations, m] = await Promise.all([getConversations(), getI18nMessages()]);
+  const [conversations, { messages: m, locale }] = await Promise.all([
+    getConversations(),
+    getTranslator(),
+  ]);
 
   return (
     <DashboardShell
@@ -32,19 +37,16 @@ export default async function MessagesPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Inbox</div>
-              <h2 style={{ margin: "6px 0 0" }}>Conversations</h2>
-              <div className="muted" style={{ marginTop: 8 }}>
-                {conversations.length} conversation{conversations.length === 1 ? "" : "s"}
-              </div>
+              <div className="kicker">{m.dashboard.messages.kicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.messages.sectionTitle}</h2>
             </div>
           </div>
 
           {conversations.length === 0 ? (
             <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>No messages yet</strong>
+              <strong>{m.dashboard.messages.empty.replace(/\.$/, "")}</strong>
               <div className="muted" style={{ marginTop: 8 }}>
-                Customer messages from the portal will appear here.
+                {m.dashboard.messages.emptyDescription}
               </div>
             </div>
           ) : (
@@ -106,16 +108,12 @@ export default async function MessagesPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {conv.last_direction === "outbound" && "You: "}
                         {conv.last_body}
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 16 }}>
                       <div className="muted" style={{ fontSize: 12 }}>
-                        {relativeTime(conv.last_created_at)}
-                      </div>
-                      <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                        {conv.message_count} msg{conv.message_count === 1 ? "" : "s"}
+                        {relativeTime(conv.last_created_at, m, locale)}
                       </div>
                     </div>
                   </div>
