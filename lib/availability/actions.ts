@@ -22,7 +22,7 @@ export async function blockProductDates(
   const productId = String(formData.get("product_id") ?? "");
   const startDate = String(formData.get("start_date") ?? "");
   const endDate = String(formData.get("end_date") ?? "");
-  const reason = String(formData.get("reason") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 500);
   const blockType = String(formData.get("block_type") ?? "manual_hold");
   const ALLOWED_BLOCK_TYPES = ["manual_hold"];
   if (!ALLOWED_BLOCK_TYPES.includes(blockType)) {
