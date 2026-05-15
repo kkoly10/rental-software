@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useActionState } from "react";
 import { updateCustomer, type CustomerActionState } from "@/lib/customers/actions";
 import type { CustomerDetail } from "@/lib/types";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: CustomerActionState = { ok: false, message: "" };
 
 export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(updateCustomer, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.editCustomer;
 
   useEffect(() => {
     if (state.ok && state.message) {
@@ -25,7 +28,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
         onClick={() => setEditing(true)}
         style={{ fontSize: 13 }}
       >
-        Edit customer
+        {m.editCustomer}
       </button>
     );
   }
@@ -36,7 +39,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>First name</strong>
+          <strong>{m.firstNameLabel}</strong>
           <input
             name="first_name"
             type="text"
@@ -46,7 +49,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
           />
         </label>
         <label className="order-card">
-          <strong>Last name</strong>
+          <strong>{m.lastNameLabel}</strong>
           <input
             name="last_name"
             type="text"
@@ -56,90 +59,90 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
           />
         </label>
         <label className="order-card">
-          <strong>Phone</strong>
+          <strong>{m.phoneLabel}</strong>
           <input
             name="phone"
             type="tel"
             defaultValue={customer.phone}
-            placeholder="(540) 555-0100"
+            placeholder={m.phonePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
       </div>
 
       <label className="order-card">
-        <strong>Email</strong>
+        <strong>{m.emailLabel}</strong>
         <input
           name="email"
           type="email"
           defaultValue={customer.email}
-          placeholder="customer@example.com"
+          placeholder={m.emailPlaceholder}
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
 
       <div className="order-card" style={{ paddingBottom: 4 }}>
-        <strong style={{ display: "block", marginBottom: 14 }}>Saved address</strong>
+        <strong style={{ display: "block", marginBottom: 14 }}>{m.savedAddressLabel}</strong>
         <div style={{ display: "grid", gap: 10 }}>
           <label className="field-stack">
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>
-              Street address
+              {m.streetAddressLabel}
             </span>
             <input
               name="address_line1"
               type="text"
               defaultValue={customer.addressLine1}
-              placeholder="123 Main St"
+              placeholder={m.streetAddressPlaceholder}
               style={{ width: "100%" }}
             />
           </label>
           <label className="field-stack">
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>
-              Apt / Suite / Unit (optional)
+              {m.aptSuiteLabel}
             </span>
             <input
               name="address_line2"
               type="text"
               defaultValue={customer.addressLine2}
-              placeholder="Apt 4B"
+              placeholder={m.aptSuitePlaceholder}
               style={{ width: "100%" }}
             />
           </label>
           <div className="grid grid-3">
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>
-                City
+                {m.cityLabel}
               </span>
               <input
                 name="address_city"
                 type="text"
                 defaultValue={customer.addressCity}
-                placeholder="Springfield"
+                placeholder={m.cityPlaceholder}
                 style={{ width: "100%" }}
               />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>
-                State
+                {m.stateLabel}
               </span>
               <input
                 name="address_state"
                 type="text"
                 defaultValue={customer.addressState}
-                placeholder="VA"
+                placeholder={m.statePlaceholder}
                 maxLength={3}
                 style={{ width: "100%" }}
               />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>
-                ZIP
+                {m.zipLabel}
               </span>
               <input
                 name="address_zip"
                 type="text"
                 defaultValue={customer.addressZip}
-                placeholder="22150"
+                placeholder={m.zipPlaceholder}
                 maxLength={10}
                 style={{ width: "100%" }}
               />
@@ -149,11 +152,11 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
       </div>
 
       <label className="order-card">
-        <strong>Notes</strong>
+        <strong>{m.notesLabel}</strong>
         <textarea
           name="notes"
           defaultValue={customer.notes}
-          placeholder="Internal notes about this customer."
+          placeholder={m.notesPlaceholder}
           rows={3}
           style={{
             marginTop: 10,
@@ -177,7 +180,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
 
       <div style={{ display: "flex", gap: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save changes"}
+          {pending ? m.submitting : m.submit}
         </button>
         <button
           type="button"
@@ -185,7 +188,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
           onClick={() => setEditing(false)}
           disabled={pending}
         >
-          Cancel
+          {m.cancel}
         </button>
       </div>
     </form>

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getThreadMessages } from "@/lib/data/messages";
 import { ReplyForm } from "@/components/messages/reply-form";
+import { getMessages } from "@/lib/i18n/server";
+import { formatMessage } from "@/lib/i18n/format";
 
 function formatTime(dateStr: string): string {
   const d = new Date(dateStr);
@@ -20,8 +22,11 @@ export default async function MessageThreadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { messages, customerName, customerEmail, orderNumber } =
-    await getThreadMessages(decodeURIComponent(id));
+  const [threadData, msgs] = await Promise.all([
+    getThreadMessages(decodeURIComponent(id)),
+    getMessages(),
+  ]);
+  const { messages, customerName, customerEmail, orderNumber } = threadData;
 
   // Extract IDs for the reply form
   const firstInbound = messages.find((m) => m.direction === "inbound");
@@ -30,12 +35,16 @@ export default async function MessageThreadPage({
 
   return (
     <DashboardShell
-      title={`Conversation with ${customerName}`}
-      description={orderNumber ? `Order #${orderNumber}` : "Direct message"}
+      title={formatMessage(msgs.dashboard.messages.detail.conversationWith, { name: customerName })}
+      description={
+        orderNumber
+          ? formatMessage(msgs.dashboard.messages.detail.orderLabel, { number: orderNumber })
+          : msgs.dashboard.messages.detail.directMessage
+      }
     >
       <div style={{ marginBottom: 16 }}>
         <Link href="/dashboard/messages" className="ghost-btn">
-          &larr; Back to Messages
+          &larr; {msgs.dashboard.messages.detail.backToMessages}
         </Link>
         {orderNumber && orderId && (
           <Link
@@ -43,7 +52,7 @@ export default async function MessageThreadPage({
             className="ghost-btn"
             style={{ marginLeft: 8 }}
           >
-            View Order #{orderNumber}
+            {formatMessage(msgs.dashboard.messages.detail.viewOrder, { number: orderNumber })}
           </Link>
         )}
       </div>
@@ -52,7 +61,7 @@ export default async function MessageThreadPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Thread</div>
+              <div className="kicker">{msgs.dashboard.messages.detail.kicker}</div>
               <h2 style={{ margin: "6px 0 0" }}>
                 {customerName}
                 {customerEmail && (

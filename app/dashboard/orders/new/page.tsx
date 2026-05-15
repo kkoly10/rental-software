@@ -17,8 +17,8 @@ export default async function NewOrderPage() {
       <section className="panel">
         <div className="section-header">
           <div>
-            <div className="kicker">Booking creation</div>
-            <h2 style={{ margin: "6px 0 0" }}>New order</h2>
+            <div className="kicker">{m.dashboard.orders.newOrderKicker}</div>
+            <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.orders.newOrderSectionTitle}</h2>
           </div>
         </div>
         <NewOrderForm products={products} serviceAreas={serviceAreas} />

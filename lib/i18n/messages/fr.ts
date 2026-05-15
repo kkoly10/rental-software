@@ -701,6 +701,7 @@ export const fr: Messages = {
         kicker: "Conversation",
         backToMessages: "Retour aux messages",
         viewOrder: "Voir la commande n°{number}",
+        orderLabel: "Commande n°{number}",
         directMessage: "Message direct",
         conversationWith: "Conversation avec {name}",
       },

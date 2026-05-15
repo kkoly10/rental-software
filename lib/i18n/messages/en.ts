@@ -702,6 +702,7 @@ const enValues = {
         kicker: "Thread",
         backToMessages: "Back to Messages",
         viewOrder: "View Order #{number}",
+        orderLabel: "Order #{number}",
         directMessage: "Direct message",
         conversationWith: "Conversation with {name}",
       },

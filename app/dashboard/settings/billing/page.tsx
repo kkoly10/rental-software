@@ -38,42 +38,20 @@ export default async function BillingPage() {
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Billing FAQ</div>
-              <h2 style={{ margin: "6px 0 0" }}>Common questions</h2>
+              <div className="kicker">{m.dashboard.billing.kickerFaq}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.billing.commonQuestions}</h2>
             </div>
           </div>
 
           <div className="list">
-            <article className="order-card">
-              <strong>Can I switch plans?</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                Yes! Upgrade or downgrade anytime. Changes are prorated automatically.
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>What happens when I cancel?</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                You keep access until the end of your billing period. Your data is
-                preserved for 90 days.
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>Is there a free trial?</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                Every new account gets a 14-day free trial on any plan. No credit
-                card required to start.
-              </div>
-            </article>
-
-            <article className="order-card">
-              <strong>What payment methods do you accept?</strong>
-              <div className="muted" style={{ marginTop: 6 }}>
-                All major credit cards via Stripe. We also accept ACH bank transfers
-                on annual plans.
-              </div>
-            </article>
+            {m.dashboard.billing.faqs.map((faq, idx) => (
+              <article key={idx} className="order-card">
+                <strong>{faq.q}</strong>
+                <div className="muted" style={{ marginTop: 6 }}>
+                  {faq.a}
+                </div>
+              </article>
+            ))}
           </div>
         </aside>
       </div>
