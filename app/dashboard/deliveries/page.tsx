@@ -56,7 +56,7 @@ export default async function DeliveriesPage() {
                     <div key={route.id} className="delivery-card">
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
-                      <div className="muted">{route.stops} stops</div>
+                      <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
@@ -81,7 +81,7 @@ export default async function DeliveriesPage() {
                     <div key={route.id} className="delivery-card">
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
-                      <div className="muted">{route.stops} stops</div>
+                      <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
@@ -106,7 +106,7 @@ export default async function DeliveriesPage() {
                     <div key={route.id} className="delivery-card">
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
-                      <div className="muted">{route.stops} stops</div>
+                      <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}

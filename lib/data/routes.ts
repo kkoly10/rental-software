@@ -19,7 +19,7 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("routes")
-    .select("id, name, route_date, route_status, route_stops(id)")
+    .select("id, name, route_date, route_status, route_stops(id), profiles(full_name)")
     .eq("organization_id", ctx.organizationId)
     .order("route_date", { ascending: false })
     .limit(50);
@@ -47,6 +47,7 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
 
   return data.map((route) => {
     const stops = ((route as Record<string, unknown>).route_stops as { id: string }[] | null) ?? [];
+    const driver = (route as Record<string, unknown>).profiles as { full_name?: string } | null;
     return {
       id: route.id,
       name: route.name ?? "Route",
@@ -55,6 +56,7 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
         : "TBD",
       status: route.route_status ?? "planned",
       stops: stops.length,
+      driverName: driver?.full_name ?? undefined,
     };
   });
 }
