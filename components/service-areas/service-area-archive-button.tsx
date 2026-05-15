@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { archiveServiceArea } from "@/lib/service-areas/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function ServiceAreaArchiveButton({ serviceAreaId }: { serviceAreaId: string }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const { messages: m } = useI18n();
 
   return (
     <span>
@@ -15,7 +17,7 @@ export function ServiceAreaArchiveButton({ serviceAreaId }: { serviceAreaId: str
         disabled={pending}
         onClick={() => {
           const confirmed = window.confirm(
-            "Remove this service area from active checkout coverage?"
+            m.forms.serviceAreaArchive.removeConfirm
           );
           if (!confirmed) return;
 
@@ -26,7 +28,7 @@ export function ServiceAreaArchiveButton({ serviceAreaId }: { serviceAreaId: str
           });
         }}
       >
-        {pending ? "Removing…" : "Remove"}
+        {pending ? m.forms.serviceAreaArchive.removing : m.common.remove}
       </button>
       {error && (
         <span style={{ marginLeft: 8, fontSize: 12, color: "var(--danger, #e53e3e)" }}>

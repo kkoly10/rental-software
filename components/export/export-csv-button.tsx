@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ExportResult } from "@/lib/export/csv";
+import { useI18n } from "@/lib/i18n/provider";
 
 type Props = {
   exportAction: () => Promise<ExportResult>;
@@ -11,6 +12,7 @@ type Props = {
 export function ExportCsvButton({ exportAction, label }: Props) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
+  const { messages: m } = useI18n();
 
   function handleExport() {
     startTransition(async () => {
@@ -44,7 +46,7 @@ export function ExportCsvButton({ exportAction, label }: Props) {
         className="ghost-btn"
         style={{ fontSize: 13 }}
       >
-        {isPending ? "Exporting…" : label}
+        {isPending ? m.common.exporting : label}
       </button>
       {message && (
         <span className="muted" style={{ fontSize: 12 }}>

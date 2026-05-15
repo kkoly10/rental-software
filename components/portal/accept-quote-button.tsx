@@ -2,11 +2,13 @@
 
 import { useActionState } from "react";
 import { acceptQuote, type AcceptQuoteState } from "@/lib/portal/accept-quote";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initial: AcceptQuoteState = { ok: false, message: "" };
 
 export function AcceptQuoteButton({ portalToken }: { portalToken: string }) {
   const [state, action, pending] = useActionState(acceptQuote, initial);
+  const { messages: m } = useI18n();
 
   if (state.ok && state.message) {
     return (
@@ -20,7 +22,7 @@ export function AcceptQuoteButton({ portalToken }: { portalToken: string }) {
           onClick={() => window.location.reload()}
           style={{ fontSize: 13 }}
         >
-          Continue to payment →
+          {m.portal.acceptQuote.continueToPayment}
         </button>
       </div>
     );
@@ -36,7 +38,7 @@ export function AcceptQuoteButton({ portalToken }: { portalToken: string }) {
           disabled={pending}
           style={{ fontWeight: 600 }}
         >
-          {pending ? "Processing…" : "Accept Quote & Proceed to Deposit"}
+          {pending ? m.portal.acceptQuote.processing : m.portal.acceptQuote.accept}
         </button>
       </form>
       {!state.ok && state.message && (

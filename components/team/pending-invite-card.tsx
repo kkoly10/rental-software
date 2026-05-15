@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { PendingInvite } from "@/lib/team/data";
 import { cancelInvite } from "@/lib/team/actions";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 export function PendingInviteCard({
   invite,
@@ -12,6 +14,7 @@ export function PendingInviteCard({
   canManage: boolean;
 }) {
   const [pending, setPending] = useState(false);
+  const { messages: m, locale } = useI18n();
 
   async function handleCancel() {
     setPending(true);
@@ -25,8 +28,8 @@ export function PendingInviteCard({
         <div>
           <strong>{invite.email}</strong>
           <div className="muted">
-            Invited as {invite.role} &middot;{" "}
-            {new Date(invite.createdAt).toLocaleDateString()}
+            {formatMessage(m.pendingInvite.invitedAs, { role: invite.role })} &middot;{" "}
+            {new Date(invite.createdAt).toLocaleDateString(locale)}
           </div>
         </div>
 
@@ -38,7 +41,7 @@ export function PendingInviteCard({
             className="ghost-btn"
             style={{ fontSize: 13, padding: "6px 10px" }}
           >
-            {pending ? "..." : "Cancel"}
+            {pending ? "..." : m.common.cancel}
           </button>
         )}
       </div>

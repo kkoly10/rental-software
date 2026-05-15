@@ -78,6 +78,9 @@ export const pt: Messages = {
     inactive: "Inativo",
     primary: "Principal",
     optional_label: "(opcional)",
+    dismiss: "Dispensar",
+    finish: "Concluir",
+    exporting: "A exportar…",
   },
 
   language: {
@@ -626,6 +629,8 @@ export const pt: Messages = {
         backToOrders: "Todas as encomendas",
         recordPayment: "Registar pagamento",
         sendQuote: "Enviar orçamento",
+        sendQuoteToCustomer: "Enviar orçamento ao cliente",
+        sendingQuote: "A enviar…",
         createDocuments: "Criar documentos",
         downloadPdf: "Descarregar PDF",
         downloadQuote: "Descarregar orçamento (PDF)",
@@ -1181,6 +1186,19 @@ export const pt: Messages = {
       agreeText: "Li e concordo com os termos deste {documentType}. Compreendo as minhas responsabilidades enquanto locatário.",
       signing: "A assinar…",
       sign: "Assinar documento",
+    },
+    payBalance: {
+      preparing: "A preparar pagamento…",
+      payBalance: "Pagar saldo {amount}",
+    },
+    acceptQuote: {
+      processing: "A processar…",
+      accept: "Aceitar orçamento e prosseguir para o depósito",
+      continueToPayment: "Continuar para o pagamento →",
+    },
+    invoice: {
+      download: "Transferir fatura",
+      generating: "A gerar...",
     },
   },
 
@@ -2029,6 +2047,26 @@ export const pt: Messages = {
         "O pagamento da sua subscrição falhou. Atualize o seu método de pagamento.",
       manageBilling: "Gerir faturação",
     },
+    replyMessage: {
+      placeholder: "Escreva a sua resposta...",
+      sending: "A enviar...",
+      send: "Enviar resposta",
+      noEmail: "Não há e-mail do cliente disponível para esta conversa.",
+    },
+    billingPortal: {
+      opening: "A abrir...",
+      manage: "Gerir faturação e método de pagamento",
+    },
+    maintenanceStatus: {
+      startWork: "Iniciar trabalho",
+      markResolved: "Marcar como resolvido",
+      logRepair: "Registar reparação",
+      flagIssue: "Reportar problema",
+    },
+    serviceAreaArchive: {
+      removing: "A remover…",
+      removeConfirm: "Remover esta área de serviço da cobertura ativa de pagamento?",
+    },
   },
 
   commandPalette: {
@@ -2316,6 +2354,8 @@ export const pt: Messages = {
     applying: "A aplicar...",
     applyChanges: "Aplicar alterações",
     dismiss: "Dispensar",
+    openLauncher: "Abrir Copilot",
+    closeLauncher: "Fechar Copilot",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "P:",
     faqAnswerPrefix: "R:",
@@ -2358,6 +2398,86 @@ export const pt: Messages = {
     upload: "Carregar logótipo",
     removing: "A remover...",
     remove: "Remover",
+  },
+
+  calendar: {
+    moreEvents: "+{count} mais",
+  },
+
+  weatherBadge: {
+    high: "Risco elevado",
+    moderate: "Moderado",
+    clear: "Limpo",
+  },
+
+  milestones: {
+    firstProduct: {
+      title: "Primeiro produto adicionado!",
+      description: "O seu catálogo de aluguer está online. Os clientes já podem navegar.",
+    },
+    firstOrder: {
+      title: "Primeira encomenda recebida!",
+      description: "A sua primeira reserva chegou. É um grande passo — está oficialmente aberto ao público.",
+    },
+    firstPayment: {
+      title: "Primeiro pagamento registado!",
+      description: "O dinheiro está a entrar. O seu fluxo de faturação está a funcionar.",
+    },
+    firstDelivery: {
+      title: "Primeira entrega agendada!",
+      description: "A sua equipa tem uma rota. A logística do dia de entrega está acertada.",
+    },
+    setupComplete: {
+      title: "Configuração concluída!",
+      description: "Concluiu todos os passos. A sua loja está totalmente operacional.",
+    },
+    tenOrders: {
+      title: "Marco de 10 encomendas!",
+      description: "Já são dois dígitos! O seu negócio de aluguer está a ganhar verdadeiro ritmo.",
+    },
+  },
+
+  firstOrderBanner: {
+    title: "A sua primeira encomenda está ativa!",
+    intro: "Eis o que fazer a seguir:",
+    recordDeposit: "Registar um depósito",
+    goToPayments: "Ir para pagamentos",
+    generateDocuments: "Gerar documentos de aluguer",
+    goToDocuments: "Ir para documentos",
+    checkDelivery: "Verificar planeamento de entregas",
+    goToDeliveries: "Ir para entregas",
+    practiceNote: "Estes passos ajudam a praticar o fluxo completo de reserva antes da chegada de clientes reais.",
+  },
+
+  availabilityBlock: {
+    kinds: {
+      order: "Encomenda",
+      manual: "Manual",
+      maintenance: "Manutenção",
+      private: "Privado",
+    },
+    orderPrefix: "Encomenda #{number}",
+    removeConfirm: "Remover este bloqueio de disponibilidade?",
+  },
+
+  welcomeModal: {
+    greetingBusiness: "Bem-vindo a {business}!",
+    greetingDefault: "Bem-vindo ao seu painel!",
+    intro: "O seu negócio de aluguer está pronto. Escolha um percurso rápido abaixo ou avance diretamente — pode sempre iniciar um percurso mais tarde no Centro de ajuda.",
+    pickFirst: "O que quer fazer primeiro?",
+    helpCenter: "Centro de ajuda",
+    or: "ou",
+    completeProfile: "Complete o seu perfil",
+    skip: "Ignorar — vou explorar por conta própria",
+  },
+
+  guidedTour: {
+    progress: "{tour} — {current} de {total}",
+    skip: "Ignorar",
+  },
+
+  pendingInvite: {
+    invitedAs: "Convidado como {role}",
   },
 
   footer: {

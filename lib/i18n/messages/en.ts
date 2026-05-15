@@ -79,6 +79,9 @@ const enValues = {
     inactive: "Inactive",
     primary: "Primary",
     optional_label: "(optional)",
+    dismiss: "Dismiss",
+    finish: "Finish",
+    exporting: "Exporting…",
   },
 
   language: {
@@ -627,6 +630,8 @@ const enValues = {
         backToOrders: "All orders",
         recordPayment: "Record payment",
         sendQuote: "Send quote",
+        sendQuoteToCustomer: "Send Quote to Customer",
+        sendingQuote: "Sending…",
         createDocuments: "Create documents",
         downloadPdf: "Download PDF",
         downloadQuote: "Download Quote PDF",
@@ -1182,6 +1187,19 @@ const enValues = {
       agreeText: "I have read and agree to the terms of this {documentType}. I understand my responsibilities as the renter.",
       signing: "Signing…",
       sign: "Sign Document",
+    },
+    payBalance: {
+      preparing: "Preparing payment…",
+      payBalance: "Pay balance {amount}",
+    },
+    acceptQuote: {
+      processing: "Processing…",
+      accept: "Accept Quote & Proceed to Deposit",
+      continueToPayment: "Continue to payment →",
+    },
+    invoice: {
+      download: "Download Invoice",
+      generating: "Generating...",
     },
   },
 
@@ -2027,6 +2045,26 @@ const enValues = {
         "Your subscription payment failed. Please update your payment method.",
       manageBilling: "Manage Billing",
     },
+    replyMessage: {
+      placeholder: "Type your reply...",
+      sending: "Sending...",
+      send: "Send Reply",
+      noEmail: "No customer email available for this conversation.",
+    },
+    billingPortal: {
+      opening: "Opening...",
+      manage: "Manage Billing & Payment Method",
+    },
+    maintenanceStatus: {
+      startWork: "Start work",
+      markResolved: "Mark resolved",
+      logRepair: "Log repair",
+      flagIssue: "Flag issue",
+    },
+    serviceAreaArchive: {
+      removing: "Removing…",
+      removeConfirm: "Remove this service area from active checkout coverage?",
+    },
   },
 
   commandPalette: {
@@ -2314,6 +2352,8 @@ const enValues = {
     applying: "Applying...",
     applyChanges: "Apply Changes",
     dismiss: "Dismiss",
+    openLauncher: "Open Copilot",
+    closeLauncher: "Close Copilot",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "Q:",
     faqAnswerPrefix: "A:",
@@ -2356,6 +2396,86 @@ const enValues = {
     upload: "Upload Logo",
     removing: "Removing...",
     remove: "Remove",
+  },
+
+  calendar: {
+    moreEvents: "+{count} more",
+  },
+
+  weatherBadge: {
+    high: "High risk",
+    moderate: "Moderate",
+    clear: "Clear",
+  },
+
+  milestones: {
+    firstProduct: {
+      title: "First product added!",
+      description: "Your rental catalog is live. Customers can now browse it.",
+    },
+    firstOrder: {
+      title: "First order received!",
+      description: "Your first booking is in. This is a big deal — you're officially open for business.",
+    },
+    firstPayment: {
+      title: "First payment recorded!",
+      description: "Money is flowing. Your invoicing workflow is up and running.",
+    },
+    firstDelivery: {
+      title: "First delivery scheduled!",
+      description: "Your crew has a route. Delivery day logistics are dialed in.",
+    },
+    setupComplete: {
+      title: "Setup complete!",
+      description: "You've finished every step. Your storefront is fully operational.",
+    },
+    tenOrders: {
+      title: "10 orders milestone!",
+      description: "Double digits! Your rental business is building real momentum.",
+    },
+  },
+
+  firstOrderBanner: {
+    title: "Your first order is live!",
+    intro: "Here's what to do next:",
+    recordDeposit: "Record a deposit payment",
+    goToPayments: "Go to Payments",
+    generateDocuments: "Generate rental documents",
+    goToDocuments: "Go to Documents",
+    checkDelivery: "Check delivery planning",
+    goToDeliveries: "Go to Deliveries",
+    practiceNote: "These steps help you practice the full booking workflow before real customers arrive.",
+  },
+
+  availabilityBlock: {
+    kinds: {
+      order: "Order",
+      manual: "Manual",
+      maintenance: "Maintenance",
+      private: "Private",
+    },
+    orderPrefix: "Order #{number}",
+    removeConfirm: "Remove this availability block?",
+  },
+
+  welcomeModal: {
+    greetingBusiness: "Welcome to {business}!",
+    greetingDefault: "Welcome to Your Dashboard!",
+    intro: "Your rental business is ready. Pick a quick tour below, or jump straight in — you can always start a tour later from the Help Center.",
+    pickFirst: "What do you want to do first?",
+    helpCenter: "Help Center",
+    or: "or",
+    completeProfile: "Complete your profile",
+    skip: "Skip — I'll explore on my own",
+  },
+
+  guidedTour: {
+    progress: "{tour} — {current} of {total}",
+    skip: "Skip",
+  },
+
+  pendingInvite: {
+    invitedAs: "Invited as {role}",
   },
 
   footer: {

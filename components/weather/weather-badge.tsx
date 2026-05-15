@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { WeatherForecast } from "@/lib/weather/api";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function WeatherBadge({
   eventDate,
@@ -13,6 +14,7 @@ export function WeatherBadge({
   compact?: boolean;
 }) {
   const [forecast, setForecast] = useState<WeatherForecast | null>(null);
+  const { messages: m } = useI18n();
 
   useEffect(() => {
     if (!zipCode || !eventDate) return;
@@ -44,10 +46,10 @@ export function WeatherBadge({
 
   const riskLabel =
     forecast.riskLevel === "high"
-      ? "High risk"
+      ? m.weatherBadge.high
       : forecast.riskLevel === "moderate"
-        ? "Moderate"
-        : "Clear";
+        ? m.weatherBadge.moderate
+        : m.weatherBadge.clear;
 
   if (compact) {
     return (

@@ -78,6 +78,9 @@ export const fr: Messages = {
     inactive: "Inactif",
     primary: "Principal",
     optional_label: "(facultatif)",
+    dismiss: "Ignorer",
+    finish: "Terminer",
+    exporting: "Exportation…",
   },
 
   language: {
@@ -626,6 +629,8 @@ export const fr: Messages = {
         backToOrders: "Toutes les commandes",
         recordPayment: "Enregistrer un paiement",
         sendQuote: "Envoyer un devis",
+        sendQuoteToCustomer: "Envoyer le devis au client",
+        sendingQuote: "Envoi…",
         createDocuments: "Créer les documents",
         downloadPdf: "Télécharger le PDF",
         downloadQuote: "Télécharger le devis (PDF)",
@@ -1181,6 +1186,19 @@ export const fr: Messages = {
       agreeText: "J’ai lu et j’accepte les termes de ce {documentType}. Je comprends mes responsabilités en tant que locataire.",
       signing: "Signature…",
       sign: "Signer le document",
+    },
+    payBalance: {
+      preparing: "Préparation du paiement…",
+      payBalance: "Payer le solde {amount}",
+    },
+    acceptQuote: {
+      processing: "Traitement…",
+      accept: "Accepter le devis et payer l’acompte",
+      continueToPayment: "Continuer vers le paiement →",
+    },
+    invoice: {
+      download: "Télécharger la facture",
+      generating: "Génération...",
     },
   },
 
@@ -2029,6 +2047,26 @@ export const fr: Messages = {
         "Le paiement de votre abonnement a échoué. Veuillez mettre à jour votre moyen de paiement.",
       manageBilling: "Gérer la facturation",
     },
+    replyMessage: {
+      placeholder: "Saisissez votre réponse...",
+      sending: "Envoi...",
+      send: "Envoyer la réponse",
+      noEmail: "Aucune adresse e-mail du client disponible pour cette conversation.",
+    },
+    billingPortal: {
+      opening: "Ouverture...",
+      manage: "Gérer la facturation et le moyen de paiement",
+    },
+    maintenanceStatus: {
+      startWork: "Commencer",
+      markResolved: "Marquer résolu",
+      logRepair: "Consigner réparation",
+      flagIssue: "Signaler un problème",
+    },
+    serviceAreaArchive: {
+      removing: "Suppression…",
+      removeConfirm: "Retirer cette zone de service de la couverture active du paiement ?",
+    },
   },
 
   commandPalette: {
@@ -2316,6 +2354,8 @@ export const fr: Messages = {
     applying: "Application...",
     applyChanges: "Appliquer les modifications",
     dismiss: "Ignorer",
+    openLauncher: "Ouvrir le copilote",
+    closeLauncher: "Fermer le copilote",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "Q :",
     faqAnswerPrefix: "R :",
@@ -2358,6 +2398,86 @@ export const fr: Messages = {
     upload: "Téléverser le logo",
     removing: "Suppression...",
     remove: "Supprimer",
+  },
+
+  calendar: {
+    moreEvents: "+{count} de plus",
+  },
+
+  weatherBadge: {
+    high: "Risque élevé",
+    moderate: "Modéré",
+    clear: "Dégagé",
+  },
+
+  milestones: {
+    firstProduct: {
+      title: "Premier produit ajouté !",
+      description: "Votre catalogue de location est en ligne. Vos clients peuvent maintenant le parcourir.",
+    },
+    firstOrder: {
+      title: "Première commande reçue !",
+      description: "Votre première réservation est arrivée. C’est un grand pas — vous êtes officiellement ouverts.",
+    },
+    firstPayment: {
+      title: "Premier paiement enregistré !",
+      description: "Les fonds rentrent. Votre flux de facturation est opérationnel.",
+    },
+    firstDelivery: {
+      title: "Première livraison planifiée !",
+      description: "Votre équipe a un itinéraire. La logistique du jour de livraison est en place.",
+    },
+    setupComplete: {
+      title: "Configuration terminée !",
+      description: "Toutes les étapes sont terminées. Votre vitrine est pleinement opérationnelle.",
+    },
+    tenOrders: {
+      title: "10 commandes atteintes !",
+      description: "À deux chiffres ! Votre activité de location prend un vrai élan.",
+    },
+  },
+
+  firstOrderBanner: {
+    title: "Votre première commande est en ligne !",
+    intro: "Voici les prochaines étapes :",
+    recordDeposit: "Enregistrer un acompte",
+    goToPayments: "Aller aux paiements",
+    generateDocuments: "Générer les documents de location",
+    goToDocuments: "Aller aux documents",
+    checkDelivery: "Vérifier la planification des livraisons",
+    goToDeliveries: "Aller aux livraisons",
+    practiceNote: "Ces étapes vous aident à pratiquer le flux complet de réservation avant l’arrivée de vrais clients.",
+  },
+
+  availabilityBlock: {
+    kinds: {
+      order: "Commande",
+      manual: "Manuel",
+      maintenance: "Maintenance",
+      private: "Privé",
+    },
+    orderPrefix: "Commande #{number}",
+    removeConfirm: "Supprimer ce blocage de disponibilité ?",
+  },
+
+  welcomeModal: {
+    greetingBusiness: "Bienvenue chez {business} !",
+    greetingDefault: "Bienvenue sur votre tableau de bord !",
+    intro: "Votre activité de location est prête. Choisissez une visite rapide ci-dessous, ou lancez-vous directement — vous pouvez toujours démarrer une visite plus tard depuis le Centre d’aide.",
+    pickFirst: "Que voulez-vous faire en premier ?",
+    helpCenter: "Centre d’aide",
+    or: "ou",
+    completeProfile: "Compléter votre profil",
+    skip: "Passer — j’explorerai par moi-même",
+  },
+
+  guidedTour: {
+    progress: "{tour} — {current} sur {total}",
+    skip: "Passer",
+  },
+
+  pendingInvite: {
+    invitedAs: "Invité en tant que {role}",
   },
 
   footer: {

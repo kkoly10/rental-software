@@ -3,34 +3,38 @@
 import { useState } from "react";
 import type { AvailabilityBlock } from "@/lib/availability/data";
 import { removeAvailabilityBlock } from "@/lib/availability/actions";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
-const blockTypeLabels: Record<string, { label: string; tone: string }> = {
-  order_hold: { label: "Order", tone: "default" },
-  manual_hold: { label: "Manual", tone: "warning" },
-  maintenance: { label: "Maintenance", tone: "danger" },
-  private_event: { label: "Private", tone: "default" },
+const BLOCK_TYPE_KEY_MAP: Record<string, { key: "order" | "manual" | "maintenance" | "private"; tone: string }> = {
+  order_hold: { key: "order", tone: "default" },
+  manual_hold: { key: "manual", tone: "warning" },
+  maintenance: { key: "maintenance", tone: "danger" },
+  private_event: { key: "private", tone: "default" },
 };
-
-function formatBlockDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 export function AvailabilityBlockCard({ block }: { block: AvailabilityBlock }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+  const { messages: m, locale } = useI18n();
 
-  const info = blockTypeLabels[block.blockType] ?? blockTypeLabels.manual_hold;
+  function formatBlockDate(iso: string): string {
+    try {
+      return new Date(iso).toLocaleDateString(locale, {
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return iso;
+    }
+  }
+
+  const info = BLOCK_TYPE_KEY_MAP[block.blockType] ?? BLOCK_TYPE_KEY_MAP.manual_hold;
+  const label = m.availabilityBlock.kinds[info.key];
   const isOrderBlock = block.blockType === "order_hold";
 
   async function handleRemove() {
-    if (!confirm("Remove this availability block?")) return;
+    if (!confirm(m.availabilityBlock.removeConfirm)) return;
     setPending(true);
     const result = await removeAvailabilityBlock(block.id);
     setMessage(result.message);
@@ -50,13 +54,13 @@ export function AvailabilityBlockCard({ block }: { block: AvailabilityBlock }) {
           )}
           {block.orderNumber && (
             <div className="muted" style={{ fontSize: 12 }}>
-              Order #{block.orderNumber}
+              {formatMessage(m.availabilityBlock.orderPrefix, { number: block.orderNumber })}
             </div>
           )}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span className={`badge ${info.tone}`}>{info.label}</span>
+          <span className={`badge ${info.tone}`}>{label}</span>
           {!isOrderBlock && (
             <button
               type="button"
@@ -65,7 +69,7 @@ export function AvailabilityBlockCard({ block }: { block: AvailabilityBlock }) {
               className="ghost-btn"
               style={{ fontSize: 12, padding: "4px 8px" }}
             >
-              {pending ? "..." : "Remove"}
+              {pending ? "..." : m.common.remove}
             </button>
           )}
         </div>

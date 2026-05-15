@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useTransition } from "react";
 import type { TourStep } from "@/lib/guidance/tour-config";
 import { markTourCompleted } from "@/lib/guidance/actions";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 export function GuidedTourOverlay({
   steps,
@@ -16,6 +18,7 @@ export function GuidedTourOverlay({
   const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [, startTransition] = useTransition();
+  const { messages: m } = useI18n();
   const current = steps[stepIndex];
 
   const updatePosition = useCallback(() => {
@@ -80,10 +83,10 @@ export function GuidedTourOverlay({
       <div className="tour-tooltip" style={tooltipStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span className="kicker" style={{ fontSize: 11 }}>
-            {tourName} — {stepIndex + 1} of {steps.length}
+            {formatMessage(m.guidedTour.progress, { tour: tourName, current: stepIndex + 1, total: steps.length })}
           </span>
           <button className="ghost-btn" onClick={finish} style={{ fontSize: 12, padding: "2px 8px" }}>
-            Skip
+            {m.guidedTour.skip}
           </button>
         </div>
         <h3 style={{ margin: "0 0 6px", fontSize: "1.05rem" }}>{current.title}</h3>
@@ -93,11 +96,11 @@ export function GuidedTourOverlay({
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {stepIndex > 0 && (
             <button className="secondary-btn" onClick={prev} style={{ padding: "8px 14px", fontSize: 13 }}>
-              Back
+              {m.common.back}
             </button>
           )}
           <button className="primary-btn" onClick={next} style={{ padding: "8px 14px", fontSize: 13 }}>
-            {stepIndex < steps.length - 1 ? "Next" : "Finish"}
+            {stepIndex < steps.length - 1 ? m.common.next : m.common.finish}
           </button>
         </div>
       </div>
