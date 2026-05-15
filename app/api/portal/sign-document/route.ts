@@ -21,6 +21,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
+  if (signerName.length > 200) {
+    return NextResponse.json({ error: "Signer name is too long." }, { status: 400 });
+  }
+
   if (!hasSupabaseEnv()) {
     return NextResponse.json({ ok: true, message: "Demo: Document signed." });
   }

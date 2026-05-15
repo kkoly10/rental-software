@@ -10,12 +10,20 @@ export async function GET(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
     "unknown";
-  const { allowed } = await enforceRateLimit({
-    scope: "api:health:ip",
-    actor: clientIp,
-    limit: 60,
-    windowSeconds: 60,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:health:ip",
+      actor: clientIp,
+      limit: 60,
+      windowSeconds: 60,
+    }));
+  } catch {
+    return NextResponse.json(
+      { status: "error", message: "Service temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
   if (!allowed) {
     return NextResponse.json(
