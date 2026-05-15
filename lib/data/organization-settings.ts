@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 
 const fallbackSettings = {
   businessName: "My Rental Business",
@@ -28,9 +28,7 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
     return fallbackSettings;
   }
 
-  // Try authenticated context first (dashboard), then public tenant resolution (storefront)
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) {
     // No org found — return empty settings rather than fake contact info that
     // could mislead visitors on a misconfigured or unclaimed storefront.
@@ -45,21 +43,13 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
 
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: organization }, { data: profile }, { data: serviceAreas }] =
+  const [{ data: organization }, { data: serviceAreas }] =
     await Promise.all([
       supabase
         .from("organizations")
         .select("name, timezone, default_currency, support_email, phone, settings")
         .eq("id", organizationId)
         .maybeSingle(),
-      // Only fetch profile if we have an authenticated user
-      ctx
-        ? supabase
-            .from("profiles")
-            .select("email, phone")
-            .eq("id", ctx.userId)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
       supabase
         .from("service_areas")
         .select("label, city, state")
@@ -86,11 +76,9 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
     businessName: organization?.name ?? fallbackSettings.businessName,
     supportEmail:
       (organization?.support_email as string) ??
-      profile?.email ??
       fallbackSettings.supportEmail,
     phone:
       (organization?.phone as string) ??
-      profile?.phone ??
       fallbackSettings.phone,
     timezone: organization?.timezone ?? fallbackSettings.timezone,
     currency: organization?.default_currency ?? fallbackSettings.currency,

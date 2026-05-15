@@ -275,7 +275,8 @@ async function sendDayBeforeReminders(
           );
         } catch { /* non-critical — delivery email already sent */ }
       }
-    } catch {
+    } catch (err) {
+      console.error(`[reminders] day-before failed for order ${order.id} (${order.order_number}):`, err instanceof Error ? err.message : err);
       errors++;
     }
   }

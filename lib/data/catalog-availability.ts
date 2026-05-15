@@ -1,5 +1,5 @@
 import { hasSupabaseEnv } from "@/lib/env";
-import { getPublicOrgId, getOrgContext } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 import { checkProductAvailability } from "@/lib/availability/check";
 import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
 import type { CatalogProduct } from "@/lib/types";
@@ -23,8 +23,7 @@ export async function enrichCatalogAvailability(
     return { products, zipValid: null };
   }
 
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) {
     return { products, zipValid: null };
   }
