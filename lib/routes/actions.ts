@@ -219,6 +219,11 @@ export async function updateRouteStatus(
   const routeId = String(formData.get("route_id") ?? "");
   const status = String(formData.get("status") ?? "");
 
+  const VALID_ROUTE_STATUSES = ["planned", "in_progress", "completed", "cancelled"];
+  if (!VALID_ROUTE_STATUSES.includes(status)) {
+    return { ok: false, message: "Invalid route status." };
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data: rsm } = await supabase.from("organization_memberships").select("role")
     .eq("organization_id", ctx.organizationId).eq("profile_id", ctx.userId).eq("status", "active").maybeSingle();
@@ -254,6 +259,11 @@ export async function updateStopStatus(
   const routeId = String(formData.get("route_id") ?? "");
   const status = String(formData.get("status") ?? "");
   const orderId = String(formData.get("order_id") ?? "") || null;
+
+  const VALID_STOP_STATUSES = ["pending", "en_route", "completed", "skipped"];
+  if (!VALID_STOP_STATUSES.includes(status)) {
+    return { ok: false, message: "Invalid stop status." };
+  }
 
   const supabase = await createSupabaseServerClient();
 

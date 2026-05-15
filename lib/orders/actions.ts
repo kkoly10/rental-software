@@ -157,6 +157,17 @@ export async function createOrder(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: createMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(createMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to create orders." };
+  }
+
   // Plan limit: count orders created this calendar month against the cap.
   // Customer-initiated orders (website checkout) bypass this check —
   // operators shouldn't lose external bookings to a plan ceiling.
@@ -392,7 +403,7 @@ export async function createOrder(
   // Helper to clean up the address row if the order creation fails
   const rollbackAddress = async () => {
     if (deliveryAddressId) {
-      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
     }
   };
 
@@ -444,7 +455,7 @@ export async function createOrder(
     });
 
     if (itemError) {
-      await supabase.from("orders").delete().eq("id", createdOrder.id);
+      await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
       return {
         ok: false,
@@ -464,7 +475,7 @@ export async function createOrder(
     });
 
     if (!reserveResult.ok) {
-      await supabase.from("orders").delete().eq("id", createdOrder.id);
+      await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
       return {
         ok: false,
@@ -558,6 +569,17 @@ export async function updateOrderStatus(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: updateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(updateMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update order status." };
+  }
+
   // Enforce state machine — only allow transitions that make business sense.
   // Automatic transitions (e.g. awaiting_deposit → confirmed on payment) bypass
   // this action and update the DB directly, so they are not affected here.
@@ -579,6 +601,7 @@ export async function updateOrderStatus(
     .select("order_status")
     .eq("id", parsed.data.orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!currentOrder) {
@@ -636,11 +659,11 @@ export async function updateOrderStatus(
     if (order?.customer_id) {
       const { data: customer } = await supabase
         .from("customers")
-        .select("phone")
+        .select("phone, sms_opt_in")
         .eq("id", order.customer_id)
         .maybeSingle();
 
-      if (customer?.phone) {
+      if (customer?.phone && customer?.sms_opt_in) {
         const { data: org } = await supabase
           .from("organizations")
           .select("name")

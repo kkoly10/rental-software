@@ -389,7 +389,7 @@ export async function createCheckoutOrder(
 
   const { data: existingCustomer } = await supabase
     .from("customers")
-    .select("id")
+    .select("id, first_name, last_name, phone")
     .eq("organization_id", orgId)
     .ilike("email", email)
     .is("deleted_at", null)
@@ -399,16 +399,25 @@ export async function createCheckoutOrder(
   if (existingCustomer) {
     customerId = existingCustomer.id;
 
-    const { error: updateCustomerError } = await supabase
-      .from("customers")
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone ?? null,
-        ...(smsOptIn ? { sms_opt_in: true, sms_opt_in_at: new Date().toISOString(), sms_opt_in_ip: clientIp } : {}),
-      })
-      .eq("id", customerId)
-      .eq("organization_id", orgId);
+    // Only fill blank fields — never overwrite data the operator already has on record
+    const customerUpdates: Record<string, unknown> = {};
+    if (firstName && !existingCustomer.first_name) customerUpdates.first_name = firstName;
+    if (lastName && !existingCustomer.last_name) customerUpdates.last_name = lastName;
+    if (phone && !existingCustomer.phone) customerUpdates.phone = phone;
+    if (smsOptIn) {
+      customerUpdates.sms_opt_in = true;
+      customerUpdates.sms_opt_in_at = new Date().toISOString();
+      customerUpdates.sms_opt_in_ip = clientIp;
+    }
+
+    const { error: updateCustomerError } = Object.keys(customerUpdates).length > 0
+      ? await supabase
+          .from("customers")
+          .update(customerUpdates)
+          .eq("id", customerId)
+          .eq("organization_id", orgId)
+          .is("deleted_at", null)
+      : { error: null };
 
     if (updateCustomerError) {
       await logAppError({

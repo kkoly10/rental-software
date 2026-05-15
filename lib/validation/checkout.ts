@@ -8,13 +8,19 @@ import {
   requiredPostalCodeSchema,
 } from "@/lib/validation/common";
 
-// Optional time in HH:MM format (24h)
+// Optional time in HH:MM format (24h), validates actual hour/minute ranges
 const optionalTimeSchema = z
   .string()
   .trim()
-  .refine((val) => val === "" || /^\d{2}:\d{2}$/.test(val), {
-    message: "Time must be in HH:MM format.",
-  })
+  .refine(
+    (val) => {
+      if (val === "") return true;
+      if (!/^\d{2}:\d{2}$/.test(val)) return false;
+      const [h, m] = val.split(":").map(Number);
+      return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+    },
+    { message: "Time must be in HH:MM format (00:00–23:59)." }
+  )
   .transform((val) => (val === "" ? undefined : val))
   .optional();
 

@@ -88,6 +88,17 @@ export async function recordPayment(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: paymentMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(paymentMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to record payments." };
+  }
+
   // Fetch order_status (needed for auto-confirm logic below)
   const { data: order } = await supabase
     .from("orders")
@@ -166,7 +177,7 @@ export async function recordPayment(
     if (fullOrder?.customer_id) {
       const { data: customer } = await supabase
         .from("customers")
-        .select("first_name, email, phone")
+        .select("first_name, email, phone, sms_opt_in")
         .eq("id", fullOrder.customer_id)
         .maybeSingle();
 
@@ -182,7 +193,7 @@ export async function recordPayment(
           newBalance,
         });
 
-        const smsTask = customer.phone && paymentType !== "refund"
+        const smsTask = customer.phone && customer.sms_opt_in && paymentType !== "refund"
           ? import("@/lib/sms/send-notification").then(({ sendSmsNotification }) =>
               sendSmsNotification("paymentReceived", customer.phone!, {
                 amount: amount.toFixed(2),
