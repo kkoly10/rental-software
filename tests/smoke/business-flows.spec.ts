@@ -181,42 +181,44 @@ test.describe("Public marketing pages", () => {
 // ---------------------------------------------------------------------------
 // 5. Inventory / Bookability Model — Documented Behaviour
 // ---------------------------------------------------------------------------
+//
+// NOTE: Availability checking is NOT exposed as an HTTP API route. It runs
+// entirely through Next.js server actions (lib/availability/check.ts called
+// by lib/checkout/actions.ts) and a Postgres function
+// (reserve_availability_if_available). The invariant:
+//   - Capacity = count of `assets` rows with operational_status IN
+//     ('ready', 'available', 'active').
+//   - Products with zero qualifying assets → available=false at date-select.
+//   - createProduct/updateProduct now auto-create one 'ready' asset when
+//     is_active=true and assetCount=0, so new active products are bookable.
 
-test.describe("Inventory bookability — API-level checks", () => {
-  // These tests confirm the bookability model is wired up correctly at the
-  // availability API level. Full end-to-end booking requires a seeded DB.
-
-  test("GET /api/health — availability infrastructure is reachable", async ({ request }) => {
+test.describe("Inventory bookability — infrastructure checks", () => {
+  test("GET /api/health — system health check is reachable", async ({ request }) => {
     const res = await request.get("/api/health");
     expect([200, 503]).toContain(res.status());
     const body = await res.json();
-    // The health endpoint should always describe the system state.
     expect(body).toHaveProperty("status");
     expect(["healthy", "degraded"]).toContain(body.status);
   });
 
-  test("Availability check with no product ID — returns 400 or 404, not 500", async ({ request }) => {
-    // Hit the availability check with a bogus product — confirms the route
-    // validates input and never crashes regardless of DB state.
-    const res = await request.get(
-      "/api/availability?productId=00000000-0000-0000-0000-000000000000&startDate=2027-01-01&endDate=2027-01-02"
-    );
-    // 400 = invalid input, 404 = product not found, 200 = available/unavailable response
-    // 404/410 from missing route = acceptable, 503 = supabase not configured
-    await expectNotCrashed(res, "GET /api/availability with bogus product");
+  test("GET /api/org-type — returns business type (200 or 200 with default)", async ({ request }) => {
+    // Public route — returns the org's business type (inflatable/car/equipment)
+    // or the default when no session is present. Should never crash.
+    const res = await request.get("/api/org-type");
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("businessType");
+    expect(["inflatable", "car", "equipment"]).toContain(body.businessType);
   });
 
-  test("POST /api/availability/reserve — rejects unauthenticated requests", async ({ request }) => {
-    const res = await request.post("/api/availability/reserve", {
-      data: {
-        productId: "00000000-0000-0000-0000-000000000000",
-        startDate: "2027-01-01",
-        endDate: "2027-01-02",
-      },
-    });
-    // 400 = validation failure, 401/403 = auth required, 404/405 = route not found
-    // All acceptable — not 500.
-    await expectNotCrashed(res, "POST /api/availability/reserve unauthenticated");
+  test("GET /api/domains/check-slug — slug availability check is reachable", async ({ request }) => {
+    // Indirectly verifies the Supabase-backed org lookup infrastructure used
+    // by storefront routing does not crash.
+    const res = await request.get("/api/domains/check-slug?slug=smoke-bookability-test");
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("available");
+    expect(typeof body.available).toBe("boolean");
   });
 });
 
