@@ -119,7 +119,7 @@ export async function signDocument(
   }
 
   const hdrs = await headers();
-  const signerIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const signerIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? null;
   const signerUserAgent = hdrs.get("user-agent") ?? null;
 
   const { data: updated, error } = await supabase

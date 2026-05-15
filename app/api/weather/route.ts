@@ -27,7 +27,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Rate limiting: 30 per 15 min per IP
-  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const clientIp =
+    request.headers.get("x-real-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
+    "unknown";
   const { allowed } = await enforceRateLimit({
     scope: "api:weather:ip",
     actor: clientIp,

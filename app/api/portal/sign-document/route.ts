@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   const hdrs = await headers();
-  const clientIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const clientIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
   const limit = await enforceRateLimit({
     scope: "portal:sign:api",
     actor: clientIp,

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch {
-    // Allow through if rate limiting unavailable
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
   }
 
   let body: unknown;

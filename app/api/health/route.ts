@@ -6,7 +6,10 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // Rate limiting: 60 per minute per IP
-  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const clientIp =
+    request.headers.get("x-real-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
+    "unknown";
   const { allowed } = await enforceRateLimit({
     scope: "api:health:ip",
     actor: clientIp,

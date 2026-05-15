@@ -18,8 +18,11 @@ export async function GET(
     return NextResponse.json({ error: "Not available in demo mode." }, { status: 503 });
   }
 
+  const clientIp =
+    req.headers.get("x-real-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
+    "unknown";
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const limit = await enforceRateLimit({
       scope: "tracking:lookup",
       actor: clientIp,
@@ -30,7 +33,7 @@ export async function GET(
       return NextResponse.json({ error: "Too many requests." }, { status: 429 });
     }
   } catch {
-    // Allow through if rate limiting unavailable
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
   }
 
   const tokenHash = hashTrackingToken(token);
@@ -70,6 +73,7 @@ export async function GET(
   };
 
   return NextResponse.json({
+    routeId: stop.route_id,
     stopStatus: stop.stop_status,
     orderNumber: order.order_number,
     customerFirstName: order.customers.first_name,

@@ -55,6 +55,11 @@ export async function updateStopStatus(
     return { ok: false, message: "You are not assigned to this route." };
   }
 
+  const VALID_STOP_STATUSES = ["pending", "en_route", "completed", "skipped"];
+  if (!VALID_STOP_STATUSES.includes(newStatus)) {
+    return { ok: false, message: "Invalid stop status." };
+  }
+
   const updateData: Record<string, unknown> = { stop_status: newStatus };
   if (newStatus === "completed") {
     updateData.completed_at = new Date().toISOString();
@@ -275,6 +280,7 @@ export async function saveSignature(
   const signerName = String(formData.get("signer_name") ?? "").trim();
 
   if (!signerName) return { ok: false, message: "Customer name is required." };
+  if (signerName.length > 200) return { ok: false, message: "Signer name is too long." };
 
   const supabase = await createSupabaseServerClient();
 
