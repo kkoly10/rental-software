@@ -34,6 +34,7 @@ export async function getCalendarEvents(
         "id, order_number, event_date, order_status, customers(first_name, last_name)"
       )
       .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .gte("event_date", startDate)
       .lt("event_date", endDate)
       .neq("order_status", "cancelled")
