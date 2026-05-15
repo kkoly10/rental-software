@@ -28,7 +28,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   }
 
   if (!hasResendEnv()) {
-    console.log(`[email-skip] No RESEND_API_KEY — would send to ${payload.to}: ${payload.subject}`);
+    console.log(`[email-skip] No RESEND_API_KEY — would send email (recipient and subject redacted)`);
     return false;
   }
 
@@ -101,7 +101,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
       source: "email.send",
       message: err instanceof Error ? err.message : "Unknown email error",
       stack: err instanceof Error ? err.stack : undefined,
-      context: { to: payload.to, subject: payload.subject },
+      context: { subject: payload.subject },
       error: err,
     });
 
