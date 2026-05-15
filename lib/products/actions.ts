@@ -226,7 +226,7 @@ export async function updateProduct(
     .from("products")
     .update({
       name: parsed.data.name,
-      slug: slugify(parsed.data.name),
+      // slug is intentionally not updated — preserves existing bookmarks and SEO URLs
       category_id: parsed.data.categoryId ?? null,
       short_description: parsed.data.shortDescription ?? null,
       description: parsed.data.description ?? null,
@@ -248,5 +248,5 @@ export async function updateProduct(
   }
 
   revalidatePath("/inventory");
-  redirect("/dashboard/products");
+  redirect(`/dashboard/products/${parsed.data.productId}`);
 }

@@ -283,6 +283,38 @@ export async function POST(request: NextRequest) {
               .eq("id", originalPayment.order_id)
               .not("order_status", "in", '("cancelled","refunded")');
           }
+
+          // Send refund notification email to customer
+          try {
+            const { data: refundOrder } = await admin
+              .from("orders")
+              .select("order_number, organization_id, customer_id")
+              .eq("id", originalPayment.order_id)
+              .maybeSingle();
+            if (refundOrder?.customer_id && refundOrder.organization_id) {
+              const { data: refundCustomer } = await admin
+                .from("customers")
+                .select("first_name, email")
+                .eq("id", refundOrder.customer_id)
+                .maybeSingle();
+              if (refundCustomer?.email) {
+                const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
+                const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
+                await triggerPaymentReceivedEmail({
+                  organizationId: refundOrder.organization_id,
+                  customerFirstName: refundCustomer.first_name ?? "there",
+                  customerEmail: refundCustomer.email,
+                  orderNumber: refundOrder.order_number,
+                  amount: totalRefunded,
+                  paymentType: "refund",
+                  paymentMethod: "stripe",
+                  newBalance: refundFinancials.remainingBalance,
+                });
+              }
+            }
+          } catch (refundEmailErr) {
+            console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);
+          }
         }
         break;
       }

@@ -40,10 +40,11 @@ export async function getCalendarEvents(
       .order("event_date"),
     supabase
       .from("availability_blocks")
-      .select("id, starts_at, block_type, reason, products(name)")
+      .select("id, starts_at, block_type, reason, expires_at, products(name)")
       .eq("organization_id", ctx.organizationId)
       .gte("starts_at", startDate)
       .lt("starts_at", endDate)
+      .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
       .order("starts_at"),
   ]);
 
