@@ -593,12 +593,16 @@ export async function createCheckoutOrder(
     });
 
     if (itemError) {
-      await supabase.from("orders").delete().eq("id", order.id);
-      if (deliveryAddressId) {
-        await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
-      }
-      if (newCustomerId) {
-        await supabase.from("customers").delete().eq("id", newCustomerId);
+      try {
+        await supabase.from("orders").delete().eq("id", order.id);
+        if (deliveryAddressId) {
+          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+        }
+        if (newCustomerId) {
+          await supabase.from("customers").delete().eq("id", newCustomerId);
+        }
+      } catch (cleanupErr) {
+        console.error("[checkout] Cleanup after item insert failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
       }
 
       await logAppError({
@@ -631,12 +635,16 @@ export async function createCheckoutOrder(
     });
 
     if (!reserveResult.ok) {
-      await supabase.from("orders").delete().eq("id", order.id);
-      if (deliveryAddressId) {
-        await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
-      }
-      if (newCustomerId) {
-        await supabase.from("customers").delete().eq("id", newCustomerId);
+      try {
+        await supabase.from("orders").delete().eq("id", order.id);
+        if (deliveryAddressId) {
+          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+        }
+        if (newCustomerId) {
+          await supabase.from("customers").delete().eq("id", newCustomerId);
+        }
+      } catch (cleanupErr) {
+        console.error("[checkout] Cleanup after reserve failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
       }
 
       await logAppError({

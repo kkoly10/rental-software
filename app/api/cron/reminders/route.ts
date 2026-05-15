@@ -374,7 +374,8 @@ async function sendMorningDigests(
         organizationId: orgId,
       });
       sent++;
-    } catch {
+    } catch (err) {
+      console.error(`[reminders] morning digest failed for org ${orgId}:`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
@@ -425,6 +426,16 @@ async function sendPostEventFollowUps(
       : branding.siteUrl;
 
     try {
+      // Atomically claim before sending to prevent duplicate emails from concurrent cron runs
+      const { data: claimed } = await supabase
+        .from("orders")
+        .update({ follow_up_sent_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("follow_up_sent_at", null)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
       await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
@@ -443,14 +454,9 @@ async function sendPostEventFollowUps(
         organizationId: order.organization_id,
       });
 
-      // Mark as sent
-      await supabase
-        .from("orders")
-        .update({ follow_up_sent_at: new Date().toISOString() })
-        .eq("id", order.id);
-
       sent++;
-    } catch {
+    } catch (err) {
+      console.error(`[reminders] post-event follow-up failed for order ${order.id} (${order.order_number}):`, err instanceof Error ? err.message : err);
       errors++;
     }
   }

@@ -152,7 +152,7 @@ export async function createNotification(
       link: link ?? null,
       read: false,
     });
-  } catch {
-    // Non-blocking — notification creation should never break a flow
+  } catch (err) {
+    console.warn("[notifications] Failed to create notification:", type, title, err instanceof Error ? err.message : err);
   }
 }
