@@ -130,7 +130,8 @@ export async function createCheckoutSession(
       const { error: customerSaveError } = await supabase
         .from("organizations")
         .update({ stripe_customer_id: customerId })
-        .eq("id", ctx.organizationId);
+        .eq("id", ctx.organizationId)
+        .is("deleted_at", null);
       if (customerSaveError) {
         console.error("[stripe] failed to persist stripe_customer_id:", customerSaveError.message);
       }

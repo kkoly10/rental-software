@@ -124,6 +124,7 @@ export async function completeOnboarding(
       .from("organizations")
       .select("settings")
       .eq("id", orgId)
+      .is("deleted_at", null)
       .maybeSingle();
 
     const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -135,7 +136,8 @@ export async function completeOnboarding(
           onboarding_completed_at: new Date().toISOString(),
         },
       })
-      .eq("id", orgId);
+      .eq("id", orgId)
+      .is("deleted_at", null);
 
     if (tsError) {
       console.error("[onboarding] Failed to record onboarding_completed_at:", tsError.message);
