@@ -817,11 +817,23 @@ export async function createCheckoutOrder(
     }
   }
 
+  const fmt = (n: number) => `$${n.toFixed(2)}`;
+  const addrParts = [line1, city, state, postalCode].filter(Boolean);
   return {
     ok: true,
     message: `Order ${orderNumber} created successfully! A deposit of $${deposit.toFixed(
       2
     )} is required to confirm your booking.`,
     orderNumber,
+    summary: {
+      productName,
+      eventDate: eventDate ?? "",
+      address: addrParts.join(", "),
+      subtotal: fmt(subtotal),
+      deliveryFee: fmt(deliveryFee),
+      total: fmt(total),
+      depositDue: fmt(deposit),
+      balanceDue: fmt(balance),
+    },
   };
 }

@@ -110,6 +110,12 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         .limit(3),
     ]);
 
+  if (todayRes.error) console.error("[dashboard] today bookings query failed:", todayRes.error.message);
+  if (upcomingRes.error) console.error("[dashboard] upcoming deliveries query failed:", upcomingRes.error.message);
+  if (productsRes.error) console.error("[dashboard] products query failed:", productsRes.error.message);
+  if (paymentsRes.error) console.error("[dashboard] payments query failed:", paymentsRes.error.message);
+  if (recentRes.error) console.error("[dashboard] recent orders query failed:", recentRes.error.message);
+
   const recentOrders: OrderSummary[] = (recentRes.data ?? []).map((o) => {
     const c = (o as Record<string, unknown>).customers as {
       first_name?: string | null;
