@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import {
   eventReminderEmail,
@@ -79,7 +79,7 @@ function buildFromAddress(businessName: string): string {
 }
 
 async function getOrgBrandings(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
   orgIds: string[]
 ): Promise<Map<string, OrgBranding>> {
   if (orgIds.length === 0) return new Map();
@@ -132,7 +132,7 @@ async function getOrgBrandings(
 // ─── Day-Before Reminder ───────────────────────────────────────────────────
 
 async function sendDayBeforeReminders(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<{ sent: number; errors: number }> {
   const tomorrow = tomorrowDateStr();
   let sent = 0;
@@ -144,6 +144,7 @@ async function sendDayBeforeReminders(
       "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone, sms_opt_in), order_items(item_name_snapshot)"
     )
     .eq("event_date", tomorrow)
+    .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled"])
     .is("day_before_reminder_sent_at", null);
 
@@ -287,7 +288,7 @@ async function sendDayBeforeReminders(
 // ─── Morning-Of Digest ────────────────────────────────────────────────────
 
 async function sendMorningDigests(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<{ sent: number; errors: number }> {
   const today = todayDateStr();
   let sent = 0;
@@ -299,6 +300,7 @@ async function sendMorningDigests(
       "id, organization_id, order_number, order_status, event_date, customer_id, customers(first_name, last_name), order_items(item_name_snapshot)"
     )
     .eq("event_date", today)
+    .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
 
   if (!orders || orders.length === 0) return { sent, errors };
@@ -386,7 +388,7 @@ async function sendMorningDigests(
 // ─── Post-Event Follow-Up ─────────────────────────────────────────────────
 
 async function sendPostEventFollowUps(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<{ sent: number; errors: number }> {
   const twoDaysAgo = daysAgoDateStr(2);
   let sent = 0;
@@ -398,6 +400,7 @@ async function sendPostEventFollowUps(
       "id, organization_id, order_number, event_date, customer_id, customers(first_name, email), order_items(item_name_snapshot)"
     )
     .eq("event_date", twoDaysAgo)
+    .is("deleted_at", null)
     .eq("order_status", "completed")
     .is("follow_up_sent_at", null);
 
@@ -481,7 +484,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
 
   const [dayBefore, morningDigest, followUp] = await Promise.all([
     sendDayBeforeReminders(supabase).catch(() => ({ sent: 0, errors: 1 })),

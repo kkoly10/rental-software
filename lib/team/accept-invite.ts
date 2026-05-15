@@ -48,7 +48,21 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     };
   }
 
-  // Check if already a member
+  // Atomically claim the invite by transitioning status from pending→accepted.
+  // If another request already claimed it, this returns 0 rows and we bail out.
+  // This prevents concurrent double-accept without needing a DB transaction.
+  const { data: claimed } = await supabase
+    .from("team_invites")
+    .update({ status: "accepted", accepted_at: new Date().toISOString() })
+    .eq("id", invite.id)
+    .eq("status", "pending")
+    .select("id");
+
+  if (!claimed || claimed.length === 0) {
+    return { ok: false, message: "This invite has already been accepted." };
+  }
+
+  // Check if already a member (race on membership insert)
   const { data: existing } = await supabase
     .from("organization_memberships")
     .select("id")
@@ -72,17 +86,13 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     });
 
   if (memberError) {
+    // Roll back the invite claim so it can be retried
+    await supabase
+      .from("team_invites")
+      .update({ status: "pending", accepted_at: null })
+      .eq("id", invite.id);
     return { ok: false, message: memberError.message };
   }
-
-  // Mark invite as accepted — non-fatal if this update fails; member row is already created
-  await supabase
-    .from("team_invites")
-    .update({ status: "accepted", accepted_at: new Date().toISOString() })
-    .eq("id", invite.id)
-    .then(({ error }) => {
-      if (error) console.error("[accept-invite] failed to mark invite accepted:", error.message);
-    });
 
   // Get org name for confirmation
   const { data: org } = await supabase
