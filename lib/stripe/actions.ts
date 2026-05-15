@@ -88,6 +88,7 @@ export async function createCheckoutSession(
     .from("organizations")
     .select("id, name, stripe_customer_id")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!org) {
@@ -199,6 +200,7 @@ export async function createBillingPortalSession(): Promise<SubscriptionActionSt
     .from("organizations")
     .select("stripe_customer_id")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!org?.stripe_customer_id) {
