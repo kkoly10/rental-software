@@ -5,6 +5,7 @@ import {
   optionalSlugSchema,
   personNameSchema,
   requiredEmailSchema,
+  requiredPostalCodeSchema,
 } from "@/lib/validation/common";
 
 // Optional time in HH:MM format (24h)
@@ -28,7 +29,7 @@ export const checkoutOrderSchema = z.object({
   line2: z.string().trim().max(100).optional().default(""),
   city: z.string().trim().max(80).optional().default(""),
   state: z.string().trim().max(80).optional().default(""),
-  postalCode: z.string().trim().optional().default(""),
+  postalCode: z.union([requiredPostalCodeSchema, z.literal("")]).optional().default(""),
   eventDate: optionalDateSchema,
   startTime: optionalTimeSchema,
   endTime: optionalTimeSchema,

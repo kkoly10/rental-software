@@ -147,6 +147,7 @@ export async function recordPayment(
       .from("availability_blocks")
       .update({ expires_at: null, block_type: "order_hold" })
       .eq("source_order_id", orderId)
+      .eq("organization_id", ctx.organizationId)
       .eq("block_type", "checkout_hold");
   }
 

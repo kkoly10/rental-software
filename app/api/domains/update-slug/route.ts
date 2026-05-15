@@ -53,10 +53,22 @@ export async function POST(request: NextRequest) {
 
   const { slug } = parsed.data;
 
+  const supabase = await createSupabaseServerClient();
+
+  const { data: slugMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(slugMembership?.role ?? "")) {
+    return NextResponse.json({ error: "Only owners and admins can change the subdomain." }, { status: 403 });
+  }
+
   const available = await isSlugAvailable(slug);
   if (!available) {
     // Check if the slug belongs to the current org (no change needed)
-    const supabase = await createSupabaseServerClient();
     const { data: currentOrg } = await supabase
       .from("organizations")
       .select("slug")
@@ -73,7 +85,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("organizations")
     .update({ slug })
