@@ -677,6 +677,15 @@ export const pt: Messages = {
         images: "Imagens",
         viewPublicPage: "Ver página pública",
         published: "Ativo / Publicado",
+        productCreatedBanner: "Produto criado!",
+        productCreatedBody: "Adicione imagens abaixo para destacá-lo no catálogo.",
+        quickInfoKicker: "Info rápida",
+        currentSettings: "Definições atuais",
+        perDay: "por dia",
+        required: "Necessária",
+        optional: "Opcional",
+        hidden: "Oculto",
+        imagesUploaded: "{count} carregadas",
       },
     },
     customers: {
@@ -722,6 +731,8 @@ export const pt: Messages = {
         orderLabel: "Encomenda n.º {number}",
         directMessage: "Mensagem direta",
         conversationWith: "Conversa com {name}",
+        emptyThread: "Sem mensagens neste tópico",
+        replyHeading: "Responder",
       },
       relativeTime: {
         justNow: "agora mesmo",
@@ -779,6 +790,11 @@ export const pt: Messages = {
         sectionStops: "Lista de paragens",
         sectionSequence: "Sequência do dia",
         addStop: "Adicionar paragem",
+        noStops: "Sem paragens ainda. Adicione encomendas abaixo.",
+        completedOf: "{done} de {total} concluídas",
+        openRouteInMaps: "Abrir rota no Google Maps",
+        stopFallback: "Paragem",
+        tbd: "A determinar",
       },
     },
     maintenance: {
@@ -1062,6 +1078,26 @@ export const pt: Messages = {
     pricing: "Preços",
     basePrice: "Preço base",
     perDay: "por dia",
+    depositReservesDate: "O depósito reserva a data",
+    whatToExpect: {
+      kicker: "O que esperar",
+      title: "Entregue como um serviço real, não apenas um produto",
+      items: [
+        { title: "Montagem profissional", body: "A nossa equipa entrega, monta e revê tudo consigo antes de sair." },
+        { title: "Requisitos de montagem", body: "Verifique a confirmação da encomenda para requisitos de espaço ou acesso e ter um dia tranquilo." },
+        { title: "Recolha posterior tratada", body: "Após o evento, voltamos para desmontar — você foca-se na festa, não na logística." },
+      ],
+    },
+    bestFit: {
+      kicker: "Ideal para",
+      title: "Perfeito para eventos familiares",
+      items: [
+        "Aniversários no quintal",
+        "Dias familiares de escola ou igreja",
+        "Celebrações de bairro ao fim de semana",
+        "Extras e pacotes disponíveis",
+      ],
+    },
   },
 
   portal: {

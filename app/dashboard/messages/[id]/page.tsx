@@ -75,7 +75,7 @@ export default async function MessageThreadPage({
 
           {messages.length === 0 ? (
             <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>No messages in this thread</strong>
+              <strong>{msgs.dashboard.messages.detail.emptyThread}</strong>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -127,7 +127,7 @@ export default async function MessageThreadPage({
 
           {/* Reply form */}
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: "1px solid var(--border, #dbe6f4)" }}>
-            <h3 style={{ marginBottom: 12 }}>Reply</h3>
+            <h3 style={{ marginBottom: 12 }}>{msgs.dashboard.messages.detail.replyHeading}</h3>
             <ReplyForm
               customerEmail={customerEmail ?? ""}
               customerId={customerId}

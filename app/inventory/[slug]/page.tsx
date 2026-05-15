@@ -149,7 +149,7 @@ export default async function ProductDetailPage({
 
               <div className="price-row" style={{ marginTop: 18 }}>
                 <strong style={{ fontSize: "2rem" }}>{product.price}</strong>
-                <span className="badge">Deposit reserves date</span>
+                <span className="badge">{m.inventoryDetail.depositReservesDate}</span>
               </div>
 
               <div className="storefront-highlight-list">
@@ -180,47 +180,29 @@ export default async function ProductDetailPage({
           <section className="section storefront-detail-section">
             <div className="storefront-detail-grid">
               <div className="panel">
-                <div className="kicker">What to expect</div>
+                <div className="kicker">{m.inventoryDetail.whatToExpect.kicker}</div>
                 <h2 style={{ margin: "8px 0 10px" }}>
-                  Delivered like a real service, not just a product
+                  {m.inventoryDetail.whatToExpect.title}
                 </h2>
                 <div className="list">
-                  <div className="order-card">
-                    <strong>Professional setup</strong>
-                    <div className="muted" style={{ marginTop: 6 }}>
-                      Our team delivers, sets up, and reviews everything with
-                      you before we leave.
+                  {m.inventoryDetail.whatToExpect.items.map((item) => (
+                    <div key={item.title} className="order-card">
+                      <strong>{item.title}</strong>
+                      <div className="muted" style={{ marginTop: 6 }}>
+                        {item.body}
+                      </div>
                     </div>
-                  </div>
-                  <div className="order-card">
-                    <strong>Setup requirements</strong>
-                    <div className="muted" style={{ marginTop: 6 }}>
-                      Check your order confirmation for any space or access
-                      requirements to keep event day smooth.
-                    </div>
-                  </div>
-                  <div className="order-card">
-                    <strong>Pickup handled later</strong>
-                    <div className="muted" style={{ marginTop: 6 }}>
-                      After the event, we return for pack-down so you can focus
-                      on celebrating, not logistics.
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
               <div className="panel">
-                <div className="kicker">Best fit</div>
-                <h2 style={{ margin: "8px 0 10px" }}>Great for family events</h2>
+                <div className="kicker">{m.inventoryDetail.bestFit.kicker}</div>
+                <h2 style={{ margin: "8px 0 10px" }}>{m.inventoryDetail.bestFit.title}</h2>
                 <div className="list">
-                  <div className="order-card">Backyard birthdays</div>
-                  <div className="order-card">School or church family days</div>
-                  <div className="order-card">
-                    Weekend neighborhood celebrations
-                  </div>
-                  <div className="order-card">
-                    Add-ons and package bundles available
-                  </div>
+                  {m.inventoryDetail.bestFit.items.map((item) => (
+                    <div key={item} className="order-card">{item}</div>
+                  ))}
                 </div>
               </div>
             </div>

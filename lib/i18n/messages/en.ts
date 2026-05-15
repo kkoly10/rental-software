@@ -678,6 +678,15 @@ const enValues = {
         images: "Images",
         viewPublicPage: "View public page",
         published: "Active / Published",
+        productCreatedBanner: "Product created!",
+        productCreatedBody: "Add images below to showcase it in your catalog.",
+        quickInfoKicker: "Quick info",
+        currentSettings: "Current settings",
+        perDay: "per day",
+        required: "Required",
+        optional: "Optional",
+        hidden: "Hidden",
+        imagesUploaded: "{count} uploaded",
       },
     },
     customers: {
@@ -723,6 +732,8 @@ const enValues = {
         orderLabel: "Order #{number}",
         directMessage: "Direct message",
         conversationWith: "Conversation with {name}",
+        emptyThread: "No messages in this thread",
+        replyHeading: "Reply",
       },
       relativeTime: {
         justNow: "just now",
@@ -780,6 +791,11 @@ const enValues = {
         sectionStops: "Stop list",
         sectionSequence: "Today’s sequence",
         addStop: "Add stop",
+        noStops: "No stops yet. Add orders below.",
+        completedOf: "{done} of {total} completed",
+        openRouteInMaps: "Open route in Google Maps",
+        stopFallback: "Stop",
+        tbd: "TBD",
       },
     },
     maintenance: {
@@ -1063,6 +1079,26 @@ const enValues = {
     pricing: "Pricing",
     basePrice: "Base price",
     perDay: "per day",
+    depositReservesDate: "Deposit reserves date",
+    whatToExpect: {
+      kicker: "What to expect",
+      title: "Delivered like a real service, not just a product",
+      items: [
+        { title: "Professional setup", body: "Our team delivers, sets up, and reviews everything with you before we leave." },
+        { title: "Setup requirements", body: "Check your order confirmation for any space or access requirements to keep event day smooth." },
+        { title: "Pickup handled later", body: "After the event, we return for pack-down so you can focus on celebrating, not logistics." },
+      ],
+    },
+    bestFit: {
+      kicker: "Best fit",
+      title: "Great for family events",
+      items: [
+        "Backyard birthdays",
+        "School or church family days",
+        "Weekend neighborhood celebrations",
+        "Add-ons and package bundles available",
+      ],
+    },
   },
 
   portal: {

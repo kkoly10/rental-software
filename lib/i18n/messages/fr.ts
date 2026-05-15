@@ -677,6 +677,15 @@ export const fr: Messages = {
         images: "Images",
         viewPublicPage: "Voir la page publique",
         published: "Actif / Publié",
+        productCreatedBanner: "Produit créé !",
+        productCreatedBody: "Ajoutez des images ci-dessous pour le mettre en valeur dans votre catalogue.",
+        quickInfoKicker: "Infos rapides",
+        currentSettings: "Paramètres actuels",
+        perDay: "par jour",
+        required: "Requise",
+        optional: "Optionnelle",
+        hidden: "Masqué",
+        imagesUploaded: "{count} téléversée(s)",
       },
     },
     customers: {
@@ -722,6 +731,8 @@ export const fr: Messages = {
         orderLabel: "Commande n°{number}",
         directMessage: "Message direct",
         conversationWith: "Conversation avec {name}",
+        emptyThread: "Aucun message dans ce fil",
+        replyHeading: "Répondre",
       },
       relativeTime: {
         justNow: "à l’instant",
@@ -779,6 +790,11 @@ export const fr: Messages = {
         sectionStops: "Liste des arrêts",
         sectionSequence: "Séquence du jour",
         addStop: "Ajouter un arrêt",
+        noStops: "Aucun arrêt pour le moment. Ajoutez des commandes ci-dessous.",
+        completedOf: "{done} sur {total} terminés",
+        openRouteInMaps: "Ouvrir l’itinéraire dans Google Maps",
+        stopFallback: "Arrêt",
+        tbd: "À déterminer",
       },
     },
     maintenance: {
@@ -1062,6 +1078,26 @@ export const fr: Messages = {
     pricing: "Tarification",
     basePrice: "Prix de base",
     perDay: "par jour",
+    depositReservesDate: "L’acompte réserve la date",
+    whatToExpect: {
+      kicker: "À quoi s’attendre",
+      title: "Livré comme un vrai service, pas un simple produit",
+      items: [
+        { title: "Installation professionnelle", body: "Notre équipe livre, installe et passe tout en revue avec vous avant de partir." },
+        { title: "Conditions d’installation", body: "Consultez votre confirmation pour les besoins d’espace ou d’accès afin que la journée se passe bien." },
+        { title: "Récupération assurée ensuite", body: "Après l’événement, nous revenons pour le démontage — vous vous concentrez sur la fête, pas la logistique." },
+      ],
+    },
+    bestFit: {
+      kicker: "Idéal pour",
+      title: "Parfait pour les événements en famille",
+      items: [
+        "Anniversaires dans le jardin",
+        "Journées école ou paroissiales",
+        "Fêtes de quartier le week-end",
+        "Options et forfaits supplémentaires disponibles",
+      ],
+    },
   },
 
   portal: {

@@ -5,7 +5,7 @@ import { ProductForm } from "@/components/products/product-form";
 import { ProductImageManager } from "@/components/products/product-image-manager";
 import { getProductById, getCategories } from "@/lib/data/products";
 import { getProductImages } from "@/lib/data/product-images";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function ProductDetailEditorPage({
   params,
@@ -17,11 +17,11 @@ export default async function ProductDetailEditorPage({
   const { id } = await params;
   const { created } = await searchParams;
   const justCreated = created === "1";
-  const [product, categories, images, m] = await Promise.all([
+  const [product, categories, images, { messages: m, t }] = await Promise.all([
     getProductById(id),
     getCategories(),
     getProductImages(id),
-    getMessages(),
+    getTranslator(),
   ]);
 
   if (!product) {
@@ -35,7 +35,7 @@ export default async function ProductDetailEditorPage({
     >
       {justCreated && (
         <div className="panel" style={{ background: "var(--success-bg, #e6f9e6)", border: "1px solid var(--success-border, #b3e6b3)", marginBottom: 16 }}>
-          <strong>Product created!</strong> Add images below to showcase it in your catalog.
+          <strong>{m.dashboard.products.detail.productCreatedBanner}</strong> {m.dashboard.products.detail.productCreatedBody}
         </div>
       )}
 
@@ -58,23 +58,23 @@ export default async function ProductDetailEditorPage({
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Quick info</div>
-              <h2 style={{ margin: "6px 0 0" }}>Current settings</h2>
+              <div className="kicker">{m.dashboard.products.detail.quickInfoKicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.products.detail.currentSettings}</h2>
             </div>
           </div>
 
           <div className="list">
-            <div className="order-card">{m.dashboard.products.detail.basePrice}: ${product.basePrice}/day</div>
+            <div className="order-card">{m.dashboard.products.detail.basePrice}: ${product.basePrice}/{m.dashboard.products.detail.perDay}</div>
             <div className="order-card">{m.dashboard.products.detail.securityDeposit}: ${product.securityDeposit}</div>
             <div className="order-card">{m.dashboard.products.detail.category}: {product.category}</div>
             <div className="order-card">
-              {m.dashboard.products.detail.delivery}: {product.requiresDelivery ? "Required" : "Optional"}
+              {m.dashboard.products.detail.delivery}: {product.requiresDelivery ? m.dashboard.products.detail.required : m.dashboard.products.detail.optional}
             </div>
             <div className="order-card">
-              {m.dashboard.products.detail.status}: {product.isActive ? m.dashboard.products.detail.published : "Hidden"}
+              {m.dashboard.products.detail.status}: {product.isActive ? m.dashboard.products.detail.published : m.dashboard.products.detail.hidden}
             </div>
             <div className="order-card">
-              {m.dashboard.products.detail.images}: {images.length} uploaded
+              {m.dashboard.products.detail.images}: {t(m.dashboard.products.detail.imagesUploaded, { count: images.length })}
             </div>
           </div>
 

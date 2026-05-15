@@ -677,6 +677,15 @@ export const es: Messages = {
         images: "Imágenes",
         viewPublicPage: "Ver página pública",
         published: "Activo / Publicado",
+        productCreatedBanner: "¡Producto creado!",
+        productCreatedBody: "Añade imágenes abajo para mostrarlo en tu catálogo.",
+        quickInfoKicker: "Información rápida",
+        currentSettings: "Configuración actual",
+        perDay: "por día",
+        required: "Obligatoria",
+        optional: "Opcional",
+        hidden: "Oculto",
+        imagesUploaded: "{count} subidas",
       },
     },
     customers: {
@@ -722,6 +731,8 @@ export const es: Messages = {
         orderLabel: "Pedido n.º {number}",
         directMessage: "Mensaje directo",
         conversationWith: "Conversación con {name}",
+        emptyThread: "No hay mensajes en este hilo",
+        replyHeading: "Responder",
       },
       relativeTime: {
         justNow: "justo ahora",
@@ -779,6 +790,11 @@ export const es: Messages = {
         sectionStops: "Lista de paradas",
         sectionSequence: "Secuencia del día",
         addStop: "Añadir parada",
+        noStops: "Aún no hay paradas. Añade pedidos abajo.",
+        completedOf: "{done} de {total} completadas",
+        openRouteInMaps: "Abrir ruta en Google Maps",
+        stopFallback: "Parada",
+        tbd: "Por determinar",
       },
     },
     maintenance: {
@@ -1062,6 +1078,26 @@ export const es: Messages = {
     pricing: "Precios",
     basePrice: "Precio base",
     perDay: "por día",
+    depositReservesDate: "El depósito reserva la fecha",
+    whatToExpect: {
+      kicker: "Qué esperar",
+      title: "Entregado como un servicio real, no solo un producto",
+      items: [
+        { title: "Montaje profesional", body: "Nuestro equipo entrega, monta y repasa todo contigo antes de irse." },
+        { title: "Requisitos de montaje", body: "Revisa la confirmación del pedido por si hay requisitos de espacio o acceso para un día sin sorpresas." },
+        { title: "Recogida posterior incluida", body: "Tras el evento, volvemos para desmontar — tú te centras en celebrar, no en la logística." },
+      ],
+    },
+    bestFit: {
+      kicker: "Ideal para",
+      title: "Perfecto para eventos familiares",
+      items: [
+        "Cumpleaños en el jardín",
+        "Días familiares de escuela o iglesia",
+        "Celebraciones de barrio el fin de semana",
+        "Complementos y paquetes disponibles",
+      ],
+    },
   },
 
   portal: {
