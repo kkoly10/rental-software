@@ -75,6 +75,9 @@ export async function getWeatherForecast(
   lng: number,
   date: string
 ): Promise<WeatherForecast | null> {
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180 || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York`;
 
