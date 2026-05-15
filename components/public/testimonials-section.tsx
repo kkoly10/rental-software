@@ -1,16 +1,19 @@
+import { getMessages } from "@/lib/i18n/server";
+
 interface TestimonialsSectionProps {
   testimonials: { name: string; text: string; rating: number }[];
 }
 
-export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
+export async function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
   if (!testimonials || testimonials.length === 0) return null;
+  const m = await getMessages();
 
   return (
     <section className="section testimonials-section">
       <div className="container">
         <div style={{ textAlign: "center", maxWidth: 580, margin: "0 auto 36px" }}>
-          <div className="kicker">Reviews</div>
-          <h2 style={{ margin: "8px 0 0" }}>What our customers say</h2>
+          <div className="kicker">{m.storefront.testimonials.kicker}</div>
+          <h2 style={{ margin: "8px 0 0" }}>{m.storefront.testimonials.title}</h2>
         </div>
 
         <div className="testimonials-grid">

@@ -4,6 +4,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { isTenantHost } from "@/lib/auth/org-context";
+import { getMessages } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   return await buildPageMetadata({
@@ -16,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function TermsPage() {
   if (await isTenantHost()) notFound();
+  const m = await getMessages();
 
   return (
     <>
@@ -23,10 +25,10 @@ export default async function TermsPage() {
       <main className="page">
         <div className="container" style={{ maxWidth: 760 }}>
           <section className="panel" style={{ padding: "40px 36px" }}>
-            <div className="kicker">Legal</div>
-            <h1 style={{ margin: "8px 0 24px" }}>Terms of Service</h1>
+            <div className="kicker">{m.footer.columns.legal}</div>
+            <h1 style={{ margin: "8px 0 24px" }}>{m.legal.terms.title}</h1>
             <p className="muted" style={{ marginBottom: 8 }}>
-              Last updated: March 30, 2026
+              {m.legal.terms.lastUpdated}: March 30, 2026
             </p>
 
             <div className="legal-content">

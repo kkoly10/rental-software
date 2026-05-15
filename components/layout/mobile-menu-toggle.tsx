@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
+import { LanguageSwitcher } from "./language-switcher";
+import type { Locale } from "@/lib/i18n/config";
 
 interface NavLink {
   key: string;
@@ -16,6 +18,12 @@ interface MobileMenuToggleProps {
   navLinks?: NavLink[];
   cta?: { label: string; href: string };
   authLabel?: string;
+  dashboardLabel?: string;
+  menuLabel?: string;
+  openMenuLabel?: string;
+  closeMenuLabel?: string;
+  currentLocale?: Locale;
+  languageLabel?: string;
 }
 
 const defaultLinks: NavLink[] = [
@@ -27,7 +35,19 @@ const defaultLinks: NavLink[] = [
   { key: "contact", label: "Contact", href: "/contact" },
 ];
 
-export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks, cta, authLabel }: MobileMenuToggleProps) {
+export function MobileMenuToggle({
+  isOperator,
+  siteUrl = "",
+  navLinks,
+  cta,
+  authLabel,
+  dashboardLabel,
+  menuLabel,
+  openMenuLabel,
+  closeMenuLabel,
+  currentLocale,
+  languageLabel,
+}: MobileMenuToggleProps) {
   const links = navLinks ?? defaultLinks;
   const ctaHref = cta?.href ?? "/inventory";
   const ctaLabel = cta?.label ?? "Book Now";
@@ -106,7 +126,7 @@ export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks, cta, auth
         ref={toggleRef}
         type="button"
         className="mobile-menu-btn"
-        aria-label="Open menu"
+        aria-label={openMenuLabel ?? "Open menu"}
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
@@ -124,15 +144,15 @@ export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks, cta, auth
             className="mobile-menu-drawer"
             role="dialog"
             aria-modal="true"
-            aria-label="Navigation menu"
+            aria-label={menuLabel ?? "Navigation menu"}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mobile-menu-header">
-              <span className="mobile-menu-title">Menu</span>
+              <span className="mobile-menu-title">{menuLabel ?? "Menu"}</span>
               <button
                 type="button"
                 className="mobile-menu-close"
-                aria-label="Close menu"
+                aria-label={closeMenuLabel ?? "Close menu"}
                 onClick={close}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -149,6 +169,9 @@ export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks, cta, auth
             </nav>
 
             <div className="mobile-menu-footer">
+              {currentLocale && (
+                <LanguageSwitcher currentLocale={currentLocale} ariaLabel={languageLabel} />
+              )}
               <Link
                 href={ctaHref}
                 className="primary-btn mobile-menu-cta"
@@ -158,7 +181,7 @@ export function MobileMenuToggle({ isOperator, siteUrl = "", navLinks, cta, auth
               </Link>
               {isOperator ? (
                 <a href={`${siteUrl}/dashboard`} className="ghost-btn" onClick={close}>
-                  Dashboard
+                  {dashboardLabel ?? "Dashboard"}
                 </a>
               ) : (
                 <a href={`${siteUrl}/login`} className="ghost-btn" onClick={close}>

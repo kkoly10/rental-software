@@ -6,6 +6,7 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportCustomers } from "@/lib/export/csv";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function CustomersPage({
   searchParams,
@@ -13,15 +14,15 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const customersPage = await getCustomersPage({
-    query: params.q,
-    page: params.page,
-  });
+  const [customersPage, m] = await Promise.all([
+    getCustomersPage({ query: params.q, page: params.page }),
+    getMessages(),
+  ]);
 
   return (
     <DashboardShell
-      title="Customers"
-      description="View customer history, contact details, and repeat booking patterns."
+      title={m.dashboard.customers.title}
+      description={m.dashboard.customers.description}
     >
       <section className="panel">
         <div className="section-header">

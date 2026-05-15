@@ -8,6 +8,7 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function DocumentsPage({
   searchParams,
@@ -15,16 +16,17 @@ export default async function DocumentsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [documentsPage, guidanceState] = await Promise.all([
+  const [documentsPage, guidanceState, m] = await Promise.all([
     getDocumentsDetailedPage({ query: params.q, page: params.page }),
     getGuidanceState(),
+    getMessages(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/documents"];
 
   return (
     <DashboardShell
-      title="Documents"
-      description="Track rental agreements, safety waivers, and manage signing status."
+      title={m.dashboard.documents.title}
+      description={m.dashboard.documents.description}
     >
       {helpConfig && (
         <ContextHelpBanner

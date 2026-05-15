@@ -3,13 +3,41 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { signInWithPassword } from "@/lib/auth/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = {
   ok: false,
   message: "",
 };
 
-export function LoginForm({ redirectTo }: { redirectTo?: string }) {
+interface LoginFormLabels {
+  email: string;
+  emailPlaceholder: string;
+  password: string;
+  passwordPlaceholder: string;
+  signIn: string;
+  signingIn: string;
+  forgotPasswordLink: string;
+}
+
+export function LoginForm({
+  redirectTo,
+  labels,
+}: {
+  redirectTo?: string;
+  labels?: LoginFormLabels;
+}) {
+  const { messages } = useI18n();
+  const l: LoginFormLabels = labels ?? {
+    email: messages.auth.form.email,
+    emailPlaceholder: messages.auth.form.emailPlaceholder,
+    password: messages.auth.form.password,
+    passwordPlaceholder: messages.auth.form.passwordPlaceholder,
+    signIn: messages.auth.form.signIn,
+    signingIn: messages.auth.form.signingIn,
+    forgotPasswordLink: messages.auth.form.forgotPasswordLink,
+  };
+
   const [state, formAction, pending] = useActionState(
     signInWithPassword,
     initialState
@@ -20,22 +48,22 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
       <input type="hidden" name="redirect" value={redirectTo ?? "/dashboard"} />
 
       <label className="order-card">
-        <strong>Email</strong>
+        <strong>{l.email}</strong>
         <input
           name="email"
           type="email"
-          placeholder="owner@business.com"
+          placeholder={l.emailPlaceholder}
           autoComplete="email"
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Password</strong>
+        <strong>{l.password}</strong>
         <input
           name="password"
           type="password"
-          placeholder="Enter password"
+          placeholder={l.passwordPlaceholder}
           autoComplete="current-password"
           style={{ marginTop: 10, width: "100%" }}
         />
@@ -45,10 +73,10 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Signing In..." : "Sign In"}
+          {pending ? l.signingIn : l.signIn}
         </button>
         <Link href="/forgot-password" className="ghost-btn">
-          Forgot password?
+          {l.forgotPasswordLink}
         </Link>
       </div>
     </form>

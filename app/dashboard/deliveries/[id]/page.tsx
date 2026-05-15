@@ -7,6 +7,7 @@ import { RouteDetailTimeline } from "./route-detail-timeline";
 import { RouteStatusControls, StopStatusButton, RemoveStopButton } from "@/components/deliveries/route-controls";
 import { AddStopForm } from "@/components/deliveries/add-stop-form";
 import { getUnroutedOrdersForDate } from "@/lib/data/unrouted-orders";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function DeliveryDetailPage({
   params,
@@ -15,12 +16,15 @@ export default async function DeliveryDetailPage({
 }) {
   const { id } = await params;
   const route = await getRouteDetailEnhanced(id);
-  const unroutedOrders = await getUnroutedOrdersForDate(route.routeDateRaw);
+  const [unroutedOrders, m] = await Promise.all([
+    getUnroutedOrdersForDate(route.routeDateRaw),
+    getMessages(),
+  ]);
 
   return (
     <DashboardShell
-      title="Route Detail"
-      description="Inspect a delivery route, crew assignment, stops, and completion state."
+      title={m.dashboard.routeDetail.title}
+      description={m.dashboard.routeDetail.description}
     >
       {/* Stats bar */}
       <DeliveryStats route={route} />

@@ -12,6 +12,7 @@ import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportOrders } from "@/lib/export/csv";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 import { FirstOrderBanner } from "@/components/orders/first-order-banner";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function OrdersPage({
   searchParams,
@@ -20,16 +21,17 @@ export default async function OrdersPage({
 }) {
   const params = await searchParams;
   const showFirstOrderBanner = params.first === "true";
-  const [ordersPage, guidanceState] = await Promise.all([
+  const [ordersPage, guidanceState, m] = await Promise.all([
     getOrdersPage({ query: params.q, page: params.page }),
     getGuidanceState(),
+    getMessages(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/orders"];
 
   return (
     <DashboardShell
-      title="Orders"
-      description="Track inquiries, confirmed bookings, payments, and delivery readiness."
+      title={m.dashboard.orders.title}
+      description={m.dashboard.orders.description}
     >
       {showFirstOrderBanner && <FirstOrderBanner />}
 

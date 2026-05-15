@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { signUpWithPassword } from "@/lib/auth/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = {
   ok: false,
@@ -9,13 +10,14 @@ const initialState = {
 };
 
 export function SignupForm() {
+  const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(signUpWithPassword, initialState);
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       <label className="order-card">
-        <strong>Full name</strong>
-        <input name="full_name" type="text" placeholder="Your full name" style={{ marginTop: 10, width: "100%" }} />
+        <strong>{m.auth.form.name}</strong>
+        <input name="full_name" type="text" placeholder={m.auth.form.namePlaceholder} style={{ marginTop: 10, width: "100%" }} />
       </label>
 
       <label className="order-card">
@@ -24,13 +26,13 @@ export function SignupForm() {
       </label>
 
       <label className="order-card">
-        <strong>Email</strong>
-        <input name="email" type="email" placeholder="owner@business.com" style={{ marginTop: 10, width: "100%" }} />
+        <strong>{m.auth.form.email}</strong>
+        <input name="email" type="email" placeholder={m.auth.form.emailPlaceholder} style={{ marginTop: 10, width: "100%" }} />
       </label>
 
       <label className="order-card">
-        <strong>Password</strong>
-        <input name="password" type="password" placeholder="Create password" style={{ marginTop: 10, width: "100%" }} />
+        <strong>{m.auth.form.password}</strong>
+        <input name="password" type="password" placeholder={m.auth.form.passwordPlaceholder} style={{ marginTop: 10, width: "100%" }} />
       </label>
 
       <label
@@ -45,13 +47,13 @@ export function SignupForm() {
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 14, lineHeight: 1.5 }}>
-          I agree to the{" "}
+          {m.auth.signup.termsAgreement}{" "}
           <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600 }}>
-            Terms of Service
+            {m.auth.signup.terms}
           </a>{" "}
-          and{" "}
+          {m.common.and}{" "}
           <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600 }}>
-            Privacy Policy
+            {m.auth.signup.privacy}
           </a>
         </span>
       </label>
@@ -60,7 +62,7 @@ export function SignupForm() {
 
       <div style={{ display: "flex", gap: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Creating Account..." : "Create Account"}
+          {pending ? m.auth.form.signingUp : m.auth.form.signUp}
         </button>
       </div>
     </form>

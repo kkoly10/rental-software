@@ -3,14 +3,16 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { isTenantHost } from "@/lib/auth/org-context";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
+import { getMessages } from "@/lib/i18n/server";
 
 export async function PublicFooter() {
   const year = new Date().getFullYear();
-  const [settings, contentSettings, isTenant, categories] = await Promise.all([
+  const [settings, contentSettings, isTenant, categories, m] = await Promise.all([
     getOrganizationSettings(),
     getContentSettings(),
     isTenantHost(),
     getCategoryGridItems().catch(() => []),
+    getMessages(),
   ]);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
@@ -67,9 +69,9 @@ export async function PublicFooter() {
             </div>
 
             <div>
-              <strong style={{ fontSize: 13 }}>Browse</strong>
+              <strong style={{ fontSize: 13 }}>{m.nav.catalog}</strong>
               <div className="list" style={{ marginTop: 10 }}>
-                <Link href="/inventory" className="muted">Full Catalog</Link>
+                <Link href="/inventory" className="muted">{m.inventory.title}</Link>
                 {categories.slice(0, 3).map((cat) => (
                   <Link key={cat.slug} href={`/inventory?category=${cat.slug}`} className="muted">
                     {cat.name}
@@ -79,13 +81,13 @@ export async function PublicFooter() {
             </div>
 
             <div>
-              <strong style={{ fontSize: 13 }}>Company</strong>
+              <strong style={{ fontSize: 13 }}>{m.footer.columns.company}</strong>
               <div className="list" style={{ marginTop: 10 }}>
-                <a href="#how-it-works" className="muted">How It Works</a>
-                <Link href="/inventory" className="muted">Pricing</Link>
-                <Link href="/order-status" className="muted">Order Status</Link>
-                <Link href="/contact" className="muted">Contact Us</Link>
-                <a href="#service-area" className="muted">Service Area</a>
+                <a href="#how-it-works" className="muted">{m.nav.howItWorks}</a>
+                <Link href="/inventory" className="muted">{m.nav.pricing}</Link>
+                <Link href="/order-status" className="muted">{m.nav.orderStatus}</Link>
+                <Link href="/contact" className="muted">{m.nav.contact}</Link>
+                <a href="#service-area" className="muted">{m.nav.serviceArea}</a>
               </div>
             </div>
 
@@ -93,7 +95,7 @@ export async function PublicFooter() {
               {isTenant ? (
                 (hasPhone || hasEmail) && (
                   <>
-                    <strong style={{ fontSize: 13 }}>Contact</strong>
+                    <strong style={{ fontSize: 13 }}>{m.footer.columns.contact}</strong>
                     <div className="list" style={{ marginTop: 10 }}>
                       {hasPhone && (
                         <a href={`tel:${settings.phone}`} className="muted">{settings.phone}</a>
@@ -106,16 +108,16 @@ export async function PublicFooter() {
                 )
               ) : (
                 <>
-                  <strong style={{ fontSize: 13 }}>For Operators</strong>
+                  <strong style={{ fontSize: 13 }}>{m.nav.operatorView}</strong>
                   <div className="list" style={{ marginTop: 10 }}>
-                    <a href={`${siteUrl}/signup`} className="muted">Create Account</a>
-                    <a href={`${siteUrl}/login`} className="muted">Operator Login</a>
-                    <Link href="/pricing" className="muted">Plans & Pricing</Link>
+                    <a href={`${siteUrl}/signup`} className="muted">{m.auth.login.createAccount}</a>
+                    <a href={`${siteUrl}/login`} className="muted">{m.nav.rentalsLogin}</a>
+                    <Link href="/pricing" className="muted">{m.nav.pricing}</Link>
                   </div>
 
                   {(hasPhone || hasEmail) && (
                     <>
-                      <strong style={{ fontSize: 13, marginTop: 16, display: "block" }}>Contact</strong>
+                      <strong style={{ fontSize: 13, marginTop: 16, display: "block" }}>{m.footer.columns.contact}</strong>
                       <div className="list" style={{ marginTop: 10 }}>
                         {hasPhone && (
                           <a href={`tel:${settings.phone}`} className="muted">{settings.phone}</a>
@@ -133,13 +135,13 @@ export async function PublicFooter() {
 
           <div className="footer-bottom">
             <div className="muted" style={{ fontSize: 12 }}>
-              &copy; {year} {settings.businessName}. All rights reserved.
+              &copy; {year} {settings.businessName}. {m.footer.rights}
             </div>
             <div className="footer-bottom-links">
               {!isTenant && (
                 <>
-                  <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>Privacy</Link>
-                  <Link href="/terms" className="muted" style={{ fontSize: 12 }}>Terms</Link>
+                  <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>{m.footer.links.privacy}</Link>
+                  <Link href="/terms" className="muted" style={{ fontSize: 12 }}>{m.footer.links.terms}</Link>
                 </>
               )}
               <a href="https://CrecyStudio.com" target="_blank" rel="noopener noreferrer" className="muted" style={{ fontSize: 12 }}>Made by CrecyStudio</a>
