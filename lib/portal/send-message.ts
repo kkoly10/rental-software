@@ -91,6 +91,8 @@ export async function sendCustomerMessage(
     .from("customers")
     .select("email")
     .eq("id", order.customer_id)
+    .eq("organization_id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const senderEmail = customer?.email?.toLowerCase();

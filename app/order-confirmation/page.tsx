@@ -50,6 +50,7 @@ async function resolvePaymentStatus(
     .select("id, order_status, total_amount")
     .eq("organization_id", orgId)
     .eq("order_number", orderNumber)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) return { status: "unpaid", orderNumber };
@@ -103,6 +104,7 @@ async function getPortalAccessUrl(orderNumber: string | undefined): Promise<stri
     .select("id")
     .eq("organization_id", orgId)
     .eq("order_number", orderNumber)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) return null;

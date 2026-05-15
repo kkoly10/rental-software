@@ -46,6 +46,7 @@ export async function sendSmsNotification(
         .select("sms_opt_in")
         .eq("id", context.customerId)
         .eq("organization_id", organizationId)
+        .is("deleted_at", null)
         .maybeSingle();
       if (customer && !customer.sms_opt_in) {
         return;

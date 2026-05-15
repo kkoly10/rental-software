@@ -52,6 +52,7 @@ export async function acceptQuote(
     .select("id, order_status, portal_access_token_created_at, order_number, product_id, event_date, event_start_time, event_end_time, customer_id")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) return { ok: false, message: "Order not found." };

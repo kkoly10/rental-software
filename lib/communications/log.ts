@@ -36,6 +36,6 @@ export async function logCommunication(entry: CommunicationLogEntry): Promise<vo
       metadata: entry.metadata ?? {},
     });
   } catch (err) {
-    console.error("[communication_log] Failed to log:", err);
+    console.error("[communication_log] Failed to log:", err instanceof Error ? err.message : String(err));
   }
 }

@@ -24,12 +24,20 @@ export async function GET() {
   }
 
   // Rate limiting: 30 per 15 min per user
-  const { allowed } = await enforceRateLimit({
-    scope: "api:copilot:current-values:user",
-    actor: access.userId,
-    limit: 30,
-    windowSeconds: 900,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:copilot:current-values:user",
+      actor: access.userId,
+      limit: 30,
+      windowSeconds: 900,
+    }));
+  } catch {
+    return NextResponse.json(
+      { error: "Service temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
   if (!allowed) {
     return NextResponse.json(

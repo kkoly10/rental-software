@@ -103,7 +103,19 @@ export async function resetTour() {
   revalidatePath("/dashboard");
 }
 
+const VALID_MILESTONE_KEYS = new Set([
+  "first_product",
+  "first_order",
+  "first_payment",
+  "first_delivery",
+  "setup_complete",
+  "ten_orders",
+]);
+
 export async function dismissMilestone(key: string) {
+  if (typeof key !== "string" || key.length > 50 || !VALID_MILESTONE_KEYS.has(key)) {
+    return;
+  }
   const state = await getGuidanceState();
   const milestones = [...state.dismissedMilestones, key];
   await upsertGuidance({ dismissed_milestones: milestones });

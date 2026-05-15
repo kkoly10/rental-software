@@ -99,6 +99,7 @@ export async function addOrderToRoute(
     .select("id")
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) return { ok: false, message: "Order not found." };

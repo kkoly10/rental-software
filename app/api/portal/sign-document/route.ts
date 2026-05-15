@@ -21,19 +21,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
+  if (signerName.length > 200) {
+    return NextResponse.json({ error: "Signer name is too long." }, { status: 400 });
+  }
+
   if (!hasSupabaseEnv()) {
     return NextResponse.json({ ok: true, message: "Demo: Document signed." });
   }
 
   const hdrs = await headers();
   const clientIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
-  const limit = await enforceRateLimit({
-    scope: "portal:sign:api",
-    actor: clientIp,
-    limit: 20,
-    windowSeconds: 300,
-    strict: true,
-  });
+  let limit: { allowed: boolean };
+  try {
+    limit = await enforceRateLimit({
+      scope: "portal:sign:api",
+      actor: clientIp,
+      limit: 20,
+      windowSeconds: 300,
+      strict: true,
+    });
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
   if (!limit.allowed) {
     return NextResponse.json({ error: "Too many attempts. Please wait." }, { status: 429 });
   }
@@ -57,6 +66,7 @@ export async function POST(request: NextRequest) {
     .select("id")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {

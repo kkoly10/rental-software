@@ -157,7 +157,6 @@ export async function createCheckoutOrder(
         source: "checkout.website",
         action: "rate_limited",
         status: "warning",
-        metadata: { email },
       });
 
       return {
@@ -170,7 +169,6 @@ export async function createCheckoutOrder(
       source: "checkout.website",
       message: "Checkout rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
-      context: { email },
       error,
     });
 
@@ -202,7 +200,6 @@ export async function createCheckoutOrder(
     await logAppError({
       source: "checkout.website",
       message: "Public checkout missing organization context",
-      context: { email },
     });
 
     return {
@@ -454,7 +451,7 @@ export async function createCheckoutOrder(
         organizationId: orgId,
         source: "checkout.website",
         message: "Failed to create customer during checkout",
-        context: { reason: customerError?.message, email },
+        context: { reason: customerError?.message },
       });
 
       return {
