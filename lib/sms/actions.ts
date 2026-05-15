@@ -33,6 +33,18 @@ export async function updateSmsSettings(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+
+  const role = membership?.role ?? null;
+  if (role !== "owner" && role !== "admin") {
+    return { ok: false, message: "Only owners and admins can update SMS settings." };
+  }
+
   // Read existing settings
   const { data: org } = await supabase
     .from("organizations")
