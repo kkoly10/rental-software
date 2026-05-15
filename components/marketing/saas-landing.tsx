@@ -725,12 +725,13 @@ export async function SaasLanding() {
               gap: "8px 24px",
             }}
           >
-            {s.pricingSection.trustSignals.map((signal, i) => (
-              <span key={signal}>
-                {signal}
-                {i < s.pricingSection.trustSignals.length - 1 && <span style={{ marginLeft: 24 }}>·</span>}
-              </span>
-            ))}
+            {s.pricingSection.trustSignals.flatMap((signal, i) => {
+              const items = [<span key={signal}>{signal}</span>];
+              if (i < s.pricingSection.trustSignals.length - 1) {
+                items.push(<span key={`sep-${i}`} aria-hidden="true">·</span>);
+              }
+              return items;
+            })}
           </div>
         </section>
 
