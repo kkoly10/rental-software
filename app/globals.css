@@ -2215,6 +2215,17 @@ textarea[aria-invalid="true"] {
   .mobile-menu-btn {
     display: flex;
   }
+
+  .mobile-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+/* Hide the mobile language switcher on desktop — the in-nav one covers it there. */
+.mobile-header-controls {
+  display: none;
 }
 
 @media (max-width: 640px) {
