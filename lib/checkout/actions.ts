@@ -276,6 +276,7 @@ export async function createCheckoutOrder(
           .from("organizations")
           .select("settings")
           .eq("id", orgId)
+          .is("deleted_at", null)
           .maybeSingle();
 
         const orgSettings = (orgData?.settings as Record<string, unknown>) ?? {};
@@ -721,6 +722,7 @@ export async function createCheckoutOrder(
         .from("organizations")
         .select("name")
         .eq("id", orgId)
+        .is("deleted_at", null)
         .maybeSingle();
       await sendSmsNotification("orderConfirmation", phone, {
         orderNumber,

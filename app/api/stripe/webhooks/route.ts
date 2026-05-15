@@ -161,7 +161,8 @@ export async function POST(request: NextRequest) {
                   .from("orders")
                   .update(updates)
                   .eq("id", orderId)
-                  .eq("organization_id", orgId);
+                  .eq("organization_id", orgId)
+                  .is("deleted_at", null);
               }
 
               // Convert temporary checkout hold to permanent order hold
@@ -308,7 +309,9 @@ export async function POST(request: NextRequest) {
           await admin
             .from("orders")
             .update({ balance_due_amount: refundFinancials.remainingBalance })
-            .eq("id", originalPayment.order_id);
+            .eq("id", originalPayment.order_id)
+            .eq("organization_id", refundOrgId)
+            .is("deleted_at", null);
 
           // When all payments have been refunded (net paid ≤ 0), mark the order refunded.
           // Only advance non-terminal statuses — don't overwrite "cancelled".
@@ -317,6 +320,8 @@ export async function POST(request: NextRequest) {
               .from("orders")
               .update({ order_status: "refunded" })
               .eq("id", originalPayment.order_id)
+              .eq("organization_id", refundOrgId)
+              .is("deleted_at", null)
               .not("order_status", "in", '("cancelled","refunded")');
           }
 
@@ -377,6 +382,7 @@ export async function POST(request: NextRequest) {
             .from("organizations")
             .select("stripe_customer_id")
             .eq("id", orgId)
+            .is("deleted_at", null)
             .maybeSingle();
           if (!cancelOrg || (cancelCustomerId && cancelOrg.stripe_customer_id !== cancelCustomerId)) {
             console.warn("[webhook] subscription.deleted: customer mismatch, skipping", { orgId });
@@ -391,7 +397,8 @@ export async function POST(request: NextRequest) {
               subscription_current_period_end: null,
               subscription_canceled_at: new Date().toISOString(),
             })
-            .eq("id", orgId);
+            .eq("id", orgId)
+            .is("deleted_at", null);
         }
         break;
       }
@@ -457,6 +464,7 @@ async function syncSubscription(
       .from("organizations")
       .select("stripe_customer_id")
       .eq("id", orgId)
+      .is("deleted_at", null)
       .maybeSingle();
     if (!org || org.stripe_customer_id !== customerId) {
       console.warn("[webhook] syncSubscription: customer mismatch, skipping", {
@@ -484,5 +492,6 @@ async function syncSubscription(
         ? new Date(periodEnd * 1000).toISOString()
         : null,
     })
-    .eq("id", orgId);
+    .eq("id", orgId)
+    .is("deleted_at", null);
 }

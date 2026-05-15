@@ -36,9 +36,8 @@ export async function POST(request: NextRequest) {
     if (!limit.allowed) {
       return NextResponse.json({ ok: true }, { status: 202 });
     }
-  } catch (err) {
-    console.warn("[client-error] Rate limit check failed, denying request:", err instanceof Error ? err.message : err);
-    return NextResponse.json({ ok: true }, { status: 202 });
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
   }
 
   await logAppError({

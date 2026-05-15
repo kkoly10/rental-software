@@ -39,6 +39,7 @@ export async function requirePublicOrg(): Promise<void> {
       .from("organizations")
       .select("subscription_status, subscription_canceled_at")
       .eq("id", orgId)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (org?.subscription_status === "canceled") {

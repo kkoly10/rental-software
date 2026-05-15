@@ -27,6 +27,7 @@ export async function getBrandSettings(): Promise<BrandSettings> {
     .from("organizations")
     .select("settings")
     .eq("id", organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) return defaultBrand;
