@@ -24,6 +24,10 @@ export async function blockProductDates(
   const endDate = String(formData.get("end_date") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   const blockType = String(formData.get("block_type") ?? "manual_hold");
+  const ALLOWED_BLOCK_TYPES = ["manual_hold"];
+  if (!ALLOWED_BLOCK_TYPES.includes(blockType)) {
+    return { ok: false, message: "Invalid block type." };
+  }
 
   if (!productId || !startDate) {
     return { ok: false, message: "Product and start date are required." };
@@ -55,6 +59,17 @@ export async function blockProductDates(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: blockMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(blockMembership?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage availability." };
+  }
 
   // Verify product belongs to org
   const { data: product } = await supabase
@@ -114,6 +129,17 @@ export async function removeAvailabilityBlock(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: removeMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(removeMembership?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage availability." };
+  }
 
   const { data: block } = await supabase
     .from("availability_blocks")

@@ -281,7 +281,7 @@ export async function lookupOrder(
     .maybeSingle();
 
   if (!order) {
-    return { ok: false, message: "Order not found. Please check your order number." };
+    return { ok: false, message: "Order not found. Please check your order number and email." };
   }
 
   const { data: customer } = await supabase

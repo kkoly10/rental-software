@@ -184,6 +184,7 @@ export async function POST(request: NextRequest) {
                     .from("customers")
                     .select("first_name, email")
                     .eq("id", orderData.customer_id)
+                    .eq("organization_id", orgId)
                     .maybeSingle();
 
                   if (customer?.email) {
@@ -260,12 +261,13 @@ export async function POST(request: NextRequest) {
 
         const { data: originalPayment } = await admin
           .from("payments")
-          .select("id, order_id")
+          .select("id, order_id, orders!inner(organization_id)")
           .eq("provider_payment_id", paymentIntentId)
           .eq("provider", "stripe")
           .maybeSingle();
 
         if (!originalPayment) break;
+        const refundOrgId = (originalPayment.orders as unknown as { organization_id: string }).organization_id;
 
         // Process each individual refund object; each has a unique id for dedup
         const refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
@@ -325,6 +327,7 @@ export async function POST(request: NextRequest) {
                 .from("customers")
                 .select("first_name, email")
                 .eq("id", refundOrder.customer_id)
+                .eq("organization_id", refundOrgId)
                 .maybeSingle();
               if (refundCustomer?.email) {
                 const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
