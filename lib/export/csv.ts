@@ -7,6 +7,8 @@ import { checkFeatureAccess } from "@/lib/stripe/gate";
 import { getOrderFinancials } from "@/lib/payments/financials";
 
 function escapeCsvField(value: string): string {
+  // Prefix formula-trigger characters to prevent CSV injection in spreadsheet apps
+  if (/^[=+\-@\t\r]/.test(value)) value = "'" + value;
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
     return `"${value.replace(/"/g, '""')}"`;
   }
@@ -50,6 +52,7 @@ export async function exportOrders(): Promise<ExportResult> {
       "id, order_number, order_status, event_date, total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount, balance_due_amount, created_at, customers(first_name, last_name, email, phone), order_items(item_name_snapshot, unit_price, quantity)"
     )
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(2000);
 

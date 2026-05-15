@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 
 export type CopilotAction = {
   type:
@@ -23,14 +24,18 @@ const ALLOWED_SETTINGS_FIELDS: Record<string, string> = {
 };
 
 export async function executeCopilotAction(
-  action: CopilotAction,
-  organizationId: string
+  action: CopilotAction
 ): Promise<{ ok: boolean; message: string }> {
   if (!hasSupabaseEnv()) {
     return {
       ok: true,
       message: `Demo mode: ${action.preview || "Action would be applied."}`,
     };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) {
+    return { ok: false, message: "Not authenticated." };
   }
 
   const settingsKey =
@@ -52,11 +57,22 @@ export async function executeCopilotAction(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: copilotMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(copilotMembership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can apply AI suggestions." };
+  }
+
   // Read existing settings
   const { data: org } = await supabase
     .from("organizations")
     .select("settings")
-    .eq("id", organizationId)
+    .eq("id", ctx.organizationId)
     .maybeSingle();
 
   const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -88,7 +104,7 @@ export async function executeCopilotAction(
         [settingsKey]: parsedValue || null,
       },
     })
-    .eq("id", organizationId);
+    .eq("id", ctx.organizationId);
 
   if (error) {
     return { ok: false, message: error.message };

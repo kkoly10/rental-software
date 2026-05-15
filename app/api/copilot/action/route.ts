@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
   const action: CopilotAction = parsed.data;
 
   try {
-    const result = await executeCopilotAction(action, access.organizationId);
+    const result = await executeCopilotAction(action);
 
     if (result.ok) {
       revalidatePath("/dashboard/website");

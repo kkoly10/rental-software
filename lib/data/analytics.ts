@@ -80,6 +80,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("orders")
         .select("id, order_status, total_amount, deposit_due_amount, event_date, created_at")
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .limit(5000),
 
       // Customer count
@@ -115,6 +116,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("orders")
         .select("balance_due_amount")
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .not("order_status", "in", "(cancelled,completed,refunded)")
         .limit(5000),
 
@@ -123,6 +125,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("orders")
         .select("customer_id")
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .not("order_status", "eq", "cancelled")
         .limit(5000),
 

@@ -59,7 +59,7 @@ export async function signDocument(
       }),
       enforceRateLimit({
         scope: "portal:sign:token",
-        actor: portalToken,
+        actor: hashPortalAccessToken(portalToken),
         limit: 15,
         windowSeconds: 300,
         strict: true,

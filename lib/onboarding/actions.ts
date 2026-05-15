@@ -153,7 +153,7 @@ export async function completeOnboarding(
         organizationId: orgId,
       });
     } catch {
-      console.error("[onboarding] Failed to send welcome email to", user.email);
+      console.error("[onboarding] Failed to send welcome email — check email provider settings.");
     }
   }
 

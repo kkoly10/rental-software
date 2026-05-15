@@ -25,7 +25,29 @@ export async function logMaintenance(
 
   if (!productId) return { ok: false, message: "Select a product." };
 
+  const VALID_MAINTENANCE_TYPES = ["service", "repair", "inspection", "cleaning", "other"];
+  if (!VALID_MAINTENANCE_TYPES.includes(maintenanceType)) {
+    return { ok: false, message: "Invalid maintenance type." };
+  }
+  if (notes.length > 2000) {
+    return { ok: false, message: "Notes must be 2000 characters or fewer." };
+  }
+  if (costRaw < 0 || costRaw > 1_000_000) {
+    return { ok: false, message: "Cost must be between 0 and 1,000,000." };
+  }
+
   const supabase = await createSupabaseServerClient();
+
+  const { data: logMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(logMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to log maintenance." };
+  }
 
   // Verify product belongs to this org
   const { data: product } = await supabase
@@ -101,7 +123,23 @@ export async function updateMaintenanceStatus(
 
   if (!recordId || !newStatus) return { ok: false, message: "Missing fields." };
 
+  const VALID_MAINTENANCE_STATUSES = ["open", "in_progress", "resolved"];
+  if (!VALID_MAINTENANCE_STATUSES.includes(newStatus)) {
+    return { ok: false, message: "Invalid status." };
+  }
+
   const supabase = await createSupabaseServerClient();
+
+  const { data: statusMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(statusMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update maintenance status." };
+  }
 
   const updatePayload: Record<string, unknown> = { status: newStatus };
   if (newStatus === "resolved") {

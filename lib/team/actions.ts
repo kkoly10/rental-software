@@ -204,7 +204,7 @@ export async function inviteTeamMember(
     organizationId: ctx.organizationId,
   });
   if (!sent) {
-    console.warn("[team] Invite email delivery failed for", email, "— invite token still valid in DB");
+    console.warn("[team] Invite email delivery failed — invite token still valid in DB");
   }
 
   revalidatePath("/dashboard/settings/team");
