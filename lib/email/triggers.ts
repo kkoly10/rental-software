@@ -46,7 +46,7 @@ function buildFromAddress(businessName: string): string {
   const rawAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
   // Strip any existing display name to get just the email address
   const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
-  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+  const safeName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
   return `${safeName} <${emailOnly}>`;
 }
 

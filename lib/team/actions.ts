@@ -176,7 +176,7 @@ export async function inviteTeamMember(
   // Check the return value so we can warn if delivery failed — but don't block
   // the invite, because the token is already in the DB and the operator can resend.
   const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
-  const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+  const safeFromName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
 
   const sent = await sendEmail({
     to: email,

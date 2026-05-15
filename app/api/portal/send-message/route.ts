@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     const businessName = org?.name ?? "Rental Company";
     const rawFromAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
     const fromEmail = rawFromAddress.replace(/^.*<(.+)>$/, "$1").trim();
-    const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+    const safeName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
 
     await sendEmail({
       to: supportEmail,

@@ -1,19 +1,14 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
- * Per-request cache to avoid repeated DB lookups within the same server action.
- */
-const demoCache = new Map<string, boolean>();
-
-/**
  * Check whether the given org is a demo organization.
- * Result is cached for the lifetime of the current request module scope.
+ * Wrapped in React cache() for request-scoped deduplication — the module-level
+ * Map approach would persist stale data across requests on the same server instance.
  */
-export async function isDemoOrganization(orgId: string): Promise<boolean> {
+export const isDemoOrganization = cache(async (orgId: string): Promise<boolean> => {
   if (!hasSupabaseEnv()) return false;
-
-  if (demoCache.has(orgId)) return demoCache.get(orgId)!;
 
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
@@ -22,10 +17,8 @@ export async function isDemoOrganization(orgId: string): Promise<boolean> {
     .eq("id", orgId)
     .maybeSingle();
 
-  const isDemo = data?.is_demo === true;
-  demoCache.set(orgId, isDemo);
-  return isDemo;
-}
+  return data?.is_demo === true;
+});
 
 export type DemoGuardResult = { blocked: true; message: string } | { blocked: false };
 
