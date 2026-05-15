@@ -72,6 +72,17 @@ export async function createCheckoutSession(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: subMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (subMembership?.role !== "owner") {
+    return { ok: false, message: "Only the organization owner can manage subscriptions." };
+  }
+
   // Get org details for Stripe metadata
   const { data: org } = await supabase
     .from("organizations")
@@ -172,6 +183,17 @@ export async function createBillingPortalSession(): Promise<SubscriptionActionSt
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: portalMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (portalMembership?.role !== "owner") {
+    return { ok: false, message: "Only the organization owner can manage billing." };
+  }
 
   const { data: org } = await supabase
     .from("organizations")
