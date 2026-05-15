@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { updateTrustBadges } from "@/lib/settings/content-actions";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 type TrustBadge = { title: string; description: string };
 
@@ -13,6 +15,8 @@ export function TrustBadgesEditor({ defaults }: { defaults: TrustBadge[] }) {
   );
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [state, formAction, pending] = useActionState(updateTrustBadges, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.trustBadges;
 
   function addItem() {
     if (items.length >= 4) return;
@@ -41,14 +45,16 @@ export function TrustBadgesEditor({ defaults }: { defaults: TrustBadge[] }) {
               onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
               style={{ cursor: "pointer" }}
             >
-              <strong>{item.title || `Badge #${index + 1}`}</strong>
+              <strong>
+                {item.title || formatMessage(m.defaultTitle, { index: index + 1 })}
+              </strong>
               <div className="content-editor-actions">
                 <button
                   type="button"
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); removeItem(index); }}
                   style={{ color: "var(--danger)" }}
-                  title="Delete"
+                  title={m.deleteTitle}
                 >
                   ✕
                 </button>
@@ -58,21 +64,21 @@ export function TrustBadgesEditor({ defaults }: { defaults: TrustBadge[] }) {
             {expandedIndex === index && (
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 <label>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>Title</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>{m.titleLabel}</span>
                   <input
                     type="text"
                     value={item.title}
                     onChange={(e) => updateItem(index, "title", e.target.value)}
-                    placeholder="e.g. Free Delivery"
+                    placeholder={m.titlePlaceholder}
                     style={{ marginTop: 4, width: "100%" }}
                   />
                 </label>
                 <label>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>Description</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>{m.descriptionLabel}</span>
                   <textarea
                     value={item.description}
                     onChange={(e) => updateItem(index, "description", e.target.value)}
-                    placeholder="Short description of the badge..."
+                    placeholder={m.descriptionPlaceholder}
                     rows={2}
                     style={{
                       marginTop: 4,
@@ -92,12 +98,12 @@ export function TrustBadgesEditor({ defaults }: { defaults: TrustBadge[] }) {
 
       {items.length < 4 && (
         <button type="button" className="content-editor-add-btn" onClick={addItem}>
-          + Add Trust Badge
+          {m.addButton}
         </button>
       )}
 
       <p style={{ fontSize: 12, color: "var(--text-soft)", margin: "4px 0 0" }}>
-        Maximum 4 badges. {items.length}/4 used.
+        {formatMessage(m.limitNote, { count: items.length })}
       </p>
 
       {state.message && (
@@ -108,7 +114,7 @@ export function TrustBadgesEditor({ defaults }: { defaults: TrustBadge[] }) {
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save Trust Badges"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>

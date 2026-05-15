@@ -3,14 +3,22 @@
 import { PLAN_TIERS } from "@/lib/stripe/config";
 import type { SubscriptionInfo } from "@/lib/stripe/subscription";
 import { BillingPortalButton } from "./billing-portal-button";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
-const statusLabels: Record<string, { label: string; tone: string }> = {
-  active: { label: "Active", tone: "success" },
-  trialing: { label: "Trial", tone: "default" },
-  past_due: { label: "Past Due", tone: "danger" },
-  canceled: { label: "Canceled", tone: "warning" },
-  unpaid: { label: "Unpaid", tone: "danger" },
-  none: { label: "No Plan", tone: "warning" },
+const statusKeyMap: Record<
+  string,
+  {
+    key: "active" | "trialing" | "pastDue" | "canceled" | "unpaid" | "none";
+    tone: string;
+  }
+> = {
+  active: { key: "active", tone: "success" },
+  trialing: { key: "trialing", tone: "default" },
+  past_due: { key: "pastDue", tone: "danger" },
+  canceled: { key: "canceled", tone: "warning" },
+  unpaid: { key: "unpaid", tone: "danger" },
+  none: { key: "none", tone: "warning" },
 };
 
 export function SubscriptionStatusCard({
@@ -18,11 +26,17 @@ export function SubscriptionStatusCard({
 }: {
   subscription: SubscriptionInfo;
 }) {
+  const { locale, messages } = useI18n();
+  const m = messages.forms.subscriptionStatus;
+  const planNames = messages.forms.planSelector.planNames;
+
   const planConfig = subscription.plan ? PLAN_TIERS[subscription.plan] : null;
-  const statusInfo = statusLabels[subscription.status] ?? statusLabels.none;
+  const planLabel = subscription.plan ? planNames[subscription.plan] : null;
+  const statusEntry = statusKeyMap[subscription.status] ?? statusKeyMap.none;
+  const statusLabel = m.statuses[statusEntry.key];
 
   const periodEnd = subscription.currentPeriodEnd
-    ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", {
+    ? new Date(subscription.currentPeriodEnd).toLocaleDateString(locale, {
         month: "long",
         day: "numeric",
         year: "numeric",
@@ -33,12 +47,12 @@ export function SubscriptionStatusCard({
     <div className="panel">
       <div className="section-header">
         <div>
-          <div className="kicker">Current subscription</div>
+          <div className="kicker">{m.kicker}</div>
           <h2 style={{ margin: "6px 0 0" }}>
-            {planConfig ? `${planConfig.name} Plan` : "No active plan"}
+            {planLabel ? formatMessage(m.planHeading, { plan: planLabel }) : m.noActivePlan}
           </h2>
         </div>
-        <span className={`badge ${statusInfo.tone}`}>{statusInfo.label}</span>
+        <span className={`badge ${statusEntry.tone}`}>{statusLabel}</span>
       </div>
 
       {subscription.hasActiveSubscription && planConfig ? (
@@ -46,18 +60,20 @@ export function SubscriptionStatusCard({
           <div className="order-card">
             <div className="order-row">
               <div>
-                <strong>Plan limits</strong>
+                <strong>{m.planLimitsHeading}</strong>
                 <div className="muted" style={{ marginTop: 4 }}>
                   {subscription.limits.products === Infinity
-                    ? "Unlimited"
+                    ? m.unlimited
                     : subscription.limits.products}{" "}
-                  products &middot;{" "}
+                  {m.productsLabel} &middot;{" "}
                   {subscription.limits.ordersPerMonth === Infinity
-                    ? "Unlimited"
+                    ? m.unlimited
                     : subscription.limits.ordersPerMonth}{" "}
-                  orders/mo &middot;{" "}
-                  {subscription.limits.teamMembers} team member
-                  {subscription.limits.teamMembers > 1 ? "s" : ""}
+                  {m.ordersPerMonthLabel} &middot;{" "}
+                  {subscription.limits.teamMembers}{" "}
+                  {subscription.limits.teamMembers > 1
+                    ? m.teamMembersLabel
+                    : m.teamMemberLabel}
                 </div>
               </div>
             </div>
@@ -65,7 +81,7 @@ export function SubscriptionStatusCard({
 
           {periodEnd && (
             <div className="order-card">
-              <strong>Next billing date</strong>
+              <strong>{m.nextBillingHeading}</strong>
               <div className="muted" style={{ marginTop: 4 }}>
                 {periodEnd}
               </div>
@@ -78,10 +94,10 @@ export function SubscriptionStatusCard({
         <div style={{ marginTop: 12 }}>
           <p className="muted">
             {subscription.status === "canceled"
-              ? "Your subscription has been canceled. Choose a plan below to resubscribe."
+              ? m.canceledMessage
               : subscription.status === "past_due"
-                ? "Your payment is past due. Please update your payment method."
-                : "Choose a plan below to unlock all features and start growing your rental business."}
+                ? m.pastDueMessage
+                : m.defaultMessage}
           </p>
 
           {subscription.status === "past_due" && <BillingPortalButton />}

@@ -3,12 +3,15 @@
 import { useActionState, useState } from "react";
 import { updateNavLinks } from "@/lib/settings/content-actions";
 import type { NavLink } from "@/lib/data/content-settings";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
 export function NavLinksEditor({ defaults }: { defaults: NavLink[] }) {
   const [links, setLinks] = useState<NavLink[]>(defaults);
   const [state, formAction, pending] = useActionState(updateNavLinks, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.navLinks;
 
   function toggleVisible(key: string) {
     setLinks((prev) =>
@@ -27,7 +30,7 @@ export function NavLinksEditor({ defaults }: { defaults: NavLink[] }) {
       <input type="hidden" name="nav_links_json" value={JSON.stringify(links)} />
 
       <div className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
-        Toggle which links appear in your storefront navigation and customise the labels your customers see.
+        {m.description}
       </div>
 
       <div>
@@ -81,7 +84,7 @@ export function NavLinksEditor({ defaults }: { defaults: NavLink[] }) {
 
       <div style={{ marginTop: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save Navigation"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>

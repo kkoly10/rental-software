@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { uploadHeroImage, removeHeroImage } from "@/lib/settings/brand-upload-actions";
 import type { SettingsActionState } from "@/lib/settings/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: SettingsActionState = { ok: false, message: "" };
 
@@ -11,6 +12,8 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
   const [uploadState, uploadAction, uploading] = useActionState(uploadHeroImage, initialState);
   const [removeState, removeAction, removing] = useActionState(removeHeroImage, initialState);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { messages } = useI18n();
+  const m = messages.forms.heroImage;
 
   // Update preview and clear file input when upload succeeds.
   // The action returns the new URL so we don't need a round-trip router.refresh().
@@ -25,14 +28,14 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
 
   return (
     <div className="order-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <strong>Hero Image</strong>
+      <strong>{m.heading}</strong>
 
       {url && (
         <div style={{ borderRadius: 10, overflow: "hidden", maxHeight: 160 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
-            alt="Hero preview"
+            alt={m.altPreview}
             style={{ width: "100%", height: 160, objectFit: "cover" }}
           />
         </div>
@@ -47,11 +50,11 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
           style={{ fontSize: 13 }}
         />
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-          Recommended: 1920x800px or larger. Shows behind your headline. Max 5MB.
+          {m.helpText}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <button className="primary-btn" type="submit" disabled={uploading} style={{ fontSize: 13, padding: "8px 16px" }}>
-            {uploading ? "Uploading..." : "Upload Hero Image"}
+            {uploading ? m.uploading : m.uploadButton}
           </button>
           {url && (
             <button
@@ -66,7 +69,7 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
                 if (fileRef.current) fileRef.current.value = "";
               }}
             >
-              {removing ? "Removing..." : "Remove"}
+              {removing ? m.removing : m.removeButton}
             </button>
           )}
         </div>

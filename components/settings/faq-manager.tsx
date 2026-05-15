@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { updateFaqContent } from "@/lib/settings/content-actions";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 type FaqItem = { question: string; answer: string };
 
@@ -13,6 +15,8 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
   );
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [state, formAction, pending] = useActionState(updateFaqContent, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.faq;
 
   function addItem() {
     setItems([...items, { question: "", answer: "" }]);
@@ -49,14 +53,16 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
               onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
               style={{ cursor: "pointer" }}
             >
-              <strong>{item.question || `FAQ #${index + 1}`}</strong>
+              <strong>
+                {item.question || formatMessage(m.defaultTitle, { index: index + 1 })}
+              </strong>
               <div className="content-editor-actions">
                 <button
                   type="button"
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); moveItem(index, "up"); }}
                   disabled={index === 0}
-                  title="Move up"
+                  title={m.moveUpTitle}
                 >
                   ↑
                 </button>
@@ -65,7 +71,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); moveItem(index, "down"); }}
                   disabled={index === items.length - 1}
-                  title="Move down"
+                  title={m.moveDownTitle}
                 >
                   ↓
                 </button>
@@ -74,7 +80,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); removeItem(index); }}
                   style={{ color: "var(--danger)" }}
-                  title="Delete"
+                  title={m.deleteTitle}
                 >
                   ✕
                 </button>
@@ -84,21 +90,21 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
             {expandedIndex === index && (
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 <label>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>Question</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>{m.questionLabel}</span>
                   <input
                     type="text"
                     value={item.question}
                     onChange={(e) => updateItem(index, "question", e.target.value)}
-                    placeholder="e.g. How do I book a rental?"
+                    placeholder={m.questionPlaceholder}
                     style={{ marginTop: 4, width: "100%" }}
                   />
                 </label>
                 <label>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>Answer</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>{m.answerLabel}</span>
                   <textarea
                     value={item.answer}
                     onChange={(e) => updateItem(index, "answer", e.target.value)}
-                    placeholder="Provide a clear answer..."
+                    placeholder={m.answerPlaceholder}
                     rows={3}
                     style={{
                       marginTop: 4,
@@ -117,7 +123,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
       </div>
 
       <button type="button" className="content-editor-add-btn" onClick={addItem}>
-        + Add FAQ
+        {m.addButton}
       </button>
 
       {state.message && (
@@ -128,7 +134,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save FAQs"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>
