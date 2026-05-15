@@ -55,6 +55,7 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
         .select("label, city, state")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
+        .is("deleted_at", null)
         .limit(3),
     ]);
 
