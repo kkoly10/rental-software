@@ -59,13 +59,22 @@ export async function GET(request: NextRequest) {
     ),
   ];
 
-  // Cancel orders FIRST so we never leave a cancelled order without an available hold
+  // Cancel orders FIRST so we never leave a cancelled order without an available hold.
+  // If the cancellation fails, abort — do NOT delete blocks and leave orders stuck.
   if (orderIds.length > 0) {
-    await admin
+    const { error: cancelError } = await admin
       .from("orders")
       .update({ order_status: "cancelled" })
       .in("id", orderIds)
       .eq("order_status", "awaiting_deposit");
+
+    if (cancelError) {
+      console.error("Failed to cancel expired orders:", cancelError.message);
+      return NextResponse.json(
+        { error: "Failed to cancel expired orders; blocks not deleted to prevent data loss" },
+        { status: 500 }
+      );
+    }
   }
 
   // Then release the availability blocks

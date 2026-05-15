@@ -225,6 +225,17 @@ async function sendDayBeforeReminders(
     }
 
     try {
+      // Atomically claim this order before sending. If two cron instances run
+      // concurrently, only the first to write wins; the second sees count=0 and skips.
+      const { data: claimed } = await supabase
+        .from("orders")
+        .update({ day_before_reminder_sent_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("day_before_reminder_sent_at", null)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
       await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
@@ -242,11 +253,6 @@ async function sendDayBeforeReminders(
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
-
-      await supabase
-        .from("orders")
-        .update({ day_before_reminder_sent_at: new Date().toISOString() })
-        .eq("id", order.id);
 
       sent++;
 
