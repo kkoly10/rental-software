@@ -181,7 +181,7 @@ export async function createProduct(
       await supabase.from("assets").insert({
         organization_id: ctx.organizationId,
         product_id: inserted.id,
-        asset_tag: `${slug.slice(0, 40)}-1`,
+        asset_tag: `${slug}-${inserted.id.slice(-6)}-1`,
         operational_status: "ready",
         condition_status: "good",
       });
@@ -334,7 +334,7 @@ export async function updateProduct(
         await supabase.from("assets").insert({
           organization_id: ctx.organizationId,
           product_id: parsed.data.productId,
-          asset_tag: `${(product?.slug ?? parsed.data.productId).slice(0, 40)}-1`,
+          asset_tag: `${product?.slug ?? parsed.data.productId}-${parsed.data.productId.slice(-6)}-1`,
           operational_status: "ready",
           condition_status: "good",
         });
