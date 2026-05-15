@@ -35,12 +35,12 @@ export default async function CustomerDetailPage({
           <div className="list">
             <div className="order-card">
               <strong>{m.common.email}</strong>
-              <div className="muted">{customer.email || "No email on file"}</div>
+              <div className="muted">{customer.email || m.dashboard.customers.detail.noEmail}</div>
             </div>
 
             <div className="order-card">
               <strong>{m.common.phone}</strong>
-              <div className="muted">{customer.phone || "No phone on file"}</div>
+              <div className="muted">{customer.phone || m.dashboard.customers.detail.noPhone}</div>
             </div>
 
             <div className="order-card">
@@ -50,7 +50,7 @@ export default async function CustomerDetailPage({
 
             <div className="order-card">
               <strong>{m.common.notes}</strong>
-              <div className="muted">{customer.notes || "No notes yet."}</div>
+              <div className="muted">{customer.notes || m.dashboard.customers.detail.noNotes}</div>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ export default async function CustomerDetailPage({
           <div className="section-header">
             <div>
               <div className="kicker">{m.dashboard.customers.detail.bookingHistory}</div>
-              <h2 style={{ margin: "6px 0 0" }}>Orders</h2>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.customers.detail.ordersHeading}</h2>
             </div>
           </div>
 
@@ -104,8 +104,8 @@ export default async function CustomerDetailPage({
       <div className="panel" style={{ marginTop: 16 }}>
         <div className="section-header">
           <div>
-            <div className="kicker">History</div>
-            <h2 style={{ margin: "6px 0 0" }}>Communications</h2>
+            <div className="kicker">{m.dashboard.customers.detail.historyKicker}</div>
+            <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.customers.detail.communicationsHeading}</h2>
           </div>
           <span className="badge default">{communications.length}</span>
         </div>

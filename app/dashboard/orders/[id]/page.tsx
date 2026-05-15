@@ -56,7 +56,7 @@ export default async function OrderDetailPage({
             <div className="order-card">
               <strong>{m.dashboard.orders.detail.labels.customer}</strong>
               <div className="muted">
-                {order.customerName} · {order.customerEmail || "No email"} · {order.customerPhone || "No phone"}
+                {order.customerName} · {order.customerEmail || m.dashboard.orders.detail.noEmail} · {order.customerPhone || m.dashboard.orders.detail.noPhone}
               </div>
             </div>
 
@@ -87,25 +87,25 @@ export default async function OrderDetailPage({
                 <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
                   {order.deliverySurfaceType && (
                     <div className="order-row" style={{ fontSize: 13 }}>
-                      <span className="muted">Surface</span>
+                      <span className="muted">{m.dashboard.orders.detail.labels.surface}</span>
                       <span style={{ textTransform: "capitalize" }}>{order.deliverySurfaceType}</span>
                     </div>
                   )}
                   {order.deliveryGateCode && (
                     <div className="order-row" style={{ fontSize: 13 }}>
-                      <span className="muted">Gate / access code</span>
+                      <span className="muted">{m.dashboard.orders.detail.labels.gateCode}</span>
                       <span style={{ fontFamily: "monospace" }}>{order.deliveryGateCode}</span>
                     </div>
                   )}
                   {order.deliveryContactName && (
                     <div className="order-row" style={{ fontSize: 13 }}>
-                      <span className="muted">On-site contact</span>
+                      <span className="muted">{m.dashboard.orders.detail.labels.onSiteContact}</span>
                       <span>{order.deliveryContactName}{order.deliveryContactPhone ? ` · ${order.deliveryContactPhone}` : ""}</span>
                     </div>
                   )}
                   {order.deliverySetupNotes && (
                     <div style={{ marginTop: 4, fontSize: 13, color: "var(--text-soft)" }}>
-                      Setup notes: {order.deliverySetupNotes}
+                      {m.dashboard.orders.detail.labels.setupNotes}: {order.deliverySetupNotes}
                     </div>
                   )}
                 </div>
@@ -134,13 +134,13 @@ export default async function OrderDetailPage({
                         rel="noopener noreferrer"
                         style={{ fontSize: 12, color: "var(--primary)" }}
                       >
-                        Download PDF
+                        {m.dashboard.orders.detail.downloadPdf}
                       </a>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="muted" style={{ marginTop: 4 }}>No documents</div>
+                <div className="muted" style={{ marginTop: 4 }}>{m.dashboard.orders.detail.noDocuments}</div>
               )}
             </div>
 
@@ -175,7 +175,7 @@ export default async function OrderDetailPage({
             </div>
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Delivery fee</span>
+                <span className="muted">{m.dashboard.orders.detail.labels.deliveryFee}</span>
                 <strong>{order.deliveryFee}</strong>
               </div>
             </div>
@@ -217,7 +217,7 @@ export default async function OrderDetailPage({
                 className="secondary-btn"
                 style={{ fontSize: 13 }}
               >
-                Download Quote PDF
+                {m.dashboard.orders.detail.downloadQuote}
               </a>
             )}
             <a
@@ -226,7 +226,7 @@ export default async function OrderDetailPage({
               rel="noopener noreferrer"
               className="primary-btn"
             >
-              Download Invoice
+              {m.dashboard.orders.detail.downloadInvoice}
             </a>
             <Link href="/dashboard/orders" className="secondary-btn">
               {m.dashboard.orders.detail.backToOrders}
@@ -242,7 +242,7 @@ export default async function OrderDetailPage({
       <div className="panel stack-gap-sm">
         <div className="section-header">
           <div>
-            <div className="kicker">Audit trail</div>
+            <div className="kicker">{m.dashboard.orders.detail.auditTrail}</div>
             <h2 className="page-title-sm">{m.dashboard.orders.detail.labels.communications}</h2>
           </div>
           <span className="badge default">{communications.length}</span>
