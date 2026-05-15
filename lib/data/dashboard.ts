@@ -61,6 +61,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         .select("id", { count: "exact", head: true })
         .eq("organization_id", ctx.organizationId)
         .eq("event_date", today)
+        .is("deleted_at", null)
         .in("order_status", [
           "confirmed",
           "scheduled",
@@ -75,6 +76,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         .eq("organization_id", ctx.organizationId)
         .gte("event_date", today)
         .lte("event_date", nextWeekStr)
+        .is("deleted_at", null)
         .in("order_status", ["confirmed", "scheduled"]),
 
       // Active products count
@@ -106,6 +108,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
           "id, order_number, order_status, event_date, total_amount, created_at, customers(first_name, last_name), order_items(item_name_snapshot)"
         )
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(3),
     ]);
