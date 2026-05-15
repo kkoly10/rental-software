@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid subject." }, { status: 400 });
   }
 
-  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const clientIp = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
   const [ipLimit, tokenLimit] = await Promise.all([
     enforceRateLimit({
       scope: "api:portal:send-message:ip",

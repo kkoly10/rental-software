@@ -151,8 +151,8 @@ export async function createOrder(
 
   const requestHeaders = await headers();
   const clientIp =
-    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     requestHeaders.get("x-real-ip") ??
+    requestHeaders.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
     null;
 
   const supabase = await createSupabaseServerClient();

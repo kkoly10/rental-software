@@ -62,9 +62,10 @@ export async function createCheckoutOrder(
 
   const smsOptIn = formData.get("sms_opt_in") === "true";
   const requestHeaders = await headers();
-  const clientIp = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? requestHeaders.get("x-real-ip")
-    ?? null;
+  const clientIp =
+    requestHeaders.get("x-real-ip") ??
+    requestHeaders.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
+    null;
 
   const parsed = checkoutOrderSchema.safeParse({
     firstName: String(formData.get("first_name") ?? ""),
