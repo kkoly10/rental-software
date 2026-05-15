@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { signDocument, type SignDocumentState } from "@/lib/portal/sign-document";
 import { SignatureCanvasInput } from "./signature-canvas";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 type DocumentEntry = {
   id: string;
@@ -16,6 +18,7 @@ type Props = {
 };
 
 export function DocumentSign({ documents, portalToken }: Props) {
+  const { messages: m } = useI18n();
   const [signingDocId, setSigningDocId] = useState<string | null>(null);
 
   if (documents.length === 0) return null;
@@ -26,14 +29,14 @@ export function DocumentSign({ documents, portalToken }: Props) {
   return (
     <div className="panel" style={{ marginTop: 16 }}>
       <div className="section-header">
-        <h3 style={{ margin: 0 }}>Documents</h3>
+        <h3 style={{ margin: 0 }}>{m.portal.documents.title}</h3>
       </div>
 
       <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
         {signedDocs.map((doc) => (
           <div key={doc.id} className="order-card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span>{doc.type}</span>
-            <span className="badge success">Signed</span>
+            <span className="badge success">{m.portal.documents.signed}</span>
           </div>
         ))}
 
@@ -48,7 +51,7 @@ export function DocumentSign({ documents, portalToken }: Props) {
                   style={{ cursor: "pointer", border: "none" }}
                   onClick={() => setSigningDocId(null)}
                 >
-                  Cancel
+                  {m.portal.documents.cancel}
                 </button>
               ) : (
                 <button
@@ -57,7 +60,7 @@ export function DocumentSign({ documents, portalToken }: Props) {
                   style={{ cursor: "pointer", border: "none" }}
                   onClick={() => setSigningDocId(doc.id)}
                 >
-                  Accept &amp; Sign
+                  {m.portal.documents.acceptAndSign}
                 </button>
               )}
             </div>
@@ -85,6 +88,7 @@ function SignForm({
   documentType: string;
   portalToken: string;
 }) {
+  const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState<SignDocumentState, FormData>(
     signDocument,
     { ok: true, message: "" }
@@ -106,21 +110,21 @@ function SignForm({
       <input type="hidden" name="signature_data_url" value={signatureDataUrl ?? ""} />
 
       <label style={{ display: "grid", gap: 4 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>Full name</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{m.portal.documents.fullName}</span>
         <input
           name="signer_name"
           type="text"
-          placeholder="Your full legal name"
+          placeholder={m.portal.documents.fullNamePlaceholder}
           required
         />
       </label>
 
       <div style={{ display: "grid", gap: 4 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>Draw your signature</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{m.portal.documents.drawSignature}</span>
         <SignatureCanvasInput onChange={setSignatureDataUrl} />
         {!signatureDataUrl && (
           <span style={{ fontSize: 11, color: "var(--text-soft)" }}>
-            Optional — a typed name is legally sufficient, but a drawn signature is accepted too.
+            {m.portal.documents.signatureOptionalHint}
           </span>
         )}
       </div>
@@ -128,8 +132,7 @@ function SignForm({
       <label className="portal-sign-checkbox">
         <input name="agreed" type="checkbox" required />
         <span style={{ fontSize: 13 }}>
-          I have read and agree to the terms of this {documentType.toLowerCase()}.
-          I understand my responsibilities as the renter.
+          {formatMessage(m.portal.documents.agreeText, { documentType: documentType.toLowerCase() })}
         </span>
       </label>
 
@@ -138,7 +141,7 @@ function SignForm({
       )}
 
       <button type="submit" className="primary-btn" disabled={pending} style={{ marginTop: 4 }}>
-        {pending ? "Signing..." : "Sign Document"}
+        {pending ? m.portal.documents.signing : m.portal.documents.sign}
       </button>
     </form>
   );
