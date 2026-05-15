@@ -31,22 +31,29 @@ export function computeOrderFinancials(
   const deliveryFee = Number(order.delivery_fee_amount ?? 0);
   const depositRequired = Number(order.deposit_due_amount ?? 0);
 
-  let totalPaid = 0;
-  let totalRefunded = 0;
+  // Accumulate in integer cents to avoid floating-point drift
+  let totalPaidCents = 0;
+  let totalRefundedCents = 0;
 
   for (const p of payments) {
     if (p.payment_status !== "paid") continue;
-    const amt = Number(p.amount ?? 0);
+    const amtCents = Math.round(Number(p.amount ?? 0) * 100);
     if (p.payment_type === "refund") {
-      totalRefunded += amt;
+      totalRefundedCents += amtCents;
     } else {
-      totalPaid += amt;
+      totalPaidCents += amtCents;
     }
   }
 
-  const netPaid = Number(Math.max(0, totalPaid - totalRefunded).toFixed(2));
-  const remainingBalance = Number(Math.max(0, total - netPaid).toFixed(2));
-  const depositFulfilled = netPaid >= depositRequired;
+  const totalCents = Math.round(total * 100);
+  const depositRequiredCents = Math.round(depositRequired * 100);
+  const netPaidCents = Math.max(0, totalPaidCents - totalRefundedCents);
+  const remainingBalanceCents = Math.max(0, totalCents - netPaidCents);
+
+  const netPaid = netPaidCents / 100;
+  const totalRefunded = totalRefundedCents / 100;
+  const remainingBalance = remainingBalanceCents / 100;
+  const depositFulfilled = netPaidCents >= depositRequiredCents;
 
   return {
     total,

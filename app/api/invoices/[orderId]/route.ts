@@ -102,7 +102,7 @@ export async function GET(
   }
 
   // Compute financials from payments table — never trust stored balance_due_amount
-  const financials = await getOrderFinancials(orderId);
+  const financials = await getOrderFinancials(orderId, ctx.organizationId);
   const totalAmount = Number(order.total_amount ?? 0);
   const depositPaid = financials?.totalPaid ?? 0;
   const balanceDue = financials?.remainingBalance ?? totalAmount;

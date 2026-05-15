@@ -90,7 +90,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
   // Compute financials from the payments table — never trust stored balance_due_amount
-  const financials = await getOrderFinancials(data.id);
+  const financials = await getOrderFinancials(data.id, ctx.organizationId);
   const totalPaid = financials?.totalPaid ?? 0;
   const remainingBalance = financials?.remainingBalance ?? Number(data.total_amount ?? 0);
 
