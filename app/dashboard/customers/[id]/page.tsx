@@ -27,29 +27,29 @@ export default async function CustomerDetailPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Customer profile</div>
+              <div className="kicker">{m.dashboard.customers.detail.kicker}</div>
               <h2 style={{ margin: "6px 0 0" }}>{customer.name}</h2>
             </div>
           </div>
 
           <div className="list">
             <div className="order-card">
-              <strong>Email</strong>
+              <strong>{m.common.email}</strong>
               <div className="muted">{customer.email || "No email on file"}</div>
             </div>
 
             <div className="order-card">
-              <strong>Phone</strong>
+              <strong>{m.common.phone}</strong>
               <div className="muted">{customer.phone || "No phone on file"}</div>
             </div>
 
             <div className="order-card">
-              <strong>Saved address</strong>
+              <strong>{m.dashboard.customers.detail.savedAddress}</strong>
               <div className="muted">{customer.addressLabel}</div>
             </div>
 
             <div className="order-card">
-              <strong>Notes</strong>
+              <strong>{m.common.notes}</strong>
               <div className="muted">{customer.notes || "No notes yet."}</div>
             </div>
           </div>
@@ -62,14 +62,14 @@ export default async function CustomerDetailPage({
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Booking history</div>
+              <div className="kicker">{m.dashboard.customers.detail.bookingHistory}</div>
               <h2 style={{ margin: "6px 0 0" }}>Orders</h2>
             </div>
           </div>
 
           {customer.orders.length === 0 ? (
             <div className="order-card" style={{ textAlign: "center", padding: 24 }}>
-              <div className="muted">No orders yet for this customer.</div>
+              <div className="muted">{m.dashboard.customers.detail.noBookings}</div>
             </div>
           ) : (
             <div className="list">
@@ -88,13 +88,13 @@ export default async function CustomerDetailPage({
 
           <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Link href={`/dashboard/orders/new?customer_id=${id}`} className="primary-btn">
-              New order
+              {m.dashboard.customers.detail.newOrder}
             </Link>
             <Link href="/dashboard/customers" className="secondary-btn">
-              All customers
+              {m.dashboard.customers.detail.allCustomers}
             </Link>
             <Link href="/dashboard/orders" className="ghost-btn">
-              All orders
+              {m.dashboard.customers.detail.allOrders}
             </Link>
           </div>
         </aside>

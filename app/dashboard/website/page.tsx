@@ -56,9 +56,9 @@ export default async function WebsitePage() {
 
       <div style={{ marginBottom: 24, padding: "16px 20px", borderRadius: 12, background: "var(--surface-muted)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Your public storefront</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{m.dashboard.website.sectionTitle}</div>
           <div className="muted" style={{ fontSize: 13 }}>
-            Changes you make here update YOUR public storefront — the website your customers see when they visit your booking page.
+            {m.dashboard.website.sectionBody}
           </div>
         </div>
         {storefrontUrl ? (
@@ -69,12 +69,12 @@ export default async function WebsitePage() {
             className="secondary-btn"
             style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}
           >
-            Preview Your Storefront
+            {m.dashboard.website.preview}
             <span style={{ fontSize: 13 }}>&#8599;</span>
           </a>
         ) : (
           <span className="secondary-btn" style={{ opacity: 0.45, cursor: "default", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-            Set up your domain first
+            {m.dashboard.website.setupDomainFirst}
           </span>
         )}
       </div>

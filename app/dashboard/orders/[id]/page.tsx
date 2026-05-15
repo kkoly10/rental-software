@@ -46,7 +46,7 @@ export default async function OrderDetailPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Order #{order.orderNumber}</div>
+              <div className="kicker">{m.dashboard.orders.detail.kicker} #{order.orderNumber}</div>
               <h2 className="page-title-sm">{order.customerName}</h2>
             </div>
             <StatusBadge label={order.status} tone={statusTone(order.status)} />
@@ -54,14 +54,14 @@ export default async function OrderDetailPage({
 
           <div className="list">
             <div className="order-card">
-              <strong>Customer</strong>
+              <strong>{m.dashboard.orders.detail.labels.customer}</strong>
               <div className="muted">
                 {order.customerName} · {order.customerEmail || "No email"} · {order.customerPhone || "No phone"}
               </div>
             </div>
 
             <div className="order-card">
-              <strong>Event date</strong>
+              <strong>{m.dashboard.orders.detail.labels.eventDate}</strong>
               <div className="muted">
                 {order.eventDate}
                 {order.eventStartTime && order.eventEndTime && (
@@ -76,12 +76,12 @@ export default async function OrderDetailPage({
             />
 
             <div className="order-card">
-              <strong>Rental items</strong>
+              <strong>{m.dashboard.orders.detail.labels.rentalItems}</strong>
               <div className="muted">{order.items.join(" · ")}</div>
             </div>
 
             <div className="order-card">
-              <strong>Delivery address</strong>
+              <strong>{m.dashboard.orders.detail.labels.deliveryAddress}</strong>
               <div className="muted">{order.deliveryLabel}</div>
               {(order.deliverySurfaceType || order.deliveryGateCode || order.deliveryContactName || order.deliverySetupNotes) && (
                 <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
@@ -114,7 +114,7 @@ export default async function OrderDetailPage({
 
             <div className="order-card">
               <div className="order-row">
-                <strong>Documents</strong>
+                <strong>{m.dashboard.orders.detail.labels.documents}</strong>
                 {!hasDocuments && <CreateDocumentsButton orderId={id} />}
               </div>
               {hasDocuments ? (
@@ -146,14 +146,14 @@ export default async function OrderDetailPage({
 
             {order.notes && (
               <div className="order-card">
-                <strong>Notes</strong>
+                <strong>{m.dashboard.orders.detail.labels.notes}</strong>
                 <div className="muted">{order.notes}</div>
               </div>
             )}
           </div>
 
           <div style={{ marginTop: 18 }}>
-            <div className="kicker" style={{ marginBottom: 6 }}>Record a payment</div>
+            <div className="kicker" style={{ marginBottom: 6 }}>{m.dashboard.orders.detail.recordPayment}</div>
             <RecordPaymentForm orderId={id} />
           </div>
         </section>
@@ -161,15 +161,15 @@ export default async function OrderDetailPage({
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Financials</div>
-              <h2 className="page-title-sm">Summary</h2>
+              <div className="kicker">{m.dashboard.orders.detail.labels.financials}</div>
+              <h2 className="page-title-sm">{m.common.summary}</h2>
             </div>
           </div>
 
           <div className="list">
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Subtotal</span>
+                <span className="muted">{m.dashboard.orders.detail.labels.subtotal}</span>
                 <strong>{order.subtotal}</strong>
               </div>
             </div>
@@ -181,25 +181,25 @@ export default async function OrderDetailPage({
             </div>
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Total</span>
+                <span className="muted">{m.common.total}</span>
                 <strong>{order.total}</strong>
               </div>
             </div>
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Deposit required</span>
+                <span className="muted">{m.dashboard.orders.detail.labels.deposit}</span>
                 <strong>{order.depositDue ?? "—"}</strong>
               </div>
             </div>
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Amount paid</span>
+                <span className="muted">{m.dashboard.orders.detail.labels.paid}</span>
                 <strong>{order.depositPaid}</strong>
               </div>
             </div>
             <div className="order-card">
               <div className="order-row">
-                <span className="muted">Balance due</span>
+                <span className="muted">{m.dashboard.orders.detail.labels.balance}</span>
                 <strong>{order.balanceDue}</strong>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default async function OrderDetailPage({
               Download Invoice
             </a>
             <Link href="/dashboard/orders" className="secondary-btn">
-              All orders
+              {m.dashboard.orders.detail.backToOrders}
             </Link>
             <Link href="/dashboard/deliveries" className="ghost-btn">
               Delivery board
@@ -243,7 +243,7 @@ export default async function OrderDetailPage({
         <div className="section-header">
           <div>
             <div className="kicker">Audit trail</div>
-            <h2 className="page-title-sm">Communications</h2>
+            <h2 className="page-title-sm">{m.dashboard.orders.detail.labels.communications}</h2>
           </div>
           <span className="badge default">{communications.length}</span>
         </div>

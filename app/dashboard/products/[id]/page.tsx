@@ -43,7 +43,7 @@ export default async function ProductDetailEditorPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Catalog item</div>
+              <div className="kicker">{m.dashboard.products.detail.kicker}</div>
               <h2 style={{ margin: "6px 0 0" }}>{product.name}</h2>
             </div>
           </div>
@@ -64,23 +64,23 @@ export default async function ProductDetailEditorPage({
           </div>
 
           <div className="list">
-            <div className="order-card">Base price: ${product.basePrice}/day</div>
-            <div className="order-card">Security deposit: ${product.securityDeposit}</div>
-            <div className="order-card">Category: {product.category}</div>
+            <div className="order-card">{m.dashboard.products.detail.basePrice}: ${product.basePrice}/day</div>
+            <div className="order-card">{m.dashboard.products.detail.securityDeposit}: ${product.securityDeposit}</div>
+            <div className="order-card">{m.dashboard.products.detail.category}: {product.category}</div>
             <div className="order-card">
-              Delivery: {product.requiresDelivery ? "Required" : "Optional"}
+              {m.dashboard.products.detail.delivery}: {product.requiresDelivery ? "Required" : "Optional"}
             </div>
             <div className="order-card">
-              Status: {product.isActive ? "Active" : "Hidden"}
+              {m.dashboard.products.detail.status}: {product.isActive ? m.dashboard.products.detail.published : "Hidden"}
             </div>
             <div className="order-card">
-              Images: {images.length} uploaded
+              {m.dashboard.products.detail.images}: {images.length} uploaded
             </div>
           </div>
 
           <div style={{ marginTop: 16 }}>
             <Link href={`/inventory/${product.slug}`} className="secondary-btn">
-              View public page
+              {m.dashboard.products.detail.viewPublicPage}
             </Link>
           </div>
         </aside>

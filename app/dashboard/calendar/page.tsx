@@ -33,11 +33,11 @@ export default async function CalendarPage({
           <div className="panel">
             <div className="section-header">
               <div>
-                <div className="kicker">Schedule view</div>
-                <h2 style={{ margin: "6px 0 0" }}>Month calendar</h2>
+                <div className="kicker">{m.dashboard.calendar.kickerSchedule}</div>
+                <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.calendar.sectionMonth}</h2>
               </div>
               <Link href="/dashboard/orders/new" className="primary-btn">
-                New booking
+                {m.dashboard.calendar.newBooking}
               </Link>
             </div>
 
@@ -49,12 +49,12 @@ export default async function CalendarPage({
           <div className="panel" style={{ marginBottom: 18 }}>
             <div className="section-header">
               <div>
-                <div className="kicker">Block dates</div>
-                <h2 style={{ margin: "6px 0 0" }}>Manual hold</h2>
+                <div className="kicker">{m.dashboard.calendar.kickerBlocks}</div>
+                <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.calendar.sectionManualHold}</h2>
               </div>
             </div>
             <p className="muted" style={{ marginBottom: 12, fontSize: 13 }}>
-              Block a product for maintenance, private events, or any reason.
+              {m.dashboard.calendar.blockHint}
             </p>
             <BlockDatesForm />
           </div>
@@ -62,15 +62,15 @@ export default async function CalendarPage({
           <div className="panel">
             <div className="section-header">
               <div>
-                <div className="kicker">Next 30 days</div>
+                <div className="kicker">{m.dashboard.calendar.kickerUpcoming}</div>
                 <h2 style={{ margin: "6px 0 0" }}>
-                  Availability blocks ({blocks.length})
+                  {m.dashboard.calendar.sectionBlocks} ({blocks.length})
                 </h2>
               </div>
             </div>
 
             {blocks.length === 0 ? (
-              <div className="muted">No blocked dates in the next 30 days.</div>
+              <div className="muted">{m.dashboard.calendar.noBlocks}</div>
             ) : (
               <div className="list">
                 {blocks.map((block) => (
