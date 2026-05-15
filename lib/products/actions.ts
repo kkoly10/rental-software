@@ -110,6 +110,17 @@ export async function createProduct(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to create products." };
+  }
+
   const { count: productCount } = await supabase
     .from("products")
     .select("id", { count: "exact", head: true })
@@ -119,6 +130,20 @@ export async function createProduct(
   const gate = await checkPlanLimit("products", productCount ?? 0);
   if (!gate.allowed) {
     return { ok: false, message: gate.reason ?? "Product limit reached." };
+  }
+
+  // Validate that the supplied categoryId belongs to this organization
+  if (categoryId) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", categoryId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!cat) {
+      return { ok: false, message: "Invalid category." };
+    }
   }
 
   const slug = slugify(name);
@@ -222,11 +247,36 @@ export async function updateProduct(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: updateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(updateMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update products." };
+  }
+
+  // Validate that the supplied categoryId belongs to this organization
+  if (parsed.data.categoryId) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", parsed.data.categoryId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!cat) {
+      return { ok: false, message: "Invalid category." };
+    }
+  }
+
   const { error } = await supabase
     .from("products")
     .update({
       name: parsed.data.name,
-      slug: slugify(parsed.data.name),
+      // slug is intentionally not updated — preserves existing bookmarks and SEO URLs
       category_id: parsed.data.categoryId ?? null,
       short_description: parsed.data.shortDescription ?? null,
       description: parsed.data.description ?? null,
@@ -248,5 +298,5 @@ export async function updateProduct(
   }
 
   revalidatePath("/inventory");
-  redirect("/dashboard/products");
+  redirect(`/dashboard/products/${parsed.data.productId}`);
 }

@@ -98,6 +98,18 @@ export async function createServiceArea(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: saMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(saMembership?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage service areas." };
+  }
+
   const postalCodes = buildPostalCodes(
     parsed.data.primaryPostalCode,
     parsed.data.postalCodesInput
@@ -180,6 +192,18 @@ export async function updateServiceArea(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: saUpdateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(saUpdateMembership?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage service areas." };
+  }
+
   const postalCodes = buildPostalCodes(
     parsed.data.primaryPostalCode,
     parsed.data.postalCodesInput
@@ -245,6 +269,18 @@ export async function archiveServiceArea(serviceAreaId: string): Promise<Service
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: saArchiveMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(saArchiveMembership?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage service areas." };
+  }
+
   const { error } = await supabase
     .from("service_areas")
     .update({

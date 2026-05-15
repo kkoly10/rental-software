@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   }
 
   const requestUrl = new URL(request.url);
-  const next = requestUrl.searchParams.get("next") || "/dashboard";
+  const rawNext = requestUrl.searchParams.get("next") ?? "/dashboard";
+  // Reject absolute URLs and protocol-relative paths to prevent open redirect
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
   const code = requestUrl.searchParams.get("code");
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");

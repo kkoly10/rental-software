@@ -53,10 +53,22 @@ export async function POST(request: NextRequest) {
 
   const { slug } = parsed.data;
 
+  const supabase = await createSupabaseServerClient();
+
+  const { data: slugMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(slugMembership?.role ?? "")) {
+    return NextResponse.json({ error: "Only owners and admins can change the subdomain." }, { status: 403 });
+  }
+
   const available = await isSlugAvailable(slug);
   if (!available) {
     // Check if the slug belongs to the current org (no change needed)
-    const supabase = await createSupabaseServerClient();
     const { data: currentOrg } = await supabase
       .from("organizations")
       .select("slug")
@@ -73,14 +85,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("organizations")
     .update({ slug })
     .eq("id", ctx.organizationId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[update-slug] DB update failed:", error.message);
+    const message = error.code === "23505"
+      ? "That subdomain is already taken. Please choose a different one."
+      : "Unable to update subdomain. Please try again.";
+    return NextResponse.json({ error: message }, { status: error.code === "23505" ? 409 : 500 });
   }
 
   revalidatePath("/dashboard/website");

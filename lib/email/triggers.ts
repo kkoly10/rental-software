@@ -46,7 +46,7 @@ function buildFromAddress(businessName: string): string {
   const rawAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
   // Strip any existing display name to get just the email address
   const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
-  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+  const safeName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
   return `${safeName} <${emailOnly}>`;
 }
 
@@ -143,6 +143,7 @@ export async function triggerOrderConfirmationEmail(params: {
     }),
     replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
+    orderId: order?.id ?? null,
   });
 
   // Alert to operator
@@ -285,6 +286,7 @@ export async function triggerPaymentReceivedEmail(params: {
 // ─── Order status update ────────────────────────────────────────────────────
 
 const EMAIL_WORTHY_STATUSES = [
+  "awaiting_deposit",
   "confirmed",
   "scheduled",
   "out_for_delivery",
@@ -316,6 +318,7 @@ export async function triggerOrderStatusEmail(params: {
     .from("customers")
     .select("first_name, email")
     .eq("id", order.customer_id)
+    .eq("organization_id", params.organizationId)
     .maybeSingle();
 
   if (!customer?.email) return;
@@ -369,6 +372,17 @@ export async function triggerOrderStatusEmail(params: {
     }
   }
 
+  // For awaiting_deposit (quote accepted), issue/re-use portal token so customer can pay
+  let portalUrl: string | undefined;
+  if (params.newStatus === "awaiting_deposit") {
+    try {
+      const portalToken = await issuePortalAccessToken({ supabase, orderId: params.orderId });
+      portalUrl = `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`;
+    } catch {
+      portalUrl = `${branding.siteUrl}/order-status`;
+    }
+  }
+
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
@@ -382,9 +396,12 @@ export async function triggerOrderStatusEmail(params: {
       supportEmail: branding.supportEmail,
       deliveryTimeWindow,
       crewName,
+      portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
+    orderId: params.orderId,
+    customerId: order.customer_id,
   });
 }
 
@@ -404,17 +421,29 @@ export async function triggerDocumentsReadyEmail(params: {
       .from("customers")
       .select("first_name, email")
       .eq("id", params.customerId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
     supabase
       .from("orders")
       .select("order_number")
       .eq("id", params.orderId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
   ]);
 
   if (!customer?.email || !order) return;
 
   const branding = await getOrgBranding(params.organizationId);
+
+  // Issue a portal token so the customer can navigate directly to sign documents
+  let portalUrl: string | undefined;
+  try {
+    const { issuePortalAccessToken: issueToken } = await import("@/lib/portal/access-token");
+    const portalToken = await issueToken({ supabase, orderId: params.orderId });
+    portalUrl = `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`;
+  } catch {
+    portalUrl = `${branding.siteUrl}/order-status`;
+  }
 
   await sendEmail({
     to: customer.email,
@@ -426,9 +455,12 @@ export async function triggerDocumentsReadyEmail(params: {
       orderNumber: order.order_number,
       documentTypes: params.documentTypes,
       supportEmail: branding.supportEmail,
+      portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
+    orderId: params.orderId,
+    customerId: params.customerId,
   });
 }
 
@@ -448,11 +480,13 @@ export async function triggerQuoteSentEmail(params: {
       .from("customers")
       .select("first_name, email")
       .eq("id", params.customerId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
     supabase
       .from("orders")
       .select("event_date, total_amount, deposit_due_amount")
       .eq("id", params.orderId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
   ]);
 

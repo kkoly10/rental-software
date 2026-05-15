@@ -67,6 +67,15 @@ export async function POST(request: NextRequest) {
           const orderId = session.metadata?.order_id;
           const orgId = session.metadata?.organization_id;
 
+          if (!orderId || !orgId) {
+            console.error("Stripe webhook: checkout.session.completed missing required metadata", {
+              sessionId: session.id,
+              hasOrderId: !!orderId,
+              hasOrgId: !!orgId,
+            });
+            break;
+          }
+
           if (orderId && orgId) {
             // Verify the order actually belongs to the claimed org (don't trust client metadata)
             const { data: orderRecord } = await admin
@@ -175,6 +184,7 @@ export async function POST(request: NextRequest) {
                     .from("customers")
                     .select("first_name, email")
                     .eq("id", orderData.customer_id)
+                    .eq("organization_id", orgId)
                     .maybeSingle();
 
                   if (customer?.email) {
@@ -213,6 +223,26 @@ export async function POST(request: NextRequest) {
               } catch (emailErr) {
                 console.error("Stripe webhook: payment confirmation email failed:", emailErr);
               }
+
+              // In-app notification for operator
+              try {
+                const { createNotification } = await import("@/lib/data/notifications");
+                const { data: notifOrder } = await admin
+                  .from("orders")
+                  .select("order_number")
+                  .eq("id", orderId)
+                  .maybeSingle();
+                const orderNumber = notifOrder?.order_number ?? orderId;
+                await createNotification(
+                  orgId,
+                  "payment_received",
+                  "Payment received",
+                  `$${amountPaid.toFixed(2)} ${paymentType} via Stripe — Order ${orderNumber}`,
+                  `/dashboard/orders/${orderId}`
+                );
+              } catch {
+                // Non-critical
+              }
             }
           }
         }
@@ -231,12 +261,13 @@ export async function POST(request: NextRequest) {
 
         const { data: originalPayment } = await admin
           .from("payments")
-          .select("id, order_id")
+          .select("id, order_id, orders!inner(organization_id)")
           .eq("provider_payment_id", paymentIntentId)
           .eq("provider", "stripe")
           .maybeSingle();
 
         if (!originalPayment) break;
+        const refundOrgId = (originalPayment.orders as unknown as { organization_id: string }).organization_id;
 
         // Process each individual refund object; each has a unique id for dedup
         const refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
@@ -282,6 +313,39 @@ export async function POST(request: NextRequest) {
               .update({ order_status: "refunded" })
               .eq("id", originalPayment.order_id)
               .not("order_status", "in", '("cancelled","refunded")');
+          }
+
+          // Send refund notification email to customer
+          try {
+            const { data: refundOrder } = await admin
+              .from("orders")
+              .select("order_number, organization_id, customer_id")
+              .eq("id", originalPayment.order_id)
+              .maybeSingle();
+            if (refundOrder?.customer_id && refundOrder.organization_id) {
+              const { data: refundCustomer } = await admin
+                .from("customers")
+                .select("first_name, email")
+                .eq("id", refundOrder.customer_id)
+                .eq("organization_id", refundOrgId)
+                .maybeSingle();
+              if (refundCustomer?.email) {
+                const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
+                const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
+                await triggerPaymentReceivedEmail({
+                  organizationId: refundOrder.organization_id,
+                  customerFirstName: refundCustomer.first_name ?? "there",
+                  customerEmail: refundCustomer.email,
+                  orderNumber: refundOrder.order_number,
+                  amount: totalRefunded,
+                  paymentType: "refund",
+                  paymentMethod: "stripe",
+                  newBalance: refundFinancials.remainingBalance,
+                });
+              }
+            }
+          } catch (refundEmailErr) {
+            console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);
           }
         }
         break;
@@ -338,19 +402,14 @@ export async function POST(request: NextRequest) {
       }
 
       case "invoice.payment_failed": {
+        // Sync the full subscription state (not just status) so plan tier,
+        // period_end, and all cached fields stay consistent with Stripe.
         const invoice = event.data.object as Stripe.Invoice;
         const subRef = invoice.parent?.subscription_details?.subscription;
         const subId = typeof subRef === "string" ? subRef : subRef?.id;
         if (subId) {
           const subscription = await stripe.subscriptions.retrieve(subId);
-          const orgId = subscription.metadata?.organization_id;
-
-          if (orgId) {
-            await admin
-              .from("organizations")
-              .update({ subscription_status: "past_due" })
-              .eq("id", orgId);
-          }
+          await syncSubscription(admin, subscription);
         }
         break;
       }

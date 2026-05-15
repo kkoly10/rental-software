@@ -6,6 +6,7 @@ import { executeCopilotAction, type CopilotAction } from "@/lib/copilot/actions"
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { revalidatePath } from "next/cache";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Copilot actions mutate organization settings — restrict to owners and admins
+  const copilotSupabase = await createSupabaseServerClient();
+  const { data: copilotMembership } = await copilotSupabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", access.organizationId)
+    .eq("profile_id", access.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(copilotMembership?.role ?? "")) {
+    return jsonResponse({ error: "Only owners and admins can modify organization settings." }, { status: 403 });
+  }
+
   // Rate limiting: 30 per 15 min per user
   const { allowed } = await enforceRateLimit({
     scope: "api:copilot:action:user",
@@ -102,7 +116,7 @@ export async function POST(request: NextRequest) {
   const action: CopilotAction = parsed.data;
 
   try {
-    const result = await executeCopilotAction(action, access.organizationId);
+    const result = await executeCopilotAction(action);
 
     if (result.ok) {
       revalidatePath("/dashboard/website");

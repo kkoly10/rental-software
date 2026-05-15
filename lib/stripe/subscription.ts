@@ -66,7 +66,9 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
   }
 
   const plan = org.subscription_plan as PlanTier;
-  const isActive = ["active", "trialing"].includes(org.subscription_status);
+  // past_due retains full plan access until actually canceled/unpaid —
+  // locking out users on the first missed payment creates unnecessary churn.
+  const isActive = ["active", "trialing", "past_due"].includes(org.subscription_status);
 
   return {
     plan,

@@ -29,14 +29,30 @@ export async function updateStopStatus(
   const supabase = await createSupabaseServerClient();
 
   // Verify the stop belongs to this organization via the parent route
-  const { data: stop } = await supabase
-    .from("route_stops")
-    .select("route_id, stop_type, order_id, routes!inner(organization_id)")
-    .eq("id", stopId)
-    .maybeSingle();
+  const [{ data: stop }, { data: membership }] = await Promise.all([
+    supabase
+      .from("route_stops")
+      .select("route_id, stop_type, order_id, routes!inner(organization_id, assigned_driver_profile_id)")
+      .eq("id", stopId)
+      .maybeSingle(),
+    supabase
+      .from("organization_memberships")
+      .select("role")
+      .eq("organization_id", ctx.organizationId)
+      .eq("profile_id", ctx.userId)
+      .eq("status", "active")
+      .maybeSingle(),
+  ]);
 
-  if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
+  const routeData = stop?.routes as unknown as { organization_id: string; assigned_driver_profile_id: string | null } | undefined;
+  if (!stop || routeData?.organization_id !== ctx.organizationId) {
     return { ok: false, message: "Stop not found." };
+  }
+
+  // Crew members may only update stops on routes they are assigned to
+  const role = membership?.role ?? "";
+  if (role === "crew" && routeData.assigned_driver_profile_id !== ctx.userId) {
+    return { ok: false, message: "You are not assigned to this route." };
   }
 
   const updateData: Record<string, unknown> = { stop_status: newStatus };
@@ -68,16 +84,18 @@ export async function updateStopStatus(
         .eq("id", stop.route_id);
     }
 
-    // Sync order status when a delivery stop (not pickup) is completed
+    // Sync order status when a delivery stop (not pickup) is completed.
+    // Direct DB update rather than updateOrderStatus() to avoid operator-session
+    // auth checks and rate limiting; org isolation is already enforced above via
+    // the routes!inner join check.
     const stopOrderId = stop.order_id as string | null;
     if (stopOrderId && stop.stop_type === "delivery") {
-      try {
-        const { updateOrderStatus } = await import("@/lib/orders/actions");
-        await updateOrderStatus(stopOrderId, "out_for_delivery").catch(() => {});
-        await updateOrderStatus(stopOrderId, "delivered");
-      } catch {
-        // Non-fatal — stop is already marked complete
-      }
+      await supabase
+        .from("orders")
+        .update({ order_status: "delivered" })
+        .eq("id", stopOrderId)
+        .eq("organization_id", ctx.organizationId)
+        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
     }
 
     // Clear tracking token so the link can't be replayed after delivery
@@ -169,7 +187,7 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Choose a photo first." };
   }
 
-  const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+  const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const MAX_PHOTO_SIZE = 20 * 1024 * 1024; // 20 MB — allow large mobile photos
 
   if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
@@ -182,14 +200,28 @@ export async function uploadProofPhoto(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: stop } = await supabase
-    .from("route_stops")
-    .select("route_id, routes!inner(organization_id)")
-    .eq("id", stopId)
-    .maybeSingle();
+  const [{ data: stop }, { data: photoMembership }] = await Promise.all([
+    supabase
+      .from("route_stops")
+      .select("route_id, routes!inner(organization_id, assigned_driver_profile_id)")
+      .eq("id", stopId)
+      .maybeSingle(),
+    supabase
+      .from("organization_memberships")
+      .select("role")
+      .eq("organization_id", ctx.organizationId)
+      .eq("profile_id", ctx.userId)
+      .eq("status", "active")
+      .maybeSingle(),
+  ]);
 
-  if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
+  const photoRouteData = stop?.routes as unknown as { organization_id: string; assigned_driver_profile_id: string | null } | undefined;
+  if (!stop || photoRouteData?.organization_id !== ctx.organizationId) {
     return { ok: false, message: "Stop not found." };
+  }
+
+  if ((photoMembership?.role ?? "") === "crew" && photoRouteData.assigned_driver_profile_id !== ctx.userId) {
+    return { ok: false, message: "You are not assigned to this route." };
   }
 
   const MIME_TO_EXT: Record<string, string> = {
@@ -246,14 +278,28 @@ export async function saveSignature(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: stop } = await supabase
-    .from("route_stops")
-    .select("route_id, routes!inner(organization_id)")
-    .eq("id", stopId)
-    .maybeSingle();
+  const [{ data: stop }, { data: sigMembership }] = await Promise.all([
+    supabase
+      .from("route_stops")
+      .select("route_id, routes!inner(organization_id, assigned_driver_profile_id)")
+      .eq("id", stopId)
+      .maybeSingle(),
+    supabase
+      .from("organization_memberships")
+      .select("role")
+      .eq("organization_id", ctx.organizationId)
+      .eq("profile_id", ctx.userId)
+      .eq("status", "active")
+      .maybeSingle(),
+  ]);
 
-  if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
+  const sigRouteData = stop?.routes as unknown as { organization_id: string; assigned_driver_profile_id: string | null } | undefined;
+  if (!stop || sigRouteData?.organization_id !== ctx.organizationId) {
     return { ok: false, message: "Stop not found." };
+  }
+
+  if ((sigMembership?.role ?? "") === "crew" && sigRouteData.assigned_driver_profile_id !== ctx.userId) {
+    return { ok: false, message: "You are not assigned to this route." };
   }
 
   const { error: sigError } = await supabase

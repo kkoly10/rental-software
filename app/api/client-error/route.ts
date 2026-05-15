@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid client error report." }, { status: 400 });
   }
 
+  const clientKey = getRequestClientKey(request);
   try {
-    const clientKey = getRequestClientKey(request);
     const limit = await enforceRateLimit({
       scope: "client-error:client",
       actor: clientKey,
@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
     if (!limit.allowed) {
       return NextResponse.json({ ok: true }, { status: 202 });
     }
-  } catch {
-    // Fail open for client error logging.
+  } catch (err) {
+    console.warn("[client-error] Rate limit check failed, denying request:", err instanceof Error ? err.message : err);
+    return NextResponse.json({ ok: true }, { status: 202 });
   }
 
   await logAppError({

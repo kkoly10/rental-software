@@ -28,6 +28,17 @@ export async function setCustomDomain(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: domainMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(domainMembership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can manage domains." };
+  }
+
   // Check if domain is already in use by another org
   const { data: existing } = await supabase
     .from("organizations")
@@ -66,6 +77,18 @@ export async function removeCustomDomain(): Promise<ActionResult> {
   if (!ctx) return { ok: false, message: "Not authenticated." };
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: rmMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(rmMembership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can manage domains." };
+  }
+
   const { error } = await supabase
     .from("organizations")
     .update({

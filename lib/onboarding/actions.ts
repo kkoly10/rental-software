@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { generateSlug, isSlugAvailable, isValidSlugFormat, getAppDomain } from "@/lib/auth/resolve-org";
+import { escapeHtml } from "@/lib/maps/escape-html";
 
 export type OnboardingActionState = {
   ok: boolean;
@@ -126,7 +127,7 @@ export async function completeOnboarding(
       .maybeSingle();
 
     const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-    await supabase
+    const { error: tsError } = await supabase
       .from("organizations")
       .update({
         settings: {
@@ -135,6 +136,10 @@ export async function completeOnboarding(
         },
       })
       .eq("id", orgId);
+
+    if (tsError) {
+      console.error("[onboarding] Failed to record onboarding_completed_at:", tsError.message);
+    }
 
     const storefrontUrl = `https://${slugInput}.${getAppDomain()}`;
     const dashboardUrl = `https://${getAppDomain()}/dashboard`;
@@ -148,7 +153,7 @@ export async function completeOnboarding(
         organizationId: orgId,
       });
     } catch {
-      console.error("[onboarding] Failed to send welcome email to", user.email);
+      console.error("[onboarding] Failed to send welcome email — check email provider settings.");
     }
   }
 
@@ -160,6 +165,7 @@ export async function completeOnboarding(
 }
 
 function welcomeEmailHtml(businessName: string, storefrontUrl: string, dashboardUrl: string): string {
+  const safeName = escapeHtml(businessName);
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -174,7 +180,7 @@ function welcomeEmailHtml(businessName: string, storefrontUrl: string, dashboard
         </tr>
         <tr>
           <td style="padding:32px;">
-            <h1 style="margin:0 0 16px;font-size:22px;color:#10233f;">Welcome aboard, ${businessName}!</h1>
+            <h1 style="margin:0 0 16px;font-size:22px;color:#10233f;">Welcome aboard, ${safeName}!</h1>
             <p style="color:#55708f;font-size:15px;">Your rental site is live and ready for customers. Here's how to get started:</p>
 
             <div style="margin:24px 0;padding:20px;background:#f4f7fb;border-radius:12px;">

@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 
 export type BookingPolicies = {
   depositPercentage: number;
@@ -27,8 +27,7 @@ const DEFAULTS: BookingPolicies = {
 export async function getBookingPolicies(): Promise<BookingPolicies> {
   if (!hasSupabaseEnv()) return DEFAULTS;
 
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) return DEFAULTS;
 
   const supabase = await createSupabaseServerClient();

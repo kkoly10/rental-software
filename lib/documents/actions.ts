@@ -66,6 +66,17 @@ export async function updateDocumentStatus(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: docUpdateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(docUpdateMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update document status." };
+  }
+
   const updateData: Record<string, unknown> = {
     document_status: parsed.data.newStatus,
   };
@@ -146,6 +157,17 @@ export async function createDocumentsForOrder(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: docCreateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(docCreateMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to create documents." };
+  }
+
   const { data: order } = await supabase
     .from("orders")
     .select("id, customer_id")
@@ -200,8 +222,8 @@ export async function createDocumentsForOrder(
       customerId: order.customer_id,
       documentTypes: ["rental_agreement", "safety_waiver"],
     });
-  } catch {
-    console.error("[documents] Failed to send documents-ready email for order", parsed.data.orderId);
+  } catch (err) {
+    console.error("[documents] Failed to send documents-ready email for order", parsed.data.orderId, err instanceof Error ? err.message : err);
   }
 
   return {

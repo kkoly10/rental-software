@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import {
   eventReminderEmail,
@@ -74,12 +74,12 @@ type OrgBranding = {
 function buildFromAddress(businessName: string): string {
   const rawAddress = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? "noreply@korent.app";
   const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
-  const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+  const safeName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
   return `${safeName} <${emailOnly}>`;
 }
 
 async function getOrgBrandings(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
   orgIds: string[]
 ): Promise<Map<string, OrgBranding>> {
   if (orgIds.length === 0) return new Map();
@@ -132,7 +132,7 @@ async function getOrgBrandings(
 // ─── Day-Before Reminder ───────────────────────────────────────────────────
 
 async function sendDayBeforeReminders(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<{ sent: number; errors: number }> {
   const tomorrow = tomorrowDateStr();
   let sent = 0;
@@ -144,6 +144,7 @@ async function sendDayBeforeReminders(
       "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone, sms_opt_in), order_items(item_name_snapshot)"
     )
     .eq("event_date", tomorrow)
+    .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled"])
     .is("day_before_reminder_sent_at", null);
 
@@ -225,6 +226,17 @@ async function sendDayBeforeReminders(
     }
 
     try {
+      // Atomically claim this order before sending. If two cron instances run
+      // concurrently, only the first to write wins; the second sees count=0 and skips.
+      const { data: claimed } = await supabase
+        .from("orders")
+        .update({ day_before_reminder_sent_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("day_before_reminder_sent_at", null)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
       await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
@@ -242,11 +254,6 @@ async function sendDayBeforeReminders(
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
-
-      await supabase
-        .from("orders")
-        .update({ day_before_reminder_sent_at: new Date().toISOString() })
-        .eq("id", order.id);
 
       sent++;
 
@@ -269,7 +276,8 @@ async function sendDayBeforeReminders(
           );
         } catch { /* non-critical — delivery email already sent */ }
       }
-    } catch {
+    } catch (err) {
+      console.error(`[reminders] day-before failed for order ${order.id} (${order.order_number}):`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
@@ -280,7 +288,7 @@ async function sendDayBeforeReminders(
 // ─── Morning-Of Digest ────────────────────────────────────────────────────
 
 async function sendMorningDigests(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<{ sent: number; errors: number }> {
   const today = todayDateStr();
   let sent = 0;
@@ -292,6 +300,7 @@ async function sendMorningDigests(
       "id, organization_id, order_number, order_status, event_date, customer_id, customers(first_name, last_name), order_items(item_name_snapshot)"
     )
     .eq("event_date", today)
+    .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
 
   if (!orders || orders.length === 0) return { sent, errors };
@@ -367,7 +376,8 @@ async function sendMorningDigests(
         organizationId: orgId,
       });
       sent++;
-    } catch {
+    } catch (err) {
+      console.error(`[reminders] morning digest failed for org ${orgId}:`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
@@ -378,7 +388,7 @@ async function sendMorningDigests(
 // ─── Post-Event Follow-Up ─────────────────────────────────────────────────
 
 async function sendPostEventFollowUps(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  supabase: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<{ sent: number; errors: number }> {
   const twoDaysAgo = daysAgoDateStr(2);
   let sent = 0;
@@ -390,6 +400,7 @@ async function sendPostEventFollowUps(
       "id, organization_id, order_number, event_date, customer_id, customers(first_name, email), order_items(item_name_snapshot)"
     )
     .eq("event_date", twoDaysAgo)
+    .is("deleted_at", null)
     .eq("order_status", "completed")
     .is("follow_up_sent_at", null);
 
@@ -418,6 +429,16 @@ async function sendPostEventFollowUps(
       : branding.siteUrl;
 
     try {
+      // Atomically claim before sending to prevent duplicate emails from concurrent cron runs
+      const { data: claimed } = await supabase
+        .from("orders")
+        .update({ follow_up_sent_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("follow_up_sent_at", null)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
       await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
@@ -436,14 +457,9 @@ async function sendPostEventFollowUps(
         organizationId: order.organization_id,
       });
 
-      // Mark as sent
-      await supabase
-        .from("orders")
-        .update({ follow_up_sent_at: new Date().toISOString() })
-        .eq("id", order.id);
-
       sent++;
-    } catch {
+    } catch (err) {
+      console.error(`[reminders] post-event follow-up failed for order ${order.id} (${order.order_number}):`, err instanceof Error ? err.message : err);
       errors++;
     }
   }
@@ -468,7 +484,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
 
   const [dayBefore, morningDigest, followUp] = await Promise.all([
     sendDayBeforeReminders(supabase).catch(() => ({ sent: 0, errors: 1 })),

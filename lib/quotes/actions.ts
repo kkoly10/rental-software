@@ -38,6 +38,17 @@ export async function sendQuote(orderId: string): Promise<QuoteActionState> {
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: quoteMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(quoteMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to send quotes." };
+  }
+
   const { data: order } = await supabase
     .from("orders")
     .select("id, order_number, order_status, customer_id, event_date")

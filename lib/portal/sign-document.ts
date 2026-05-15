@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -20,7 +21,8 @@ export async function signDocument(
 ): Promise<SignDocumentState> {
   const documentId = String(formData.get("document_id") ?? "").trim();
   const portalToken = String(formData.get("portal_token") ?? "").trim();
-  const signerName = String(formData.get("signer_name") ?? "").trim();
+  const rawSignerName = String(formData.get("signer_name") ?? "").trim();
+  const signerName = rawSignerName.slice(0, 200);
   const agreed = formData.get("agreed") === "on";
   const rawSignatureDataUrl = String(formData.get("signature_data_url") ?? "").trim();
   // Only accept valid PNG data URLs; discard anything malformed
@@ -57,7 +59,7 @@ export async function signDocument(
       }),
       enforceRateLimit({
         scope: "portal:sign:token",
-        actor: portalToken,
+        actor: hashPortalAccessToken(portalToken),
         limit: 15,
         windowSeconds: 300,
         strict: true,
@@ -145,6 +147,22 @@ export async function signDocument(
   if (!updated || updated.length === 0) {
     return { ok: false, message: "This document has already been signed." };
   }
+
+  // Revalidate portal and dashboard so document status shows as signed immediately
+  revalidatePath("/order-status");
+  revalidatePath(`/dashboard/orders/${order.id}`);
+  revalidatePath("/dashboard/documents");
+
+  // Notify operator that the customer signed a document
+  void import("@/lib/data/notifications").then(({ createNotification }) =>
+    createNotification(
+      orgId,
+      "new_message",
+      "Document signed",
+      `${signerName} signed a document`,
+      `/dashboard/orders/${order.id}`
+    )
+  );
 
   return { ok: true, message: "Document signed successfully." };
 }

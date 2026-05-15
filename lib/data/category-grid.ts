@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 
 export type CategoryGridItem = {
   name: string;
@@ -12,8 +12,7 @@ export type CategoryGridItem = {
 export async function getCategoryGridItems(): Promise<CategoryGridItem[]> {
   if (!hasSupabaseEnv()) return [];
 
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) return [];
 
   const supabase = await createSupabaseServerClient();

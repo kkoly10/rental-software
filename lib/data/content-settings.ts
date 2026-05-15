@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 
 export type NavLink = {
   key: string;
@@ -49,8 +49,7 @@ const fallbackContent: ContentSettings = {
 export async function getContentSettings(): Promise<ContentSettings> {
   if (!hasSupabaseEnv()) return fallbackContent;
 
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) return fallbackContent;
 
   const supabase = await createSupabaseServerClient();

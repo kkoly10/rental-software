@@ -157,6 +157,17 @@ export async function createOrder(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: createMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(createMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to create orders." };
+  }
+
   // Plan limit: count orders created this calendar month against the cap.
   // Customer-initiated orders (website checkout) bypass this check —
   // operators shouldn't lose external bookings to a plan ceiling.
@@ -269,7 +280,7 @@ export async function createOrder(
   if (email) {
     const { data: existing } = await supabase
       .from("customers")
-      .select("id")
+      .select("id, first_name, last_name, phone")
       .eq("organization_id", ctx.organizationId)
       .eq("email", email)
       .is("deleted_at", null)
@@ -279,23 +290,26 @@ export async function createOrder(
     if (existing) {
       customerId = existing.id;
 
-      const { error: updateCustomerError } = await supabase
-        .from("customers")
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone ?? null,
-          ...(smsOptIn
-            ? {
-                sms_opt_in: true,
-                sms_opt_in_at: new Date().toISOString(),
-                sms_opt_in_ip: clientIp,
-              }
-            : {}),
-        })
-        .eq("id", customerId)
-        .eq("organization_id", ctx.organizationId)
-        .is("deleted_at", null);
+      // Only fill in blank fields — never overwrite a name or phone the operator
+      // already has on record (prevents silent data corruption on repeat bookings).
+      const updates: Record<string, unknown> = {};
+      if (firstName && !existing.first_name) updates.first_name = firstName;
+      if (lastName && !existing.last_name) updates.last_name = lastName;
+      if (phone && !existing.phone) updates.phone = phone;
+      if (smsOptIn) {
+        updates.sms_opt_in = true;
+        updates.sms_opt_in_at = new Date().toISOString();
+        updates.sms_opt_in_ip = clientIp;
+      }
+
+      const { error: updateCustomerError } = Object.keys(updates).length > 0
+        ? await supabase
+            .from("customers")
+            .update(updates)
+            .eq("id", customerId)
+            .eq("organization_id", ctx.organizationId)
+            .is("deleted_at", null)
+        : { error: null };
 
       if (updateCustomerError) {
         return { ok: false, message: updateCustomerError.message };
@@ -389,7 +403,7 @@ export async function createOrder(
   // Helper to clean up the address row if the order creation fails
   const rollbackAddress = async () => {
     if (deliveryAddressId) {
-      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
     }
   };
 
@@ -441,7 +455,7 @@ export async function createOrder(
     });
 
     if (itemError) {
-      await supabase.from("orders").delete().eq("id", createdOrder.id);
+      await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
       return {
         ok: false,
@@ -461,7 +475,7 @@ export async function createOrder(
     });
 
     if (!reserveResult.ok) {
-      await supabase.from("orders").delete().eq("id", createdOrder.id);
+      await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
       return {
         ok: false,
@@ -486,19 +500,21 @@ export async function createOrder(
     await markSetupStep(ctx.organizationId, "has_first_order");
   } catch { /* non-critical */ }
 
-  try {
-    const { triggerDashboardOrderEmail } = await import("@/lib/email/triggers");
-    await triggerDashboardOrderEmail({
-      organizationId: ctx.organizationId,
-      customerName: `${firstName} ${lastName}`,
-      customerEmail: email ?? "",
-      orderNumber,
-      productName: productNameSnapshot,
-      eventDate: eventDate ?? "",
-      total,
-    });
-  } catch {
-    console.error("[orders] Failed to send new order alert for", orderNumber);
+  if (email) {
+    try {
+      const { triggerDashboardOrderEmail } = await import("@/lib/email/triggers");
+      await triggerDashboardOrderEmail({
+        organizationId: ctx.organizationId,
+        customerName: `${firstName} ${lastName}`,
+        customerEmail: email,
+        orderNumber,
+        productName: productNameSnapshot,
+        eventDate: eventDate ?? "",
+        total,
+      });
+    } catch (err) {
+      console.error("[orders] Failed to send new order alert for", orderNumber, err instanceof Error ? err.message : err);
+    }
   }
 
   redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
@@ -553,6 +569,17 @@ export async function updateOrderStatus(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: updateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(updateMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update order status." };
+  }
+
   // Enforce state machine — only allow transitions that make business sense.
   // Automatic transitions (e.g. awaiting_deposit → confirmed on payment) bypass
   // this action and update the DB directly, so they are not affected here.
@@ -566,6 +593,7 @@ export async function updateOrderStatus(
     delivered:        ["completed"],
     completed:        [],
     cancelled:        [],
+    refunded:         [],
   };
 
   const { data: currentOrder } = await supabase
@@ -573,6 +601,7 @@ export async function updateOrderStatus(
     .select("order_status")
     .eq("id", parsed.data.orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!currentOrder) {
@@ -622,7 +651,7 @@ export async function updateOrderStatus(
     const { sendSmsNotification } = await import("@/lib/sms/send-notification");
     const { data: order } = await supabase
       .from("orders")
-      .select("order_number, event_date, customer_id")
+      .select("order_number, event_date, customer_id, deposit_due_amount")
       .eq("id", parsed.data.orderId)
       .eq("organization_id", ctx.organizationId)
       .maybeSingle();
@@ -630,11 +659,11 @@ export async function updateOrderStatus(
     if (order?.customer_id) {
       const { data: customer } = await supabase
         .from("customers")
-        .select("phone")
+        .select("phone, sms_opt_in")
         .eq("id", order.customer_id)
         .maybeSingle();
 
-      if (customer?.phone) {
+      if (customer?.phone && customer?.sms_opt_in) {
         const { data: org } = await supabase
           .from("organizations")
           .select("name")
@@ -648,7 +677,7 @@ export async function updateOrderStatus(
         if (status === "awaiting_deposit") {
           await sendSmsNotification("depositReminder", customer.phone, {
             orderNumber: order.order_number,
-            amount: "your deposit",
+            amount: Number(order.deposit_due_amount ?? 0).toFixed(2),
             businessName,
           }, ctx.organizationId, smsContext);
         } else if (status === "confirmed") {

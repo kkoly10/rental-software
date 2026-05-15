@@ -83,6 +83,17 @@ export async function sendReply(
   const { body, customerEmail, customerId, orderId, orderNumber } = parsed.data;
   const supabase = await createSupabaseServerClient();
 
+  const { data: replyMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(replyMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to send messages." };
+  }
+
   // Get operator info for sender_name
   const { data: profile } = await supabase
     .from("profiles")
@@ -137,7 +148,7 @@ export async function sendReply(
     const supportEmail = org?.support_email ?? null;
 
     const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
-    const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+    const safeFromName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
     await sendEmail({
       to: customerEmail,
       from: `${safeFromName} <${fromDomain}>`,
@@ -157,7 +168,7 @@ export async function sendReply(
       organizationId: ctx.organizationId,
     });
   } catch {
-    console.error("[messages] Failed to send reply email to", customerEmail);
+    console.error("[messages] Failed to send reply email — check email provider settings.");
     // Message row is already saved — returning ok:false here would prompt the
     // operator to retry, creating a duplicate row.  Return ok:true so the UI
     // closes the form, but surface the delivery warning in the toast.

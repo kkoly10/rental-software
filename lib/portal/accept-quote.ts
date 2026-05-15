@@ -49,7 +49,7 @@ export async function acceptQuote(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status, portal_access_token_created_at")
+    .select("id, order_status, portal_access_token_created_at, order_number, product_id, event_date, event_start_time, event_end_time, customer_id")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
@@ -71,6 +71,51 @@ export async function acceptQuote(
 
   if (error) return { ok: false, message: "Failed to accept quote. Please try again." };
 
+  // Reserve inventory so this date/product can't be double-booked
+  if (order.product_id && order.event_date) {
+    try {
+      const { reserveProductAvailabilityBlock } = await import("@/lib/availability/blocks");
+      await reserveProductAvailabilityBlock({
+        organizationId: orgId,
+        productId: order.product_id,
+        orderId: order.id,
+        eventDate: order.event_date,
+        startTime: order.event_start_time,
+        endTime: order.event_end_time,
+        source: "dashboard", // permanent hold — no expiry
+      });
+    } catch {
+      // Non-fatal: log but don't block the customer flow; operator can review manually
+      console.error("[accept-quote] Failed to create availability block for order", order.id);
+    }
+  }
+
+  // Notify operator
+  try {
+    const { createNotification } = await import("@/lib/data/notifications");
+    await createNotification(
+      orgId,
+      "order_confirmed",
+      "Quote accepted by customer",
+      `Order #${order.order_number} — deposit payment required`,
+      `/dashboard/orders/${order.id}`
+    );
+  } catch { /* non-critical */ }
+
+  // Send customer confirmation email with portal link to pay deposit
+  try {
+    const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+    await triggerOrderStatusEmail({
+      organizationId: orgId,
+      orderId: order.id,
+      newStatus: "awaiting_deposit",
+    });
+  } catch { /* non-critical */ }
+
+  // Revalidate dashboard so operator sees updated status immediately
   revalidatePath("/order-status");
+  revalidatePath(`/dashboard/orders/${order.id}`);
+  revalidatePath("/dashboard/orders");
+
   return { ok: true, message: "Quote accepted! Please pay your deposit to confirm your booking." };
 }

@@ -40,10 +40,12 @@ export async function getCalendarEvents(
       .order("event_date"),
     supabase
       .from("availability_blocks")
-      .select("id, starts_at, block_type, reason, products(name)")
+      .select("id, starts_at, ends_at, block_type, reason, expires_at, products(name)")
       .eq("organization_id", ctx.organizationId)
-      .gte("starts_at", startDate)
+      // Capture blocks that overlap the calendar period (not just those starting within it)
       .lt("starts_at", endDate)
+      .gte("ends_at", startDate)
+      .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
       .order("starts_at"),
   ]);
 
@@ -79,9 +81,12 @@ export async function getCalendarEvents(
       const product = (b as Record<string, unknown>).products as
         | { name?: string | null }
         | null;
+      // If the block started before this calendar period, pin it to the first day of the period
+      const blockStartDate = b.starts_at ? b.starts_at.slice(0, 10) : "";
+      const displayDate = blockStartDate < startDate ? startDate : blockStartDate;
       events.push({
         id: b.id,
-        date: b.starts_at ? b.starts_at.slice(0, 10) : "",
+        date: displayDate,
         label: `${product?.name ?? "Product"} — ${b.reason ?? b.block_type ?? "Hold"}`,
         type: "block",
         tone: "danger",

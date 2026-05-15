@@ -7,6 +7,8 @@ import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { getStripe, hasStripeEnv } from "@/lib/stripe/config";
 import { getSiteUrl } from "@/lib/site-url";
+import { getActionClientKey } from "@/lib/security/action-client";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export type PayBalanceState = { ok: boolean; message: string; stripeUrl?: string };
 
@@ -24,8 +26,28 @@ export async function createBalancePaymentSession(
   const token = String(formData.get("portal_token") ?? "").trim();
   if (!token) return { ok: false, message: "Invalid portal link." };
 
+  try {
+    const clientKey = await getActionClientKey();
+    const [clientLimit, tokenLimit] = await Promise.all([
+      enforceRateLimit({ scope: "portal:pay-balance:client", actor: clientKey, limit: 10, windowSeconds: 600, strict: true }),
+      enforceRateLimit({ scope: "portal:pay-balance:token", actor: hashPortalAccessToken(token), limit: 5, windowSeconds: 600, strict: true }),
+    ]);
+    if (!clientLimit.allowed || !tokenLimit.allowed) {
+      return { ok: false, message: "Too many attempts. Please wait a moment." };
+    }
+  } catch {
+    return { ok: false, message: "Unable to process right now." };
+  }
+
   const orgId = await getPublicOrgId();
   if (!orgId) return { ok: false, message: "Service unavailable." };
+
+  // Verify the org's plan allows Stripe payments
+  const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+  const stripeGate = await checkFeatureAccess("stripe_payments");
+  if (!stripeGate.allowed) {
+    return { ok: false, message: "Online payments are not available. Please contact us to pay your balance." };
+  }
 
   const supabase = await createSupabaseServerClient();
   const tokenHash = hashPortalAccessToken(token);
@@ -42,7 +64,7 @@ export async function createBalancePaymentSession(
     return { ok: false, message: "This portal link has expired. Contact us for a new one." };
   }
 
-  const financials = await getOrderFinancials(order.id);
+  const financials = await getOrderFinancials(order.id, orgId);
   const balance = financials?.remainingBalance ?? 0;
 
   if (balance <= 0) {

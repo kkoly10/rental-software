@@ -76,11 +76,13 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  // Fetch customer
+  // Fetch customer — scope to org and exclude soft-deleted records
   const { data: customer } = await supabase
     .from("customers")
     .select("first_name, last_name, email, phone")
     .eq("id", order.customer_id)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   // Fetch delivery address
@@ -100,7 +102,7 @@ export async function GET(
   }
 
   // Compute financials from payments table — never trust stored balance_due_amount
-  const financials = await getOrderFinancials(orderId);
+  const financials = await getOrderFinancials(orderId, ctx.organizationId);
   const totalAmount = Number(order.total_amount ?? 0);
   const depositPaid = financials?.totalPaid ?? 0;
   const balanceDue = financials?.remainingBalance ?? totalAmount;

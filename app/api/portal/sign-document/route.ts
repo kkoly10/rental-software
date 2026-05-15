@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   const signerIp = clientIp;
   const signerUserAgent = hdrs.get("user-agent") ?? null;
 
-  const { error, count } = await supabase
+  const { data: signed, error } = await supabase
     .from("documents")
     .update({
       document_status: "signed",
@@ -91,13 +91,14 @@ export async function POST(request: NextRequest) {
       signer_user_agent: signerUserAgent,
     })
     .eq("id", documentId)
-    .eq("document_status", "pending");
+    .eq("document_status", "pending")
+    .select("id");
 
   if (error) {
     return NextResponse.json({ error: "Failed to sign document." }, { status: 500 });
   }
 
-  if (count === 0) {
+  if (!signed || signed.length === 0) {
     return NextResponse.json({ error: "This document has already been signed." }, { status: 409 });
   }
 

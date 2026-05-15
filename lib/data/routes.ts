@@ -17,12 +17,26 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
   if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
+
+  // Crew members see only routes they are assigned to drive
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+
   let query = supabase
     .from("routes")
     .select("id, name, route_date, route_status, route_stops(id), profiles(full_name)")
     .eq("organization_id", ctx.organizationId)
     .order("route_date", { ascending: false })
     .limit(50);
+
+  if (membership?.role === "crew") {
+    query = query.eq("assigned_driver_profile_id", ctx.userId);
+  }
 
   if (date) {
     // Include yesterday (UTC) as lower bound to cover US timezones where local date

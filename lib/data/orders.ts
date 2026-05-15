@@ -77,6 +77,7 @@ export async function getOrdersPage(options?: {
       "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses!delivery_address_id(postal_code)"
     )
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -119,6 +120,7 @@ export async function getOrdersPage(options?: {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "UTC",
           })
         : "TBD",
       total:

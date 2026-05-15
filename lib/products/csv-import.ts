@@ -79,6 +79,17 @@ export async function importProductsFromCsv(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: importMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(importMembership?.role ?? "")) {
+    return { ok: false, imported: 0, skipped: 0, errors: [], message: "Only owners and admins can import products." };
+  }
+
   const [{ data: existingCats }, { data: existingProducts }] = await Promise.all([
     supabase.from("categories").select("id, name").eq("organization_id", ctx.organizationId),
     supabase.from("products").select("slug").eq("organization_id", ctx.organizationId).is("deleted_at", null),
@@ -113,6 +124,12 @@ export async function importProductsFromCsv(
     }
 
     const rawPrice = (row.price ?? "").replace(/[^0-9.]/g, "");
+    // Reject values with more than one decimal point (e.g. "1.99.50") that parseFloat
+    // would silently accept, producing a wrong price.
+    if ((rawPrice.match(/\./g) ?? []).length > 1) {
+      errors.push({ row: rowNum, name, reason: "Price has multiple decimal points and is not a valid number." });
+      continue;
+    }
     const price = parseFloat(rawPrice);
     if (!rawPrice || isNaN(price) || price < 0) {
       errors.push({ row: rowNum, name, reason: "Price is missing or not a valid number." });
@@ -179,12 +196,23 @@ export async function importProductsFromCsv(
         context: { reason: catError.message },
       });
       for (const catName of newCategoryNames) {
-        const { data: cat } = await supabase
+        const { data: cat, error: singleCatErr } = await supabase
           .from("categories")
           .insert({ organization_id: ctx.organizationId, name: catName, slug: slugify(catName), sort_order: 99 })
           .select("id, name")
           .single();
-        if (cat) categoryMap.set(cat.name.toLowerCase(), cat.id);
+        if (cat) {
+          categoryMap.set(cat.name.toLowerCase(), cat.id);
+        } else if (singleCatErr) {
+          // Category insert failed (e.g. slug collision) — products referencing this
+          // category will be created without a category_id rather than silently wrong.
+          await logAppError({
+            organizationId: ctx.organizationId,
+            source: "products.csv_import",
+            message: "Individual category insert failed",
+            context: { catName, reason: singleCatErr.message },
+          });
+        }
       }
     } else {
       for (const cat of newCats ?? []) {

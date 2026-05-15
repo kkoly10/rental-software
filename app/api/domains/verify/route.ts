@@ -36,6 +36,17 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: verifyMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(verifyMembership?.role ?? "")) {
+    return NextResponse.json({ error: "Only owners and admins can verify domains." }, { status: 403 });
+  }
+
   const { data: org } = await supabase
     .from("organizations")
     .select("custom_domain, custom_domain_verified")

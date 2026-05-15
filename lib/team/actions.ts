@@ -91,11 +91,12 @@ export async function inviteTeamMember(
     return { ok: false, message: "Only owners and admins can invite team members." };
   }
 
-  // Check if already a member
+  // Check if already a member — use ilike for case-insensitive match since email
+  // is normalized to lowercase on invite but stored in whatever case the user registered with
   const { data: existingMember } = await supabase
     .from("profiles")
     .select("id")
-    .eq("email", email)
+    .ilike("email", email)
     .maybeSingle();
 
   if (existingMember) {
@@ -175,7 +176,7 @@ export async function inviteTeamMember(
   // Check the return value so we can warn if delivery failed — but don't block
   // the invite, because the token is already in the DB and the operator can resend.
   const fromDomain = (process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app").replace(/^.*<(.+)>$/, "$1").trim();
-  const safeFromName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+  const safeFromName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
 
   const sent = await sendEmail({
     to: email,
@@ -203,7 +204,7 @@ export async function inviteTeamMember(
     organizationId: ctx.organizationId,
   });
   if (!sent) {
-    console.warn("[team] Invite email delivery failed for", email, "— invite token still valid in DB");
+    console.warn("[team] Invite email delivery failed — invite token still valid in DB");
   }
 
   revalidatePath("/dashboard/settings/team");

@@ -3,8 +3,15 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { sendEmail } from "@/lib/email/send";
+
+const VALID_SUBJECTS = [
+  "Question about my order",
+  "Request to reschedule",
+  "Request to cancel",
+  "Other",
+];
 
 function escapeHtml(str: string): string {
   return str
@@ -32,6 +39,10 @@ export async function POST(request: NextRequest) {
 
   if (message.length > 2000) {
     return NextResponse.json({ error: "Message too long." }, { status: 400 });
+  }
+
+  if (!VALID_SUBJECTS.includes(subject)) {
+    return NextResponse.json({ error: "Invalid subject." }, { status: 400 });
   }
 
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -79,13 +90,17 @@ export async function POST(request: NextRequest) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, customer_id, order_number")
+    .select("id, customer_id, order_number, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
 
   if (!order) {
     return NextResponse.json({ error: "Invalid portal link." }, { status: 403 });
+  }
+
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return NextResponse.json({ error: "This portal link has expired. Please request a new one." }, { status: 403 });
   }
 
   const { data: customer } = await supabase
@@ -137,7 +152,7 @@ export async function POST(request: NextRequest) {
     const businessName = org?.name ?? "Rental Company";
     const rawFromAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
     const fromEmail = rawFromAddress.replace(/^.*<(.+)>$/, "$1").trim();
-    const safeName = businessName.replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
+    const safeName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
 
     await sendEmail({
       to: supportEmail,

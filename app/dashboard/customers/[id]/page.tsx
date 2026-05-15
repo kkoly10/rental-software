@@ -71,20 +71,28 @@ export default async function CustomerDetailPage({
             </div>
           ) : (
             <div className="list">
-              {customer.orders.map((order, i) => (
-                <div key={i} className="order-card">
-                  {order}
-                </div>
+              {customer.orders.map((order) => (
+                <Link
+                  key={order.id}
+                  href={`/dashboard/orders/${order.id}`}
+                  className="order-card"
+                  style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                >
+                  {order.label}
+                </Link>
               ))}
             </div>
           )}
 
-          <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+          <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link href={`/dashboard/orders/new?customer_id=${id}`} className="primary-btn">
+              New order
+            </Link>
             <Link href="/dashboard/customers" className="secondary-btn">
               All customers
             </Link>
             <Link href="/dashboard/orders" className="ghost-btn">
-              View orders
+              All orders
             </Link>
           </div>
         </aside>

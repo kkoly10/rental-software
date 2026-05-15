@@ -1,7 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-images";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 import type { CatalogProduct } from "@/lib/types";
 
 const fallbackCatalog: CatalogProduct[] = [
@@ -48,9 +48,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
     return fallbackCatalog;
   }
 
-  // Resolve org: authenticated user context or public tenant hostname
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) {
     return [];
   }
@@ -69,7 +67,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
 
   if (error) {
     console.error("[catalog-list] Failed to fetch products:", error.message);
-    return [];
+    throw new Error("Failed to load catalog. Please try again.");
   }
 
   if (!data || data.length === 0) {

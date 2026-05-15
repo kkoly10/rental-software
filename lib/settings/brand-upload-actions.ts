@@ -49,8 +49,20 @@ async function uploadBrandAsset(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: uploadMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(uploadMembership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can upload brand assets." };
+  }
+
   const bucket = getBucketName();
-  const filePath = `${ctx.organizationId}/brand/${kind}-${Date.now()}-${sanitizeFilename(file.name)}`;
+  const filePath = `${ctx.organizationId}/brand/${kind}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
 
   const { error: storageError } = await supabase.storage
     .from(bucket)

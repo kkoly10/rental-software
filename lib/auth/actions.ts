@@ -112,7 +112,6 @@ export async function signInWithPassword(
         source: "auth.signin",
         action: "rate_limited",
         status: "warning",
-        metadata: { email: parsed.data.email },
       });
 
       return rateLimitFailure;
@@ -122,7 +121,6 @@ export async function signInWithPassword(
       source: "auth.signin",
       message: "Sign-in rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
-      context: { email: parsed.data.email },
       error,
     });
 
@@ -145,7 +143,7 @@ export async function signInWithPassword(
       source: "auth.signin",
       action: "failed",
       status: "warning",
-      metadata: { email, reason: error.message },
+      metadata: { reason: error.message },
     });
 
     return { ok: false, message: error.message };
@@ -159,7 +157,6 @@ export async function signInWithPassword(
     await logAppError({
       source: "auth.signin",
       message: "User missing after successful sign-in attempt",
-      context: { email },
     });
 
     return {
@@ -176,7 +173,6 @@ export async function signInWithPassword(
       source: "auth.signin",
       action: "blocked_unverified",
       status: "warning",
-      metadata: { email },
     });
 
     return {
@@ -243,7 +239,6 @@ export async function signUpWithPassword(
         source: "auth.signup",
         action: "rate_limited",
         status: "warning",
-        metadata: { email: parsed.data.email },
       });
 
       return rateLimitFailure;
@@ -253,7 +248,6 @@ export async function signUpWithPassword(
       source: "auth.signup",
       message: "Signup rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
-      context: { email: parsed.data.email },
       error,
     });
 
@@ -284,7 +278,7 @@ export async function signUpWithPassword(
       source: "auth.signup",
       action: "failed",
       status: "warning",
-      metadata: { email, reason: error.message },
+      metadata: { reason: error.message },
     });
 
     return { ok: false, message: error.message };
@@ -294,7 +288,6 @@ export async function signUpWithPassword(
     source: "auth.signup",
     action: "created",
     status: "success",
-    metadata: { email },
   });
 
   // Record terms acceptance on the profile before terminating the Lambda via redirect
@@ -353,7 +346,6 @@ export async function requestPasswordReset(
         source: "auth.password_reset",
         action: "rate_limited",
         status: "warning",
-        metadata: { email: parsed.data.email },
       });
 
       return rateLimitFailure;
@@ -363,7 +355,6 @@ export async function requestPasswordReset(
       source: "auth.password_reset",
       message: "Password reset rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
-      context: { email: parsed.data.email },
       error,
     });
 
@@ -386,7 +377,7 @@ export async function requestPasswordReset(
       source: "auth.password_reset",
       action: "failed",
       status: "warning",
-      metadata: { email: parsed.data.email, reason: error.message },
+      metadata: { reason: error.message },
     });
 
     return { ok: false, message: error.message };
@@ -396,7 +387,6 @@ export async function requestPasswordReset(
     source: "auth.password_reset",
     action: "requested",
     status: "success",
-    metadata: { email: parsed.data.email },
   });
 
   return {

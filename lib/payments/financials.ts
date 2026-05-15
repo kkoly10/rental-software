@@ -22,18 +22,21 @@ import {
 export type OrderFinancials = ComputedFinancials;
 
 export async function getOrderFinancials(
-  orderId: string
+  orderId: string,
+  organizationId?: string
 ): Promise<OrderFinancials | null> {
   const supabase = await createSupabaseServerClient();
 
+  let orderQuery = supabase
+    .from("orders")
+    .select("total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount")
+    .eq("id", orderId);
+  if (organizationId) {
+    orderQuery = orderQuery.eq("organization_id", organizationId);
+  }
+
   const [{ data: order }, { data: payments }] = await Promise.all([
-    supabase
-      .from("orders")
-      .select(
-        "total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount"
-      )
-      .eq("id", orderId)
-      .maybeSingle(),
+    orderQuery.maybeSingle(),
     supabase
       .from("payments")
       .select("amount, payment_type, payment_status")

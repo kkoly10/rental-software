@@ -18,6 +18,13 @@ export async function createRoute(
   const ctx = await getOrgContext();
   if (!ctx) return { ok: false, message: "Not authenticated." };
 
+  const supabase = await createSupabaseServerClient();
+  const { data: rm } = await supabase.from("organization_memberships").select("role")
+    .eq("organization_id", ctx.organizationId).eq("profile_id", ctx.userId).eq("status", "active").maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(rm?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage routes." };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const routeDate = String(formData.get("route_date") ?? "").trim();
   const driverProfileId = String(formData.get("driver_profile_id") ?? "").trim() || null;
@@ -25,7 +32,6 @@ export async function createRoute(
 
   if (!routeDate) return { ok: false, message: "Route date is required." };
 
-  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("routes")
     .insert({
@@ -58,6 +64,13 @@ export async function addOrderToRoute(
   const ctx = await getOrgContext();
   if (!ctx) return { ok: false, message: "Not authenticated." };
 
+  const supabase = await createSupabaseServerClient();
+  const { data: arm } = await supabase.from("organization_memberships").select("role")
+    .eq("organization_id", ctx.organizationId).eq("profile_id", ctx.userId).eq("status", "active").maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(arm?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage routes." };
+  }
+
   const routeId = String(formData.get("route_id") ?? "");
   const orderId = String(formData.get("order_id") ?? "");
   const stopType = String(formData.get("stop_type") ?? "delivery");
@@ -67,8 +80,6 @@ export async function addOrderToRoute(
   if (!routeId || !orderId) {
     return { ok: false, message: "Route and order are required." };
   }
-
-  const supabase = await createSupabaseServerClient();
 
   // Verify the route belongs to this org
   const { data: route } = await supabase
@@ -148,10 +159,15 @@ export async function removeStopFromRoute(
   const ctx = await getOrgContext();
   if (!ctx) return { ok: false, message: "Not authenticated." };
 
+  const supabase = await createSupabaseServerClient();
+  const { data: rrm } = await supabase.from("organization_memberships").select("role")
+    .eq("organization_id", ctx.organizationId).eq("profile_id", ctx.userId).eq("status", "active").maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(rrm?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage routes." };
+  }
+
   const stopId = String(formData.get("stop_id") ?? "");
   const routeId = String(formData.get("route_id") ?? "");
-
-  const supabase = await createSupabaseServerClient();
 
   // Verify the stop belongs to a route owned by this org before deleting
   const { data: stop } = await supabase
@@ -203,7 +219,18 @@ export async function updateRouteStatus(
   const routeId = String(formData.get("route_id") ?? "");
   const status = String(formData.get("status") ?? "");
 
+  const VALID_ROUTE_STATUSES = ["planned", "in_progress", "completed", "cancelled"];
+  if (!VALID_ROUTE_STATUSES.includes(status)) {
+    return { ok: false, message: "Invalid route status." };
+  }
+
   const supabase = await createSupabaseServerClient();
+  const { data: rsm } = await supabase.from("organization_memberships").select("role")
+    .eq("organization_id", ctx.organizationId).eq("profile_id", ctx.userId).eq("status", "active").maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(rsm?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage routes." };
+  }
+
   const { error } = await supabase
     .from("routes")
     .update({ route_status: status })
@@ -233,6 +260,11 @@ export async function updateStopStatus(
   const status = String(formData.get("status") ?? "");
   const orderId = String(formData.get("order_id") ?? "") || null;
 
+  const VALID_STOP_STATUSES = ["pending", "en_route", "completed", "skipped"];
+  if (!VALID_STOP_STATUSES.includes(status)) {
+    return { ok: false, message: "Invalid stop status." };
+  }
+
   const supabase = await createSupabaseServerClient();
 
   // Verify the stop belongs to a route owned by this org before updating
@@ -258,16 +290,16 @@ export async function updateStopStatus(
 
   if (error) return { ok: false, message: error.message };
 
-  // Sync order status when a delivery stop (not pickup) is completed
+  // Sync order status when a delivery stop (not pickup) is completed.
+  // Direct DB update rather than updateOrderStatus() to avoid state-machine
+  // failures when the order skips the scheduled/out_for_delivery steps.
   if (resolvedOrderId && status === "completed" && stop.stop_type === "delivery") {
-    try {
-      const { updateOrderStatus } = await import("@/lib/orders/actions");
-      // Two-step: advance through out_for_delivery if needed, then to delivered
-      await updateOrderStatus(resolvedOrderId, "out_for_delivery").catch(() => {});
-      await updateOrderStatus(resolvedOrderId, "delivered");
-    } catch {
-      // Non-fatal — stop is already marked complete
-    }
+    await supabase
+      .from("orders")
+      .update({ order_status: "delivered" })
+      .eq("id", resolvedOrderId)
+      .eq("organization_id", ctx.organizationId)
+      .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
 
     // Clear tracking token so expired links can't be replayed
     await supabase

@@ -5,7 +5,7 @@ import {
   getStorefrontFallbackGallery,
   getStorefrontFallbackImage,
 } from "@/lib/media/storefront-fallback-images";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 import type { CatalogDetail } from "@/lib/types";
 import { notFound } from "next/navigation";
 
@@ -82,9 +82,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
     );
   }
 
-  // Resolve org: authenticated user context or public tenant hostname
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) {
     notFound();
   }

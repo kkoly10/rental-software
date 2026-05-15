@@ -1,6 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 import { normalizePostalCode } from "@/lib/service-areas/normalize";
 
 export type ServiceAreaGeo = {
@@ -48,8 +48,7 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
     return fallbackGeoAreas;
   }
 
-  const ctx = await getOrgContext();
-  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
+  const organizationId = await getPublicOrgId();
   if (!organizationId) return [];
 
   const supabase = await createSupabaseServerClient();

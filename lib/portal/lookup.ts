@@ -49,6 +49,7 @@ type OrderBase = {
   delivery_fee_amount: number | string | null;
   total_amount: number | string | null;
   deposit_due_amount: number | string | null;
+  balance_due_amount: number | string | null;
   customer_id: string;
 };
 
@@ -95,7 +96,9 @@ async function buildPortalOrder(order: OrderBase, customer: { first_name: string
   };
 
   const financials = await getOrderFinancials(order.id);
-  const remainingBalance = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
+  // Fall back to cached balance_due_amount column (kept current by record_manual_payment DB function)
+  // rather than total_amount, which doesn't account for payments already received.
+  const remainingBalance = financials?.remainingBalance ?? Number(order.balance_due_amount ?? order.total_amount ?? 0);
 
   return {
     orderNumber: order.order_number,
@@ -175,7 +178,7 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
       id, order_number, order_status, event_date,
       event_start_time, event_end_time,
       subtotal_amount, delivery_fee_amount, total_amount,
-      deposit_due_amount, customer_id,
+      deposit_due_amount, balance_due_amount, customer_id,
       portal_access_token_created_at
     `)
     .eq("organization_id", orgId)
@@ -271,14 +274,14 @@ export async function lookupOrder(
       id, order_number, order_status, event_date,
       event_start_time, event_end_time,
       subtotal_amount, delivery_fee_amount, total_amount,
-      deposit_due_amount, customer_id
+      deposit_due_amount, balance_due_amount, customer_id
     `)
     .eq("organization_id", orgId)
     .eq("order_number", orderNumber)
     .maybeSingle();
 
   if (!order) {
-    return { ok: false, message: "Order not found. Please check your order number." };
+    return { ok: false, message: "Order not found. Please check your order number and email." };
   }
 
   const { data: customer } = await supabase

@@ -68,7 +68,8 @@ export async function sendSmsNotification(
   const result = await sendSms({ to: customerPhone, body });
 
   if (!result.ok) {
-    console.error(`[SMS] Failed to send ${type} to ${customerPhone}:`, result.error);
+    const redacted = `***-***-${customerPhone.slice(-4)}`;
+    console.error(`[SMS] Failed to send ${type} to ${redacted}:`, result.error);
   }
 
   // Log to communication_log — must be awaited; fire-and-forget is killed by Lambda
@@ -84,6 +85,6 @@ export async function sendSmsNotification(
       bodyPreview: body,
       status: result.ok ? "sent" : "failed",
       metadata: result.ok ? { messageId: result.messageId } : { error: result.error },
-    }).catch(() => {});
+    }).catch((err) => { console.error("[sms] Failed to log communication:", err instanceof Error ? err.message : err); });
   }
 }

@@ -15,7 +15,7 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
   const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
   if (!sid || !authToken || !fromNumber) {
-    console.log("[SMS Demo Mode] Would send to", message.to, ":", message.body);
+    console.log("[SMS Demo Mode] Would send SMS (phone and body redacted)");
     return { ok: true, messageId: `demo-${Date.now()}` };
   }
 

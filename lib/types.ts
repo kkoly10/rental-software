@@ -117,7 +117,7 @@ export type CustomerDetail = {
   addressState: string;
   addressZip: string;
   notes: string;
-  orders: string[];
+  orders: { id: string; label: string }[];
 };
 
 export type RouteDetail = {

@@ -19,9 +19,9 @@ const fallbackCustomerDetail: CustomerDetail = {
   addressState: "VA",
   addressZip: "22554",
   orders: [
-    "Johnson Birthday Setup · Confirmed · $245",
-    "Neighborhood Cookout · Completed · $190",
-    "Church Family Day Referral · Inquiry",
+    { id: "ord_1001", label: "Johnson Birthday Setup · Confirmed · $245.00" },
+    { id: "ord_1002", label: "Neighborhood Cookout · Completed · $190.00" },
+    { id: "ord_1003", label: "Church Family Day Referral · Inquiry · $0.00" },
   ],
 };
 
@@ -43,7 +43,7 @@ export async function getCustomerDetail(
     .select(`
       id, first_name, last_name, email, phone, notes,
       customer_addresses(line1, line2, city, state, postal_code, is_default_delivery),
-      orders(id, order_number, order_status, total_amount, event_date)
+      orders(id, order_number, order_status, total_amount, event_date, deleted_at)
     `)
     .eq("id", customerId)
     .eq("organization_id", ctx.organizationId)
@@ -66,15 +66,16 @@ export async function getCustomerDetail(
       | null) ?? [];
 
   const orders =
-    ((data as Record<string, unknown>).orders as
+    (((data as Record<string, unknown>).orders as
       | {
           id: string;
           order_number: string;
           order_status: string;
           total_amount: number;
           event_date: string;
+          deleted_at: string | null;
         }[]
-      | null) ?? [];
+      | null) ?? []).filter((o) => !o.deleted_at);
 
   const defaultAddr =
     addresses.find((a) => a.is_default_delivery) ?? addresses[0];
@@ -99,14 +100,16 @@ export async function getCustomerDetail(
     addressCity: defaultAddr?.city ?? "",
     addressState: defaultAddr?.state ?? "",
     addressZip: defaultAddr?.postal_code ?? "",
-    orders:
-      orders.length > 0
-        ? orders.map((o) => {
-            const status = (o.order_status ?? "inquiry")
-              .replace(/_/g, " ")
-              .replace(/\b\w/g, (c: string) => c.toUpperCase());
-            return `${o.order_number} · ${status} · $${o.total_amount ?? 0}`;
-          })
-        : ["No orders yet"],
+    orders: [...orders]
+      .sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""))
+      .map((o) => {
+        const status = (o.order_status ?? "inquiry")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c: string) => c.toUpperCase());
+        return {
+          id: o.id,
+          label: `${o.order_number} · ${status} · $${Number(o.total_amount ?? 0).toFixed(2)}`,
+        };
+      }),
   };
 }

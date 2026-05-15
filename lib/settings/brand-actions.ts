@@ -90,6 +90,17 @@ export async function updateBrandSettings(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: brandMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(brandMembership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can update brand settings." };
+  }
+
   // Read existing settings
   const { data: org } = await supabase
     .from("organizations")

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
 import { hasSupabaseEnv } from "@/lib/env";
 import { hashTrackingToken } from "@/lib/tracking/access-token";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
@@ -15,6 +16,21 @@ export async function GET(
 
   if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
     return NextResponse.json({ error: "Not available in demo mode." }, { status: 503 });
+  }
+
+  try {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const limit = await enforceRateLimit({
+      scope: "tracking:lookup",
+      actor: clientIp,
+      limit: 30,
+      windowSeconds: 300,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+    }
+  } catch {
+    // Allow through if rate limiting unavailable
   }
 
   const tokenHash = hashTrackingToken(token);
@@ -54,7 +70,6 @@ export async function GET(
   };
 
   return NextResponse.json({
-    routeId: stop.route_id,
     stopStatus: stop.stop_status,
     orderNumber: order.order_number,
     customerFirstName: order.customers.first_name,

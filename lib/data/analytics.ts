@@ -80,6 +80,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("orders")
         .select("id, order_status, total_amount, deposit_due_amount, event_date, created_at")
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .limit(5000),
 
       // Customer count
@@ -115,6 +116,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("orders")
         .select("balance_due_amount")
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .not("order_status", "in", "(cancelled,completed,refunded)")
         .limit(5000),
 
@@ -123,6 +125,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("orders")
         .select("customer_id")
         .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .not("order_status", "eq", "cancelled")
         .limit(5000),
 
@@ -134,6 +137,13 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .is("deleted_at", null)
         .gte("created_at", monthStart),
     ]);
+
+  // Log any query failures so operators aren't shown silent zeros
+  if (ordersRes.error) console.error("[analytics] orders query failed:", ordersRes.error.message);
+  if (paymentsRes.error) console.error("[analytics] payments query failed:", paymentsRes.error.message);
+  if (itemsRes.error) console.error("[analytics] items query failed:", itemsRes.error.message);
+  if (balanceRes.error) console.error("[analytics] balance query failed:", balanceRes.error.message);
+  if (repeatRes.error) console.error("[analytics] repeat customers query failed:", repeatRes.error.message);
 
   const orders = ordersRes.data ?? [];
   const payments = paymentsRes.data ?? [];
@@ -174,14 +184,21 @@ export async function getAnalytics(): Promise<AnalyticsData> {
   const paidOrderCount = paidOrderIds.size;
   const averageOrderValue = paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0;
 
-  // Deposit collection rate
+  // Deposit collection rate — build per-order net-paid totals from payments
+  const paidByOrder = new Map<string, number>();
+  for (const p of payments) {
+    if (!p.order_id) continue;
+    const current = paidByOrder.get(p.order_id) ?? 0;
+    const delta = typeof p.amount === "number" ? p.amount : 0;
+    paidByOrder.set(p.order_id, current + (p.payment_type === "refund" ? -delta : delta));
+  }
+
   const ordersWithDeposit = orders.filter(
     (o) => typeof o.deposit_due_amount === "number" && o.deposit_due_amount > 0
   );
-  // An order's deposit is "fulfilled" if it has payments >= deposit_due_amount
-  // Use a simplified check: order exists in paidOrderIds
+  // An order's deposit is "fulfilled" only when net paid >= deposit_due_amount
   const depositFulfilledCount = ordersWithDeposit.filter((o) =>
-    paidOrderIds.has(o.id)
+    (paidByOrder.get(o.id) ?? 0) >= (o.deposit_due_amount as number)
   ).length;
   const depositCollectionRate =
     ordersWithDeposit.length > 0

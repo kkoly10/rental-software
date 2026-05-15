@@ -52,7 +52,7 @@ export async function createCheckoutOrder(
   _prevState: CheckoutActionState,
   formData: FormData
 ): Promise<CheckoutActionState> {
-  const termsAccepted = formData.get("terms_accepted") === "true";
+  const termsAccepted = formData.has("terms_accepted");
   if (!termsAccepted) {
     return {
       ok: false,
@@ -389,7 +389,7 @@ export async function createCheckoutOrder(
 
   const { data: existingCustomer } = await supabase
     .from("customers")
-    .select("id")
+    .select("id, first_name, last_name, phone")
     .eq("organization_id", orgId)
     .ilike("email", email)
     .is("deleted_at", null)
@@ -399,16 +399,25 @@ export async function createCheckoutOrder(
   if (existingCustomer) {
     customerId = existingCustomer.id;
 
-    const { error: updateCustomerError } = await supabase
-      .from("customers")
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone ?? null,
-        ...(smsOptIn ? { sms_opt_in: true, sms_opt_in_at: new Date().toISOString(), sms_opt_in_ip: clientIp } : {}),
-      })
-      .eq("id", customerId)
-      .eq("organization_id", orgId);
+    // Only fill blank fields — never overwrite data the operator already has on record
+    const customerUpdates: Record<string, unknown> = {};
+    if (firstName && !existingCustomer.first_name) customerUpdates.first_name = firstName;
+    if (lastName && !existingCustomer.last_name) customerUpdates.last_name = lastName;
+    if (phone && !existingCustomer.phone) customerUpdates.phone = phone;
+    if (smsOptIn) {
+      customerUpdates.sms_opt_in = true;
+      customerUpdates.sms_opt_in_at = new Date().toISOString();
+      customerUpdates.sms_opt_in_ip = clientIp;
+    }
+
+    const { error: updateCustomerError } = Object.keys(customerUpdates).length > 0
+      ? await supabase
+          .from("customers")
+          .update(customerUpdates)
+          .eq("id", customerId)
+          .eq("organization_id", orgId)
+          .is("deleted_at", null)
+      : { error: null };
 
     if (updateCustomerError) {
       await logAppError({
@@ -476,7 +485,7 @@ export async function createCheckoutOrder(
 
     if (addressError || !address) {
       if (newCustomerId) {
-        await supabase.from("customers").delete().eq("id", newCustomerId);
+        await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
       }
 
       await logAppError({
@@ -505,6 +514,20 @@ export async function createCheckoutOrder(
     deposit = Math.min(policies.depositMinimum, total);
   }
   const balance = Number((total - deposit).toFixed(2));
+
+  // Check Stripe plan gate before creating any records — fail early if org can't accept
+  // online payments but a deposit is required.
+  if (hasStripeEnv() && deposit > 0) {
+    const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+    const stripeGate = await checkFeatureAccess("stripe_payments");
+    if (!stripeGate.allowed) {
+      return {
+        ok: false,
+        message: stripeGate.reason ?? "Online payments are not available on your current plan.",
+      };
+    }
+  }
+
   const orderNumber = createOrderNumber();
 
   // Convert event date + time strings to timestamptz for storage.
@@ -546,10 +569,10 @@ export async function createCheckoutOrder(
 
   if (orderError || !order) {
     if (deliveryAddressId) {
-      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
     }
     if (newCustomerId) {
-      await supabase.from("customers").delete().eq("id", newCustomerId);
+      await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
     }
 
     await logAppError({
@@ -579,12 +602,16 @@ export async function createCheckoutOrder(
     });
 
     if (itemError) {
-      await supabase.from("orders").delete().eq("id", order.id);
-      if (deliveryAddressId) {
-        await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
-      }
-      if (newCustomerId) {
-        await supabase.from("customers").delete().eq("id", newCustomerId);
+      try {
+        await supabase.from("orders").delete().eq("id", order.id).eq("organization_id", orgId);
+        if (deliveryAddressId) {
+          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
+        }
+        if (newCustomerId) {
+          await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
+        }
+      } catch (cleanupErr) {
+        console.error("[checkout] Cleanup after item insert failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
       }
 
       await logAppError({
@@ -617,12 +644,16 @@ export async function createCheckoutOrder(
     });
 
     if (!reserveResult.ok) {
-      await supabase.from("orders").delete().eq("id", order.id);
-      if (deliveryAddressId) {
-        await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
-      }
-      if (newCustomerId) {
-        await supabase.from("customers").delete().eq("id", newCustomerId);
+      try {
+        await supabase.from("orders").delete().eq("id", order.id).eq("organization_id", orgId);
+        if (deliveryAddressId) {
+          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
+        }
+        if (newCustomerId) {
+          await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
+        }
+      } catch (cleanupErr) {
+        console.error("[checkout] Cleanup after reserve failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
       }
 
       await logAppError({
@@ -709,6 +740,16 @@ export async function createCheckoutOrder(
   // Attempt Stripe Checkout for deposit payment
   if (hasStripeEnv() && deposit > 0) {
     try {
+      // Verify the org's plan allows Stripe payments before creating a session
+      const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+      const stripeGate = await checkFeatureAccess("stripe_payments");
+      if (!stripeGate.allowed) {
+        return {
+          ok: false,
+          message: stripeGate.reason ?? "Online payments are not available on your current plan.",
+        };
+      }
+
       const stripe = getStripe();
       // Use the request origin so the customer is redirected back to the
       // tenant subdomain / custom domain they checked out on, not the root
@@ -766,37 +807,52 @@ export async function createCheckoutOrder(
       await logAppError({
         organizationId: orgId,
         source: "checkout.website",
-        message: "Stripe checkout session creation failed — order still created",
+        message: "Stripe checkout session creation failed — cancelling order and releasing hold",
         stack: stripeError instanceof Error ? stripeError.stack : undefined,
         context: { orderNumber, deposit },
         error: stripeError,
       });
-      // Stripe failed — send confirmation email now as fallback so customer isn't left without any receipt
+      // Cancel the order and release the checkout hold so inventory isn't locked indefinitely
       try {
-        const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
-        await triggerOrderConfirmationEmail({
-          organizationId: orgId,
-          customerFirstName: firstName,
-          customerEmail: email,
-          orderNumber,
-          productName,
-          eventDate: eventDate ?? "",
-          subtotal,
-          deliveryFee,
-          total,
-          depositDue: deposit,
-        });
+        await supabase
+          .from("orders")
+          .update({ order_status: "cancelled" })
+          .eq("id", order.id)
+          .eq("organization_id", orgId)
+          .eq("order_status", "awaiting_deposit");
+        await supabase
+          .from("availability_blocks")
+          .delete()
+          .eq("source_order_id", order.id)
+          .eq("organization_id", orgId)
+          .eq("block_type", "checkout_hold");
       } catch {
-        console.error("[checkout] Fallback confirmation email failed for order", orderNumber);
+        console.error("[checkout] Failed to cancel order/block after Stripe failure", orderNumber);
       }
+      return {
+        ok: false,
+        message: "We were unable to process your payment at this time. Please try again or contact us for assistance.",
+      };
     }
   }
 
+  const fmt = (n: number) => `$${n.toFixed(2)}`;
+  const addrParts = [line1, city, state, postalCode].filter(Boolean);
   return {
     ok: true,
     message: `Order ${orderNumber} created successfully! A deposit of $${deposit.toFixed(
       2
     )} is required to confirm your booking.`,
     orderNumber,
+    summary: {
+      productName,
+      eventDate: eventDate ?? "",
+      address: addrParts.join(", "),
+      subtotal: fmt(subtotal),
+      deliveryFee: fmt(deliveryFee),
+      total: fmt(total),
+      depositDue: fmt(deposit),
+      balanceDue: fmt(balance),
+    },
   };
 }

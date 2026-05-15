@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
-import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 
 export type DomainSettings = {
   slug: string;
@@ -16,29 +17,14 @@ const fallback: DomainSettings = {
 export async function getDomainSettings(): Promise<DomainSettings> {
   if (!hasSupabaseEnv()) return fallback;
 
-  // Authenticate the user via their session cookie
-  const sessionClient = await createSupabaseServerClient();
-  const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) return fallback;
+  const ctx = await getOrgContext();
+  if (!ctx) return fallback;
 
-  // Use the admin client so RLS never blocks this internal dashboard lookup
-  const admin = createSupabaseAdminClient();
-
-  const { data: membership } = await admin
-    .from("organization_memberships")
-    .select("organization_id")
-    .eq("profile_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) return fallback;
-
-  const { data: org } = await admin
+  const supabase = await createSupabaseServerClient();
+  const { data: org } = await supabase
     .from("organizations")
     .select("slug, custom_domain, custom_domain_verified")
-    .eq("id", membership.organization_id)
+    .eq("id", ctx.organizationId)
     .maybeSingle();
 
   if (!org) return fallback;
