@@ -241,9 +241,14 @@ export type OrderStatusUpdateData = {
   supportEmail: string | null;
   deliveryTimeWindow?: string;
   crewName?: string;
+  portalUrl?: string;
 };
 
 const statusMessages: Record<string, { heading: string; body: string }> = {
+  awaiting_deposit: {
+    heading: "Quote accepted — deposit required",
+    body: "Thanks for accepting your quote! Your booking will be confirmed once your deposit is received. Use the button below to pay securely.",
+  },
   confirmed: {
     heading: "Your booking is confirmed!",
     body: "Your event is locked in. We'll send delivery details as the date approaches.",
@@ -301,6 +306,12 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
 
     <p style="font-size:14px;margin:16px 0;">${esc(msg.body)}</p>
 
+    ${data.portalUrl ? `<p style="margin:20px 0;">
+      <a href="${esc(data.portalUrl)}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;display:inline-block;">
+        View my order
+      </a>
+    </p>` : ""}
+
     ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
       Questions? Contact us at ${esc(data.supportEmail)}.
     </p>` : ""}
@@ -316,6 +327,7 @@ export type DocumentsReadyData = {
   orderNumber: string;
   documentTypes: string[];
   supportEmail: string | null;
+  portalUrl?: string;
 };
 
 export function documentsReadyEmail(data: DocumentsReadyData): string {
@@ -331,11 +343,17 @@ export function documentsReadyEmail(data: DocumentsReadyData): string {
     <h1 style="margin:0 0 8px;font-size:24px;">Documents ready to sign</h1>
     <p style="color:#55708f;margin:0 0 20px;">
       Hi ${esc(data.customerFirstName)}, your ${docList} for order #${esc(data.orderNumber)}
-      ${data.documentTypes.length > 1 ? "are" : "is"} ready for review.
+      ${data.documentTypes.length > 1 ? "are" : "is"} ready for your signature.
     </p>
 
+    ${data.portalUrl ? `<p style="margin:20px 0;">
+      <a href="${esc(data.portalUrl)}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;display:inline-block;">
+        Review &amp; sign documents
+      </a>
+    </p>` : ""}
+
     <p style="font-size:14px;">
-      Our team will send you the documents for signing.${data.supportEmail ? ` If you have questions, contact us at ${esc(data.supportEmail)}.` : ""}
+      ${data.supportEmail ? `Questions? Contact us at ${esc(data.supportEmail)}.` : ""}
     </p>
     `
   );

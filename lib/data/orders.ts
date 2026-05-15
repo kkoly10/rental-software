@@ -120,6 +120,7 @@ export async function getOrdersPage(options?: {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "UTC",
           })
         : "TBD",
       total:

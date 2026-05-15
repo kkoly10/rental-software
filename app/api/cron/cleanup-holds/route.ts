@@ -59,7 +59,16 @@ export async function GET(request: NextRequest) {
     ),
   ];
 
-  // Delete the expired availability blocks
+  // Cancel orders FIRST so we never leave a cancelled order without an available hold
+  if (orderIds.length > 0) {
+    await admin
+      .from("orders")
+      .update({ order_status: "cancelled" })
+      .in("id", orderIds)
+      .eq("order_status", "awaiting_deposit");
+  }
+
+  // Then release the availability blocks
   const { error: deleteError } = await admin
     .from("availability_blocks")
     .delete()
@@ -67,15 +76,6 @@ export async function GET(request: NextRequest) {
 
   if (deleteError) {
     console.error("Failed to delete expired holds:", deleteError.message);
-  }
-
-  // Cancel associated orders that are still awaiting deposit (never paid)
-  if (orderIds.length > 0) {
-    await admin
-      .from("orders")
-      .update({ order_status: "cancelled" })
-      .in("id", orderIds)
-      .eq("order_status", "awaiting_deposit");
   }
 
   console.log(

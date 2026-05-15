@@ -19,9 +19,9 @@ const fallbackCustomerDetail: CustomerDetail = {
   addressState: "VA",
   addressZip: "22554",
   orders: [
-    "Johnson Birthday Setup · Confirmed · $245",
-    "Neighborhood Cookout · Completed · $190",
-    "Church Family Day Referral · Inquiry",
+    { id: "ord_1001", label: "Johnson Birthday Setup · Confirmed · $245.00" },
+    { id: "ord_1002", label: "Neighborhood Cookout · Completed · $190.00" },
+    { id: "ord_1003", label: "Church Family Day Referral · Inquiry · $0.00" },
   ],
 };
 

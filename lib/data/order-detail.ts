@@ -108,6 +108,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
           month: "short",
           day: "numeric",
           year: "numeric",
+          timeZone: "UTC",
         })
       : "TBD",
     eventStartTime: data.event_start_time

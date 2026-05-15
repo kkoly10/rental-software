@@ -143,6 +143,7 @@ export async function triggerOrderConfirmationEmail(params: {
     }),
     replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
+    orderId: order?.id ?? null,
   });
 
   // Alert to operator
@@ -285,6 +286,7 @@ export async function triggerPaymentReceivedEmail(params: {
 // ─── Order status update ────────────────────────────────────────────────────
 
 const EMAIL_WORTHY_STATUSES = [
+  "awaiting_deposit",
   "confirmed",
   "scheduled",
   "out_for_delivery",
@@ -369,6 +371,17 @@ export async function triggerOrderStatusEmail(params: {
     }
   }
 
+  // For awaiting_deposit (quote accepted), issue/re-use portal token so customer can pay
+  let portalUrl: string | undefined;
+  if (params.newStatus === "awaiting_deposit") {
+    try {
+      const portalToken = await issuePortalAccessToken({ supabase, orderId: params.orderId });
+      portalUrl = `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`;
+    } catch {
+      portalUrl = `${branding.siteUrl}/order-status`;
+    }
+  }
+
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
@@ -382,9 +395,12 @@ export async function triggerOrderStatusEmail(params: {
       supportEmail: branding.supportEmail,
       deliveryTimeWindow,
       crewName,
+      portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
+    orderId: params.orderId,
+    customerId: order.customer_id,
   });
 }
 
@@ -416,6 +432,16 @@ export async function triggerDocumentsReadyEmail(params: {
 
   const branding = await getOrgBranding(params.organizationId);
 
+  // Issue a portal token so the customer can navigate directly to sign documents
+  let portalUrl: string | undefined;
+  try {
+    const { issuePortalAccessToken: issueToken } = await import("@/lib/portal/access-token");
+    const portalToken = await issueToken({ supabase, orderId: params.orderId });
+    portalUrl = `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`;
+  } catch {
+    portalUrl = `${branding.siteUrl}/order-status`;
+  }
+
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
@@ -426,9 +452,12 @@ export async function triggerDocumentsReadyEmail(params: {
       orderNumber: order.order_number,
       documentTypes: params.documentTypes,
       supportEmail: branding.supportEmail,
+      portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
     organizationId: params.organizationId,
+    orderId: params.orderId,
+    customerId: params.customerId,
   });
 }
 

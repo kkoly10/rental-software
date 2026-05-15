@@ -766,29 +766,30 @@ export async function createCheckoutOrder(
       await logAppError({
         organizationId: orgId,
         source: "checkout.website",
-        message: "Stripe checkout session creation failed — order still created",
+        message: "Stripe checkout session creation failed — cancelling order and releasing hold",
         stack: stripeError instanceof Error ? stripeError.stack : undefined,
         context: { orderNumber, deposit },
         error: stripeError,
       });
-      // Stripe failed — send confirmation email now as fallback so customer isn't left without any receipt
+      // Cancel the order and release the checkout hold so inventory isn't locked indefinitely
       try {
-        const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
-        await triggerOrderConfirmationEmail({
-          organizationId: orgId,
-          customerFirstName: firstName,
-          customerEmail: email,
-          orderNumber,
-          productName,
-          eventDate: eventDate ?? "",
-          subtotal,
-          deliveryFee,
-          total,
-          depositDue: deposit,
-        });
+        await supabase
+          .from("orders")
+          .update({ order_status: "cancelled" })
+          .eq("id", order.id)
+          .eq("order_status", "awaiting_deposit");
+        await supabase
+          .from("availability_blocks")
+          .delete()
+          .eq("source_order_id", order.id)
+          .eq("block_type", "checkout_hold");
       } catch {
-        console.error("[checkout] Fallback confirmation email failed for order", orderNumber);
+        console.error("[checkout] Failed to cancel order/block after Stripe failure", orderNumber);
       }
+      return {
+        ok: false,
+        message: "We were unable to process your payment at this time. Please try again or contact us for assistance.",
+      };
     }
   }
 
