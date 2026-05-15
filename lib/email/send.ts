@@ -49,7 +49,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
         organizationId: payload.organizationId,
         source: "email.send",
         message: `Email send failed: ${error.message}`,
-        context: { to: payload.to, subject: payload.subject },
+        context: { subject: payload.subject },
       });
 
       // Log failed email to communication_log
@@ -76,7 +76,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
       source: "email.send",
       action: "sent",
       status: "success",
-      metadata: { to: payload.to, subject: payload.subject },
+      metadata: { subject: payload.subject },
     });
 
     // Log sent email to communication_log
