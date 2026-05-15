@@ -85,14 +85,20 @@ export async function GET(request: NextRequest) {
 
   if (deleteError) {
     console.error("Failed to delete expired holds:", deleteError.message);
+    // Orders were already cancelled — return 500 so the caller knows the
+    // blocks were NOT cleaned up, even though some orders are now cancelled.
+    return NextResponse.json(
+      { error: "Orders cancelled but blocks delete failed; blocks may be orphaned" },
+      { status: 500 }
+    );
   }
 
   console.log(
-    `Cleanup: released ${blockIds.length} expired holds, checked ${orderIds.length} orders`
+    `Cleanup: released ${blockIds.length} expired holds, cancelled ${orderIds.length} orders`
   );
 
   return NextResponse.json({
     released: blockIds.length,
-    ordersChecked: orderIds.length,
+    ordersCancelled: orderIds.length,
   });
 }

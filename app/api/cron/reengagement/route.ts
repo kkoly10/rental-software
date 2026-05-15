@@ -150,10 +150,12 @@ export async function GET(request: NextRequest) {
   let day7Sent = 0;
   let errors = 0;
 
-  // Find organizations that completed onboarding but haven't added products
+  // Find organizations that completed onboarding but haven't added products.
+  // Exclude soft-deleted organizations (deleted_at IS NOT NULL).
   const { data: orgs } = await supabase
     .from("organizations")
-    .select("id, name, settings, support_email");
+    .select("id, name, settings, support_email")
+    .is("deleted_at", null);
 
   if (!orgs || orgs.length === 0) {
     return NextResponse.json({
