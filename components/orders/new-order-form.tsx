@@ -6,16 +6,10 @@ import type {
   OrderFormProductOption,
   OrderFormServiceAreaOption,
 } from "@/lib/data/order-form-options";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const initialState = { ok: false, message: "" };
-
-const ORDER_STATUSES = [
-  { value: "inquiry", label: "Inquiry" },
-  { value: "quote_sent", label: "Quote Sent" },
-  { value: "awaiting_deposit", label: "Awaiting Deposit" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "scheduled", label: "Scheduled" },
-];
 
 export function NewOrderForm({
   products,
@@ -25,54 +19,64 @@ export function NewOrderForm({
   serviceAreas: OrderFormServiceAreaOption[];
 }) {
   const [state, formAction, pending] = useActionState(createOrder, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.newOrder;
+
+  const orderStatuses = [
+    { value: "inquiry", label: m.statuses.inquiry },
+    { value: "quote_sent", label: m.statuses.quoteSent },
+    { value: "awaiting_deposit", label: m.statuses.awaitingDeposit },
+    { value: "confirmed", label: m.statuses.confirmed },
+    { value: "scheduled", label: m.statuses.scheduled },
+  ];
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>First name</strong>
+          <strong>{m.firstNameLabel}</strong>
           <input
             name="first_name"
             type="text"
             required
-            placeholder="First name"
+            placeholder={m.firstNamePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
         <label className="order-card">
-          <strong>Last name</strong>
+          <strong>{m.lastNameLabel}</strong>
           <input
             name="last_name"
             type="text"
             required
-            placeholder="Last name"
+            placeholder={m.lastNamePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
         <label className="order-card">
-          <strong>Phone</strong>
+          <strong>{m.phoneLabel}</strong>
           <input
             name="phone"
             type="tel"
-            placeholder="(540) 555-0100"
+            placeholder={m.phonePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
       </div>
 
       <label className="order-card">
-        <strong>Email</strong>
+        <strong>{m.emailLabel}</strong>
         <input
           name="email"
           type="email"
-          placeholder="customer@example.com"
+          placeholder={m.emailPlaceholder}
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>Event date</strong>
+          <strong>{m.eventDateLabel}</strong>
           <input
             name="event_date"
             type="date"
@@ -80,7 +84,7 @@ export function NewOrderForm({
           />
         </label>
         <label className="order-card">
-          <strong>Start time</strong>
+          <strong>{m.startTimeLabel}</strong>
           <input
             name="start_time"
             type="time"
@@ -88,7 +92,7 @@ export function NewOrderForm({
           />
         </label>
         <label className="order-card">
-          <strong>End time</strong>
+          <strong>{m.endTimeLabel}</strong>
           <input
             name="end_time"
             type="time"
@@ -98,14 +102,14 @@ export function NewOrderForm({
       </div>
 
       <label className="order-card">
-        <strong>Rental end date</strong>
+        <strong>{m.rentalEndDateLabel}</strong>
         <input
           name="rental_end_date"
           type="date"
           style={{ marginTop: 10, width: "100%" }}
         />
         <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-          Optional — leave blank for single-day rentals. Set for multi-day events.
+          {m.rentalEndDateHelp}
         </div>
       </label>
 
@@ -120,22 +124,21 @@ export function NewOrderForm({
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
-          <strong style={{ color: "var(--text)" }}>Customer consents to SMS updates</strong>
+          <strong style={{ color: "var(--text)" }}>{m.smsOptInTitle}</strong>
           <br />
-          Check only if the customer has explicitly agreed to receive text notifications
-          (order confirmation, delivery reminders, status updates).
+          {m.smsOptInHelp}
         </span>
       </label>
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>Order status</strong>
+          <strong>{m.orderStatusLabel}</strong>
           <select
             name="order_status"
             defaultValue="inquiry"
             style={{ marginTop: 10, width: "100%" }}
           >
-            {ORDER_STATUSES.map((s) => (
+            {orderStatuses.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
@@ -143,16 +146,19 @@ export function NewOrderForm({
           </select>
         </label>
         <label className="order-card">
-          <strong>Product</strong>
+          <strong>{m.productLabel}</strong>
           <select
             name="product_id"
             defaultValue=""
             style={{ marginTop: 10, width: "100%" }}
           >
-            <option value="">No product selected</option>
+            <option value="">{m.noProductSelected}</option>
             {products.map((product) => (
               <option key={product.id} value={product.id}>
-                {product.name} · ${product.basePrice}
+                {formatMessage(m.productOption, {
+                  name: product.name,
+                  price: product.basePrice,
+                })}
               </option>
             ))}
           </select>
@@ -161,22 +167,26 @@ export function NewOrderForm({
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>Service area</strong>
+          <strong>{m.serviceAreaLabel}</strong>
           <select
             name="service_area_id"
             defaultValue=""
             style={{ marginTop: 10, width: "100%" }}
           >
-            <option value="">Manual / no service area selected</option>
+            <option value="">{m.serviceAreaPlaceholder}</option>
             {serviceAreas.map((area) => (
               <option key={area.id} value={area.id}>
-                {area.label} · ${area.deliveryFee} fee · ${area.minimumOrderAmount} min
+                {formatMessage(m.serviceAreaOption, {
+                  label: area.label,
+                  fee: area.deliveryFee,
+                  min: area.minimumOrderAmount,
+                })}
               </option>
             ))}
           </select>
         </label>
         <label className="order-card">
-          <strong>Delivery fee</strong>
+          <strong>{m.deliveryFeeLabel}</strong>
           <input
             name="delivery_fee"
             type="number"
@@ -186,11 +196,11 @@ export function NewOrderForm({
             style={{ marginTop: 10, width: "100%" }}
           />
           <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            Auto-overridden when a service area is selected.
+            {m.deliveryFeeHelp}
           </div>
         </label>
         <label className="order-card">
-          <strong>Subtotal ($)</strong>
+          <strong>{m.subtotalLabel}</strong>
           <input
             name="subtotal"
             type="number"
@@ -200,14 +210,14 @@ export function NewOrderForm({
             style={{ marginTop: 10, width: "100%" }}
           />
           <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            If left at 0 and a product is selected, the product base price is used.
+            {m.subtotalHelp}
           </div>
         </label>
       </div>
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>Deposit amount ($)</strong>
+          <strong>{m.depositAmountLabel}</strong>
           <input
             name="deposit_amount"
             type="number"
@@ -218,85 +228,85 @@ export function NewOrderForm({
           />
         </label>
         <div className="order-card">
-          <strong>Total</strong>
+          <strong>{m.totalLabel}</strong>
           <div className="muted" style={{ marginTop: 10 }}>
-            Calculated on save from subtotal + delivery fee.
+            {m.totalHelp}
           </div>
         </div>
       </div>
 
       <div className="order-card" style={{ paddingBottom: 4 }}>
-        <strong style={{ display: "block", marginBottom: 14 }}>Delivery address</strong>
+        <strong style={{ display: "block", marginBottom: 14 }}>{m.deliveryAddressHeading}</strong>
         <div style={{ display: "grid", gap: 10 }}>
           <label className="field-stack">
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Street address</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.streetAddressLabel}</span>
             <input
               name="delivery_line1"
               type="text"
-              placeholder="123 Main St"
+              placeholder={m.streetAddressPlaceholder}
               style={{ width: "100%" }}
             />
           </label>
           <label className="field-stack">
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Apt / Suite / Unit (optional)</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.aptSuiteLabel}</span>
             <input
               name="delivery_line2"
               type="text"
-              placeholder="Apt 4B"
+              placeholder={m.aptSuitePlaceholder}
               style={{ width: "100%" }}
             />
           </label>
           <div className="grid grid-3">
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>City</span>
-              <input name="delivery_city" type="text" placeholder="Springfield" style={{ width: "100%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.cityLabel}</span>
+              <input name="delivery_city" type="text" placeholder={m.cityPlaceholder} style={{ width: "100%" }} />
             </label>
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>State</span>
-              <input name="delivery_state" type="text" placeholder="VA" maxLength={3} style={{ width: "100%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.stateLabel}</span>
+              <input name="delivery_state" type="text" placeholder={m.statePlaceholder} maxLength={3} style={{ width: "100%" }} />
             </label>
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>ZIP</span>
-              <input name="delivery_zip" type="text" placeholder="22150" maxLength={10} style={{ width: "100%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.zipLabel}</span>
+              <input name="delivery_zip" type="text" placeholder={m.zipPlaceholder} maxLength={10} style={{ width: "100%" }} />
             </label>
           </div>
         </div>
       </div>
 
       <div className="order-card" style={{ paddingBottom: 4 }}>
-        <strong style={{ display: "block", marginBottom: 14 }}>Delivery details</strong>
+        <strong style={{ display: "block", marginBottom: 14 }}>{m.deliveryDetailsHeading}</strong>
         <div style={{ display: "grid", gap: 10 }}>
           <div className="grid grid-3">
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Surface type</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.surfaceTypeLabel}</span>
               <select name="delivery_surface_type" defaultValue="" style={{ width: "100%" }}>
-                <option value="">Not specified</option>
-                <option value="grass">Grass</option>
-                <option value="concrete">Concrete</option>
-                <option value="asphalt">Asphalt</option>
-                <option value="other">Other</option>
+                <option value="">{m.surfaces.notSpecified}</option>
+                <option value="grass">{m.surfaces.grass}</option>
+                <option value="concrete">{m.surfaces.concrete}</option>
+                <option value="asphalt">{m.surfaces.asphalt}</option>
+                <option value="other">{m.surfaces.other}</option>
               </select>
             </label>
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Gate / access code</span>
-              <input name="delivery_gate_code" type="text" placeholder="e.g. #1234" style={{ width: "100%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.gateCodeLabel}</span>
+              <input name="delivery_gate_code" type="text" placeholder={m.gateCodePlaceholder} style={{ width: "100%" }} />
             </label>
           </div>
           <div className="grid grid-3">
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>On-site contact name</span>
-              <input name="delivery_contact_name" type="text" placeholder="Jane Smith" style={{ width: "100%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.onSiteContactNameLabel}</span>
+              <input name="delivery_contact_name" type="text" placeholder={m.onSiteContactNamePlaceholder} style={{ width: "100%" }} />
             </label>
             <label className="field-stack">
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>On-site contact phone</span>
-              <input name="delivery_contact_phone" type="tel" placeholder="(540) 555-0100" style={{ width: "100%" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.onSiteContactPhoneLabel}</span>
+              <input name="delivery_contact_phone" type="tel" placeholder={m.onSiteContactPhonePlaceholder} style={{ width: "100%" }} />
             </label>
           </div>
           <label className="field-stack">
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>Setup notes</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.setupNotesLabel}</span>
             <textarea
               name="delivery_setup_notes"
-              placeholder="Backyard access, slope, low-hanging wires, HOA rules, etc."
+              placeholder={m.setupNotesPlaceholder}
               rows={2}
               style={{
                 width: "100%",
@@ -311,10 +321,10 @@ export function NewOrderForm({
       </div>
 
       <label className="order-card">
-        <strong>Internal notes</strong>
+        <strong>{m.internalNotesLabel}</strong>
         <textarea
           name="notes"
-          placeholder="Internal notes for your team."
+          placeholder={m.internalNotesPlaceholder}
           rows={3}
           style={{
             marginTop: 10,
@@ -338,7 +348,7 @@ export function NewOrderForm({
 
       <div style={{ display: "flex", gap: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Creating..." : "Create Order"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>
