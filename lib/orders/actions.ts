@@ -269,7 +269,7 @@ export async function createOrder(
   if (email) {
     const { data: existing } = await supabase
       .from("customers")
-      .select("id")
+      .select("id, first_name, last_name, phone")
       .eq("organization_id", ctx.organizationId)
       .eq("email", email)
       .is("deleted_at", null)
@@ -279,23 +279,26 @@ export async function createOrder(
     if (existing) {
       customerId = existing.id;
 
-      const { error: updateCustomerError } = await supabase
-        .from("customers")
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone ?? null,
-          ...(smsOptIn
-            ? {
-                sms_opt_in: true,
-                sms_opt_in_at: new Date().toISOString(),
-                sms_opt_in_ip: clientIp,
-              }
-            : {}),
-        })
-        .eq("id", customerId)
-        .eq("organization_id", ctx.organizationId)
-        .is("deleted_at", null);
+      // Only fill in blank fields — never overwrite a name or phone the operator
+      // already has on record (prevents silent data corruption on repeat bookings).
+      const updates: Record<string, unknown> = {};
+      if (firstName && !existing.first_name) updates.first_name = firstName;
+      if (lastName && !existing.last_name) updates.last_name = lastName;
+      if (phone && !existing.phone) updates.phone = phone;
+      if (smsOptIn) {
+        updates.sms_opt_in = true;
+        updates.sms_opt_in_at = new Date().toISOString();
+        updates.sms_opt_in_ip = clientIp;
+      }
+
+      const { error: updateCustomerError } = Object.keys(updates).length > 0
+        ? await supabase
+            .from("customers")
+            .update(updates)
+            .eq("id", customerId)
+            .eq("organization_id", ctx.organizationId)
+            .is("deleted_at", null)
+        : { error: null };
 
       if (updateCustomerError) {
         return { ok: false, message: updateCustomerError.message };

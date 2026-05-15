@@ -52,6 +52,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     `)
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) {

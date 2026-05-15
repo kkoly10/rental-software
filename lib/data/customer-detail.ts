@@ -99,14 +99,16 @@ export async function getCustomerDetail(
     addressCity: defaultAddr?.city ?? "",
     addressState: defaultAddr?.state ?? "",
     addressZip: defaultAddr?.postal_code ?? "",
-    orders:
-      orders.length > 0
-        ? orders.map((o) => {
-            const status = (o.order_status ?? "inquiry")
-              .replace(/_/g, " ")
-              .replace(/\b\w/g, (c: string) => c.toUpperCase());
-            return `${o.order_number} · ${status} · $${o.total_amount ?? 0}`;
-          })
-        : ["No orders yet"],
+    orders: [...orders]
+      .sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""))
+      .map((o) => {
+        const status = (o.order_status ?? "inquiry")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c: string) => c.toUpperCase());
+        return {
+          id: o.id,
+          label: `${o.order_number} · ${status} · $${Number(o.total_amount ?? 0).toFixed(2)}`,
+        };
+      }),
   };
 }
