@@ -301,6 +301,7 @@ export async function updateStopStatus(
       .update({ order_status: "delivered" })
       .eq("id", resolvedOrderId)
       .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
 
     // Clear tracking token so expired links can't be replayed

@@ -57,7 +57,8 @@ export async function getGuidanceSnapshot(): Promise<GuidanceSnapshot> {
       supabase
         .from("product_images")
         .select("id, products!inner(organization_id)", { count: "exact", head: true })
-        .eq("products.organization_id", ctx.organizationId),
+        .eq("products.organization_id", ctx.organizationId)
+        .is("deleted_at", null),
       supabase
         .from("service_areas")
         .select("id", { count: "exact", head: true })

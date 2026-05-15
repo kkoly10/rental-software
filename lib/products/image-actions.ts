@@ -28,7 +28,7 @@ export async function uploadProductImage(
   formData: FormData
 ): Promise<ProductImageActionState> {
   const productId = String(formData.get("product_id") ?? "").trim();
-  const altText = String(formData.get("alt_text") ?? "").trim();
+  const altText = String(formData.get("alt_text") ?? "").trim().slice(0, 500);
   const file = formData.get("image_file");
 
   if (!productId) {

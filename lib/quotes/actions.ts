@@ -54,6 +54,7 @@ export async function sendQuote(orderId: string): Promise<QuoteActionState> {
     .select("id, order_number, order_status, customer_id, event_date")
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) return { ok: false, message: "Order not found." };
