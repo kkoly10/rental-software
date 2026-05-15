@@ -1,5 +1,6 @@
 import { TrackingMap } from "@/components/tracking/tracking-map";
 import { getSiteUrl } from "@/lib/site-url";
+import { getMessages } from "@/lib/i18n/server";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -30,7 +31,7 @@ async function resolveToken(token: string): Promise<TokenResult> {
 
 export default async function TrackingPage({ params }: PageProps) {
   const { token } = await params;
-  const result = await resolveToken(token);
+  const [result, m] = await Promise.all([resolveToken(token), getMessages()]);
 
   if (!result.ok) {
     return (
@@ -38,12 +39,12 @@ export default async function TrackingPage({ params }: PageProps) {
         <div style={{ textAlign: "center", maxWidth: 360 }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>📦</div>
           <h1 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8 }}>
-            {result.expired ? "Tracking link expired" : "Tracking link not found"}
+            {result.expired ? m.tracking.expired : m.tracking.notFound}
           </h1>
           <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
             {result.expired
-              ? "This link has expired. Your delivery may already be complete — check your email for confirmation."
-              : "This tracking link is invalid or has already been used. Please check your SMS for the correct link."}
+              ? m.tracking.expiredBody
+              : m.tracking.notFoundBody}
           </p>
         </div>
       </main>
@@ -55,13 +56,13 @@ export default async function TrackingPage({ params }: PageProps) {
   return (
     <main style={{ minHeight: "100svh", display: "flex", flexDirection: "column", fontFamily: "system-ui, sans-serif" }}>
       <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
-        <div style={{ fontSize: 13, color: "#6b7280" }}>Order #{data.orderNumber}</div>
+        <div style={{ fontSize: 13, color: "#6b7280" }}>#{data.orderNumber}</div>
         <h1 style={{ fontSize: "1.3rem", margin: "4px 0 0", fontWeight: 700 }}>
           {data.isLive
-            ? `Your delivery is on the way, ${data.customerFirstName}!`
+            ? `${m.tracking.onTheWay} — ${data.customerFirstName}`
             : data.stopStatus === "completed"
-            ? "Your delivery has arrived!"
-            : "Tracking your delivery"}
+            ? m.tracking.arrived
+            : m.tracking.title}
         </h1>
         {data.isLive && (
           <div style={{ fontSize: 12, color: "#059669", marginTop: 4, fontWeight: 500 }}>
