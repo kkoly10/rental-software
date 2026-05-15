@@ -67,6 +67,7 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
     )
     .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("label", { ascending: true });
 
   if (error) {

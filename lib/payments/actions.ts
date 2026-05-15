@@ -169,8 +169,8 @@ export async function recordPayment(
   try {
     const [{ triggerPaymentReceivedEmail }, orderResult, orgResult] = await Promise.all([
       import("@/lib/email/triggers"),
-      supabase.from("orders").select("order_number, customer_id").eq("id", orderId).eq("organization_id", ctx.organizationId).maybeSingle(),
-      supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle(),
+      supabase.from("orders").select("order_number, customer_id").eq("id", orderId).eq("organization_id", ctx.organizationId).is("deleted_at", null).maybeSingle(),
+      supabase.from("organizations").select("name").eq("id", ctx.organizationId).is("deleted_at", null).maybeSingle(),
     ]);
     const fullOrder = orderResult.data;
 
@@ -179,6 +179,7 @@ export async function recordPayment(
         .from("customers")
         .select("first_name, email, phone, sms_opt_in")
         .eq("id", fullOrder.customer_id)
+        .is("deleted_at", null)
         .maybeSingle();
 
       if (customer?.email) {

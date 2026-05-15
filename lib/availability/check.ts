@@ -37,6 +37,7 @@ export async function checkProductAvailability(options: {
       .select("id", { count: "exact", head: true })
       .eq("organization_id", options.organizationId)
       .eq("product_id", options.productId)
+      .is("deleted_at", null)
       .in("operational_status", ["ready", "available", "active"]),
     // Count overlapping blocks, excluding any that have already expired
     supabase

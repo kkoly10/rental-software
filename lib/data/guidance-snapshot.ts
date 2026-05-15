@@ -52,20 +52,24 @@ export async function getGuidanceSnapshot(): Promise<GuidanceSnapshot> {
       supabase
         .from("products")
         .select("id", { count: "exact", head: true })
-        .eq("organization_id", ctx.organizationId),
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null),
       supabase
         .from("product_images")
         .select("id, products!inner(organization_id)", { count: "exact", head: true })
-        .eq("products.organization_id", ctx.organizationId),
+        .eq("products.organization_id", ctx.organizationId)
+        .is("deleted_at", null),
       supabase
         .from("service_areas")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", ctx.organizationId)
-        .eq("is_active", true),
+        .eq("is_active", true)
+        .is("deleted_at", null),
       supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
-        .eq("organization_id", ctx.organizationId),
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null),
       supabase
         .from("payments")
         .select("id, orders!inner(organization_id)", { count: "exact", head: true })

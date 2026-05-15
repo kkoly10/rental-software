@@ -47,6 +47,7 @@ export async function getCustomerDetail(
     `)
     .eq("id", customerId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) {

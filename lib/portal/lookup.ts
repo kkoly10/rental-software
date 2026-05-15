@@ -197,6 +197,7 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
     .from("customers")
     .select("first_name, last_name")
     .eq("id", order.customer_id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   return {
@@ -211,8 +212,8 @@ export async function lookupOrder(
   _prevState: PortalLookupState,
   formData: FormData
 ): Promise<PortalLookupState> {
-  const orderNumber = String(formData.get("order_number") ?? "").trim().toUpperCase();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const orderNumber = String(formData.get("order_number") ?? "").trim().toUpperCase().slice(0, 50);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 254);
 
   if (!orderNumber || !email) {
     return { ok: false, message: "Please enter your order number and email." };
@@ -288,6 +289,7 @@ export async function lookupOrder(
     .from("customers")
     .select("email, first_name, last_name")
     .eq("id", order.customer_id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!customer || customer.email?.toLowerCase() !== email) {

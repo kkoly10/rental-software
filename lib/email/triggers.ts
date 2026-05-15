@@ -113,6 +113,7 @@ export async function triggerOrderConfirmationEmail(params: {
     .select("id")
     .eq("organization_id", params.organizationId)
     .eq("order_number", params.orderNumber)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const portalToken = order
@@ -310,6 +311,7 @@ export async function triggerOrderStatusEmail(params: {
     .select("order_number, event_date, customer_id")
     .eq("id", params.orderId)
     .eq("organization_id", params.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order?.customer_id) return;
@@ -319,6 +321,7 @@ export async function triggerOrderStatusEmail(params: {
     .select("first_name, email")
     .eq("id", order.customer_id)
     .eq("organization_id", params.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!customer?.email) return;
@@ -422,12 +425,14 @@ export async function triggerDocumentsReadyEmail(params: {
       .select("first_name, email")
       .eq("id", params.customerId)
       .eq("organization_id", params.organizationId)
+      .is("deleted_at", null)
       .maybeSingle(),
     supabase
       .from("orders")
       .select("order_number")
       .eq("id", params.orderId)
       .eq("organization_id", params.organizationId)
+      .is("deleted_at", null)
       .maybeSingle(),
   ]);
 
@@ -481,12 +486,14 @@ export async function triggerQuoteSentEmail(params: {
       .select("first_name, email")
       .eq("id", params.customerId)
       .eq("organization_id", params.organizationId)
+      .is("deleted_at", null)
       .maybeSingle(),
     supabase
       .from("orders")
       .select("event_date, total_amount, deposit_due_amount")
       .eq("id", params.orderId)
       .eq("organization_id", params.organizationId)
+      .is("deleted_at", null)
       .maybeSingle(),
   ]);
 

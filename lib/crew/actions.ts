@@ -147,6 +147,7 @@ export async function updateStopStatus(
             .from("organizations")
             .select("name")
             .eq("id", ctx.organizationId)
+            .is("deleted_at", null)
             .maybeSingle();
           await sendSmsNotification(
             "deliveryEnRoute",

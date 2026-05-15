@@ -59,6 +59,7 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
     )
     .eq("organization_id", organizationId)
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("label", { ascending: true });
 
   if (error) {

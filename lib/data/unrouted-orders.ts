@@ -35,6 +35,7 @@ export async function getUnroutedOrdersForDate(
     .select("id, order_number, order_status, event_date, customers(first_name, last_name), order_items(item_name_snapshot)")
     .eq("organization_id", ctx.organizationId)
     .eq("event_date", routeDate)
+    .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled"])
     .order("created_at", { ascending: true });
 

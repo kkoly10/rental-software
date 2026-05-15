@@ -31,10 +31,10 @@ export async function updateBusinessProfile(
   _prevState: SettingsActionState,
   formData: FormData
 ): Promise<SettingsActionState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const supportEmail = String(formData.get("support_email") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const timezone = String(formData.get("timezone") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 255);
+  const supportEmail = String(formData.get("support_email") ?? "").trim().slice(0, 320);
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 50);
+  const timezone = String(formData.get("timezone") ?? "").trim().slice(0, 100);
 
   if (!name) {
     return { ok: false, message: "Business name is required." };
@@ -78,10 +78,10 @@ export async function updateWebsiteSettings(
   _prevState: SettingsActionState,
   formData: FormData
 ): Promise<SettingsActionState> {
-  const heroMessage = String(formData.get("hero_message") ?? "").trim();
-  const heroHeadline = String(formData.get("hero_headline") ?? "").trim();
-  const serviceAreaText = String(formData.get("service_area_text") ?? "").trim();
-  const bookingMessage = String(formData.get("booking_message") ?? "").trim();
+  const heroMessage = String(formData.get("hero_message") ?? "").trim().slice(0, 1000);
+  const heroHeadline = String(formData.get("hero_headline") ?? "").trim().slice(0, 200);
+  const serviceAreaText = String(formData.get("service_area_text") ?? "").trim().slice(0, 500);
+  const bookingMessage = String(formData.get("booking_message") ?? "").trim().slice(0, 1000);
 
   if (!hasSupabaseEnv()) {
     return { ok: true, message: "Demo mode: Website settings would be updated." };
