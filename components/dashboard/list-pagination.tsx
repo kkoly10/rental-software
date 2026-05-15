@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getMessages } from "@/lib/i18n/server";
 
 function buildHref(pathname: string, query?: string, page?: number) {
   const params = new URLSearchParams();
@@ -8,7 +9,7 @@ function buildHref(pathname: string, query?: string, page?: number) {
   return search ? `${pathname}?${search}` : pathname;
 }
 
-export function ListPagination({
+export async function ListPagination({
   pathname,
   page,
   totalPages,
@@ -22,12 +23,13 @@ export function ListPagination({
   if (totalPages <= 1) {
     return null;
   }
+  const m = await getMessages();
 
   return (
     <div className="order-card" style={{ marginTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <div className="muted">
-          Page {page} of {totalPages}
+          {page} / {totalPages}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link
@@ -36,7 +38,7 @@ export function ListPagination({
             aria-disabled={page <= 1}
             style={page <= 1 ? { pointerEvents: "none", opacity: 0.5 } : undefined}
           >
-            Previous
+            {m.common.back}
           </Link>
           <Link
             href={buildHref(pathname, query, page + 1)}
@@ -44,7 +46,7 @@ export function ListPagination({
             aria-disabled={page >= totalPages}
             style={page >= totalPages ? { pointerEvents: "none", opacity: 0.5 } : undefined}
           >
-            Next
+            {m.common.next}
           </Link>
         </div>
       </div>

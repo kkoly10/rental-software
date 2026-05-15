@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { updateSmsSettings } from "@/lib/sms/actions";
 import type { SmsSettings } from "@/lib/data/sms-settings";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
@@ -11,14 +12,16 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
     updateSmsSettings,
     initialState
   );
+  const { messages } = useI18n();
+  const m = messages.forms.smsSettings;
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
       <div className="sms-toggle-row order-card">
         <div>
-          <strong>Enable SMS notifications</strong>
+          <strong>{m.enableSmsTitle}</strong>
           <div className="muted" style={{ marginTop: 4 }}>
-            Send text messages to customers for order updates
+            {m.enableSmsHelp}
           </div>
         </div>
         <label className="sms-toggle">
@@ -33,13 +36,13 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
       <div className="order-card">
         <strong style={{ display: "block", marginBottom: 12 }}>
-          Notification types
+          {m.notificationTypesHeading}
         </strong>
 
         <div className="sms-toggle-row">
           <div>
-            <strong>Order confirmations</strong>
-            <div className="muted">Notify when an order is confirmed</div>
+            <strong>{m.orderConfirmationTitle}</strong>
+            <div className="muted">{m.orderConfirmationHelp}</div>
           </div>
           <label className="sms-toggle">
             <input
@@ -53,8 +56,8 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
         <div className="sms-toggle-row">
           <div>
-            <strong>Deposit reminders</strong>
-            <div className="muted">Remind customers about pending deposits</div>
+            <strong>{m.depositReminderTitle}</strong>
+            <div className="muted">{m.depositReminderHelp}</div>
           </div>
           <label className="sms-toggle">
             <input
@@ -68,9 +71,9 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
         <div className="sms-toggle-row">
           <div>
-            <strong>Delivery updates</strong>
+            <strong>{m.deliveryUpdatesTitle}</strong>
             <div className="muted">
-              Scheduled, en route, and completed notifications
+              {m.deliveryUpdatesHelp}
             </div>
           </div>
           <label className="sms-toggle">
@@ -85,8 +88,8 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
         <div className="sms-toggle-row">
           <div>
-            <strong>Payment confirmations</strong>
-            <div className="muted">Confirm when a payment is received</div>
+            <strong>{m.paymentConfirmationTitle}</strong>
+            <div className="muted">{m.paymentConfirmationHelp}</div>
           </div>
           <label className="sms-toggle">
             <input
@@ -100,9 +103,9 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
         <div className="sms-toggle-row">
           <div>
-            <strong>Weather alerts</strong>
+            <strong>{m.weatherAlertsTitle}</strong>
             <div className="muted">
-              Notify about weather that may affect events
+              {m.weatherAlertsHelp}
             </div>
           </div>
           <label className="sms-toggle">
@@ -117,15 +120,15 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
       </div>
 
       <label className="order-card">
-        <strong>SMS signature</strong>
+        <strong>{m.signatureLabel}</strong>
         <div className="muted" style={{ marginTop: 4 }}>
-          Appended to every outgoing SMS (e.g. your business name or phone)
+          {m.signatureHelp}
         </div>
         <input
           name="sms_signature"
           type="text"
           defaultValue={defaults.signature}
-          placeholder="Bounce Back Rentals"
+          placeholder={m.signaturePlaceholder}
           maxLength={40}
           style={{ marginTop: 8, width: "100%" }}
         />
@@ -142,7 +145,7 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save SMS Settings"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>

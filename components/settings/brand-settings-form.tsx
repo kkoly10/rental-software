@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { updateBrandSettings, type SettingsActionState } from "@/lib/settings/brand-actions";
 import { LogoUpload } from "./logo-upload";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: SettingsActionState = { ok: false, message: "" };
 
@@ -37,6 +38,8 @@ export function BrandSettingsForm({
   const [primaryColor, setPrimaryColor] = useState(defaults.primaryColor);
   const [accentColor, setAccentColor] = useState(defaults.accentColor);
   const [fontFamily, setFontFamily] = useState(defaults.fontFamily);
+  const { messages } = useI18n();
+  const m = messages.forms.brandSettings;
 
   const fontParam =
     fontFamily && fontFamily !== "System Default"
