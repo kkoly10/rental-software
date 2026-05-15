@@ -76,11 +76,13 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  // Fetch customer
+  // Fetch customer — scope to org and exclude soft-deleted records
   const { data: customer } = await supabase
     .from("customers")
     .select("first_name, last_name, email, phone")
     .eq("id", order.customer_id)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   // Fetch delivery address

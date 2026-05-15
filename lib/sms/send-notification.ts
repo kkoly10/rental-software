@@ -84,6 +84,6 @@ export async function sendSmsNotification(
       bodyPreview: body,
       status: result.ok ? "sent" : "failed",
       metadata: result.ok ? { messageId: result.messageId } : { error: result.error },
-    }).catch(() => {});
+    }).catch((err) => { console.error("[sms] Failed to log communication:", err instanceof Error ? err.message : err); });
   }
 }

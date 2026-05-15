@@ -200,8 +200,8 @@ export async function createDocumentsForOrder(
       customerId: order.customer_id,
       documentTypes: ["rental_agreement", "safety_waiver"],
     });
-  } catch {
-    console.error("[documents] Failed to send documents-ready email for order", parsed.data.orderId);
+  } catch (err) {
+    console.error("[documents] Failed to send documents-ready email for order", parsed.data.orderId, err instanceof Error ? err.message : err);
   }
 
   return {

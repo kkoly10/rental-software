@@ -37,7 +37,7 @@ export async function updateSmsSettings(
     .from("organization_memberships")
     .select("role")
     .eq("organization_id", ctx.organizationId)
-    .eq("user_id", ctx.userId)
+    .eq("profile_id", ctx.userId)
     .maybeSingle();
 
   const role = membership?.role ?? null;
