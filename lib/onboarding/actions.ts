@@ -16,9 +16,9 @@ export async function completeOnboarding(
   _prevState: OnboardingActionState,
   formData: FormData
 ): Promise<OnboardingActionState> {
-  const businessName = String(formData.get("business_name") ?? "").trim();
-  const timezone = String(formData.get("timezone") ?? "America/New_York").trim();
-  const zipCode = String(formData.get("zip_code") ?? "").trim();
+  const businessName = String(formData.get("business_name") ?? "").trim().slice(0, 255);
+  const timezone = String(formData.get("timezone") ?? "America/New_York").trim().slice(0, 100);
+  const zipCode = String(formData.get("zip_code") ?? "").trim().slice(0, 20);
   const deliveryFee = parseFloat(String(formData.get("delivery_fee") ?? "25"));
   const minimumOrder = parseFloat(String(formData.get("minimum_order") ?? "100"));
   const businessType = ["inflatable", "car", "equipment"].includes(

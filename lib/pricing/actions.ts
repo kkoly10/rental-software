@@ -95,6 +95,7 @@ export async function savePricingRules(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -107,7 +108,8 @@ export async function savePricingRules(
         pricing_rules: rules,
       },
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

@@ -67,6 +67,7 @@ export async function logMaintenance(
     .select("id")
     .eq("organization_id", ctx.organizationId)
     .eq("product_id", productId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();

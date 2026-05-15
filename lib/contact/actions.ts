@@ -28,6 +28,7 @@ async function resolveOperatorEmail(orgId: string | null): Promise<string | null
     .from("organizations")
     .select("support_email")
     .eq("id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (org?.support_email) return org.support_email;
@@ -63,13 +64,18 @@ export async function submitContactForm(
   }
 
   const clientKey = await getActionClientKey();
-  const limit = await enforceRateLimit({
-    scope: "contact:submit",
-    actor: clientKey,
-    limit: 5,
-    windowSeconds: 3600,
-    strict: true,
-  });
+  let limit: { allowed: boolean };
+  try {
+    limit = await enforceRateLimit({
+      scope: "contact:submit",
+      actor: clientKey,
+      limit: 5,
+      windowSeconds: 3600,
+      strict: true,
+    });
+  } catch {
+    return { ok: false, message: "Unable to process request right now. Please try again shortly." };
+  }
 
   if (!limit.allowed) {
     return { ok: false, message: "Too many messages. Please try again later." };
