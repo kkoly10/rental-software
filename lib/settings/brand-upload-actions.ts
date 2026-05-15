@@ -50,7 +50,7 @@ async function uploadBrandAsset(
 
   const supabase = await createSupabaseServerClient();
   const bucket = getBucketName();
-  const filePath = `${ctx.organizationId}/brand/${kind}-${Date.now()}-${sanitizeFilename(file.name)}`;
+  const filePath = `${ctx.organizationId}/brand/${kind}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
 
   const { error: storageError } = await supabase.storage
     .from(bucket)

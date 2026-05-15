@@ -21,9 +21,11 @@ export interface Notification {
   link?: string;
 }
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
   const now = Date.now();
   const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return "—";
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
   if (diffMin < 1) return "just now";

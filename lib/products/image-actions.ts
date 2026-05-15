@@ -82,7 +82,7 @@ export async function uploadProductImage(
     .order("sort_order", { ascending: true });
 
   const bucket = getBucketName();
-  const filePath = `${ctx.organizationId}/${productId}/${Date.now()}-${sanitizeFilename(file.name)}`;
+  const filePath = `${ctx.organizationId}/${productId}/${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
 
   const { error: storageError } = await supabase.storage
     .from(bucket)

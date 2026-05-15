@@ -69,7 +69,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
 
   if (error) {
     console.error("[catalog-list] Failed to fetch products:", error.message);
-    return [];
+    throw new Error("Failed to load catalog. Please try again.");
   }
 
   if (!data || data.length === 0) {

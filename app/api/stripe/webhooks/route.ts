@@ -222,6 +222,26 @@ export async function POST(request: NextRequest) {
               } catch (emailErr) {
                 console.error("Stripe webhook: payment confirmation email failed:", emailErr);
               }
+
+              // In-app notification for operator
+              try {
+                const { createNotification } = await import("@/lib/data/notifications");
+                const { data: notifOrder } = await admin
+                  .from("orders")
+                  .select("order_number")
+                  .eq("id", orderId)
+                  .maybeSingle();
+                const orderNumber = notifOrder?.order_number ?? orderId;
+                await createNotification(
+                  orgId,
+                  "payment_received",
+                  "Payment received",
+                  `$${amountPaid.toFixed(2)} ${paymentType} via Stripe — Order ${orderNumber}`,
+                  `/dashboard/orders/${orderId}`
+                );
+              } catch {
+                // Non-critical
+              }
             }
           }
         }

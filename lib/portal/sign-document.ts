@@ -153,5 +153,16 @@ export async function signDocument(
   revalidatePath(`/dashboard/orders/${order.id}`);
   revalidatePath("/dashboard/documents");
 
+  // Notify operator that the customer signed a document
+  void import("@/lib/data/notifications").then(({ createNotification }) =>
+    createNotification(
+      orgId,
+      "new_message",
+      "Document signed",
+      `${signerName} signed a document`,
+      `/dashboard/orders/${order.id}`
+    )
+  );
+
   return { ok: true, message: "Document signed successfully." };
 }
