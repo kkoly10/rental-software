@@ -85,8 +85,8 @@ export default async function AnalyticsPage() {
             <section className="panel">
               <div className="section-header">
                 <div>
-                  <div className="kicker">Revenue</div>
-                  <h2 style={{ margin: "6px 0 0" }}>Monthly breakdown</h2>
+                  <div className="kicker">{m.dashboard.analytics.kickerRevenue}</div>
+                  <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.analytics.monthlyBreakdown}</h2>
                 </div>
               </div>
 
@@ -149,8 +149,8 @@ export default async function AnalyticsPage() {
               <div className="panel" style={{ marginBottom: 18 }}>
                 <div className="section-header">
                   <div>
-                    <div className="kicker">Pipeline</div>
-                    <h2 style={{ margin: "6px 0 0" }}>Orders by status</h2>
+                    <div className="kicker">{m.dashboard.analytics.kickerPipeline}</div>
+                    <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.analytics.ordersByStatus}</h2>
                   </div>
                 </div>
 
@@ -175,8 +175,8 @@ export default async function AnalyticsPage() {
               <div className="panel">
                 <div className="section-header">
                   <div>
-                    <div className="kicker">Schedule</div>
-                    <h2 style={{ margin: "6px 0 0" }}>Busiest days</h2>
+                    <div className="kicker">{m.dashboard.analytics.kickerSchedule}</div>
+                    <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.analytics.busiestDays}</h2>
                   </div>
                 </div>
 
@@ -205,8 +205,8 @@ export default async function AnalyticsPage() {
             <section className="panel">
               <div className="section-header">
                 <div>
-                  <div className="kicker">Catalog</div>
-                  <h2 style={{ margin: "6px 0 0" }}>Top products</h2>
+                  <div className="kicker">{m.dashboard.analytics.kickerCatalog}</div>
+                  <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.analytics.topProducts}</h2>
                 </div>
               </div>
 

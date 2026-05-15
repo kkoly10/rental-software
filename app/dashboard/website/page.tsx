@@ -40,7 +40,7 @@ export default async function WebsitePage() {
     ? {
         ...pageConfig,
         primaryAction: storefrontUrl
-          ? { label: pageConfig.primaryAction?.label ?? "View storefront", href: storefrontUrl }
+          ? { label: pageConfig.primaryAction?.label ?? m.dashboard.website.viewStorefront, href: storefrontUrl }
           : undefined,
       }
     : undefined;
@@ -83,8 +83,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Public site</div>
-              <h2 style={{ margin: "6px 0 0" }}>Website controls</h2>
+              <div className="kicker">{m.dashboard.website.kicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.websiteControls}</h2>
             </div>
           </div>
 
@@ -105,8 +105,8 @@ export default async function WebsitePage() {
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Homepage preview data</div>
-              <h2 style={{ margin: "6px 0 0" }}>Featured inventory</h2>
+              <div className="kicker">{m.dashboard.website.kickerHomepagePreview}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.featuredInventory}</h2>
             </div>
           </div>
 
@@ -123,7 +123,7 @@ export default async function WebsitePage() {
               ))
             ) : (
               <article className="order-card">
-                <strong>No featured products</strong>
+                <strong>{m.dashboard.website.noFeaturedProducts}</strong>
                 <div className="muted" style={{ marginTop: 6 }}>
                   Add active products to populate the public homepage.
                 </div>
@@ -133,7 +133,7 @@ export default async function WebsitePage() {
 
           <div className="section-header" style={{ marginTop: 18 }}>
             <div>
-              <div className="kicker">Area highlights</div>
+              <div className="kicker">{m.dashboard.website.kickerAreaHighlights}</div>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ export default async function WebsitePage() {
               ))
             ) : (
               <article className="order-card">
-                <strong>No active service areas</strong>
+                <strong>{m.dashboard.website.noActiveServiceAreas}</strong>
                 <div className="muted" style={{ marginTop: 6 }}>
                   Add ZIP coverage to improve storefront clarity.
                 </div>
@@ -164,8 +164,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Storefront</div>
-              <h2 style={{ margin: "6px 0 0" }}>Domain &amp; URL</h2>
+              <div className="kicker">{m.dashboard.website.kickerStorefront}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.domainUrl}</h2>
             </div>
           </div>
 
@@ -177,8 +177,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Storefront</div>
-              <h2 style={{ margin: "6px 0 0" }}>Brand &amp; Appearance</h2>
+              <div className="kicker">{m.dashboard.website.kickerStorefront}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.brandAppearance}</h2>
             </div>
           </div>
 
@@ -197,8 +197,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Storefront</div>
-              <h2 style={{ margin: "6px 0 0" }}>Social Media</h2>
+              <div className="kicker">{m.dashboard.website.kickerStorefront}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.socialMedia}</h2>
             </div>
           </div>
 
@@ -217,8 +217,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Homepage Content</div>
-              <h2 style={{ margin: "6px 0 0" }}>FAQ Manager</h2>
+              <div className="kicker">{m.dashboard.website.kickerHomepageContent}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.faqTitle}</h2>
             </div>
           </div>
 
@@ -228,8 +228,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Homepage Content</div>
-              <h2 style={{ margin: "6px 0 0" }}>About Section</h2>
+              <div className="kicker">{m.dashboard.website.kickerHomepageContent}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.aboutSection}</h2>
             </div>
           </div>
 
@@ -241,8 +241,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Social Proof</div>
-              <h2 style={{ margin: "6px 0 0" }}>Testimonials</h2>
+              <div className="kicker">{m.dashboard.website.kickerSocialProof}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.testimonialsTitle}</h2>
             </div>
           </div>
 
@@ -252,8 +252,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Social Proof</div>
-              <h2 style={{ margin: "6px 0 0" }}>Trust Badges</h2>
+              <div className="kicker">{m.dashboard.website.kickerSocialProof}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.trustBadgesTitle}</h2>
             </div>
           </div>
 
@@ -265,8 +265,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Layout</div>
-              <h2 style={{ margin: "6px 0 0" }}>Navigation Links</h2>
+              <div className="kicker">{m.dashboard.website.kickerLayout}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.navigationLinks}</h2>
             </div>
           </div>
 
@@ -276,8 +276,8 @@ export default async function WebsitePage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Layout</div>
-              <h2 style={{ margin: "6px 0 0" }}>Section Visibility</h2>
+              <div className="kicker">{m.dashboard.website.kickerLayout}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.website.sectionVisibilityTitle}</h2>
             </div>
           </div>
 

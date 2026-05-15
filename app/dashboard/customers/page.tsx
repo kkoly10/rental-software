@@ -73,7 +73,7 @@ export default async function CustomersPage({
                     <div className="muted">
                       {customer.email || "No email"} · {customer.phone || "No phone"}
                     </div>
-                    <div className="muted">Latest: {customer.latestBooking}</div>
+                    <div className="muted">{m.dashboard.customers.latestLabel}: {customer.latestBooking}</div>
                   </article>
                 </Link>
               ))}

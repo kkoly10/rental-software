@@ -128,7 +128,7 @@ export default async function DeliveriesPage() {
         </section>
 
         <aside className="map-card">
-          <div className="kicker">Route detail</div>
+          <div className="kicker">{m.dashboard.deliveries.detail.routeDetailKicker}</div>
           <h2 className="page-title-sm" style={{ marginTop: 8 }}>
             {enhancedRoute ? enhancedRoute.name : m.dashboard.deliveries.noRoutesYet}
           </h2>
