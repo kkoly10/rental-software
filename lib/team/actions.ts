@@ -91,11 +91,12 @@ export async function inviteTeamMember(
     return { ok: false, message: "Only owners and admins can invite team members." };
   }
 
-  // Check if already a member
+  // Check if already a member — use ilike for case-insensitive match since email
+  // is normalized to lowercase on invite but stored in whatever case the user registered with
   const { data: existingMember } = await supabase
     .from("profiles")
     .select("id")
-    .eq("email", email)
+    .ilike("email", email)
     .maybeSingle();
 
   if (existingMember) {

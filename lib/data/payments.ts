@@ -104,7 +104,7 @@ export async function getPaymentsPage(options?: {
     return {
       id: payment.id,
       customer: customerLabel || order?.order_number || "Order",
-      label: `$${amount} ${type} ${status}`,
+      label: `$${amount.toFixed(2)} ${type} ${status}`,
       item: order?.order_number ?? "N/A",
       date: payment.paid_at
         ? new Date(payment.paid_at).toLocaleDateString("en-US", {
