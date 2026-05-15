@@ -79,6 +79,17 @@ export async function savePricingRules(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: pricingMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(pricingMembership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can manage pricing rules." };
+  }
+
   // Read existing settings
   const { data: org } = await supabase
     .from("organizations")
