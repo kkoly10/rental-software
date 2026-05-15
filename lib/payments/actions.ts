@@ -7,7 +7,6 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { recordPaymentSchema } from "@/lib/validation/payments";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { getOrderFinancials } from "@/lib/payments/financials";
 
 export type PaymentActionState = {
   ok: boolean;
@@ -89,10 +88,10 @@ export async function recordPayment(
 
   const supabase = await createSupabaseServerClient();
 
-  // Fetch the order to verify it exists and belongs to this org
+  // Fetch order_status (needed for auto-confirm logic below)
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status, total_amount, deposit_due_amount")
+    .select("id, order_status, deposit_due_amount")
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
@@ -101,54 +100,31 @@ export async function recordPayment(
     return { ok: false, message: "Order not found." };
   }
 
-  // Compute the current financial state from the payments table (never trust stored balance)
-  const financials = await getOrderFinancials(orderId);
-  const currentBalance = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
-
-  if (paymentType !== "refund" && amount > currentBalance) {
-    return {
-      ok: false,
-      message: "Payment amount cannot be greater than the outstanding balance.",
-    };
-  }
-
-  if (paymentType === "refund") {
-    const totalPaid = financials?.totalPaid ?? 0;
-    if (amount > totalPaid) {
-      return {
-        ok: false,
-        message: `Refund cannot exceed total payments received ($${totalPaid.toFixed(2)}).`,
-      };
-    }
-  }
-
-  // Insert the payment record — this is the source of truth
-  const { error } = await supabase.from("payments").insert({
-    order_id: orderId,
-    provider: "manual",
-    payment_type: paymentType,
-    payment_status: "paid",
-    amount,
-    payment_method: paymentMethod,
-    reference_note: referenceNote ?? null,
-    paid_at: toPaidAtIso(paidAt),
+  // Atomically validate + insert + update cached balance via DB function.
+  // The function uses SELECT FOR UPDATE on the order row to prevent concurrent
+  // payments from both passing the balance check before either is committed.
+  const { data: rpcResult, error: rpcError } = await supabase.rpc("record_manual_payment", {
+    p_order_id:       orderId,
+    p_org_id:         ctx.organizationId,
+    p_amount:         amount,
+    p_payment_type:   paymentType,
+    p_payment_method: paymentMethod,
+    p_reference_note: referenceNote ?? null,
+    p_paid_at:        toPaidAtIso(paidAt),
   });
 
-  if (error) {
-    return { ok: false, message: error.message };
+  if (rpcError) {
+    return { ok: false, message: rpcError.message };
   }
 
-  // Re-compute balance AFTER the new payment is inserted
-  // balance_due_amount is kept in sync as a cache for queries/reports,
-  // but the computed value from payments is always authoritative.
-  const updatedFinancials = await getOrderFinancials(orderId);
-  const newBalance = updatedFinancials?.remainingBalance ?? 0;
+  const result = rpcResult as { ok: boolean; message?: string; new_balance?: number; net_paid?: number } | null;
+  if (!result?.ok) {
+    return { ok: false, message: result?.message ?? "Failed to record payment." };
+  }
 
-  await supabase
-    .from("orders")
-    .update({ balance_due_amount: newBalance })
-    .eq("id", orderId)
-    .eq("organization_id", ctx.organizationId);
+  const newBalance = result.new_balance ?? 0;
+  const netPaid = result.net_paid ?? 0;
+  const updatedFinancials = { remainingBalance: newBalance, depositFulfilled: netPaid >= Number(order.deposit_due_amount ?? 0) };
 
   // Auto-confirm orders when deposit is fulfilled
   if (
