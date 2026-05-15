@@ -476,7 +476,7 @@ export async function createCheckoutOrder(
 
     if (addressError || !address) {
       if (newCustomerId) {
-        await supabase.from("customers").delete().eq("id", newCustomerId);
+        await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
       }
 
       await logAppError({
@@ -560,10 +560,10 @@ export async function createCheckoutOrder(
 
   if (orderError || !order) {
     if (deliveryAddressId) {
-      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+      await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
     }
     if (newCustomerId) {
-      await supabase.from("customers").delete().eq("id", newCustomerId);
+      await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
     }
 
     await logAppError({
@@ -594,12 +594,12 @@ export async function createCheckoutOrder(
 
     if (itemError) {
       try {
-        await supabase.from("orders").delete().eq("id", order.id);
+        await supabase.from("orders").delete().eq("id", order.id).eq("organization_id", orgId);
         if (deliveryAddressId) {
-          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
         }
         if (newCustomerId) {
-          await supabase.from("customers").delete().eq("id", newCustomerId);
+          await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
         }
       } catch (cleanupErr) {
         console.error("[checkout] Cleanup after item insert failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
@@ -636,12 +636,12 @@ export async function createCheckoutOrder(
 
     if (!reserveResult.ok) {
       try {
-        await supabase.from("orders").delete().eq("id", order.id);
+        await supabase.from("orders").delete().eq("id", order.id).eq("organization_id", orgId);
         if (deliveryAddressId) {
-          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId);
+          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
         }
         if (newCustomerId) {
-          await supabase.from("customers").delete().eq("id", newCustomerId);
+          await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
         }
       } catch (cleanupErr) {
         console.error("[checkout] Cleanup after reserve failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
@@ -809,11 +809,13 @@ export async function createCheckoutOrder(
           .from("orders")
           .update({ order_status: "cancelled" })
           .eq("id", order.id)
+          .eq("organization_id", orgId)
           .eq("order_status", "awaiting_deposit");
         await supabase
           .from("availability_blocks")
           .delete()
           .eq("source_order_id", order.id)
+          .eq("organization_id", orgId)
           .eq("block_type", "checkout_hold");
       } catch {
         console.error("[checkout] Failed to cancel order/block after Stripe failure", orderNumber);

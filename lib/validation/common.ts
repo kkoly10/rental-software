@@ -88,7 +88,14 @@ export const optionalDateSchema = z
   .string()
   .transform((value) => sanitizePlainText(value))
   .refine(
-    (value) => value.length === 0 || /^\d{4}-\d{2}-\d{2}$/.test(value),
+    (value) => {
+      if (value.length === 0) return true;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const d = new Date(value + "T00:00:00Z");
+      if (isNaN(d.getTime())) return false;
+      const [y, m, day] = value.split("-").map(Number);
+      return d.getUTCFullYear() === y && d.getUTCMonth() + 1 === m && d.getUTCDate() === day;
+    },
     "Enter a valid date."
   )
   .transform((value) => value || undefined);
