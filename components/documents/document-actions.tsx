@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateDocumentStatus, createDocumentsForOrder } from "@/lib/documents/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function DocumentStatusButton({
   documentId,
@@ -14,6 +15,7 @@ export function DocumentStatusButton({
   targetStatus: string;
   label: string;
 }) {
+  const { messages: m } = useI18n();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -40,7 +42,7 @@ export function DocumentStatusButton({
         onClick={handleClick}
         disabled={pending}
       >
-        {pending ? "Updating..." : label}
+        {pending ? m.documents.updating : label}
       </button>
       {message && <span className="muted" style={{ fontSize: 12 }}>{message}</span>}
     </>
@@ -48,6 +50,7 @@ export function DocumentStatusButton({
 }
 
 export function CreateDocumentsButton({ orderId }: { orderId: string }) {
+  const { messages: m } = useI18n();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -70,7 +73,7 @@ export function CreateDocumentsButton({ orderId }: { orderId: string }) {
         onClick={handleClick}
         disabled={pending}
       >
-        {pending ? "Creating..." : "Generate Documents"}
+        {pending ? m.documents.creating : m.documents.generateDocuments}
       </button>
       {message && <span className="muted" style={{ fontSize: 12 }}>{message}</span>}
     </div>

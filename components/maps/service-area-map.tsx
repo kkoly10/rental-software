@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { geocodeZipClient } from "@/lib/maps/geocode-client";
 import { escapeHtml } from "@/lib/maps/escape-html";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 type ServiceArea = {
   id: string;
@@ -29,6 +31,7 @@ export function ServiceAreaMap({
   interactive = false,
   height = "400px",
 }: Props) {
+  const { messages: m } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -43,7 +46,7 @@ export function ServiceAreaMap({
       try {
         L = (await import("leaflet")).default as unknown as typeof import("leaflet");
       } catch {
-        if (!cancelled) setMapError("Map failed to load. Please refresh the page.");
+        if (!cancelled) setMapError(m.serviceAreaMap.mapFailed);
         return;
       }
       if (cancelled || !containerRef.current) return;
@@ -131,7 +134,10 @@ export function ServiceAreaMap({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         map.on("click", (e: any) => {
           const { lat, lng } = e.latlng;
-          const msg = `Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          const msg = formatMessage(m.serviceAreaMap.coordinates, {
+            lat: lat.toFixed(5),
+            lng: lng.toFixed(5),
+          });
           setToast(msg);
           setTimeout(() => setToast(null), 3000);
         });

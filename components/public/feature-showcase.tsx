@@ -1,29 +1,4 @@
-const features = [
-  {
-    kicker: "Booking calendar",
-    title: "See every event at a glance",
-    description:
-      "Color-coded month view shows confirmed bookings, pending inquiries, and blocked dates. Never double-book again.",
-    visual: "calendar",
-    gradient: "linear-gradient(135deg, #eef4ff 0%, #d8e7ff 100%)",
-  },
-  {
-    kicker: "Order pipeline",
-    title: "Track orders from inquiry to delivery",
-    description:
-      "Every booking flows through a clear pipeline — inquiry, quote, deposit, confirmed, delivered, completed. Nothing falls through the cracks.",
-    visual: "orders",
-    gradient: "linear-gradient(135deg, #eaf9f4 0%, #d0f0e4 100%)",
-  },
-  {
-    kicker: "Online checkout",
-    title: "Let customers book while you sleep",
-    description:
-      "A branded public storefront with live availability. Customers pick a date, choose their rentals, and submit — no phone calls required.",
-    visual: "checkout",
-    gradient: "linear-gradient(135deg, #fff4e5 0%, #ffe8cc 100%)",
-  },
-];
+import { getMessages } from "@/lib/i18n/server";
 
 function FeatureVisual({ type, gradient }: { type: string; gradient: string }) {
   return (
@@ -100,14 +75,39 @@ function FeatureVisual({ type, gradient }: { type: string; gradient: string }) {
   );
 }
 
-export function FeatureShowcase() {
+export async function FeatureShowcase() {
+  const m = await getMessages();
+  const features = [
+    {
+      kicker: m.featureShowcase.features.calendarKicker,
+      title: m.featureShowcase.features.calendarTitle,
+      description: m.featureShowcase.features.calendarDescription,
+      visual: "calendar",
+      gradient: "linear-gradient(135deg, #eef4ff 0%, #d8e7ff 100%)",
+    },
+    {
+      kicker: m.featureShowcase.features.ordersKicker,
+      title: m.featureShowcase.features.ordersTitle,
+      description: m.featureShowcase.features.ordersDescription,
+      visual: "orders",
+      gradient: "linear-gradient(135deg, #eaf9f4 0%, #d0f0e4 100%)",
+    },
+    {
+      kicker: m.featureShowcase.features.checkoutKicker,
+      title: m.featureShowcase.features.checkoutTitle,
+      description: m.featureShowcase.features.checkoutDescription,
+      visual: "checkout",
+      gradient: "linear-gradient(135deg, #fff4e5 0%, #ffe8cc 100%)",
+    },
+  ];
+
   return (
     <section className="section">
       <div className="container">
         <div style={{ textAlign: "center", maxWidth: 580, margin: "0 auto 36px" }}>
-          <div className="kicker">Platform preview</div>
+          <div className="kicker">{m.featureShowcase.kicker}</div>
           <h2 style={{ margin: "8px 0 0" }}>
-            See what you get on day one
+            {m.featureShowcase.title}
           </h2>
         </div>
 

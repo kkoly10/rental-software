@@ -3,10 +3,12 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { uploadLogoImage, removeLogoImage } from "@/lib/settings/brand-upload-actions";
 import type { SettingsActionState } from "@/lib/settings/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: SettingsActionState = { ok: false, message: "" };
 
 export function LogoUpload({ currentUrl }: { currentUrl: string }) {
+  const { messages: m } = useI18n();
   const [url, setUrl] = useState(currentUrl);
   const [uploadState, uploadAction, uploading] = useActionState(uploadLogoImage, initialState);
   const [removeState, removeAction, removing] = useActionState(removeLogoImage, initialState);
@@ -24,12 +26,12 @@ export function LogoUpload({ currentUrl }: { currentUrl: string }) {
 
   return (
     <div className="brand-form-section">
-      <strong>Logo</strong>
+      <strong>{m.logoUpload.label}</strong>
 
       {url && (
         <div className="brand-logo-preview">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="Logo preview" />
+          <img src={url} alt={m.logoUpload.altPreview} />
         </div>
       )}
 
@@ -42,11 +44,11 @@ export function LogoUpload({ currentUrl }: { currentUrl: string }) {
           style={{ fontSize: 13 }}
         />
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-          Recommended: 200x60px, PNG or SVG. Max 2MB.
+          {m.logoUpload.recommended}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <button className="primary-btn" type="submit" disabled={uploading} style={{ fontSize: 13, padding: "8px 16px" }}>
-            {uploading ? "Uploading..." : "Upload Logo"}
+            {uploading ? m.logoUpload.uploading : m.logoUpload.upload}
           </button>
           {url && (
             <button
@@ -61,7 +63,7 @@ export function LogoUpload({ currentUrl }: { currentUrl: string }) {
                 if (fileRef.current) fileRef.current.value = "";
               }}
             >
-              {removing ? "Removing..." : "Remove"}
+              {removing ? m.logoUpload.removing : m.logoUpload.remove}
             </button>
           )}
         </div>

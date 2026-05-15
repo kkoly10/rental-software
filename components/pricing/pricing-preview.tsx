@@ -3,8 +3,10 @@
 import { useState, useMemo } from "react";
 import { calculatePrice } from "@/lib/pricing/engine";
 import type { PricingRule } from "@/lib/pricing/types";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function PricingPreview({ rules }: { rules: PricingRule[] }) {
+  const { messages: m } = useI18n();
   const today = new Date().toISOString().split("T")[0];
   const [basePrice, setBasePrice] = useState(250);
   const [eventDate, setEventDate] = useState(today);
@@ -24,14 +26,14 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
     <div className="panel pricing-preview">
       <div className="section-header">
         <div>
-          <div className="kicker">Calculator</div>
-          <h2 className="page-title-sm">Pricing Preview</h2>
+          <div className="kicker">{m.pricingPreview.kicker}</div>
+          <h2 className="page-title-sm">{m.pricingPreview.title}</h2>
         </div>
       </div>
 
       <div className="list">
         <label className="order-card field-stack">
-          <strong>Base price ($)</strong>
+          <strong>{m.pricingPreview.basePrice}</strong>
           <input
             type="number"
             value={basePrice}
@@ -43,7 +45,7 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
         </label>
 
         <label className="order-card field-stack">
-          <strong>Event date</strong>
+          <strong>{m.pricingPreview.eventDate}</strong>
           <input
             type="date"
             value={eventDate}
@@ -53,7 +55,7 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
         </label>
 
         <label className="order-card field-stack">
-          <strong>Rental days</strong>
+          <strong>{m.pricingPreview.rentalDays}</strong>
           <input
             type="number"
             value={rentalDays}
@@ -67,14 +69,14 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
       <div className="pricing-breakdown" style={{ marginTop: 14 }}>
         <div className="order-card">
           <div className="order-row">
-            <span>Base price</span>
+            <span>{m.pricingPreview.basePriceLabel}</span>
             <strong>${calculation.basePrice.toFixed(2)}</strong>
           </div>
         </div>
 
         {calculation.adjustments.length === 0 ? (
           <div className="muted" style={{ padding: "10px 0", textAlign: "center", fontSize: 13 }}>
-            No rules apply to this configuration.
+            {m.pricingPreview.noRules}
           </div>
         ) : (
           calculation.adjustments.map((adj, i) => (
@@ -99,7 +101,7 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
 
         <div className="pricing-final">
           <div className="order-row">
-            <strong>Final Price</strong>
+            <strong>{m.pricingPreview.finalPrice}</strong>
             <strong>${calculation.finalPrice.toFixed(2)}</strong>
           </div>
         </div>

@@ -2,30 +2,31 @@
 
 import { useState } from "react";
 import type { CopilotAction } from "@/lib/copilot/actions";
+import { useI18n } from "@/lib/i18n/provider";
+import type { Messages } from "@/lib/i18n/dictionaries";
 
-const FIELD_LABELS: Record<string, string> = {
-  hero_message: "Hero Message",
-  service_area_text: "Service Area Text",
-  booking_message: "Booking Message",
-  custom_faq: "FAQ",
-  about_text: "About Section",
-};
-
-function getFieldLabel(action: CopilotAction): string {
+function getFieldLabel(action: CopilotAction, m: Messages): string {
+  const fieldLabels: Record<string, string> = {
+    hero_message: m.copilot.fields.heroMessage,
+    service_area_text: m.copilot.fields.serviceAreaText,
+    booking_message: m.copilot.fields.bookingMessage,
+    custom_faq: m.copilot.fields.faq,
+    about_text: m.copilot.fields.aboutSection,
+  };
   if (action.type === "generate_content") {
-    return FIELD_LABELS[action.field] ?? action.field;
+    return fieldLabels[action.field] ?? action.field;
   }
   const fieldMap: Record<string, string> = {
-    update_hero: "Hero Message",
-    update_service_area_text: "Service Area Text",
-    update_booking_message: "Booking Message",
-    update_faq: "FAQ",
-    update_about: "About Section",
+    update_hero: m.copilot.fields.heroMessage,
+    update_service_area_text: m.copilot.fields.serviceAreaText,
+    update_booking_message: m.copilot.fields.bookingMessage,
+    update_faq: m.copilot.fields.faq,
+    update_about: m.copilot.fields.aboutSection,
   };
   return fieldMap[action.type] ?? action.type;
 }
 
-function formatValue(value: string, field: string): string {
+function formatValue(value: string, field: string, qPrefix: string, aPrefix: string): string {
   if (field === "custom_faq") {
     try {
       const items = JSON.parse(value);
@@ -33,7 +34,7 @@ function formatValue(value: string, field: string): string {
         return items
           .map(
             (item: { question: string; answer: string }) =>
-              `Q: ${item.question}\nA: ${item.answer}`
+              `${qPrefix} ${item.question}\n${aPrefix} ${item.answer}`
           )
           .join("\n\n");
       }
@@ -65,18 +66,19 @@ export function CopilotActionPreview({
   onApply: (action: CopilotAction) => Promise<void>;
   onDismiss: () => void;
 }) {
+  const { messages: m, t } = useI18n();
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState<{
     ok: boolean;
     message: string;
   } | null>(null);
 
-  const fieldLabel = getFieldLabel(action);
-  const displayValue = formatValue(action.value, action.field);
+  const fieldLabel = getFieldLabel(action, m);
+  const displayValue = formatValue(action.value, action.field, m.copilot.faqQuestionPrefix, m.copilot.faqAnswerPrefix);
 
   const currentRaw = currentValues?.[action.field] ?? "";
   const currentDisplay = currentRaw
-    ? formatValue(currentRaw, action.field)
+    ? formatValue(currentRaw, action.field, m.copilot.faqQuestionPrefix, m.copilot.faqAnswerPrefix)
     : "";
 
   const isFaq = action.field === "custom_faq";
@@ -87,12 +89,12 @@ export function CopilotActionPreview({
     setApplying(true);
     try {
       await onApply(action);
-      setResult({ ok: true, message: "Changes applied successfully." });
+      setResult({ ok: true, message: m.copilot.appliedSuccess });
     } catch (error) {
       setResult({
         ok: false,
         message:
-          error instanceof Error ? error.message : "Failed to apply changes.",
+          error instanceof Error ? error.message : m.copilot.failedToApply,
       });
     } finally {
       setApplying(false);
@@ -109,7 +111,7 @@ export function CopilotActionPreview({
         }
       >
         <div className="copilot-action-field-label">
-          {result.ok ? "Applied" : "Error"}
+          {result.ok ? m.copilot.appliedLabel : m.copilot.errorLabel}
         </div>
         <div style={{ fontSize: 13 }}>{result.message}</div>
       </div>
@@ -119,7 +121,7 @@ export function CopilotActionPreview({
   return (
     <div className="copilot-action-preview">
       <div className="copilot-action-field-label">
-        Proposed change: {fieldLabel}
+        {t(m.copilot.proposedChange, { field: fieldLabel })}
       </div>
       {action.preview && (
         <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 6 }}>
@@ -128,20 +130,25 @@ export function CopilotActionPreview({
       )}
       {isFaq && currentFaqCount !== null && newFaqCount !== null && (
         <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 6 }}>
-          {currentFaqCount} FAQ{currentFaqCount !== 1 ? "s" : ""} → {newFaqCount} FAQ{newFaqCount !== 1 ? "s" : ""}
+          {t(m.copilot.faqCount, {
+            currentCount: currentFaqCount,
+            currentPlural: currentFaqCount !== 1 ? "s" : "",
+            newCount: newFaqCount,
+            newPlural: newFaqCount !== 1 ? "s" : "",
+          })}
         </div>
       )}
       <div className="copilot-action-diff">
         <div className="copilot-action-current">
-          <div className="copilot-action-label">Current</div>
+          <div className="copilot-action-label">{m.copilot.current}</div>
           {currentDisplay ? (
             <pre>{currentDisplay}</pre>
           ) : (
-            <div className="copilot-action-empty">No current value</div>
+            <div className="copilot-action-empty">{m.copilot.noCurrentValue}</div>
           )}
         </div>
         <div className="copilot-action-proposed">
-          <div className="copilot-action-label">New</div>
+          <div className="copilot-action-label">{m.copilot.proposed}</div>
           <pre>{displayValue}</pre>
         </div>
       </div>
@@ -151,14 +158,14 @@ export function CopilotActionPreview({
           onClick={handleApply}
           disabled={applying}
         >
-          {applying ? "Applying..." : "Apply Changes"}
+          {applying ? m.copilot.applying : m.copilot.applyChanges}
         </button>
         <button
           className="ghost-btn copilot-action-dismiss-btn"
           onClick={onDismiss}
           disabled={applying}
         >
-          Dismiss
+          {m.copilot.dismiss}
         </button>
       </div>
     </div>

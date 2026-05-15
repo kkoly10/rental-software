@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { dismissChecklist } from "@/lib/guidance/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 type ChecklistItemData = {
   id: string;
@@ -24,6 +25,7 @@ export function SetupChecklistCard({
   completed: number;
   total: number;
 }) {
+  const { messages: m, t } = useI18n();
   const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -47,18 +49,18 @@ export function SetupChecklistCard({
     <div className="checklist-card" data-tour="setup-checklist">
       <div className="checklist-header">
         <div style={{ flex: 1 }}>
-          <div className="kicker">Getting started</div>
+          <div className="kicker">{m.setupChecklist.kicker}</div>
           <h2 style={{ margin: "6px 0 4px", fontSize: "1.25rem" }}>
             {allDone
-              ? "Setup complete!"
+              ? m.setupChecklist.setupComplete
               : phase1Done && !showAll
-              ? "Phase 1 complete!"
-              : "Setup checklist"}
+              ? m.setupChecklist.phase1Complete
+              : m.setupChecklist.setupChecklist}
           </h2>
           <div className="muted">
-            {displayCompleted} of {displayTotal} completed
+            {t(m.setupChecklist.progressCount, { completed: displayCompleted, total: displayTotal })}
             {!showAll && phase2Items.length > 0 && (
-              <span> (Phase 1)</span>
+              <span>{m.setupChecklist.phase1Suffix}</span>
             )}
           </div>
         </div>
@@ -69,7 +71,7 @@ export function SetupChecklistCard({
             onClick={() => setExpanded(!expanded)}
             style={{ fontSize: 13, padding: "6px 12px" }}
           >
-            {expanded ? "Collapse" : "Expand"}
+            {expanded ? m.setupChecklist.collapse : m.setupChecklist.expand}
           </button>
           {allDone && (
             <button
@@ -80,7 +82,7 @@ export function SetupChecklistCard({
               }}
               style={{ fontSize: 13, padding: "6px 12px" }}
             >
-              Dismiss
+              {m.setupChecklist.dismiss}
             </button>
           )}
         </div>
@@ -95,8 +97,7 @@ export function SetupChecklistCard({
 
       {phase1Done && !showAll && expanded && (
         <div className="checklist-milestone">
-          <strong>Nice work!</strong> You&apos;ve completed the essentials. Your
-          storefront is ready for your first real booking.
+          <strong>{m.setupChecklist.milestoneTitle}</strong> {m.setupChecklist.milestoneBody}
         </div>
       )}
 
@@ -117,7 +118,7 @@ export function SetupChecklistCard({
                   <div className="muted" style={{ fontSize: 13 }}>{item.description}</div>
                 </div>
                 {!item.completed && (
-                  <span className="checklist-go">Go &rarr;</span>
+                  <span className="checklist-go">{m.setupChecklist.go}</span>
                 )}
               </Link>
             ))}
@@ -129,7 +130,7 @@ export function SetupChecklistCard({
               onClick={() => setShowAll(true)}
               style={{ width: "100%", textAlign: "center", marginTop: 8, fontSize: 13 }}
             >
-              Show {phase2Items.length} more steps (advanced)
+              {t(m.setupChecklist.showMore, { count: phase2Items.length })}
             </button>
           )}
 
@@ -139,7 +140,7 @@ export function SetupChecklistCard({
               onClick={() => setShowAll(false)}
               style={{ width: "100%", textAlign: "center", marginTop: 8, fontSize: 13 }}
             >
-              Show less
+              {m.setupChecklist.showLess}
             </button>
           )}
         </>

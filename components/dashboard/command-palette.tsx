@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface PaletteItem {
   id: string;
@@ -11,20 +12,6 @@ interface PaletteItem {
   section: "quick" | "navigation" | "recent";
   shortcut?: string;
 }
-
-const quickActions: PaletteItem[] = [
-  { id: "qa-order", label: "Create Order", href: "/dashboard/orders?action=new", section: "quick", shortcut: "O" },
-  { id: "qa-product", label: "Add Product", href: "/dashboard/products?action=new", section: "quick", shortcut: "P" },
-  { id: "qa-deliveries", label: "View Deliveries", href: "/dashboard/deliveries", section: "quick", shortcut: "D" },
-  { id: "qa-help", label: "Open Help Center", href: "/dashboard/help", section: "quick", shortcut: "?" },
-];
-
-const navigationItems: PaletteItem[] = dashboardNavItems.map((item) => ({
-  id: `nav-${item.href}`,
-  label: item.label,
-  href: item.href,
-  section: "navigation" as const,
-}));
 
 const RECENT_KEY = "command-palette-recent";
 
@@ -63,6 +50,7 @@ function matchesQuery(label: string, query: string): boolean {
 }
 
 export function CommandPalette() {
+  const { messages: m } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -71,6 +59,20 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const quickActions: PaletteItem[] = [
+    { id: "qa-order", label: m.commandPalette.createOrder, href: "/dashboard/orders?action=new", section: "quick", shortcut: "O" },
+    { id: "qa-product", label: m.commandPalette.addProduct, href: "/dashboard/products?action=new", section: "quick", shortcut: "P" },
+    { id: "qa-deliveries", label: m.commandPalette.viewDeliveries, href: "/dashboard/deliveries", section: "quick", shortcut: "D" },
+    { id: "qa-help", label: m.commandPalette.openHelpCenter, href: "/dashboard/help", section: "quick", shortcut: "?" },
+  ];
+
+  const navigationItems: PaletteItem[] = dashboardNavItems.map((item) => ({
+    id: `nav-${item.href}`,
+    label: item.label,
+    href: item.href,
+    section: "navigation" as const,
+  }));
 
   // Load recent items on open
   useEffect(() => {
@@ -213,21 +215,21 @@ export function CommandPalette() {
             ref={inputRef}
             type="text"
             className="cmd-palette-input"
-            placeholder="Type a command or search..."
+            placeholder={m.commandPalette.placeholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleInputKeyDown}
           />
-          <kbd className="cmd-palette-esc">Esc</kbd>
+          <kbd className="cmd-palette-esc">{m.commandPalette.esc}</kbd>
         </div>
 
         <div className="cmd-palette-list" ref={listRef}>
           {allItems.length === 0 && (
-            <div className="cmd-palette-empty">No results found</div>
+            <div className="cmd-palette-empty">{m.commandPalette.noResults}</div>
           )}
-          {renderSection("Recent", filteredRecent, recentOffset)}
-          {renderSection("Quick Actions", filteredQuick, quickOffset)}
-          {renderSection("Navigation", filteredNav, navOffset)}
+          {renderSection(m.commandPalette.recent, filteredRecent, recentOffset)}
+          {renderSection(m.commandPalette.quickActions, filteredQuick, quickOffset)}
+          {renderSection(m.commandPalette.navigation, filteredNav, navOffset)}
         </div>
       </div>
     </div>

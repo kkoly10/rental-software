@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { escapeHtml } from "@/lib/maps/escape-html";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 export type RouteMapStop = {
   id: string;
@@ -40,6 +42,7 @@ export function RouteMap({
   interactive = true,
   height = "400px",
 }: Props) {
+  const { messages: m } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -60,7 +63,7 @@ export function RouteMap({
       try {
         L = (await import("leaflet")).default as unknown as typeof import("leaflet");
       } catch {
-        if (!cancelled) setMapError("Map failed to load. Please refresh the page.");
+        if (!cancelled) setMapError(m.routeMap.mapFailed);
         return;
       }
       if (cancelled || !containerRef.current) return;
@@ -113,12 +116,16 @@ export function RouteMap({
           popupAnchor: [0, -18],
         });
 
-        const typeLabel = stop.type === "pickup" ? "Pickup" : "Delivery";
+        const typeLabel = stop.type === "pickup" ? m.routeMap.pickup : m.routeMap.delivery;
         const statusLabel = stop.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-        const safeName = escapeHtml(stop.customerName ?? "Stop " + stop.sequence);
+        const stopFallback = formatMessage(m.routeMap.stopPrefix, { sequence: stop.sequence });
+        const safeName = escapeHtml(stop.customerName ?? stopFallback);
         const safeAddress = stop.address ? escapeHtml(stop.address) : "";
         const safeTime = stop.scheduledTime ? escapeHtml(stop.scheduledTime) : "";
+        const scheduledLabel = stop.scheduledTime
+          ? escapeHtml(formatMessage(m.routeMap.scheduled, { time: stop.scheduledTime }))
+          : "";
 
         const popupHtml = `
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.5;min-width:160px">
@@ -128,7 +135,7 @@ export function RouteMap({
               <span style="display:inline-block;padding:2px 8px;border-radius:10px;background:${color}22;color:${color};font-weight:600;font-size:11px">${statusLabel}</span>
               <span style="margin-left:6px;color:#55708f">${typeLabel}</span>
             </div>
-            ${safeTime ? `<div style="margin-top:4px;font-size:12px;color:#55708f">Scheduled: ${safeTime}</div>` : ""}
+            ${safeTime ? `<div style="margin-top:4px;font-size:12px;color:#55708f">${scheduledLabel}</div>` : ""}
           </div>
         `;
 
@@ -174,7 +181,7 @@ export function RouteMap({
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
-          <p>Add addresses to see route on map</p>
+          <p>{m.routeMap.addAddresses}</p>
         </div>
       </div>
     );

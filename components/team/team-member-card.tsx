@@ -3,14 +3,7 @@
 import { useState } from "react";
 import type { TeamMember } from "@/lib/team/data";
 import { removeTeamMember, updateMemberRole } from "@/lib/team/actions";
-
-const roleLabels: Record<string, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  dispatcher: "Dispatcher",
-  crew: "Crew",
-  viewer: "Viewer",
-};
+import { useI18n } from "@/lib/i18n/provider";
 
 const roleTones: Record<string, string> = {
   owner: "default",
@@ -27,6 +20,14 @@ export function TeamMemberCard({
   member: TeamMember;
   canManage: boolean;
 }) {
+  const { messages: m, t } = useI18n();
+  const roleLabels: Record<string, string> = {
+    owner: m.dashboard.team.roles.owner,
+    admin: m.dashboard.team.roles.admin,
+    dispatcher: m.dashboard.team.roles.dispatcher,
+    crew: m.dashboard.team.roles.crew,
+    viewer: m.dashboard.team.roles.viewer,
+  };
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -42,7 +43,7 @@ export function TeamMemberCard({
   }
 
   async function handleRemove() {
-    if (!confirm(`Remove ${member.name} from the team?`)) return;
+    if (!confirm(t(m.teamMember.confirmRemove, { name: member.name }))) return;
     setPending(true);
     setMessage("");
     const result = await removeTeamMember(member.id);
@@ -57,7 +58,7 @@ export function TeamMemberCard({
           <strong>
             {member.name}
             {member.isCurrentUser && (
-              <span className="muted" style={{ fontWeight: 400 }}> (you)</span>
+              <span className="muted" style={{ fontWeight: 400 }}> {m.teamMember.you}</span>
             )}
           </strong>
           <div className="muted">{member.email}</div>
@@ -71,10 +72,10 @@ export function TeamMemberCard({
               disabled={pending}
               style={{ minHeight: 36, fontSize: 13, borderRadius: 8 }}
             >
-              <option value="admin">Admin</option>
-              <option value="dispatcher">Dispatcher</option>
-              <option value="crew">Crew</option>
-              <option value="viewer">Viewer</option>
+              <option value="admin">{m.dashboard.team.roles.admin}</option>
+              <option value="dispatcher">{m.dashboard.team.roles.dispatcher}</option>
+              <option value="crew">{m.dashboard.team.roles.crew}</option>
+              <option value="viewer">{m.dashboard.team.roles.viewer}</option>
             </select>
           ) : (
             <span className={`badge ${roleTones[member.role] ?? "default"}`}>
@@ -90,7 +91,7 @@ export function TeamMemberCard({
               className="ghost-btn"
               style={{ color: "var(--danger)", fontSize: 13, padding: "6px 10px" }}
             >
-              Remove
+              {m.teamMember.remove}
             </button>
           )}
         </div>
