@@ -1,10 +1,12 @@
 import { DashboardListLoading } from "@/components/dashboard/dashboard-list-loading";
+import { getMessages } from "@/lib/i18n/server";
 
-export default function DocumentsLoading() {
+export default async function DocumentsLoading() {
+  const m = await getMessages();
   return (
     <DashboardListLoading
-      title="Documents"
-      description="Loading agreements, waivers, and signature status."
+      title={m.dashboard.documents.title}
+      description={m.dashboard.documents.description}
     />
   );
 }

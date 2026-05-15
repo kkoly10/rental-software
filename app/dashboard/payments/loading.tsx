@@ -1,10 +1,12 @@
 import { DashboardListLoading } from "@/components/dashboard/dashboard-list-loading";
+import { getMessages } from "@/lib/i18n/server";
 
-export default function PaymentsLoading() {
+export default async function PaymentsLoading() {
+  const m = await getMessages();
   return (
     <DashboardListLoading
-      title="Payments"
-      description="Loading deposits, balances, and payment records."
+      title={m.dashboard.payments.title}
+      description={m.dashboard.payments.description}
     />
   );
 }

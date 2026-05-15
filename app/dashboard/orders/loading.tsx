@@ -1,11 +1,13 @@
 import { DashboardListLoading } from "@/components/dashboard/dashboard-list-loading";
+import { getMessages } from "@/lib/i18n/server";
 
-export default function OrdersLoading() {
+export default async function OrdersLoading() {
+  const m = await getMessages();
   return (
     <DashboardListLoading
-      title="Orders"
-      description="Loading inquiries, bookings, and payment readiness."
-      buttonLabel="New order"
+      title={m.dashboard.orders.title}
+      description={m.dashboard.orders.description}
+      buttonLabel={m.dashboard.orders.newOrder}
       showButton
     />
   );
