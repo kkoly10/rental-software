@@ -110,6 +110,17 @@ export async function createProduct(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to create products." };
+  }
+
   const { count: productCount } = await supabase
     .from("products")
     .select("id", { count: "exact", head: true })
@@ -235,6 +246,17 @@ export async function updateProduct(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: updateMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(updateMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update products." };
+  }
 
   // Validate that the supplied categoryId belongs to this organization
   if (parsed.data.categoryId) {

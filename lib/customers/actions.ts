@@ -92,6 +92,17 @@ export async function updateCustomer(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to update customers." };
+  }
+
   const { error: updateError } = await supabase
     .from("customers")
     .update({
@@ -135,6 +146,7 @@ export async function updateCustomer(
 
       if (addrErr) {
         console.error("[customers] Failed to update address:", addrErr.message);
+        return { ok: false, message: "Customer info saved but address update failed. Please try again." };
       }
     } else {
       const { error: addrErr } = await supabase
@@ -147,6 +159,7 @@ export async function updateCustomer(
 
       if (addrErr) {
         console.error("[customers] Failed to create address:", addrErr.message);
+        return { ok: false, message: "Customer info saved but address could not be stored. Please try again." };
       }
     }
   }

@@ -64,6 +64,17 @@ export async function uploadProductImage(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: imgMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(imgMembership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to upload product images." };
+  }
+
   const { data: product, error: productError } = await supabase
     .from("products")
     .select("id")

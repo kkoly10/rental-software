@@ -79,6 +79,17 @@ export async function importProductsFromCsv(
 
   const supabase = await createSupabaseServerClient();
 
+  const { data: importMembership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(importMembership?.role ?? "")) {
+    return { ok: false, imported: 0, skipped: 0, errors: [], message: "Only owners and admins can import products." };
+  }
+
   const [{ data: existingCats }, { data: existingProducts }] = await Promise.all([
     supabase.from("categories").select("id, name").eq("organization_id", ctx.organizationId),
     supabase.from("products").select("slug").eq("organization_id", ctx.organizationId).is("deleted_at", null),
