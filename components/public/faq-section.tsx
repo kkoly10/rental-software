@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface FaqSectionProps {
   customFaqs: { question: string; answer: string }[];
 }
 
 export function FaqSection({ customFaqs }: FaqSectionProps) {
+  const { messages: m } = useI18n();
   const faqs = customFaqs;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -16,9 +18,9 @@ export function FaqSection({ customFaqs }: FaqSectionProps) {
     <section className="section">
       <div className="container">
         <div style={{ textAlign: "center", maxWidth: 580, margin: "0 auto 36px" }}>
-          <div className="kicker">Common questions</div>
+          <div className="kicker">{m.storefront.faq.kicker}</div>
           <h2 style={{ margin: "8px 0 0" }}>
-            Everything you need to know
+            {m.storefront.faq.title}
           </h2>
         </div>
 

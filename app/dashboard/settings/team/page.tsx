@@ -3,15 +3,16 @@ import { getTeamData } from "@/lib/team/data";
 import { InviteMemberForm } from "@/components/team/invite-member-form";
 import { TeamMemberCard } from "@/components/team/team-member-card";
 import { PendingInviteCard } from "@/components/team/pending-invite-card";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function TeamPage() {
-  const team = await getTeamData();
+  const [team, m] = await Promise.all([getTeamData(), getMessages()]);
   const canManage = team.currentUserRole === "owner" || team.currentUserRole === "admin";
 
   return (
     <DashboardShell
-      title="Team"
-      description="Manage team members and their roles."
+      title={m.dashboard.team.title}
+      description={m.dashboard.team.description}
     >
       <div className="dashboard-grid">
         <section>

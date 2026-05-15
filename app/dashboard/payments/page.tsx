@@ -11,6 +11,7 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportPayments } from "@/lib/export/csv";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function PaymentsPage({
   searchParams,
@@ -18,17 +19,18 @@ export default async function PaymentsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [paymentsPage, orders, guidanceState] = await Promise.all([
+  const [paymentsPage, orders, guidanceState, m] = await Promise.all([
     getPaymentsPage({ query: params.q, page: params.page }),
     getOrders(),
     getGuidanceState(),
+    getMessages(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/payments"];
 
   return (
     <DashboardShell
-      title="Payments"
-      description="Record deposits, track balances, and review payment activity."
+      title={m.dashboard.payments.title}
+      description={m.dashboard.payments.description}
     >
       {helpConfig && (
         <ContextHelpBanner

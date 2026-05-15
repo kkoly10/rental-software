@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SignupForm } from "@/components/auth/signup-form";
 import { isTenantHost } from "@/lib/auth/org-context";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function SignupPage() {
   if (await isTenantHost()) notFound();
+
+  const m = await getMessages();
 
   return (
     <main className="page">
@@ -12,10 +15,10 @@ export default async function SignupPage() {
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Create account</div>
-              <h1 style={{ margin: "6px 0 8px" }}>Sign Up</h1>
+              <div className="kicker">{m.auth.signup.kicker}</div>
+              <h1 style={{ margin: "6px 0 8px" }}>{m.auth.signup.title}</h1>
               <div className="muted">
-                Create your operator account and start setting up your rental business.
+                {m.auth.signup.description}
               </div>
             </div>
           </div>
@@ -24,10 +27,10 @@ export default async function SignupPage() {
 
           <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
             <Link href="/login" className="secondary-btn">
-              Back to Login
+              {m.auth.forgotPassword.backToLogin}
             </Link>
             <Link href="/" className="ghost-btn">
-              Back to Home
+              {m.common.backToHome}
             </Link>
           </div>
         </section>

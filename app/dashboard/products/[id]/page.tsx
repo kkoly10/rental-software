@@ -5,6 +5,7 @@ import { ProductForm } from "@/components/products/product-form";
 import { ProductImageManager } from "@/components/products/product-image-manager";
 import { getProductById, getCategories } from "@/lib/data/products";
 import { getProductImages } from "@/lib/data/product-images";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function ProductDetailEditorPage({
   params,
@@ -16,10 +17,11 @@ export default async function ProductDetailEditorPage({
   const { id } = await params;
   const { created } = await searchParams;
   const justCreated = created === "1";
-  const [product, categories, images] = await Promise.all([
+  const [product, categories, images, m] = await Promise.all([
     getProductById(id),
     getCategories(),
     getProductImages(id),
+    getMessages(),
   ]);
 
   if (!product) {
@@ -28,8 +30,8 @@ export default async function ProductDetailEditorPage({
 
   return (
     <DashboardShell
-      title="Edit Product"
-      description="Edit pricing, specs, availability rules, public catalog content, and images."
+      title={m.dashboard.productDetail.title}
+      description={m.dashboard.productDetail.description}
     >
       {justCreated && (
         <div className="panel" style={{ background: "var(--success-bg, #e6f9e6)", border: "1px solid var(--success-border, #b3e6b3)", marginBottom: 16 }}>

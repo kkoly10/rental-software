@@ -13,22 +13,24 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function SettingsPage() {
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, m] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
     getBookingPolicies(),
     getSmsLog(),
+    getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/settings"];
 
   return (
     <DashboardShell
-      title="Settings"
-      description="Manage business preferences, support details, and booking defaults."
+      title={m.dashboard.settings.title}
+      description={m.dashboard.settings.description}
     >
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />

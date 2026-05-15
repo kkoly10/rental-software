@@ -10,11 +10,13 @@ import { DeliveryStats } from "@/components/deliveries/delivery-stats";
 import { RouteMapWrapper } from "./route-map-wrapper";
 import { CreateRouteForm } from "@/components/deliveries/create-route-form";
 import { getTeamMembersForRoute } from "@/lib/data/unrouted-orders";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function DeliveriesPage() {
-  const [board, teamMembers] = await Promise.all([
+  const [board, teamMembers, m] = await Promise.all([
     getDeliveryBoardData(),
     getTeamMembersForRoute(),
+    getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
@@ -24,8 +26,8 @@ export default async function DeliveriesPage() {
 
   return (
     <DashboardShell
-      title="Delivery Board"
-      description="Track routes, stop status, and crew progress."
+      title={m.dashboard.deliveries.title}
+      description={m.dashboard.deliveries.description}
     >
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
@@ -56,7 +58,7 @@ export default async function DeliveriesPage() {
                     <div key={route.id} className="delivery-card">
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
-                      <div className="muted">{route.stops} stops</div>
+                      <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
@@ -81,7 +83,7 @@ export default async function DeliveriesPage() {
                     <div key={route.id} className="delivery-card">
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
-                      <div className="muted">{route.stops} stops</div>
+                      <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
@@ -106,7 +108,7 @@ export default async function DeliveriesPage() {
                     <div key={route.id} className="delivery-card">
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
-                      <div className="muted">{route.stops} stops</div>
+                      <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}

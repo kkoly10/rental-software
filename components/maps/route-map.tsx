@@ -24,7 +24,7 @@ type Props = {
 
 /* ── Status → color mapping ── */
 const STATUS_COLORS: Record<string, string> = {
-  assigned: "#1e5dcf",
+  assigned: "#e8590c",
   en_route: "#f5a623",
   in_progress: "#f5a623",
   completed: "#20b486",
@@ -88,7 +88,7 @@ export function RouteMap({
       const sortedStops = [...geoStops].sort((a, b) => a.sequence - b.sequence);
 
       for (const stop of sortedStops) {
-        const color = STATUS_COLORS[stop.status] ?? "#1e5dcf";
+        const color = STATUS_COLORS[stop.status] ?? "#e8590c";
         const pos: [number, number] = [stop.lat!, stop.lng!];
         bounds.push(pos);
 
@@ -138,7 +138,7 @@ export function RouteMap({
       /* Draw route polyline */
       if (showRoute && bounds.length > 1) {
         L.polyline(bounds, {
-          color: "#1e5dcf",
+          color: "#e8590c",
           weight: 3,
           opacity: 0.6,
           dashArray: "8, 6",

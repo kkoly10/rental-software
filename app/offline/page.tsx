@@ -1,6 +1,9 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n/provider";
+
 export default function OfflinePage() {
+  const { messages: m } = useI18n();
   return (
     <div className="offline-page">
       <div className="offline-card">
@@ -24,16 +27,16 @@ export default function OfflinePage() {
             <line x1="12" y1="20" x2="12.01" y2="20" />
           </svg>
         </div>
-        <h1 className="offline-title">Offline</h1>
-        <p className="offline-heading">You&apos;re offline</p>
+        <h1 className="offline-title">{m.errors.offline.title}</h1>
+        <p className="offline-heading">{m.errors.offline.title}</p>
         <p className="offline-body">
-          Check your internet connection and try again.
+          {m.errors.offline.description}
         </p>
         <button
           className="offline-retry"
           onClick={() => window.location.reload()}
         >
-          Retry
+          {m.errors.generic.retry}
         </button>
       </div>
     </div>

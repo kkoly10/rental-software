@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getConversations } from "@/lib/data/messages";
+import { getMessages as getI18nMessages } from "@/lib/i18n/server";
 
 function relativeTime(dateStr: string): string {
   const now = Date.now();
@@ -20,12 +21,12 @@ function relativeTime(dateStr: string): string {
 }
 
 export default async function MessagesPage() {
-  const conversations = await getConversations();
+  const [conversations, m] = await Promise.all([getConversations(), getI18nMessages()]);
 
   return (
     <DashboardShell
-      title="Messages"
-      description="Customer conversations from the portal and dashboard."
+      title={m.dashboard.messages.title}
+      description={m.dashboard.messages.description}
     >
       <div className="dashboard-grid" style={{ gridTemplateColumns: "1fr" }}>
         <section className="panel">

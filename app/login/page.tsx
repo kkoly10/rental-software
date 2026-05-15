@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function LoginPage({
   searchParams,
@@ -11,7 +12,7 @@ export default async function LoginPage({
     message?: string;
   }>;
 }) {
-  const params = await searchParams;
+  const [params, m] = await Promise.all([searchParams, getMessages()]);
   const redirectTo =
     typeof params.redirect === "string" ? params.redirect : undefined;
 
@@ -21,52 +22,63 @@ export default async function LoginPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Account access</div>
-              <h1 style={{ margin: "6px 0 8px" }}>Login</h1>
+              <div className="kicker">{m.auth.login.kicker}</div>
+              <h1 style={{ margin: "6px 0 8px" }}>{m.auth.login.title}</h1>
               <div className="muted">
-                Sign in to manage bookings, deliveries, and inventory.
+                {m.auth.login.description}
               </div>
             </div>
           </div>
 
           {params.reset === "success" ? (
             <div className="order-card" style={{ marginTop: 16 }}>
-              <strong>Password updated</strong>
+              <strong>{m.auth.login.passwordUpdated}</strong>
               <div className="muted" style={{ marginTop: 8 }}>
-                Sign in with your new password.
+                {m.auth.login.passwordUpdatedHint}
               </div>
             </div>
           ) : null}
 
           {params.verified === "1" ? (
             <div className="order-card" style={{ marginTop: 16 }}>
-              <strong>Email verified</strong>
+              <strong>{m.auth.login.emailVerified}</strong>
               <div className="muted" style={{ marginTop: 8 }}>
-                Your email is confirmed. You can sign in now.
+                {m.auth.login.emailVerifiedHint}
               </div>
             </div>
           ) : null}
 
           {params.message ? (
             <div className="order-card" style={{ marginTop: 16 }}>
-              <strong>Notice</strong>
+              <strong>{m.auth.login.notice}</strong>
               <div className="muted" style={{ marginTop: 8 }}>
                 {params.message}
               </div>
             </div>
           ) : null}
 
-          <LoginForm redirectTo={redirectTo} />
+          <LoginForm
+            redirectTo={redirectTo}
+            labels={{
+              email: m.auth.form.email,
+              emailPlaceholder: m.auth.form.emailPlaceholder,
+              password: m.auth.form.password,
+              passwordPlaceholder: m.auth.form.passwordPlaceholder,
+              signIn: m.auth.form.signIn,
+              signingIn: m.auth.form.signingIn,
+              forgotPasswordLink: m.auth.form.forgotPasswordLink,
+            }}
+          />
 
           <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Link href="/signup" className="secondary-btn">
-              Create Account
+              {m.auth.login.createAccount}
             </Link>
             <Link href="/forgot-password" className="ghost-btn">
-              Forgot Password
+              {m.auth.login.forgotPassword}
             </Link>
             <Link href="/" className="ghost-btn">
-              Back to Home
+              {m.common.backToHome}
             </Link>
           </div>
         </section>

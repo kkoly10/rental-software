@@ -8,6 +8,7 @@ import { WeatherAlert } from "@/components/weather/weather-alert";
 import { CommunicationList } from "@/components/communications/communication-list";
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
+import { getMessages } from "@/lib/i18n/server";
 
 function extractZip(address: string): string | undefined {
   const match = address.match(/\b(\d{5})\b/);
@@ -28,17 +29,18 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications] = await Promise.all([
+  const [order, communications, m] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
+    getMessages(),
   ]);
 
   const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
   return (
     <DashboardShell
-      title="Order Detail"
-      description="Single booking view for customer info, pricing, documents, and delivery readiness."
+      title={m.dashboard.orderDetail.title}
+      description={m.dashboard.orderDetail.description}
     >
       <div className="dashboard-grid">
         <section className="panel">

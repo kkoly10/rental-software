@@ -6,6 +6,7 @@ import { buildPageMetadata } from "@/lib/seo/metadata";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { lookupOrderByPortalToken } from "@/lib/portal/lookup";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getMessages } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -26,7 +27,10 @@ export default async function OrderStatusPage({
   await requirePublicOrg();
 
   const { token } = await searchParams;
-  const initialState = token ? await lookupOrderByPortalToken(token) : undefined;
+  const [initialState, m] = await Promise.all([
+    token ? lookupOrderByPortalToken(token) : Promise.resolve(undefined),
+    getMessages(),
+  ]);
 
   return (
     <>
@@ -35,13 +39,12 @@ export default async function OrderStatusPage({
       <main className="page">
         <div className="container" style={{ maxWidth: 680 }}>
           <div className="centered-stack-lg">
-            <div className="kicker">Customer portal</div>
+            <div className="kicker">{m.nav.orderStatus}</div>
             <h1 style={{ margin: "8px 0 12px", fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
-              Check your order status
+              {m.orderStatus.title}
             </h1>
             <p className="muted">
-              Open your secure portal link to view booking details, balance,
-              and documents. If needed, you can request access with order number + email.
+              {m.orderStatus.description}
             </p>
           </div>
 

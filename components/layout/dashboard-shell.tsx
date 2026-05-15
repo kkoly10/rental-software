@@ -12,6 +12,8 @@ import type { Notification } from "@/lib/data/notifications";
 import { fetchUnreadMessageCount } from "@/lib/messages/actions";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 import { SubscriptionBanner } from "@/components/settings/subscription-banner";
+import { useI18n } from "@/lib/i18n/provider";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -34,6 +36,7 @@ export function DashboardShell({
   subscriptionStatus?: string | null;
 }) {
   const pathname = usePathname();
+  const { locale, messages: m } = useI18n();
   const [badgeCount, setBadgeCount] = useState(unreadMessages);
   const [subStatus, setSubStatus] = useState(initialSubscriptionStatus ?? null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -143,16 +146,19 @@ export function DashboardShell({
             href={item.href}
             className={isNavItemActive(pathname, item.href) ? "active" : undefined}
             data-tour={item.tourId}
-            style={item.label === "Messages" ? { display: "flex", alignItems: "center", justifyContent: "space-between" } : undefined}
+            style={item.key === "messages" ? { display: "flex", alignItems: "center", justifyContent: "space-between" } : undefined}
           >
-            {item.label}
-            {item.label === "Messages" && renderMessagesBadge()}
+            {m.dashboard.nav[item.key]}
+            {item.key === "messages" && renderMessagesBadge()}
           </Link>
         ))}
 
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.12)" }}>
+          <div style={{ padding: "0 14px 12px" }}>
+            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
+          </div>
           <a href={publicSiteUrl} style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, opacity: 0.7 }}>
-            Public Site
+            {m.dashboard.nav.publicSite}
           </a>
           <button
             type="button"
@@ -172,7 +178,7 @@ export function DashboardShell({
               await signOut();
             }}
           >
-            Sign Out
+            {m.dashboard.nav.signOut}
           </button>
         </div>
       </aside>
@@ -183,7 +189,7 @@ export function DashboardShell({
             ref={menuButtonRef}
             type="button"
             className="dashboard-mobile-menu-btn"
-            aria-label="Open dashboard navigation"
+            aria-label={m.dashboard.shell.openNav}
             aria-expanded={mobileNavOpen}
             onClick={() => setMobileNavOpen(true)}
           >
@@ -192,7 +198,7 @@ export function DashboardShell({
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
-            Menu
+            {m.common.menu}
           </button>
           <Link href="/dashboard" className="logo">
             Korent
@@ -203,7 +209,7 @@ export function DashboardShell({
         <Breadcrumbs />
         <div className="section-header">
           <div>
-            <div className="kicker">Rental platform</div>
+            <div className="kicker">{m.dashboard.shell.kicker}</div>
             <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>
             <div className="muted">{description}</div>
           </div>
@@ -221,15 +227,15 @@ export function DashboardShell({
             className="mobile-menu-drawer dashboard-mobile-drawer"
             role="dialog"
             aria-modal="true"
-            aria-label="Dashboard navigation menu"
+            aria-label={m.dashboard.shell.mobileMenu}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mobile-menu-header">
-              <span className="mobile-menu-title">Dashboard menu</span>
+              <span className="mobile-menu-title">{m.dashboard.shell.mobileMenu}</span>
               <button
                 type="button"
                 className="mobile-menu-close"
-                aria-label="Close menu"
+                aria-label={m.common.closeMenu}
                 onClick={closeMobileNav}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -250,14 +256,15 @@ export function DashboardShell({
                       onClick={closeMobileNav}
                       className={isNavItemActive(pathname, item.href) ? "active" : undefined}
                     >
-                      {item.label}
-                      {item.label === "Messages" && renderMessagesBadge()}
+                      {m.dashboard.nav[item.key]}
+                      {item.key === "messages" && renderMessagesBadge()}
                     </Link>
                   ))}
             </nav>
             <div className="mobile-menu-footer">
+              <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
               <a href={publicSiteUrl} className="secondary-btn" onClick={closeMobileNav}>
-                Public Site
+                {m.dashboard.nav.publicSite}
               </a>
               <button
                 type="button"
@@ -268,7 +275,7 @@ export function DashboardShell({
                   await signOut();
                 }}
               >
-                Sign Out
+                {m.dashboard.nav.signOut}
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { ContactForm } from "@/components/public/contact-form";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
+import { getMessages } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -18,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ContactPage() {
   await requirePublicOrg();
-  const settings = await getOrganizationSettings();
+  const [settings, m] = await Promise.all([getOrganizationSettings(), getMessages()]);
 
   return (
     <>
@@ -27,11 +28,10 @@ export default async function ContactPage() {
         <div className="container" style={{ maxWidth: 560 }}>
           <section className="panel" style={{ padding: "40px 36px" }}>
             <div style={{ textAlign: "center", marginBottom: 28 }}>
-              <div className="kicker">Get in touch</div>
-              <h1 style={{ margin: "8px 0 12px" }}>Contact Us</h1>
+              <div className="kicker">{m.nav.contact}</div>
+              <h1 style={{ margin: "8px 0 12px" }}>{m.contact.title}</h1>
               <p className="muted">
-                Have a question about rentals, pricing, or a custom event package?
-                Send us a message and we&apos;ll get back to you within 24 hours.
+                {m.contact.description}
               </p>
             </div>
 

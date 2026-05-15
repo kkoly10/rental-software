@@ -1,19 +1,20 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatCard } from "@/components/ui/stat-card";
 import { getAnalytics } from "@/lib/data/analytics";
+import { getMessages } from "@/lib/i18n/server";
 
 function formatMoney(amount: number): string {
   return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export default async function AnalyticsPage() {
-  const data = await getAnalytics();
+  const [data, m] = await Promise.all([getAnalytics(), getMessages()]);
   const isEmpty = data.totalOrders === 0 && data.totalCustomers === 0;
 
   return (
     <DashboardShell
-      title="Analytics"
-      description="Business performance metrics and revenue insights."
+      title={m.dashboard.analytics.title}
+      description={m.dashboard.analytics.description}
     >
       {isEmpty ? (
         <section className="panel" style={{ textAlign: "center", padding: "48px 24px" }}>

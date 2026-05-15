@@ -3,19 +3,21 @@ import { getMaintenanceRecords } from "@/lib/data/maintenance";
 import { getProductsPage } from "@/lib/data/products";
 import { LogMaintenanceForm } from "@/components/maintenance/log-form";
 import { MaintenanceStatusButton } from "@/components/maintenance/status-button";
+import { getMessages } from "@/lib/i18n/server";
 
 export default async function MaintenancePage() {
-  const [records, productsResult] = await Promise.all([
+  const [records, productsResult, m] = await Promise.all([
     getMaintenanceRecords(),
     getProductsPage({ pageSize: 200 }),
+    getMessages(),
   ]);
 
   const products = productsResult.items.map((p) => ({ id: p.id, name: p.name }));
 
   return (
     <DashboardShell
-      title="Maintenance"
-      description="Monitor repairs, service reminders, and rental readiness across assets."
+      title={m.dashboard.maintenance.title}
+      description={m.dashboard.maintenance.description}
     >
       <div className="dashboard-grid" style={{ gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
         <section className="panel">
