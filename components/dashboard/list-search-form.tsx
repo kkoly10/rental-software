@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { getMessages } from "@/lib/i18n/server";
 
-export function ListSearchForm({
+export async function ListSearchForm({
   placeholder,
   initialQuery,
   actions,
@@ -9,6 +10,7 @@ export function ListSearchForm({
   initialQuery?: string;
   actions?: ReactNode;
 }) {
+  const m = await getMessages();
   return (
     <form method="get" className="order-card" style={{ marginTop: 16 }}>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -20,11 +22,11 @@ export function ListSearchForm({
           style={{ flex: "1 1 280px", minWidth: 220 }}
         />
         <button type="submit" className="secondary-btn">
-          Search
+          {m.common.search}
         </button>
         {initialQuery ? (
           <a href="?" className="ghost-btn">
-            Clear
+            {m.common.close}
           </a>
         ) : null}
         {actions}

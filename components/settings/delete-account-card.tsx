@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { deleteAccount, type DeleteAccountState } from "@/lib/account/delete-account";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: DeleteAccountState = {
   ok: false,
@@ -12,20 +13,21 @@ export function DeleteAccountCard() {
   const [state, formAction, pending] = useActionState(deleteAccount, initialState);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmation, setConfirmation] = useState("");
+  const { messages } = useI18n();
+  const m = messages.forms.deleteAccount;
 
   if (!showConfirm) {
     return (
       <section className="panel" style={{ borderLeft: "4px solid var(--danger, #dc2626)" }}>
         <div className="section-header">
           <div>
-            <div className="kicker" style={{ color: "var(--danger, #dc2626)" }}>Danger zone</div>
-            <h2 style={{ margin: "6px 0 0" }}>Delete account</h2>
+            <div className="kicker" style={{ color: "var(--danger, #dc2626)" }}>{m.dangerZone}</div>
+            <h2 style={{ margin: "6px 0 0" }}>{m.deleteAccountHeading}</h2>
           </div>
         </div>
 
         <p className="muted" style={{ margin: "8px 0 16px", lineHeight: 1.6 }}>
-          Permanently delete your organization, all data, and cancel your subscription.
-          This action cannot be undone after 30 days.
+          {m.warningText}
         </p>
 
         <button
@@ -42,7 +44,7 @@ export function DeleteAccountCard() {
             fontSize: 14,
           }}
         >
-          Delete my account...
+          {m.openDeleteButton}
         </button>
       </section>
     );
@@ -52,19 +54,17 @@ export function DeleteAccountCard() {
     <section className="panel" style={{ borderLeft: "4px solid var(--danger, #dc2626)" }}>
       <div className="section-header">
         <div>
-          <div className="kicker" style={{ color: "var(--danger, #dc2626)" }}>Danger zone</div>
-          <h2 style={{ margin: "6px 0 0" }}>Confirm account deletion</h2>
+          <div className="kicker" style={{ color: "var(--danger, #dc2626)" }}>{m.dangerZone}</div>
+          <h2 style={{ margin: "6px 0 0" }}>{m.confirmHeading}</h2>
         </div>
       </div>
 
       <div style={{ margin: "8px 0 16px", lineHeight: 1.6 }}>
         <p className="muted" style={{ margin: "0 0 12px" }}>
-          This will permanently delete your organization and all associated data including
-          orders, customers, products, and team members. Any active Stripe subscription
-          will be cancelled immediately.
+          {m.confirmWarning}
         </p>
         <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>
-          Type <code style={{ background: "var(--bg-muted, #f3f4f6)", padding: "2px 6px", borderRadius: 4 }}>DELETE</code> to confirm:
+          {m.typeToConfirmPrefix} <code style={{ background: "var(--bg-muted, #f3f4f6)", padding: "2px 6px", borderRadius: 4 }}>DELETE</code> {m.typeToConfirmSuffix}
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export function DeleteAccountCard() {
         <input
           name="confirmation"
           type="text"
-          placeholder="Type DELETE to confirm"
+          placeholder={m.confirmPlaceholder}
           value={confirmation}
           onChange={(e) => setConfirmation(e.target.value)}
           autoComplete="off"
@@ -100,7 +100,7 @@ export function DeleteAccountCard() {
               fontSize: 14,
             }}
           >
-            {pending ? "Deleting..." : "Permanently delete account"}
+            {pending ? m.confirmDeleting : m.confirmDelete}
           </button>
           <button
             type="button"
@@ -117,7 +117,7 @@ export function DeleteAccountCard() {
               fontSize: 14,
             }}
           >
-            Cancel
+            {m.cancel}
           </button>
         </div>
       </form>

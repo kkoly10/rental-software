@@ -9,6 +9,8 @@ import { CustomerMessageForm } from "./customer-message-form";
 import { InvoiceDownload } from "./invoice-download";
 import { PayBalanceButton } from "./pay-balance-button";
 import { AcceptQuoteButton } from "./accept-quote-button";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const statusTones: Record<string, string> = {
   Confirmed: "success",
@@ -29,6 +31,7 @@ type Props = {
 };
 
 export function OrderLookupForm({ initialState }: Props) {
+  const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState<PortalLookupState, FormData>(
     lookupOrder,
     initialState ?? { ok: true, message: "" }
@@ -45,22 +48,22 @@ export function OrderLookupForm({ initialState }: Props) {
         <form action={formAction} className="panel" style={{ marginBottom: 24 }}>
           <div style={{ display: "grid", gap: 14 }}>
             <label className="field-stack">
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Order number</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{m.portal.lookup.orderNumber}</span>
               <input
                 name="order_number"
                 type="text"
-                placeholder="ORD-2401"
+                placeholder={m.portal.lookup.orderNumberPlaceholder}
                 required
                 style={{ textTransform: "uppercase" }}
               />
             </label>
 
             <label className="field-stack">
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Email address</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{m.portal.lookup.email}</span>
               <input
                 name="email"
                 type="email"
-                placeholder="your@email.com"
+                placeholder={m.portal.lookup.emailPlaceholder}
                 required
                 value={lookupEmail}
                 onChange={(e) => setLookupEmail(e.target.value)}
@@ -68,7 +71,7 @@ export function OrderLookupForm({ initialState }: Props) {
             </label>
 
             <button type="submit" className="primary-btn" disabled={pending}>
-              {pending ? "Looking up..." : "Look Up Order"}
+              {pending ? m.portal.lookup.lookingUp : m.portal.lookup.submit}
             </button>
           </div>
 
@@ -85,7 +88,7 @@ export function OrderLookupForm({ initialState }: Props) {
           <div className="panel">
             <div className="section-header">
               <div>
-                <div className="kicker">Order #{state.order.orderNumber}</div>
+                <div className="kicker">{formatMessage(m.portal.order.orderLabel, { value: state.order.orderNumber })}</div>
                 <h2 style={{ margin: "6px 0 0" }}>{state.order.eventDate}</h2>
                 {state.order.customerName && (
                   <div className="muted" style={{ marginTop: 4 }}>{state.order.customerName}</div>
@@ -102,15 +105,15 @@ export function OrderLookupForm({ initialState }: Props) {
 
             {DELIVERY_STATUSES.includes(state.order.status) && state.order.deliveryDate && (
               <div className="portal-delivery-card" style={{ marginTop: 16 }}>
-                <strong>Delivery Information</strong>
+                <strong>{m.portal.order.deliveryInformation}</strong>
                 <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
                   <div className="order-row">
-                    <span className="muted">Delivery date</span>
+                    <span className="muted">{m.portal.order.deliveryDate}</span>
                     <span>{state.order.deliveryDate}</span>
                   </div>
                   {state.order.deliveryTimeWindow && (
                     <div className="order-row">
-                      <span className="muted">Time window</span>
+                      <span className="muted">{m.portal.order.timeWindow}</span>
                       <span>{state.order.deliveryTimeWindow}</span>
                     </div>
                   )}
@@ -126,35 +129,35 @@ export function OrderLookupForm({ initialState }: Props) {
               fontSize: 13,
               color: "var(--text-soft)",
             }}>
-              Check weather for your event day
+              {m.portal.order.checkWeather}
             </div>
 
             <div className="list" style={{ marginTop: 12 }}>
               <div className="order-card">
-                <strong>Rental items</strong>
+                <strong>{m.portal.order.rentalItems}</strong>
                 <div className="muted">{state.order.items.join(" · ") || "—"}</div>
               </div>
 
               <div className="order-card">
                 <div style={{ display: "grid", gap: 6 }}>
                   <div className="order-row">
-                    <span className="muted">Subtotal</span>
+                    <span className="muted">{m.portal.order.subtotal}</span>
                     <span>{state.order.subtotal}</span>
                   </div>
                   <div className="order-row">
-                    <span className="muted">Delivery fee</span>
+                    <span className="muted">{m.portal.order.deliveryFee}</span>
                     <span>{state.order.deliveryFee}</span>
                   </div>
                   <div className="order-row" style={{ borderTop: "1px solid var(--border)", paddingTop: 6 }}>
-                    <strong>Total</strong>
+                    <strong>{m.portal.order.total}</strong>
                     <strong>{state.order.total}</strong>
                   </div>
                   <div className="order-row">
-                    <span className="muted">Deposit required</span>
+                    <span className="muted">{m.portal.order.depositRequired}</span>
                     <span>{state.order.depositDue}</span>
                   </div>
                   <div className="order-row" style={{ borderTop: "1px solid var(--border)", paddingTop: 6 }}>
-                    <strong style={{ color: "var(--primary)" }}>Balance due</strong>
+                    <strong style={{ color: "var(--primary)" }}>{m.portal.order.balanceDue}</strong>
                     <strong style={{ color: "var(--primary)" }}>{state.order.balanceDue}</strong>
                   </div>
                 </div>
@@ -169,7 +172,7 @@ export function OrderLookupForm({ initialState }: Props) {
 
             {state.order.payments.length > 0 && (
               <div className="order-card" style={{ marginTop: 12 }}>
-                <strong>Payment history</strong>
+                <strong>{m.portal.order.paymentHistory}</strong>
                 <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
                   {state.order.payments.map((p, i) => (
                     <div key={i} className="order-row" style={{ fontSize: 13 }}>

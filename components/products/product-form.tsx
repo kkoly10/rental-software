@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createProduct, updateProduct } from "@/lib/products/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
@@ -26,31 +27,33 @@ export function ProductForm({
   const isEdit = !!product;
   const action = isEdit ? updateProduct : createProduct;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.editProduct;
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       {isEdit && <input type="hidden" name="product_id" value={product!.id} />}
 
       <label className="order-card">
-        <strong>Product name</strong>
+        <strong>{m.productNameLabel}</strong>
         <input
           name="name"
           type="text"
           defaultValue={product?.name ?? ""}
-          placeholder="e.g., Large Party Tent"
+          placeholder={m.productNamePlaceholder}
           required
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Category</strong>
+        <strong>{m.categoryLabel}</strong>
         <select
           name="category_id"
           defaultValue={product?.categoryId ?? ""}
           style={{ marginTop: 10, width: "100%" }}
         >
-          <option value="">Select category</option>
+          <option value="">{m.categoryPlaceholder}</option>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>
               {cat.name}
@@ -61,20 +64,20 @@ export function ProductForm({
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>Base price ($/day)</strong>
+          <strong>{m.basePriceLabel}</strong>
           <input
             name="base_price"
             type="number"
             step="0.01"
             min="0"
             defaultValue={product?.basePrice ?? 0}
-            placeholder="e.g., 175"
+            placeholder={m.basePricePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
 
         <label className="order-card">
-          <strong>Security deposit ($)</strong>
+          <strong>{m.securityDepositLabel}</strong>
           <input
             name="security_deposit"
             type="number"
@@ -86,36 +89,36 @@ export function ProductForm({
         </label>
 
         <label className="order-card">
-          <strong>Visibility</strong>
+          <strong>{m.visibilityLabel}</strong>
           <select
             name="visibility"
             defaultValue={product?.visibility ?? "public"}
             style={{ marginTop: 10, width: "100%" }}
           >
-            <option value="public">Public</option>
-            <option value="unlisted">Unlisted</option>
-            <option value="hidden">Hidden</option>
+            <option value="public">{m.visibilities.public}</option>
+            <option value="unlisted">{m.visibilities.unlisted}</option>
+            <option value="hidden">{m.visibilities.hidden}</option>
           </select>
         </label>
       </div>
 
       <label className="order-card">
-        <strong>Short description</strong>
+        <strong>{m.shortDescriptionLabel}</strong>
         <input
           name="short_description"
           type="text"
           defaultValue={product?.shortDescription ?? ""}
-          placeholder="e.g., Perfect for backyard birthdays, fits kids ages 3-12"
+          placeholder={m.shortDescriptionPlaceholder}
           style={{ marginTop: 10, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Full description</strong>
+        <strong>{m.fullDescriptionLabel}</strong>
         <textarea
           name="description"
           defaultValue={product?.description ?? ""}
-          placeholder="e.g., Describe dimensions, capacity, and what's included with the rental."
+          placeholder={m.fullDescriptionPlaceholder}
           rows={4}
           style={{ marginTop: 10, width: "100%", fontFamily: "inherit", border: "1px solid var(--border)", borderRadius: 12, padding: 12 }}
         />
@@ -128,7 +131,7 @@ export function ProductForm({
             type="checkbox"
             defaultChecked={product?.requiresDelivery ?? true}
           />
-          <strong>Requires delivery</strong>
+          <strong>{m.requiresDeliveryLabel}</strong>
         </label>
 
         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -138,7 +141,7 @@ export function ProductForm({
             defaultChecked={product?.isActive ?? true}
             value="on"
           />
-          <strong>Active / Published</strong>
+          <strong>{m.activePublishedLabel}</strong>
         </label>
       </div>
 
@@ -150,7 +153,7 @@ export function ProductForm({
 
       <div style={{ display: "flex", gap: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : isEdit ? "Save Changes" : "Create Product"}
+          {pending ? m.submitting : isEdit ? m.submitEdit : m.submitCreate}
         </button>
       </div>
     </form>

@@ -1,23 +1,26 @@
 import { getServiceStatuses } from "@/lib/env/demo-mode";
+import { getMessages } from "@/lib/i18n/server";
 
-export function EnvStatusChecklist() {
+export async function EnvStatusChecklist() {
   const statuses = getServiceStatuses();
   const allConnected = statuses.every((s) => s.connected);
 
   if (allConnected) return null;
 
+  const messages = await getMessages();
+  const m = messages.forms.envStatus;
+
   return (
     <section className="panel" style={{ marginBottom: 24 }}>
       <div className="section-header">
         <div>
-          <div className="kicker">Environment</div>
-          <h2 style={{ margin: "6px 0 0" }}>Service connections</h2>
+          <div className="kicker">{m.kicker}</div>
+          <h2 style={{ margin: "6px 0 0" }}>{m.heading}</h2>
         </div>
       </div>
 
       <p className="muted" style={{ margin: "0 0 16px", fontSize: 14 }}>
-        Connect these services to enable live functionality. Without them, the
-        app runs in demo mode with mock data.
+        {m.description}
       </p>
 
       <div className="list">
@@ -38,7 +41,7 @@ export function EnvStatusChecklist() {
                   className="muted"
                   style={{ fontSize: 12, marginLeft: 8 }}
                 >
-                  (optional)
+                  {m.optional}
                 </span>
               )}
               {!service.connected && (
@@ -53,7 +56,7 @@ export function EnvStatusChecklist() {
             <span
               className={`badge ${service.connected ? "success" : service.required ? "danger" : "warning"}`}
             >
-              {service.connected ? "Connected" : "Not configured"}
+              {service.connected ? m.connected : m.notConfigured}
             </span>
           </article>
         ))}

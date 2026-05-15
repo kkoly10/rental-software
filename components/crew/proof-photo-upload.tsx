@@ -2,10 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { uploadProofPhoto, type StopActionState } from "@/lib/crew/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initial: StopActionState = { ok: false, message: "" };
 
 export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; existingUrl?: string }) {
+  const { messages } = useI18n();
+  const t = messages.forms.crew.proofPhoto;
   const [state, action, pending] = useActionState(uploadProofPhoto, initial);
   const [preview, setPreview] = useState<string | null>(existingUrl ?? null);
 
@@ -20,9 +23,9 @@ export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; exis
     return (
       <div style={{ marginTop: 8 }}>
         {preview && (
-          <img src={preview} alt="Setup photo" style={{ width: "100%", borderRadius: 8, marginBottom: 8 }} />
+          <img src={preview} alt={t.setupPhotoAlt} style={{ width: "100%", borderRadius: 8, marginBottom: 8 }} />
         )}
-        <span className="badge success">Photo saved</span>
+        <span className="badge success">{t.photoSaved}</span>
       </div>
     );
   }
@@ -32,7 +35,7 @@ export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; exis
       <input type="hidden" name="stop_id" value={stopId} />
 
       {preview && (
-        <img src={preview} alt="Preview" style={{ width: "100%", borderRadius: 8, marginBottom: 8 }} />
+        <img src={preview} alt={t.previewAlt} style={{ width: "100%", borderRadius: 8, marginBottom: 8 }} />
       )}
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -45,7 +48,7 @@ export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; exis
           style={{ fontSize: 13, flex: 1 }}
         />
         <button type="submit" className="primary-btn" disabled={pending} style={{ fontSize: 12, padding: "6px 14px", flexShrink: 0 }}>
-          {pending ? "Saving…" : "Save Photo"}
+          {pending ? t.saving : t.savePhoto}
         </button>
       </div>
 

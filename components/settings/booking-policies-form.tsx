@@ -3,17 +3,20 @@
 import { useActionState } from "react";
 import { updateBookingPolicies } from "@/lib/settings/actions";
 import type { BookingPolicies } from "@/lib/data/booking-policies";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
 export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies }) {
   const [state, formAction, pending] = useActionState(updateBookingPolicies, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.bookingPolicies;
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       <div className="grid grid-2">
         <label className="order-card">
-          <strong>Deposit percentage (%)</strong>
+          <strong>{m.depositPercentageLabel}</strong>
           <input
             name="deposit_percentage"
             type="number"
@@ -24,23 +27,23 @@ export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies })
             style={{ marginTop: 10, width: "100%" }}
           />
           <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
-            Percentage of the order total required as deposit. Set to 0 for no deposit.
+            {m.depositPercentageHelp}
           </div>
         </label>
 
         <label className="order-card">
-          <strong>Minimum deposit ($)</strong>
+          <strong>{m.depositMinimumLabel}</strong>
           <input
             name="deposit_minimum"
             type="number"
             min="0"
             step="0.01"
             defaultValue={defaults.depositMinimum ?? ""}
-            placeholder="No minimum"
+            placeholder={m.depositMinimumPlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
           <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
-            Minimum deposit regardless of percentage. Leave blank for no minimum.
+            {m.depositMinimumHelp}
           </div>
         </label>
       </div>
@@ -52,16 +55,16 @@ export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies })
           defaultChecked={defaults.requireDepositToConfirm}
         />
         <div>
-          <strong>Require deposit to confirm booking</strong>
+          <strong>{m.requireDepositToConfirmTitle}</strong>
           <div className="muted" style={{ fontSize: 12 }}>
-            When enabled, orders stay in &ldquo;Awaiting Deposit&rdquo; until deposit is received. When disabled, orders are confirmed immediately.
+            {m.requireDepositToConfirmHelp}
           </div>
         </div>
       </label>
 
       <div className="grid grid-2">
         <label className="order-card">
-          <strong>Booking lead time (hours)</strong>
+          <strong>{m.bookingLeadTimeHoursLabel}</strong>
           <input
             name="booking_lead_time_hours"
             type="number"
@@ -71,12 +74,12 @@ export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies })
             style={{ marginTop: 10, width: "100%" }}
           />
           <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
-            Minimum hours before an event that a customer can book. Prevents last-minute bookings.
+            {m.bookingLeadTimeHoursHelp}
           </div>
         </label>
 
         <label className="order-card">
-          <strong>Max advance booking (days)</strong>
+          <strong>{m.maxAdvanceBookingDaysLabel}</strong>
           <input
             name="max_advance_booking_days"
             type="number"
@@ -86,16 +89,16 @@ export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies })
             style={{ marginTop: 10, width: "100%" }}
           />
           <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
-            How far in advance customers can book.
+            {m.maxAdvanceBookingDaysHelp}
           </div>
         </label>
       </div>
 
       <label className="order-card">
-        <strong>Cancellation policy</strong>
+        <strong>{m.cancellationPolicyLabel}</strong>
         <textarea
           name="cancellation_policy_text"
-          placeholder="e.g., Full refund if cancelled 48+ hours before event. 50% refund within 48 hours."
+          placeholder={m.cancellationPolicyPlaceholder}
           rows={3}
           maxLength={2000}
           defaultValue={defaults.cancellationPolicyText ?? ""}
@@ -109,7 +112,7 @@ export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies })
           }}
         />
         <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
-          Shown to customers at checkout. Leave blank to hide.
+          {m.cancellationPolicyHelp}
         </div>
       </label>
 
@@ -120,7 +123,7 @@ export function BookingPoliciesForm({ defaults }: { defaults: BookingPolicies })
       )}
 
       <button className="primary-btn" type="submit" disabled={pending}>
-        {pending ? "Saving..." : "Save Booking Policies"}
+        {pending ? m.submitting : m.submit}
       </button>
     </form>
   );

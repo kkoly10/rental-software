@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { createRoute, type RouteActionState } from "@/lib/routes/actions";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initial: RouteActionState = { ok: false, message: "" };
 
@@ -12,6 +13,8 @@ export function CreateRouteForm({
 }: {
   teamMembers: { id: string; name: string }[];
 }) {
+  const { messages } = useI18n();
+  const t = messages.forms.routing.createRoute;
   const [state, action, pending] = useActionState(createRoute, initial);
   const router = useRouter();
   // Compute today in the browser's local timezone to avoid UTC-date mismatch
@@ -28,16 +31,16 @@ export function CreateRouteForm({
     <form action={action} className="list" style={{ marginTop: 12 }}>
       <div className="grid grid-2">
         <label className="order-card">
-          <strong>Route name</strong>
+          <strong>{t.routeNameLabel}</strong>
           <input
             name="name"
             type="text"
-            placeholder="e.g. Crew A Morning Route"
+            placeholder={t.routeNamePlaceholder}
             style={{ marginTop: 8, width: "100%" }}
           />
         </label>
         <label className="order-card">
-          <strong>Date</strong>
+          <strong>{t.dateLabel}</strong>
           <input
             name="route_date"
             type="date"
@@ -50,9 +53,9 @@ export function CreateRouteForm({
 
       <div className="grid grid-2">
         <label className="order-card">
-          <strong>Driver / crew</strong>
+          <strong>{t.driverLabel}</strong>
           <select name="driver_profile_id" style={{ marginTop: 8, width: "100%" }}>
-            <option value="">Unassigned</option>
+            <option value="">{t.unassigned}</option>
             {teamMembers.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -61,11 +64,11 @@ export function CreateRouteForm({
           </select>
         </label>
         <label className="order-card">
-          <strong>Vehicle</strong>
+          <strong>{t.vehicleLabel}</strong>
           <input
             name="assigned_vehicle"
             type="text"
-            placeholder="e.g. Truck 1 · Trailer"
+            placeholder={t.vehiclePlaceholder}
             style={{ marginTop: 8, width: "100%" }}
           />
         </label>
@@ -79,7 +82,7 @@ export function CreateRouteForm({
 
       <div>
         <button type="submit" className="primary-btn" disabled={pending}>
-          {pending ? "Creating..." : "Create Route"}
+          {pending ? t.submitting : t.submit}
         </button>
       </div>
     </form>

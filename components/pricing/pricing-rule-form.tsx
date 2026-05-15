@@ -1,18 +1,7 @@
 "use client";
 
 import type { PricingRule, PricingRuleType } from "@/lib/pricing/types";
-
-const RULE_TYPE_LABELS: Record<PricingRuleType, string> = {
-  weekend: "Weekend",
-  holiday: "Holiday",
-  peak_season: "Peak Season",
-  early_bird: "Early Bird",
-  last_minute: "Last Minute",
-  multi_day: "Multi-Day",
-  bundle: "Bundle",
-};
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { useI18n } from "@/lib/i18n/provider";
 
 export function PricingRuleForm({
   rule,
@@ -23,6 +12,29 @@ export function PricingRuleForm({
   onChange: (updated: PricingRule) => void;
   onDelete: () => void;
 }) {
+  const { messages } = useI18n();
+  const m = messages.forms.pricingRule;
+
+  const RULE_TYPE_LABELS: Record<PricingRuleType, string> = {
+    weekend: m.types.weekend,
+    holiday: m.types.holiday,
+    peak_season: m.types.peakSeason,
+    early_bird: m.types.earlyBird,
+    last_minute: m.types.lastMinute,
+    multi_day: m.types.multiDay,
+    bundle: m.types.bundle,
+  };
+
+  const DAY_LABELS = [
+    m.dayLabels.sun,
+    m.dayLabels.mon,
+    m.dayLabels.tue,
+    m.dayLabels.wed,
+    m.dayLabels.thu,
+    m.dayLabels.fri,
+    m.dayLabels.sat,
+  ];
+
   function update(partial: Partial<PricingRule>) {
     onChange({ ...rule, ...partial });
   }
@@ -35,18 +47,18 @@ export function PricingRuleForm({
     <div className="pricing-rule-form">
       <div className="grid grid-3" style={{ gap: 12 }}>
         <label className="field-stack">
-          <strong>Name</strong>
+          <strong>{m.nameLabel}</strong>
           <input
             type="text"
             value={rule.name}
             onChange={(e) => update({ name: e.target.value })}
-            placeholder="Rule name"
+            placeholder={m.namePlaceholder}
             style={{ width: "100%" }}
           />
         </label>
 
         <label className="field-stack">
-          <strong>Type</strong>
+          <strong>{m.typeLabel}</strong>
           <select
             value={rule.type}
             onChange={(e) => {
@@ -64,7 +76,7 @@ export function PricingRuleForm({
         </label>
 
         <label className="field-stack">
-          <strong>Adjustment %</strong>
+          <strong>{m.adjustmentLabel}</strong>
           <input
             type="number"
             value={rule.adjustment}
@@ -73,7 +85,7 @@ export function PricingRuleForm({
             style={{ width: "100%" }}
           />
           <span className="muted" style={{ fontSize: 12 }}>
-            Positive = surcharge, negative = discount
+            {m.adjustmentHelp}
           </span>
         </label>
       </div>
@@ -81,7 +93,7 @@ export function PricingRuleForm({
       <div className="stack-gap-xs">
         {rule.type === "weekend" && (
           <fieldset className="field-stack" style={{ border: "none", padding: 0, margin: 0 }}>
-            <strong>Days of week</strong>
+            <strong>{m.daysOfWeekLabel}</strong>
             <div className="grid grid-4" style={{ gap: 10 }}>
               {DAY_LABELS.map((label, i) => (
                 <label
@@ -108,7 +120,7 @@ export function PricingRuleForm({
 
         {(rule.type === "holiday" || rule.type === "peak_season") && (
           <div className="field-stack">
-            <strong>Date ranges</strong>
+            <strong>{m.dateRangesLabel}</strong>
             {(rule.conditions.dateRanges ?? []).map((range, idx) => (
               <div
                 key={idx}
@@ -131,7 +143,7 @@ export function PricingRuleForm({
                   style={{ flex: "1 1 160px" }}
                 />
                 <span className="muted" style={{ fontSize: 13 }}>
-                  to
+                  {m.dateRangeTo}
                 </span>
                 <input
                   type="date"
@@ -153,7 +165,7 @@ export function PricingRuleForm({
                     updateConditions({ dateRanges: ranges });
                   }}
                 >
-                  Remove
+                  {m.removeDateRange}
                 </button>
               </div>
             ))}
@@ -166,14 +178,14 @@ export function PricingRuleForm({
                 updateConditions({ dateRanges: ranges });
               }}
             >
-              + Add date range
+              {m.addDateRange}
             </button>
           </div>
         )}
 
         {rule.type === "early_bird" && (
           <label className="field-stack" style={{ maxWidth: 180 }}>
-            <strong>Minimum days before event</strong>
+            <strong>{m.earlyBirdMinDaysLabel}</strong>
             <input
               type="number"
               value={rule.conditions.daysBeforeEvent?.min ?? 14}
@@ -193,7 +205,7 @@ export function PricingRuleForm({
 
         {rule.type === "last_minute" && (
           <label className="field-stack" style={{ maxWidth: 180 }}>
-            <strong>Maximum days before event</strong>
+            <strong>{m.lastMinuteMaxDaysLabel}</strong>
             <input
               type="number"
               value={rule.conditions.daysBeforeEvent?.max ?? 3}
@@ -213,7 +225,7 @@ export function PricingRuleForm({
 
         {rule.type === "multi_day" && (
           <label className="field-stack" style={{ maxWidth: 180 }}>
-            <strong>Minimum rental days</strong>
+            <strong>{m.minRentalDaysLabel}</strong>
             <input
               type="number"
               value={rule.conditions.minRentalDays ?? 3}
@@ -228,7 +240,7 @@ export function PricingRuleForm({
 
         {rule.type === "bundle" && (
           <div className="muted" style={{ fontSize: 13 }}>
-            Product-specific bundles will be configurable in a future update.
+            {m.bundleMessage}
           </div>
         )}
       </div>
@@ -249,11 +261,11 @@ export function PricingRuleForm({
             checked={rule.isActive}
             onChange={(e) => update({ isActive: e.target.checked })}
           />
-          Active
+          {m.activeLabel}
         </label>
 
         <button type="button" className="small-btn danger" onClick={onDelete}>
-          Delete rule
+          {m.deleteRule}
         </button>
       </div>
     </div>

@@ -1,13 +1,16 @@
-export default function SettingsLoading() {
+import { getMessages } from "@/lib/i18n/server";
+
+export default async function SettingsLoading() {
+  const m = await getMessages();
   return (
     <main className="page">
       <div className="container">
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Loading</div>
-              <h1 style={{ margin: "6px 0 8px" }}>Preparing settings</h1>
-              <div className="muted">Loading organization, support, and booking defaults.</div>
+              <div className="kicker">{m.common.loading}</div>
+              <h1 style={{ margin: "6px 0 8px" }}>{m.dashboard.settings.title}</h1>
+              <div className="muted">{m.dashboard.settings.description}</div>
             </div>
           </div>
         </section>

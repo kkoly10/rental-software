@@ -7,6 +7,7 @@ import {
   removeStopFromRoute,
   type RouteActionState,
 } from "@/lib/routes/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initial: RouteActionState = { ok: false, message: "" };
 
@@ -17,13 +18,15 @@ export function RouteStatusControls({
   routeId: string;
   currentStatus: string;
 }) {
+  const { messages } = useI18n();
+  const t = messages.forms.routing.routeControls;
   const [state, action, pending] = useActionState(updateRouteStatus, initial);
 
   const next =
     currentStatus === "planned"
-      ? { status: "in_progress", label: "Start Route" }
+      ? { status: "in_progress", label: t.startRoute }
       : currentStatus === "in_progress"
-        ? { status: "completed", label: "Complete Route" }
+        ? { status: "completed", label: t.completeRoute }
         : null;
 
   if (!next) return null;
@@ -33,7 +36,7 @@ export function RouteStatusControls({
       <input type="hidden" name="route_id" value={routeId} />
       <input type="hidden" name="status" value={next.status} />
       <button type="submit" className="primary-btn" disabled={pending}>
-        {pending ? "Updating…" : next.label}
+        {pending ? t.updating : next.label}
       </button>
       {state.message && !state.ok && (
         <span className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
@@ -55,10 +58,12 @@ export function StopStatusButton({
   orderId?: string;
   currentStatus: string;
 }) {
+  const { messages } = useI18n();
+  const t = messages.forms.routing.routeControls;
   const [state, action, pending] = useActionState(updateStopStatus, initial);
 
   if (currentStatus === "completed") {
-    return <span className="badge success">Done</span>;
+    return <span className="badge success">{t.done}</span>;
   }
 
   const nextStatus =
@@ -66,8 +71,8 @@ export function StopStatusButton({
     : currentStatus === "en_route" || currentStatus === "in_progress" ? "completed"
     : "completed";
   const label =
-    currentStatus === "assigned" ? "Mark En Route"
-    : "Mark Delivered";
+    currentStatus === "assigned" ? t.markEnRoute
+    : t.markDelivered;
 
   return (
     <form action={action} style={{ display: "inline" }}>
@@ -94,6 +99,8 @@ export function RemoveStopButton({
   stopId: string;
   routeId: string;
 }) {
+  const { messages } = useI18n();
+  const t = messages.forms.routing.routeControls;
   const [state, action, pending] = useActionState(removeStopFromRoute, initial);
 
   return (
@@ -101,7 +108,7 @@ export function RemoveStopButton({
       <input type="hidden" name="stop_id" value={stopId} />
       <input type="hidden" name="route_id" value={routeId} />
       <button type="submit" className="ghost-btn" disabled={pending} style={{ fontSize: 12, color: "var(--text-soft)" }}>
-        {pending ? "…" : "Remove"}
+        {pending ? "…" : t.remove}
       </button>
       {state.message && !state.ok && (
         <span style={{ marginLeft: 6, fontSize: 12, color: "var(--danger, #e53e3e)" }}>

@@ -2,22 +2,26 @@
 
 import { useActionState, useState } from "react";
 import { updateAboutContent } from "@/lib/settings/content-actions";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const initialState = { ok: false, message: "" };
 
 export function AboutEditor({ defaultValue }: { defaultValue: string }) {
   const [text, setText] = useState(defaultValue);
   const [state, formAction, pending] = useActionState(updateAboutContent, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.about;
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
       <label className="order-card">
-        <strong>About your business</strong>
+        <strong>{m.heading}</strong>
         <textarea
           name="about_text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Tell customers about your rental business, your history, mission, and what makes you stand out..."
+          placeholder={m.placeholder}
           rows={6}
           style={{
             marginTop: 8,
@@ -29,7 +33,7 @@ export function AboutEditor({ defaultValue }: { defaultValue: string }) {
           }}
         />
         <div className="content-editor-char-count">
-          {text.length} characters
+          {formatMessage(m.charCount, { count: text.length })}
         </div>
       </label>
 
@@ -41,7 +45,7 @@ export function AboutEditor({ defaultValue }: { defaultValue: string }) {
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save About"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>

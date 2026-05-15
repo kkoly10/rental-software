@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/provider";
 
 /**
  * Dashboard-wide banner shown when an operator's subscription needs attention.
@@ -11,26 +12,29 @@ export function SubscriptionBanner({
 }: {
   status: string | null | undefined;
 }) {
+  const { messages } = useI18n();
+  const m = messages.forms.subscriptionBanner;
+
   if (!status || !["past_due", "canceled", "unpaid"].includes(status)) {
     return null;
   }
 
-  const messages: Record<string, { text: string; tone: string }> = {
+  const messageMap: Record<string, { text: string; tone: string }> = {
     past_due: {
-      text: "Your subscription payment is past due. Update your payment method to avoid losing access.",
+      text: m.pastDue,
       tone: "var(--warning, #e6a817)",
     },
     canceled: {
-      text: "Your subscription has been canceled. Resubscribe to keep your storefront active and access all features.",
+      text: m.canceled,
       tone: "var(--danger, #dc3545)",
     },
     unpaid: {
-      text: "Your subscription payment failed. Please update your payment method.",
+      text: m.unpaid,
       tone: "var(--danger, #dc3545)",
     },
   };
 
-  const msg = messages[status];
+  const msg = messageMap[status];
   if (!msg) return null;
 
   return (
@@ -58,7 +62,7 @@ export function SubscriptionBanner({
           whiteSpace: "nowrap",
         }}
       >
-        Manage Billing
+        {m.manageBilling}
       </Link>
     </div>
   );

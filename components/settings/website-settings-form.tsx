@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateWebsiteSettings } from "@/lib/settings/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
@@ -11,52 +12,54 @@ export function WebsiteSettingsForm({
   defaults: { heroMessage: string; heroHeadline: string; serviceAreaText: string; bookingMessage: string };
 }) {
   const [state, formAction, pending] = useActionState(updateWebsiteSettings, initialState);
+  const { messages } = useI18n();
+  const m = messages.forms.websiteSettings;
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
       <label className="order-card">
-        <strong>Hero headline</strong>
+        <strong>{m.heroHeadlineLabel}</strong>
         <input
           name="hero_headline"
           type="text"
           defaultValue={defaults.heroHeadline}
-          placeholder="Your Next Party, Booked in Minutes"
+          placeholder={m.heroHeadlinePlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
         <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          Main headline on your homepage hero. Leave blank for the default.
+          {m.heroHeadlineHelp}
         </div>
       </label>
 
       <label className="order-card">
-        <strong>Homepage hero message</strong>
+        <strong>{m.heroMessageLabel}</strong>
         <textarea
           name="hero_message"
           defaultValue={defaults.heroMessage}
-          placeholder="Book fun faster. Run operations from one place."
+          placeholder={m.heroMessagePlaceholder}
           rows={2}
           style={{ marginTop: 8, width: "100%", fontFamily: "inherit", border: "1px solid var(--border)", borderRadius: 12, padding: 12 }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Service area display text</strong>
+        <strong>{m.serviceAreaTextLabel}</strong>
         <input
           name="service_area_text"
           type="text"
           defaultValue={defaults.serviceAreaText}
-          placeholder="Serving Stafford, Fredericksburg, and Northern Virginia"
+          placeholder={m.serviceAreaTextPlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
 
       <label className="order-card">
-        <strong>Checkout / booking message</strong>
+        <strong>{m.bookingMessageLabel}</strong>
         <input
           name="booking_message"
           type="text"
           defaultValue={defaults.bookingMessage}
-          placeholder="A deposit is required to confirm your reservation."
+          placeholder={m.bookingMessagePlaceholder}
           style={{ marginTop: 8, width: "100%" }}
         />
       </label>
@@ -69,7 +72,7 @@ export function WebsiteSettingsForm({
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save Website Settings"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
     </form>

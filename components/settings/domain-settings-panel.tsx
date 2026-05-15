@@ -4,6 +4,8 @@ import { useState, useCallback, useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { setCustomDomain, removeCustomDomain } from "@/lib/settings/domain-actions";
 import type { DomainSettings } from "@/lib/data/domain-settings";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const initialState = { ok: false, message: "", savedDomain: undefined as string | undefined };
 
@@ -14,6 +16,8 @@ function getAppDomain() {
 export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) {
   const appDomain = getAppDomain();
   const router = useRouter();
+  const { messages } = useI18n();
+  const m = messages.forms.domainSettings;
 
   // Slug editing
   const [slug, setSlug] = useState(defaults.slug);
@@ -83,13 +87,13 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
       if (data.ok) {
         setSlug(data.slug);
         setSlugEditing(false);
-        setSlugMessage("Slug updated. The new URL may take a few minutes to resolve everywhere.");
+        setSlugMessage(m.slugUpdated);
         router.refresh();
       } else {
-        setSlugMessage(data.error ?? "Failed to update slug.");
+        setSlugMessage(data.error ?? m.slugUpdateFailed);
       }
     } catch {
-      setSlugMessage("Network error.");
+      setSlugMessage(m.networkError);
     } finally {
       setSlugSaving(false);
     }
@@ -103,20 +107,20 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
       const data = await res.json();
       if (data.verified) {
         setDomainVerified(true);
-        setVerifyMessage("Domain verified successfully!");
+        setVerifyMessage(m.verifySuccess);
         router.refresh();
       } else {
-        setVerifyMessage(data.message ?? "Verification failed.");
+        setVerifyMessage(data.message ?? m.verifyFailed);
       }
     } catch {
-      setVerifyMessage("Network error.");
+      setVerifyMessage(m.networkError);
     } finally {
       setVerifying(false);
     }
   }
 
   async function handleRemoveDomain() {
-    if (!confirm("Remove your custom domain? Your storefront will only be accessible via your subdomain URL.")) return;
+    if (!confirm(m.removeConfirm)) return;
     setRemoving(true);
     setRemoveError("");
     try {
@@ -128,10 +132,10 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
         setVerifyMessage("");
         router.refresh();
       } else {
-        setRemoveError(result.message ?? "Failed to remove domain.");
+        setRemoveError(result.message ?? m.removeFailed);
       }
     } catch {
-      setRemoveError("Network error. Please try again.");
+      setRemoveError(m.networkRetry);
     } finally {
       setRemoving(false);
     }
@@ -143,9 +147,9 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
       <div className="order-card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <strong>Subdomain URL</strong>
+            <strong>{m.subdomainHeading}</strong>
             <div className="muted" style={{ marginTop: 4 }}>
-              This is your default storefront URL. DNS and platform routing changes can take a few minutes to fully propagate.
+              {m.subdomainHelp}
             </div>
           </div>
           {!slugEditing && (
@@ -159,7 +163,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                 setSlugMessage("");
               }}
             >
-              Edit
+              {m.edit}
             </button>
           )}
         </div>
@@ -182,22 +186,22 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
             </div>
 
             {slugStatus === "checking" && (
-              <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>Checking availability...</div>
+              <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>{m.checking}</div>
             )}
             {slugStatus === "available" && (
-              <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>Available!</div>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>{m.available}</div>
             )}
             {slugStatus === "taken" && (
-              <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>Already taken or reserved.</div>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>{m.taken}</div>
             )}
             {slugStatus === "invalid" && (
               <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>
-                Must be 3-63 lowercase letters, numbers, and hyphens.
+                {m.invalid}
               </div>
             )}
 
             <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: "#fef3c7", fontSize: 13, color: "#92400e" }}>
-              Your old URL will stop working immediately. Customers using your current URL will need the new one.
+              {m.changeWarning}
             </div>
 
             <div className="inline-form-actions" style={{ marginTop: 10 }}>
@@ -207,14 +211,14 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                 disabled={slugSaving || slugStatus === "taken" || slugStatus === "invalid" || slugInput === slug}
                 onClick={saveSlug}
               >
-                {slugSaving ? "Saving..." : "Save"}
+                {slugSaving ? m.saving : m.save}
               </button>
               <button
                 className="ghost-btn"
                 style={{ fontSize: 13 }}
                 onClick={() => setSlugEditing(false)}
               >
-                Cancel
+                {m.cancel}
               </button>
             </div>
 
@@ -235,7 +239,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
               </a>
             ) : (
               <span className="muted" style={{ fontSize: 13 }}>
-                No subdomain configured — click Edit to set one.
+                {m.noSubdomain}
               </span>
             )}
           </div>
@@ -244,9 +248,9 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
 
       {/* Custom domain section */}
       <div className="order-card">
-        <strong>Custom Domain</strong>
+        <strong>{m.customDomainHeading}</strong>
         <div className="muted" style={{ marginTop: 4 }}>
-          Use your own domain name for your storefront (optional).
+          {m.customDomainHelp}
         </div>
 
         {customDomain ? (
@@ -269,22 +273,22 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                   color: domainVerified ? "#166534" : "#854d0e",
                 }}
               >
-                {domainVerified ? "Verified" : "Pending verification"}
+                {domainVerified ? m.statusVerified : m.statusPending}
               </span>
             </div>
 
             {!domainVerified && (
               <>
                 <div style={{ padding: "12px 14px", borderRadius: 8, background: "var(--surface-muted)", fontSize: 13, lineHeight: 1.7 }}>
-                  <strong>DNS Configuration</strong>
+                  <strong>{m.dnsHeading}</strong>
                   <div style={{ marginTop: 6 }}>
-                    1. Add a <strong>CNAME</strong> record pointing <code>{customDomain}</code> to <code>cname.vercel-dns.com</code>
+                    {formatMessage(m.dnsStep1, { domain: customDomain })}
                   </div>
                   <div>
-                    2. If using an apex domain (no www), add an <strong>A</strong> record pointing to <code>76.76.21.21</code>
+                    {m.dnsStep2}
                   </div>
                   <div className="muted" style={{ marginTop: 8 }}>
-                    DNS changes can take up to 48 hours to propagate.
+                    {m.dnsPropagationNote}
                   </div>
                 </div>
 
@@ -294,7 +298,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                   disabled={verifying}
                   onClick={verifyDomain}
                 >
-                  {verifying ? "Verifying..." : "Verify Domain"}
+                  {verifying ? m.verifying : m.verifyDomain}
                 </button>
               </>
             )}
@@ -319,7 +323,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                 disabled={removing}
                 onClick={handleRemoveDomain}
               >
-                {removing ? "Removing..." : "Remove Domain"}
+                {removing ? m.removing : m.removeDomain}
               </button>
               {removeError && (
                 <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--danger, #dc2626)" }}>{removeError}</p>
@@ -328,18 +332,18 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
 
             {domainVerified && (
               <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-                After verification, it may take a few minutes for your custom domain to go live with HTTPS.
+                {m.httpsNote}
               </div>
             )}
           </div>
         ) : showDomainForm ? (
           <form action={domainAction} style={{ marginTop: 12 }}>
             <label>
-              <span className="muted" style={{ fontSize: 13 }}>Domain name</span>
+              <span className="muted" style={{ fontSize: 13 }}>{m.domainNameLabel}</span>
               <input
                 name="domain"
                 type="text"
-                placeholder="e.g., myrentals.com"
+                placeholder={m.domainNamePlaceholder}
                 required
                 style={{ marginTop: 6, width: "100%", fontFamily: "monospace" }}
               />
@@ -356,7 +360,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
 
             <div className="inline-form-actions" style={{ marginTop: 10 }}>
               <button className="primary-btn" type="submit" disabled={domainPending} style={{ fontSize: 13 }}>
-                {domainPending ? "Saving..." : "Save Domain"}
+                {domainPending ? m.savingDomain : m.saveDomain}
               </button>
               <button
                 type="button"
@@ -364,7 +368,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
                 style={{ fontSize: 13 }}
                 onClick={() => setShowDomainForm(false)}
               >
-                Cancel
+                {m.cancel}
               </button>
             </div>
           </form>
@@ -374,7 +378,7 @@ export function DomainSettingsPanel({ defaults }: { defaults: DomainSettings }) 
             style={{ marginTop: 10, fontSize: 13 }}
             onClick={() => setShowDomainForm(true)}
           >
-            Add Custom Domain
+            {m.addCustomDomain}
           </button>
         )}
       </div>

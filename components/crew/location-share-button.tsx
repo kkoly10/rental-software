@@ -2,10 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatMessage } from "@/lib/i18n/format";
 
 const PUBLISH_INTERVAL_MS = 20_000;
 
 export function LocationShareButton({ routeId }: { routeId: string }) {
+  const { messages } = useI18n();
+  const t = messages.forms.crew.locationShare;
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
@@ -18,7 +22,7 @@ export function LocationShareButton({ routeId }: { routeId: string }) {
 
   async function startSharing() {
     if (!("geolocation" in navigator)) {
-      setError("Geolocation is not supported in this browser.");
+      setError(t.geolocationUnsupported);
       return;
     }
 
@@ -59,7 +63,7 @@ export function LocationShareButton({ routeId }: { routeId: string }) {
       },
       (posErr) => {
         if (posErr.code === 1) {
-          setError("Location permission denied. Please allow location access in browser settings.");
+          setError(t.permissionDenied);
           stopSharing();
         }
       },
@@ -101,23 +105,23 @@ export function LocationShareButton({ routeId }: { routeId: string }) {
   return (
     <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--surface-2, #f5f5f5)", borderRadius: 8 }}>
       <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--text-soft)" }}>
-        Live location sharing
+        {t.title}
       </div>
       {!sharing ? (
         <button className="primary-btn" onClick={startSharing} style={{ fontSize: 12, padding: "6px 14px" }}>
-          Share My Location
+          {t.shareMyLocation}
         </button>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#20b486", display: "inline-block" }} />
-            <span style={{ fontSize: 13 }}>Sharing location…</span>
+            <span style={{ fontSize: 13 }}>{t.sharingLocation}</span>
           </div>
           {lastUpdate && (
-            <div style={{ fontSize: 11, color: "var(--text-soft)" }}>Last sent: {lastUpdate}</div>
+            <div style={{ fontSize: 11, color: "var(--text-soft)" }}>{formatMessage(t.lastSent, { time: lastUpdate })}</div>
           )}
           <button onClick={stopSharing} className="ghost-btn" style={{ fontSize: 12, padding: "4px 10px", marginTop: 4, width: "fit-content" }}>
-            Stop Sharing
+            {t.stopSharing}
           </button>
         </div>
       )}

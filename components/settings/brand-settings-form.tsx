@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { updateBrandSettings, type SettingsActionState } from "@/lib/settings/brand-actions";
 import { LogoUpload } from "./logo-upload";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initialState: SettingsActionState = { ok: false, message: "" };
 
@@ -37,6 +38,8 @@ export function BrandSettingsForm({
   const [primaryColor, setPrimaryColor] = useState(defaults.primaryColor);
   const [accentColor, setAccentColor] = useState(defaults.accentColor);
   const [fontFamily, setFontFamily] = useState(defaults.fontFamily);
+  const { messages } = useI18n();
+  const m = messages.forms.brandSettings;
 
   const fontParam =
     fontFamily && fontFamily !== "System Default"
@@ -56,10 +59,10 @@ export function BrandSettingsForm({
       <form action={formAction}>
       {/* Brand Colors Section */}
       <div className="brand-form-section">
-        <strong>Brand Colors</strong>
+        <strong>{m.brandColorsHeading}</strong>
         <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
           <label className="brand-color-picker">
-            <span>Primary</span>
+            <span>{m.primaryLabel}</span>
             <input
               name="brand_primary_color"
               type="color"
@@ -69,7 +72,7 @@ export function BrandSettingsForm({
             <span className="muted" style={{ fontSize: 13 }}>{primaryColor}</span>
           </label>
           <label className="brand-color-picker">
-            <span>Accent</span>
+            <span>{m.accentLabel}</span>
             <input
               name="brand_accent_color"
               type="color"
@@ -81,10 +84,10 @@ export function BrandSettingsForm({
         </div>
         <div className="brand-color-preview">
           <div style={{ background: primaryColor, flex: 1, borderRadius: 8, padding: "10px 14px", color: "#fff", fontSize: 14, fontWeight: 600 }}>
-            Primary
+            {m.primarySample}
           </div>
           <div style={{ background: accentColor, flex: 1, borderRadius: 8, padding: "10px 14px", color: "#fff", fontSize: 14, fontWeight: 600 }}>
-            Accent
+            {m.accentSample}
           </div>
           <button
             type="button"
@@ -99,7 +102,7 @@ export function BrandSettingsForm({
               cursor: "default",
             }}
           >
-            Sample Button
+            {m.sampleButton}
           </button>
           <span
             style={{
@@ -111,14 +114,14 @@ export function BrandSettingsForm({
               fontWeight: 600,
             }}
           >
-            Badge
+            {m.sampleBadge}
           </span>
         </div>
       </div>
 
       {/* Typography Section */}
       <div className="brand-form-section">
-        <strong>Typography</strong>
+        <strong>{m.typographyHeading}</strong>
         {fontParam && (
           <link
             rel="stylesheet"
@@ -140,9 +143,9 @@ export function BrandSettingsForm({
           </select>
         </div>
         <div className="brand-font-preview" style={{ fontFamily: fontCssFamily }}>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>The quick brown fox</div>
+          <div style={{ fontSize: 20, fontWeight: 600 }}>{m.fontPreviewHeadline}</div>
           <div style={{ fontSize: 14, marginTop: 4 }}>
-            jumps over the lazy dog — 0123456789
+            {m.fontPreviewBody}
           </div>
         </div>
       </div>
@@ -169,7 +172,7 @@ export function BrandSettingsForm({
           role="alert"
         >
           <strong style={{ display: "block", marginBottom: 6 }}>
-            Contrast warning
+            {m.contrastWarningHeading}
           </strong>
           {state.contrastWarnings.map((warning) => (
             <div key={warning} style={{ marginTop: 4 }}>
@@ -181,7 +184,7 @@ export function BrandSettingsForm({
 
       <div>
         <button className="primary-btn" type="submit" disabled={pending}>
-          {pending ? "Saving..." : "Save Brand Settings"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
       </form>
