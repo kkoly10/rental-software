@@ -45,7 +45,6 @@ export async function setCustomDomain(
     .select("id")
     .eq("custom_domain", parsed.data.domain)
     .neq("id", ctx.organizationId)
-    .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
 
