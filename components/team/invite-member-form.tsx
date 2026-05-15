@@ -2,38 +2,41 @@
 
 import { useActionState } from "react";
 import { inviteTeamMember } from "@/lib/team/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function InviteMemberForm() {
   const [state, formAction, pending] = useActionState(inviteTeamMember, {
     ok: true,
     message: "",
   });
+  const { messages } = useI18n();
+  const m = messages.forms.inviteMember;
 
   return (
     <form action={formAction}>
       <div className="team-invite-grid">
         <label className="field-stack">
-          <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>Email address</span>
+          <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>{m.emailLabel}</span>
           <input
             name="email"
             type="email"
-            placeholder="teammate@example.com"
+            placeholder={m.emailPlaceholder}
             required
           />
         </label>
 
         <label className="field-stack">
-          <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>Role</span>
+          <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>{m.roleLabel}</span>
           <select name="role" defaultValue="viewer">
-            <option value="admin">Admin</option>
-            <option value="dispatcher">Dispatcher</option>
-            <option value="crew">Crew</option>
-            <option value="viewer">Viewer</option>
+            <option value="admin">{m.roles.admin}</option>
+            <option value="dispatcher">{m.roles.dispatcher}</option>
+            <option value="crew">{m.roles.crew}</option>
+            <option value="viewer">{m.roles.viewer}</option>
           </select>
         </label>
 
         <button type="submit" className="primary-btn team-invite-submit" disabled={pending}>
-          {pending ? "Sending..." : "Send Invite"}
+          {pending ? m.submitting : m.submit}
         </button>
       </div>
 
