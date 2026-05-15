@@ -12,10 +12,10 @@ export function detectNewMilestone(
   dismissed: string[]
 ): MilestoneKey | null {
   const candidates: { key: MilestoneKey; condition: boolean }[] = [
-    { key: "first_product", condition: snapshot.productsCount === 1 },
-    { key: "first_order", condition: snapshot.ordersCount === 1 },
-    { key: "first_payment", condition: snapshot.paymentsCount === 1 },
-    { key: "ten_orders", condition: snapshot.ordersCount === 10 },
+    { key: "first_product", condition: snapshot.productsCount >= 1 },
+    { key: "first_order", condition: snapshot.ordersCount >= 1 },
+    { key: "first_payment", condition: snapshot.paymentsCount >= 1 },
+    { key: "ten_orders", condition: snapshot.ordersCount >= 10 },
     {
       key: "setup_complete",
       condition:
