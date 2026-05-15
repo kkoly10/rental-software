@@ -318,6 +318,7 @@ export async function triggerOrderStatusEmail(params: {
     .from("customers")
     .select("first_name, email")
     .eq("id", order.customer_id)
+    .eq("organization_id", params.organizationId)
     .maybeSingle();
 
   if (!customer?.email) return;
@@ -420,11 +421,13 @@ export async function triggerDocumentsReadyEmail(params: {
       .from("customers")
       .select("first_name, email")
       .eq("id", params.customerId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
     supabase
       .from("orders")
       .select("order_number")
       .eq("id", params.orderId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
   ]);
 
@@ -477,11 +480,13 @@ export async function triggerQuoteSentEmail(params: {
       .from("customers")
       .select("first_name, email")
       .eq("id", params.customerId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
     supabase
       .from("orders")
       .select("event_date, total_amount, deposit_due_amount")
       .eq("id", params.orderId)
+      .eq("organization_id", params.organizationId)
       .maybeSingle(),
   ]);
 

@@ -52,7 +52,7 @@ export async function createCheckoutOrder(
   _prevState: CheckoutActionState,
   formData: FormData
 ): Promise<CheckoutActionState> {
-  const termsAccepted = formData.get("terms_accepted") === "true";
+  const termsAccepted = formData.has("terms_accepted");
   if (!termsAccepted) {
     return {
       ok: false,

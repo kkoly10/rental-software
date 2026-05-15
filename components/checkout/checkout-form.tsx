@@ -106,6 +106,7 @@ export function CheckoutForm({
           <button
             className="primary-btn storefront-search-btn"
             type="button"
+            disabled={reviewConfirmed}
             onClick={() => setReviewConfirmed(true)}
           >
             Confirm &amp; Pay Deposit ({s.depositDue})
@@ -245,6 +246,7 @@ export function CheckoutForm({
         <input
           name="event_date"
           type="date"
+          required
           defaultValue={initialDate}
           min={minDate}
           max={maxDate}
