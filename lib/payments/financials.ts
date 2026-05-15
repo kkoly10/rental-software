@@ -30,7 +30,8 @@ export async function getOrderFinancials(
   let orderQuery = supabase
     .from("orders")
     .select("total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount")
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .is("deleted_at", null);
   if (organizationId) {
     orderQuery = orderQuery.eq("organization_id", organizationId);
   }
@@ -63,6 +64,7 @@ export async function getOrderFinancialsAdmin(
         "total_amount, subtotal_amount, delivery_fee_amount, deposit_due_amount"
       )
       .eq("id", orderId)
+      .is("deleted_at", null)
       .maybeSingle(),
     admin
       .from("payments")
