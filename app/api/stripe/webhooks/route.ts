@@ -399,19 +399,14 @@ export async function POST(request: NextRequest) {
       }
 
       case "invoice.payment_failed": {
+        // Sync the full subscription state (not just status) so plan tier,
+        // period_end, and all cached fields stay consistent with Stripe.
         const invoice = event.data.object as Stripe.Invoice;
         const subRef = invoice.parent?.subscription_details?.subscription;
         const subId = typeof subRef === "string" ? subRef : subRef?.id;
         if (subId) {
           const subscription = await stripe.subscriptions.retrieve(subId);
-          const orgId = subscription.metadata?.organization_id;
-
-          if (orgId) {
-            await admin
-              .from("organizations")
-              .update({ subscription_status: "past_due" })
-              .eq("id", orgId);
-          }
+          await syncSubscription(admin, subscription);
         }
         break;
       }
