@@ -489,19 +489,21 @@ export async function createOrder(
     await markSetupStep(ctx.organizationId, "has_first_order");
   } catch { /* non-critical */ }
 
-  try {
-    const { triggerDashboardOrderEmail } = await import("@/lib/email/triggers");
-    await triggerDashboardOrderEmail({
-      organizationId: ctx.organizationId,
-      customerName: `${firstName} ${lastName}`,
-      customerEmail: email ?? "",
-      orderNumber,
-      productName: productNameSnapshot,
-      eventDate: eventDate ?? "",
-      total,
-    });
-  } catch {
-    console.error("[orders] Failed to send new order alert for", orderNumber);
+  if (email) {
+    try {
+      const { triggerDashboardOrderEmail } = await import("@/lib/email/triggers");
+      await triggerDashboardOrderEmail({
+        organizationId: ctx.organizationId,
+        customerName: `${firstName} ${lastName}`,
+        customerEmail: email,
+        orderNumber,
+        productName: productNameSnapshot,
+        eventDate: eventDate ?? "",
+        total,
+      });
+    } catch (err) {
+      console.error("[orders] Failed to send new order alert for", orderNumber, err instanceof Error ? err.message : err);
+    }
   }
 
   redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
@@ -569,6 +571,7 @@ export async function updateOrderStatus(
     delivered:        ["completed"],
     completed:        [],
     cancelled:        [],
+    refunded:         [],
   };
 
   const { data: currentOrder } = await supabase
