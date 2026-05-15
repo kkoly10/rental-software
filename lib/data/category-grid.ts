@@ -36,7 +36,7 @@ export async function getCategoryGridItems(): Promise<CategoryGridItem[]> {
     // Get cheapest active product and first product image in one go
     const { data: products } = await supabase
       .from("products")
-      .select("base_price, product_images(image_url)")
+      .select("base_price, product_images(image_url, deleted_at)")
       .eq("category_id", cat.id)
       .eq("organization_id", organizationId)
       .eq("is_active", true)
@@ -48,10 +48,11 @@ export async function getCategoryGridItems(): Promise<CategoryGridItem[]> {
 
     const startingPrice = products[0]?.base_price ?? null;
 
-    // Find the first product that has an image
+    // Find the first product that has a non-deleted image
     let imageUrl: string | null = null;
     for (const p of products) {
-      const imgs = p.product_images as { image_url: string }[] | null;
+      const imgs = (p.product_images as { image_url: string; deleted_at?: string | null }[] | null)
+        ?.filter((img) => !img.deleted_at);
       if (imgs && imgs.length > 0) {
         imageUrl = imgs[0].image_url;
         break;

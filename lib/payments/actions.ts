@@ -105,6 +105,7 @@ export async function recordPayment(
     .select("id, order_status, deposit_due_amount")
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {
@@ -147,7 +148,8 @@ export async function recordPayment(
       .from("orders")
       .update({ order_status: "confirmed" })
       .eq("id", orderId)
-      .eq("organization_id", ctx.organizationId);
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null);
   }
 
   // Convert any temporary checkout_hold to permanent now that payment is recorded.

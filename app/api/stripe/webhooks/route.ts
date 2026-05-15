@@ -235,6 +235,7 @@ export async function POST(request: NextRequest) {
                   .select("order_number")
                   .eq("id", orderId)
                   .eq("organization_id", orgId)
+                  .is("deleted_at", null)
                   .maybeSingle();
                 const orderNumber = notifOrder?.order_number ?? orderId;
                 await createNotification(

@@ -67,7 +67,8 @@ export async function sendQuote(orderId: string): Promise<QuoteActionState> {
     .from("orders")
     .update({ order_status: "quote_sent" })
     .eq("id", orderId)
-    .eq("organization_id", ctx.organizationId);
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, message: error.message };
 

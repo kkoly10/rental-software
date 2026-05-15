@@ -91,6 +91,7 @@ export async function uploadProductImage(
     .from("product_images")
     .select("id")
     .eq("product_id", productId)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   const bucket = getBucketName();
