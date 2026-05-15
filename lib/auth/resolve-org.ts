@@ -55,7 +55,6 @@ export async function isSlugAvailable(slug: string): Promise<boolean> {
     .from("organizations")
     .select("id")
     .eq("slug", slug)
-    .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
 
