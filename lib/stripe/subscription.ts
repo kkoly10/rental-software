@@ -53,6 +53,7 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
       "subscription_status, subscription_plan, subscription_current_period_end"
     )
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!org || !org.subscription_plan) {

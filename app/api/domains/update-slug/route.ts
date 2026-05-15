@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       .from("organizations")
       .select("slug")
       .eq("id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (currentOrg?.slug === slug) {
@@ -88,7 +89,8 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase
     .from("organizations")
     .update({ slug })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     console.error("[update-slug] DB update failed:", error.message);

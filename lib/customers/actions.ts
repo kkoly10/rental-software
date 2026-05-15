@@ -143,7 +143,8 @@ export async function updateCustomer(
         .from("customer_addresses")
         .update(addressPayload)
         .eq("id", existingAddr.id)
-        .eq("customer_id", customerId);
+        .eq("customer_id", customerId)
+        .is("deleted_at", null);
 
       if (addrErr) {
         console.error("[customers] Failed to update address:", addrErr.message);

@@ -272,20 +272,15 @@ export async function createCheckoutOrder(
         // Add 1 so both start and end dates are counted (Mon→Fri = 5 days, not 4).
         const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
 
-        const { data: rulesRows } = await supabase
-          .from("pricing_rules")
-          .select("id, name, type, adjustment, conditions, is_active, priority")
-          .eq("organization_id", orgId);
+        const { data: orgData } = await supabase
+          .from("organizations")
+          .select("settings")
+          .eq("id", orgId)
+          .is("deleted_at", null)
+          .maybeSingle();
 
-        const rules: PricingRule[] = (rulesRows ?? []).map((r) => ({
-          id: r.id as string,
-          name: r.name as string,
-          type: r.type as PricingRule["type"],
-          adjustment: r.adjustment as number,
-          conditions: (r.conditions ?? {}) as PricingRule["conditions"],
-          isActive: r.is_active as boolean,
-          priority: r.priority as number,
-        }));
+        const orgSettings = (orgData?.settings as Record<string, unknown>) ?? {};
+        const rules: PricingRule[] = (orgSettings.pricing_rules as PricingRule[] | undefined) ?? [];
 
         const priceCalc = calculatePrice(ratePerDay, rules, {
           eventDate,
@@ -727,6 +722,7 @@ export async function createCheckoutOrder(
         .from("organizations")
         .select("name")
         .eq("id", orgId)
+        .is("deleted_at", null)
         .maybeSingle();
       await sendSmsNotification("orderConfirmation", phone, {
         orderNumber,

@@ -90,6 +90,7 @@ export async function sendReply(
       .select("id")
       .eq("id", customerId)
       .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle();
     if (!custCheck) return { ok: false, message: "Invalid customer." };
   }

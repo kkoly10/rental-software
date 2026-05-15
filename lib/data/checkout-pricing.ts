@@ -51,6 +51,7 @@ export async function getCheckoutPricing(
       .from("organizations")
       .select("settings")
       .eq("id", orgId)
+      .is("deleted_at", null)
       .maybeSingle(),
   ]);
 

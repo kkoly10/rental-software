@@ -61,6 +61,7 @@ async function getOrgBranding(
     .from("organizations")
     .select("name, support_email")
     .eq("id", organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const businessName = org?.name ?? "Rental Company";

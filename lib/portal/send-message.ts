@@ -177,6 +177,7 @@ export async function sendCustomerMessage(
     .from("organizations")
     .select("name, support_email")
     .eq("id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   // Fall back to the org owner's profile email so customer messages still

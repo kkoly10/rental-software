@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     .from("organizations")
     .select("custom_domain, custom_domain_verified")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!org?.custom_domain) {
@@ -95,7 +96,8 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("organizations")
       .update({ custom_domain_verified: true })
-      .eq("id", ctx.organizationId);
+      .eq("id", ctx.organizationId)
+      .is("deleted_at", null);
 
     return NextResponse.json({ verified: true, domain });
   }

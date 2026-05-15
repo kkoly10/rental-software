@@ -620,7 +620,8 @@ export async function updateOrderStatus(
     .from("orders")
     .update({ order_status: parsed.data.newStatus })
     .eq("id", parsed.data.orderId)
-    .eq("organization_id", ctx.organizationId);
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -654,6 +655,7 @@ export async function updateOrderStatus(
       .select("order_number, event_date, customer_id, deposit_due_amount")
       .eq("id", parsed.data.orderId)
       .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (order?.customer_id) {
@@ -661,6 +663,8 @@ export async function updateOrderStatus(
         .from("customers")
         .select("phone, sms_opt_in")
         .eq("id", order.customer_id)
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
         .maybeSingle();
 
       if (customer?.phone && customer?.sms_opt_in) {
@@ -668,6 +672,7 @@ export async function updateOrderStatus(
           .from("organizations")
           .select("name")
           .eq("id", ctx.organizationId)
+          .is("deleted_at", null)
           .maybeSingle();
 
         const businessName = org?.name ?? "Your rental company";

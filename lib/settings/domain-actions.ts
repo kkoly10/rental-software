@@ -58,7 +58,8 @@ export async function setCustomDomain(
       custom_domain: parsed.data.domain,
       custom_domain_verified: false,
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, message: error.message };
 
@@ -95,7 +96,8 @@ export async function removeCustomDomain(): Promise<ActionResult> {
       custom_domain: null,
       custom_domain_verified: false,
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, message: error.message };
 

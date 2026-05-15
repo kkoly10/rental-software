@@ -45,6 +45,7 @@ export async function getOrgSettings(): Promise<OrgSettings> {
     .from("organizations")
     .select("name, support_email, phone, timezone, settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {

@@ -40,6 +40,7 @@ export async function getPricingRules(): Promise<PricingRule[]> {
     .from("organizations")
     .select("settings")
     .eq("id", organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const settings = (org?.settings as Record<string, unknown>) ?? {};

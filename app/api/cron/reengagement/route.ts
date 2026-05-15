@@ -251,6 +251,7 @@ export async function GET(request: NextRequest) {
           .from("organizations")
           .select("settings")
           .eq("id", org.id)
+          .is("deleted_at", null)
           .maybeSingle();
 
         const freshSettings = (freshOrg?.settings as Record<string, unknown>) ?? {};
@@ -267,7 +268,8 @@ export async function GET(request: NextRequest) {
               },
             },
           })
-          .eq("id", org.id);
+          .eq("id", org.id)
+          .is("deleted_at", null);
 
         try {
           await logCommunication({
@@ -311,6 +313,7 @@ export async function GET(request: NextRequest) {
           .from("organizations")
           .select("settings")
           .eq("id", org.id)
+          .is("deleted_at", null)
           .maybeSingle();
 
         const freshSettings = (freshOrg?.settings as Record<string, unknown>) ?? {};
@@ -327,7 +330,8 @@ export async function GET(request: NextRequest) {
               },
             },
           })
-          .eq("id", org.id);
+          .eq("id", org.id)
+          .is("deleted_at", null);
 
         try {
           await logCommunication({

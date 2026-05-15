@@ -87,7 +87,8 @@ async function getOrgBrandings(
   const { data: orgs } = await supabase
     .from("organizations")
     .select("id, name, support_email, slug, settings")
-    .in("id", orgIds);
+    .in("id", orgIds)
+    .is("deleted_at", null);
 
   const map = new Map<string, OrgBranding>();
   const siteUrl = getOptionalEnv("NEXT_PUBLIC_SITE_URL") ?? "http://localhost:3000";

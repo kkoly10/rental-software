@@ -49,6 +49,7 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
         .from("organizations")
         .select("name, timezone, default_currency, support_email, phone, settings")
         .eq("id", organizationId)
+        .is("deleted_at", null)
         .maybeSingle(),
       supabase
         .from("service_areas")

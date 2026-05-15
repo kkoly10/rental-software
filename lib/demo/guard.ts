@@ -15,6 +15,7 @@ export const isDemoOrganization = cache(async (orgId: string): Promise<boolean> 
     .from("organizations")
     .select("is_demo")
     .eq("id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   return data?.is_demo === true;

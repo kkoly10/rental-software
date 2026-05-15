@@ -35,6 +35,7 @@ export async function getBookingPolicies(): Promise<BookingPolicies> {
     .from("organizations")
     .select("settings")
     .eq("id", organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!data) return DEFAULTS;

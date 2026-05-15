@@ -99,6 +99,7 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     .from("organizations")
     .select("name")
     .eq("id", invite.organization_id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   revalidatePath("/dashboard/settings/team");
