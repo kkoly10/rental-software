@@ -174,6 +174,20 @@ export async function createProduct(
     return { ok: false, message: error.message };
   }
 
+  // Auto-create the first asset so the product is immediately bookable.
+  // Asset-based model: products with zero assets cannot be reserved.
+  if (isActive && inserted?.id) {
+    try {
+      await supabase.from("assets").insert({
+        organization_id: ctx.organizationId,
+        product_id: inserted.id,
+        asset_tag: `${slug.slice(0, 40)}-1`,
+        operational_status: "ready",
+        condition_status: "good",
+      });
+    } catch { /* non-critical — product is created; operator can manage assets manually */ }
+  }
+
   try {
     const { markSetupStep } = await import("@/lib/guidance/update-setup-progress");
     await markSetupStep(ctx.organizationId, "has_products");
@@ -295,6 +309,37 @@ export async function updateProduct(
       return { ok: false, message: "A product with that name already exists. Please choose a different name." };
     }
     return { ok: false, message: error.message };
+  }
+
+  // If the product is being activated, ensure it has at least one bookable asset.
+  if (parsed.data.isActive) {
+    try {
+      const { count: assetCount } = await supabase
+        .from("assets")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", ctx.organizationId)
+        .eq("product_id", parsed.data.productId)
+        .in("operational_status", ["ready", "available", "active"])
+        .is("deleted_at", null);
+
+      if ((assetCount ?? 0) === 0) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("slug")
+          .eq("id", parsed.data.productId)
+          .eq("organization_id", ctx.organizationId)
+          .is("deleted_at", null)
+          .maybeSingle();
+
+        await supabase.from("assets").insert({
+          organization_id: ctx.organizationId,
+          product_id: parsed.data.productId,
+          asset_tag: `${(product?.slug ?? parsed.data.productId).slice(0, 40)}-1`,
+          operational_status: "ready",
+          condition_status: "good",
+        });
+      }
+    } catch { /* non-critical */ }
   }
 
   revalidatePath("/inventory");
