@@ -505,6 +505,20 @@ export async function createCheckoutOrder(
     deposit = Math.min(policies.depositMinimum, total);
   }
   const balance = Number((total - deposit).toFixed(2));
+
+  // Check Stripe plan gate before creating any records — fail early if org can't accept
+  // online payments but a deposit is required.
+  if (hasStripeEnv() && deposit > 0) {
+    const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+    const stripeGate = await checkFeatureAccess("stripe_payments");
+    if (!stripeGate.allowed) {
+      return {
+        ok: false,
+        message: stripeGate.reason ?? "Online payments are not available on your current plan.",
+      };
+    }
+  }
+
   const orderNumber = createOrderNumber();
 
   // Convert event date + time strings to timestamptz for storage.
