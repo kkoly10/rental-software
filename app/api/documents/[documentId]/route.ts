@@ -20,12 +20,17 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { allowed } = await enforceRateLimit({
-    scope: "api:documents:user",
-    actor: ctx.userId,
-    limit: 20,
-    windowSeconds: 900,
-  });
+  let allowed: boolean;
+  try {
+    ({ allowed } = await enforceRateLimit({
+      scope: "api:documents:user",
+      actor: ctx.userId,
+      limit: 20,
+      windowSeconds: 900,
+    }));
+  } catch {
+    return NextResponse.json({ error: "Service temporarily unavailable." }, { status: 503 });
+  }
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Please wait before trying again." }, { status: 429 });
   }
@@ -56,6 +61,7 @@ export async function GET(
     .from("organizations")
     .select("name, support_email, business_type")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const order = document.orders as unknown as {

@@ -57,6 +57,7 @@ export async function createBalancePaymentSession(
     .select("id, order_number, total_amount, portal_access_token_created_at, customers!inner(email, first_name, last_name)")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) return { ok: false, message: "Order not found." };

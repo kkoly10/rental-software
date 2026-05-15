@@ -153,6 +153,6 @@ export async function createNotification(
       read: false,
     });
   } catch (err) {
-    console.warn("[notifications] Failed to create notification:", type, title, err instanceof Error ? err.message : err);
+    console.warn("[notifications] Failed to create notification:", type, err instanceof Error ? err.message : String(err));
   }
 }
