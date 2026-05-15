@@ -67,7 +67,7 @@ export async function getTeamMembersForRoute(): Promise<{ id: string; name: stri
     .from("organization_memberships")
     .select("profile_id, profiles(full_name)")
     .eq("organization_id", ctx.organizationId)
-    .eq("is_active", true);
+    .eq("status", "active");
 
   if (!members) return [];
 

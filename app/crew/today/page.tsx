@@ -11,8 +11,9 @@ export default async function CrewTodayPage() {
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
   const routes = await getRoutes(today);
   const activeRoute = routes.find((r) => r.status === "in_progress") ?? routes[0];
-  const routeDetail = activeRoute ? await getRouteDetail(activeRoute.id) : null;
-  const stops = activeRoute ? await getRouteStops(activeRoute.id) : [];
+  const [routeDetail, stops] = activeRoute
+    ? await Promise.all([getRouteDetail(activeRoute.id), getRouteStops(activeRoute.id)])
+    : [null, []];
 
   return (
     <main className="page">
@@ -60,6 +61,12 @@ export default async function CrewTodayPage() {
                         <div>
                           <strong>{stop.sequence}. {stop.label}</strong>
                           <div className="muted">{stop.time} · {stop.type}</div>
+                          {stop.productName && (
+                            <div className="muted" style={{ fontSize: 12 }}>{stop.productName}</div>
+                          )}
+                          {stop.address && (
+                            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{stop.address}</div>
+                          )}
                         </div>
                         <StatusBadge
                           label={stop.status.replace(/_/g, " ")}

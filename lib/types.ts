@@ -65,6 +65,7 @@ export type RouteSummary = {
   date: string;
   status: string;
   stops: number;
+  driverName?: string;
 };
 
 export type ServiceAreaSummary = {

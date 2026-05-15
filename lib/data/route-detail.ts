@@ -12,6 +12,8 @@ export type RouteStopData = {
   time: string;
   type: string;
   status: string;
+  address?: string;
+  productName?: string;
   proofPhotoUrl?: string;
   signatureName?: string;
 };
@@ -117,7 +119,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
     .from("route_stops")
-    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, routes!inner(organization_id), orders(order_number, customers(first_name, last_name))")
+    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot))")
     .eq("route_id", routeId)
     .eq("routes.organization_id", ctx.organizationId)
     .order("stop_sequence", { ascending: true });
@@ -132,8 +134,15 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   }
 
   return stops.map((stop, index) => {
-    const order = (stop as Record<string, unknown>).orders as { order_number: string; customers: { first_name: string; last_name: string } | null } | null;
+    const order = (stop as Record<string, unknown>).orders as {
+      order_number: string;
+      customers: { first_name: string; last_name: string } | null;
+      customer_addresses: { line1?: string; city?: string; state?: string } | null;
+      order_items: { item_name_snapshot?: string }[] | null;
+    } | null;
     const customer = order?.customers;
+    const addr = order?.customer_addresses;
+    const addressParts = [addr?.line1, addr?.city, addr?.state].filter(Boolean);
     return {
       id: stop.id,
       sequence: stop.stop_sequence ?? index + 1,
@@ -143,6 +152,8 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
         : "TBD",
       type: (stop.stop_type ?? "delivery").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: stop.stop_status ?? "assigned",
+      address: addressParts.length > 0 ? addressParts.join(", ") : undefined,
+      productName: order?.order_items?.[0]?.item_name_snapshot ?? undefined,
       proofPhotoUrl: (stop as Record<string, unknown>).proof_photo_url as string | undefined,
       signatureName: (stop as Record<string, unknown>).signature_name as string | undefined,
     };
@@ -324,18 +335,22 @@ export async function getRouteDetailEnhanced(
     };
   });
 
-  // Lazily geocode addresses that lack coordinates, then cache the result back
-  for (const item of toGeocode) {
-    const coords = await geocodeZipServer(item.postalCode);
-    if (coords) {
-      enhancedStops[item.stopIndex].lat = coords.lat;
-      enhancedStops[item.stopIndex].lng = coords.lng;
-      // Write coordinates back to the database so we only geocode once per address
-      await supabase
-        .from("customer_addresses")
-        .update({ latitude: coords.lat, longitude: coords.lng })
-        .eq("id", item.addressId);
-    }
+  // Lazily geocode addresses that lack coordinates, then cache the result back.
+  // Run in parallel — sequential geocoding blocks render by ~1s per stop.
+  if (toGeocode.length > 0) {
+    await Promise.all(
+      toGeocode.map(async (item) => {
+        const coords = await geocodeZipServer(item.postalCode);
+        if (coords) {
+          enhancedStops[item.stopIndex].lat = coords.lat;
+          enhancedStops[item.stopIndex].lng = coords.lng;
+          await supabase
+            .from("customer_addresses")
+            .update({ latitude: coords.lat, longitude: coords.lng })
+            .eq("id", item.addressId);
+        }
+      })
+    );
   }
 
   const completedStops = enhancedStops.filter((s) => s.status === "completed").length;
