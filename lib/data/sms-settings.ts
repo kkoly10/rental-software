@@ -39,6 +39,7 @@ export async function getSmsSettings(organizationId?: string): Promise<SmsSettin
     .from("organizations")
     .select("settings")
     .eq("id", orgId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) {

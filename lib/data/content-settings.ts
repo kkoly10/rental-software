@@ -57,6 +57,7 @@ export async function getContentSettings(): Promise<ContentSettings> {
     .from("organizations")
     .select("settings")
     .eq("id", organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) return fallbackContent;

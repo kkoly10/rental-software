@@ -20,6 +20,7 @@ export async function getSubscriptionStatus(): Promise<string | null> {
     .from("organizations")
     .select("subscription_status")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   return org?.subscription_status ?? null;

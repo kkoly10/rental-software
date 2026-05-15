@@ -672,6 +672,7 @@ export async function updateOrderStatus(
           .from("organizations")
           .select("name")
           .eq("id", ctx.organizationId)
+          .is("deleted_at", null)
           .maybeSingle();
 
         const businessName = org?.name ?? "Your rental company";

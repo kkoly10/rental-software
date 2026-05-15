@@ -106,6 +106,7 @@ export async function updateBrandSettings(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -120,7 +121,8 @@ export async function updateBrandSettings(
         brand_font_family: fontFamily || null,
       },
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

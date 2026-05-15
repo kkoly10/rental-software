@@ -85,6 +85,7 @@ async function readMergeWrite(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -97,7 +98,8 @@ async function readMergeWrite(
         [key]: value,
       },
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

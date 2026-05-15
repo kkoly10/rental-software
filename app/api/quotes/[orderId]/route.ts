@@ -60,6 +60,7 @@ export async function GET(
     .from("organizations")
     .select("name, support_email, phone")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const customer = order.customers as unknown as {

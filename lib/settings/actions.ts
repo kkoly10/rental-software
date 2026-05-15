@@ -63,7 +63,8 @@ export async function updateBusinessProfile(
       phone: phone || null,
       timezone: timezone || "America/New_York",
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -103,6 +104,7 @@ export async function updateWebsiteSettings(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -118,7 +120,8 @@ export async function updateWebsiteSettings(
         booking_message: bookingMessage || null,
       },
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };
@@ -181,6 +184,7 @@ export async function updateBookingPolicies(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
@@ -198,7 +202,8 @@ export async function updateBookingPolicies(
         max_advance_booking_days: maxAdvanceBookingDays,
       },
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) {
     return { ok: false, message: error.message };

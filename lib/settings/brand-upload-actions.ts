@@ -99,6 +99,7 @@ async function saveSetting(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existing = (org?.settings as Record<string, unknown>) ?? {};
@@ -106,7 +107,8 @@ async function saveSetting(
   const { error } = await supabase
     .from("organizations")
     .update({ settings: { ...existing, [key]: value } })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, message: error.message };
 
@@ -215,6 +217,7 @@ export async function updateSocialLinks(
     .from("organizations")
     .select("settings")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const existing = (org?.settings as Record<string, unknown>) ?? {};
@@ -230,7 +233,8 @@ export async function updateSocialLinks(
         social_google_business: googleBusiness || null,
       },
     })
-    .eq("id", ctx.organizationId);
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, message: error.message };
 

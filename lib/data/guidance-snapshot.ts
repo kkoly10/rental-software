@@ -48,6 +48,7 @@ export async function getGuidanceSnapshot(): Promise<GuidanceSnapshot> {
         .from("organizations")
         .select("name, support_email, phone, settings")
         .eq("id", ctx.organizationId)
+        .is("deleted_at", null)
         .maybeSingle(),
       supabase
         .from("products")

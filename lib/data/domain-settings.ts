@@ -25,6 +25,7 @@ export async function getDomainSettings(): Promise<DomainSettings> {
     .from("organizations")
     .select("slug, custom_domain, custom_domain_verified")
     .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!org) return fallback;

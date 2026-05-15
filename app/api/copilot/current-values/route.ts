@@ -61,6 +61,7 @@ export async function GET() {
     .from("organizations")
     .select("settings")
     .eq("id", access.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const settings = (org?.settings as Record<string, unknown>) ?? {};
