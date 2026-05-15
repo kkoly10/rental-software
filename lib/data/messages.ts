@@ -163,12 +163,16 @@ export async function getConversations(): Promise<ConversationSummary[]> {
           .from("customers")
           .select("id, first_name, last_name, email")
           .in("id", customerIds)
+          .eq("organization_id", ctx.organizationId)
+          .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; first_name: string | null; last_name: string | null; email: string | null }[] }),
     orderIds.length > 0
       ? supabase
           .from("orders")
           .select("id, order_number")
           .in("id", orderIds)
+          .eq("organization_id", ctx.organizationId)
+          .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; order_number: string }[] }),
   ]);
 
@@ -276,6 +280,8 @@ export async function getThreadMessages(
       .from("customers")
       .select("first_name, last_name, email")
       .eq("id", firstMsg.customer_id)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle();
     if (customer) {
       customerName = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || customerName;
@@ -288,6 +294,8 @@ export async function getThreadMessages(
       .from("orders")
       .select("order_number")
       .eq("id", firstMsg.order_id)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle();
     orderNumber = order?.order_number ?? null;
   }
