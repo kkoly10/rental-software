@@ -91,7 +91,7 @@ export async function importProductsFromCsv(
   }
 
   const [{ data: existingCats }, { data: existingProducts }] = await Promise.all([
-    supabase.from("categories").select("id, name").eq("organization_id", ctx.organizationId),
+    supabase.from("categories").select("id, name").eq("organization_id", ctx.organizationId).is("deleted_at", null),
     supabase.from("products").select("slug").eq("organization_id", ctx.organizationId).is("deleted_at", null),
   ]);
 

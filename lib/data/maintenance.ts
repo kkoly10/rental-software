@@ -46,6 +46,7 @@ export async function getMaintenanceRecords() {
       "id, maintenance_type, status, opened_at, completed_at, vendor_name, cost_amount, notes, assets!inner(organization_id, products(name), asset_tag)"
     )
     .eq("organization_id", ctx.organizationId)
+    .is("assets.deleted_at", null)
     .order("opened_at", { ascending: false })
     .limit(50);
 

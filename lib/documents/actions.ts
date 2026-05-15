@@ -173,6 +173,7 @@ export async function createDocumentsForOrder(
     .select("id, customer_id")
     .eq("id", parsed.data.orderId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {

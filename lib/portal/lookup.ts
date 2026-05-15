@@ -212,8 +212,8 @@ export async function lookupOrder(
   _prevState: PortalLookupState,
   formData: FormData
 ): Promise<PortalLookupState> {
-  const orderNumber = String(formData.get("order_number") ?? "").trim().toUpperCase();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const orderNumber = String(formData.get("order_number") ?? "").trim().toUpperCase().slice(0, 50);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 254);
 
   if (!orderNumber || !email) {
     return { ok: false, message: "Please enter your order number and email." };
