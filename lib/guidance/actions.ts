@@ -73,7 +73,20 @@ export async function markTourCompleted() {
   revalidatePath("/dashboard");
 }
 
+const VALID_HELP_BANNER_KEYS = new Set([
+  "getting-started",
+  "invite-team",
+  "add-vehicle",
+  "add-customer",
+  "create-booking",
+  "setup-payments",
+  "explore-reports",
+]);
+
 export async function dismissHelpBanner(key: string) {
+  if (typeof key !== "string" || key.length > 50 || !VALID_HELP_BANNER_KEYS.has(key)) {
+    return;
+  }
   const state = await getGuidanceState();
   const dismissed = { ...state.dismissedHelp, [key]: true };
   await upsertGuidance({ dismissed_help: dismissed });
