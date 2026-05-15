@@ -87,6 +87,7 @@ export async function deleteAccount(
         .from("organizations")
         .select("stripe_customer_id")
         .eq("id", ctx.organizationId)
+        .is("deleted_at", null)
         .maybeSingle();
 
       if (org?.stripe_customer_id) {

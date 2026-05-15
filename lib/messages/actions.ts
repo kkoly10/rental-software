@@ -14,7 +14,7 @@ const replySchema = z.object({
   customerEmail: z.string().email("Valid customer email required"),
   customerId: z.string().nullable(),
   orderId: z.string().nullable(),
-  orderNumber: z.string().nullable(),
+  orderNumber: z.string().max(100).nullable(),
 });
 
 export type ReplyActionState = {
@@ -83,6 +83,27 @@ export async function sendReply(
   const { body, customerEmail, customerId, orderId, orderNumber } = parsed.data;
   const supabase = await createSupabaseServerClient();
 
+  // Verify customerId and orderId belong to this org before inserting
+  if (customerId) {
+    const { data: custCheck } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("id", customerId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    if (!custCheck) return { ok: false, message: "Invalid customer." };
+  }
+  if (orderId) {
+    const { data: orderCheck } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("id", orderId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!orderCheck) return { ok: false, message: "Invalid order." };
+  }
+
   const { data: replyMembership } = await supabase
     .from("organization_memberships")
     .select("role")
@@ -142,6 +163,7 @@ export async function sendReply(
       .from("organizations")
       .select("name, support_email")
       .eq("id", ctx.organizationId)
+      .is("deleted_at", null)
       .maybeSingle();
 
     const businessName = org?.name ?? "Rental Company";
