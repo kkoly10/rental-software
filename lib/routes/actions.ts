@@ -25,10 +25,10 @@ export async function createRoute(
     return { ok: false, message: "Only dispatchers and above can manage routes." };
   }
 
-  const name = String(formData.get("name") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 255);
   const routeDate = String(formData.get("route_date") ?? "").trim();
   const driverProfileId = String(formData.get("driver_profile_id") ?? "").trim() || null;
-  const assignedVehicle = String(formData.get("assigned_vehicle") ?? "").trim() || null;
+  const assignedVehicle = String(formData.get("assigned_vehicle") ?? "").trim().slice(0, 255) || null;
 
   if (!routeDate) return { ok: false, message: "Route date is required." };
 
@@ -333,7 +333,7 @@ export async function updateStopStatus(
         }).orders;
         const customer = order?.customers;
         if (customer?.phone && customer?.sms_opt_in) {
-          const { data: org } = await supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle();
+          const { data: org } = await supabase.from("organizations").select("name").eq("id", ctx.organizationId).is("deleted_at", null).maybeSingle();
           await sendSmsNotification("deliveryEnRoute", customer.phone, {
             orderNumber: order.order_number,
             eta: "shortly",

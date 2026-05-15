@@ -177,6 +177,8 @@ export async function POST(request: NextRequest) {
                   .from("orders")
                   .select("order_number, customer_id, balance_due_amount, event_date, subtotal_amount, delivery_fee_amount, total_amount, deposit_due_amount, order_items(item_name_snapshot)")
                   .eq("id", orderId)
+                  .eq("organization_id", orgId)
+                  .is("deleted_at", null)
                   .maybeSingle();
 
                 if (orderData?.customer_id) {
@@ -185,6 +187,7 @@ export async function POST(request: NextRequest) {
                     .select("first_name, email")
                     .eq("id", orderData.customer_id)
                     .eq("organization_id", orgId)
+                    .is("deleted_at", null)
                     .maybeSingle();
 
                   if (customer?.email) {
@@ -231,6 +234,7 @@ export async function POST(request: NextRequest) {
                   .from("orders")
                   .select("order_number")
                   .eq("id", orderId)
+                  .eq("organization_id", orgId)
                   .maybeSingle();
                 const orderNumber = notifOrder?.order_number ?? orderId;
                 await createNotification(
@@ -328,6 +332,7 @@ export async function POST(request: NextRequest) {
                 .select("first_name, email")
                 .eq("id", refundOrder.customer_id)
                 .eq("organization_id", refundOrgId)
+                .is("deleted_at", null)
                 .maybeSingle();
               if (refundCustomer?.email) {
                 const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
