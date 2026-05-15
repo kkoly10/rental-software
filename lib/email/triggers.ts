@@ -113,6 +113,7 @@ export async function triggerOrderConfirmationEmail(params: {
     .select("id")
     .eq("organization_id", params.organizationId)
     .eq("order_number", params.orderNumber)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const portalToken = order
