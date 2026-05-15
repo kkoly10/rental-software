@@ -73,19 +73,22 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
             </Link>
           </div>
 
-          <MobileMenuToggle
-            isOperator={isOperator}
-            siteUrl={siteUrl}
-            navLinks={visibleNavLinks}
-            authLabel={m.nav.rentalsLogin}
-            dashboardLabel={m.nav.dashboard}
-            cta={{ label: m.common.bookNow, href: "/inventory" }}
-            menuLabel={m.common.menu}
-            openMenuLabel={m.common.openMenu}
-            closeMenuLabel={m.common.closeMenu}
-            currentLocale={locale}
-            languageLabel={m.language.label}
-          />
+          <div className="mobile-header-controls">
+            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} compact />
+            <MobileMenuToggle
+              isOperator={isOperator}
+              siteUrl={siteUrl}
+              navLinks={visibleNavLinks}
+              authLabel={m.nav.rentalsLogin}
+              dashboardLabel={m.nav.dashboard}
+              cta={{ label: m.common.bookNow, href: "/inventory" }}
+              menuLabel={m.common.menu}
+              openMenuLabel={m.common.openMenu}
+              closeMenuLabel={m.common.closeMenu}
+              currentLocale={locale}
+              languageLabel={m.language.label}
+            />
+          </div>
         </div>
       </header>
     </>

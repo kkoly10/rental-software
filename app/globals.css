@@ -1038,6 +1038,14 @@ textarea[aria-invalid="true"] {
   align-items: center;
 }
 
+/* Mobile-only header slot (language switcher + hamburger).
+   Hidden on desktop — desktop nav has its own switcher. */
+.mobile-header-controls {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Mobile menu — hamburger button hidden on desktop */
 .mobile-menu-btn {
   display: none;
@@ -2213,6 +2221,10 @@ textarea[aria-invalid="true"] {
   }
 
   .mobile-menu-btn {
+    display: flex;
+  }
+
+  .mobile-header-controls {
     display: flex;
   }
 }
