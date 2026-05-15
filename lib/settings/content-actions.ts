@@ -134,7 +134,7 @@ export async function updateAboutContent(
   _prevState: SettingsActionState,
   formData: FormData
 ): Promise<SettingsActionState> {
-  const aboutText = String(formData.get("about_text") ?? "").trim();
+  const aboutText = String(formData.get("about_text") ?? "").trim().slice(0, 10000);
 
   if (!hasSupabaseEnv()) {
     return { ok: true, message: "Demo mode: About section would be updated." };
