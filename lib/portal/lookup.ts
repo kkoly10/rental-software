@@ -197,6 +197,7 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
     .from("customers")
     .select("first_name, last_name")
     .eq("id", order.customer_id)
+    .eq("organization_id", orgId)
     .is("deleted_at", null)
     .maybeSingle();
 
@@ -279,6 +280,7 @@ export async function lookupOrder(
     `)
     .eq("organization_id", orgId)
     .eq("order_number", orderNumber)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {
@@ -289,6 +291,7 @@ export async function lookupOrder(
     .from("customers")
     .select("email, first_name, last_name")
     .eq("id", order.customer_id)
+    .eq("organization_id", orgId)
     .is("deleted_at", null)
     .maybeSingle();
 

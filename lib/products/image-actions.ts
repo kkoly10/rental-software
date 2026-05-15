@@ -80,6 +80,7 @@ export async function uploadProductImage(
     .select("id")
     .eq("id", productId)
     .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (productError || !product) {

@@ -28,7 +28,8 @@ export async function issuePortalAccessToken(options: {
       portal_access_token_hash: tokenHash,
       portal_access_token_created_at: new Date().toISOString(),
     })
-    .eq("id", options.orderId);
+    .eq("id", options.orderId)
+    .is("deleted_at", null);
 
   if (error) {
     throw new Error(`Failed to issue portal access token: ${error.message}`);

@@ -55,6 +55,7 @@ export async function isSlugAvailable(slug: string): Promise<boolean> {
     .from("organizations")
     .select("id")
     .eq("slug", slug)
+    .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
 
@@ -120,6 +121,7 @@ export async function resolveOrgFromHostname(
       .from("organizations")
       .select("id")
       .eq("slug", subdomain)
+      .is("deleted_at", null)
       .limit(1)
       .maybeSingle();
 
@@ -132,6 +134,7 @@ export async function resolveOrgFromHostname(
     .select("id")
     .eq("custom_domain", hostWithoutPort)
     .eq("custom_domain_verified", true)
+    .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
 
@@ -146,6 +149,7 @@ async function devFallbackOrgId(): Promise<string | null> {
   const { data: org } = await supabase
     .from("organizations")
     .select("id")
+    .is("deleted_at", null)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
