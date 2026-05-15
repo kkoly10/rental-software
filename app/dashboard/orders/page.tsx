@@ -12,7 +12,7 @@ import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportOrders } from "@/lib/export/csv";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 import { FirstOrderBanner } from "@/components/orders/first-order-banner";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function OrdersPage({
   searchParams,
@@ -21,10 +21,10 @@ export default async function OrdersPage({
 }) {
   const params = await searchParams;
   const showFirstOrderBanner = params.first === "true";
-  const [ordersPage, guidanceState, m] = await Promise.all([
+  const [ordersPage, guidanceState, { messages: m, t }] = await Promise.all([
     getOrdersPage({ query: params.q, page: params.page }),
     getGuidanceState(),
-    getMessages(),
+    getTranslator(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/orders"];
 
@@ -45,38 +45,37 @@ export default async function OrdersPage({
       <section className="panel">
         <div className="section-header">
           <div>
-            <div className="kicker">Rental pipeline</div>
-            <h2 className="page-title-sm">All orders</h2>
+            <div className="kicker">{m.dashboard.orders.kicker}</div>
+            <h2 className="page-title-sm">{m.dashboard.orders.sectionTitle}</h2>
             <div className="muted" style={{ marginTop: 8 }}>
-              {ordersPage.totalItems} matching order
-              {ordersPage.totalItems === 1 ? "" : "s"} found
+              {t(ordersPage.totalItems === 1 ? m.dashboard.orders.matchingFound : m.dashboard.orders.matchingFoundPlural, { count: ordersPage.totalItems })}
             </div>
           </div>
           <div className="action-row-inline">
-            <ExportCsvButton exportAction={exportOrders} label="Export CSV" />
+            <ExportCsvButton exportAction={exportOrders} label={m.common.exportCsv} />
             <Link href="/dashboard/orders/new" className="primary-btn">
-              New order
+              {m.dashboard.orders.newOrder}
             </Link>
           </div>
         </div>
 
         <ListSearchForm
-          placeholder="Search by customer, item, status, or amount"
+          placeholder={m.dashboard.orders.searchPlaceholder}
           initialQuery={ordersPage.query}
         />
 
         {ordersPage.items.length === 0 ? (
           ordersPage.query ? (
             <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>No orders found</strong>
-              <div className="muted" style={{ marginTop: 8 }}>Try a different search term.</div>
+              <strong>{m.dashboard.orders.noOrdersFound}</strong>
+              <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
             </div>
           ) : (
             <EmptyState
               icon="orders"
-              title="No orders yet"
-              description="Create your first order from the dashboard or receive one through the public booking flow."
-              actionLabel="Create order"
+              title={m.dashboard.orders.noOrdersYet}
+              description={m.dashboard.orders.noOrdersYetDescription}
+              actionLabel={m.dashboard.orders.createOrder}
               actionHref="/dashboard/orders/new"
             />
           )

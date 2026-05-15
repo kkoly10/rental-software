@@ -11,7 +11,7 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportPayments } from "@/lib/export/csv";
-import { getMessages } from "@/lib/i18n/server";
+import { getTranslator } from "@/lib/i18n/server";
 
 export default async function PaymentsPage({
   searchParams,
@@ -19,11 +19,11 @@ export default async function PaymentsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [paymentsPage, orders, guidanceState, m] = await Promise.all([
+  const [paymentsPage, orders, guidanceState, { messages: m, t }] = await Promise.all([
     getPaymentsPage({ query: params.q, page: params.page }),
     getOrders(),
     getGuidanceState(),
-    getMessages(),
+    getTranslator(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/payments"];
 
@@ -42,28 +42,27 @@ export default async function PaymentsPage({
         <section className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Money flow</div>
-              <h2 style={{ margin: "6px 0 0" }}>Payment activity</h2>
+              <div className="kicker">{m.dashboard.payments.kicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.payments.sectionTitle}</h2>
               <div className="muted" style={{ marginTop: 8 }}>
-                {paymentsPage.totalItems} matching payment
-                {paymentsPage.totalItems === 1 ? "" : "s"} found
+                {t(paymentsPage.totalItems === 1 ? m.dashboard.payments.matchingFound : m.dashboard.payments.matchingFoundPlural, { count: paymentsPage.totalItems })}
               </div>
             </div>
-            <ExportCsvButton exportAction={exportPayments} label="Export CSV" />
+            <ExportCsvButton exportAction={exportPayments} label={m.common.exportCsv} />
           </div>
 
           <ListSearchForm
-            placeholder="Search by customer, order, type, or status"
+            placeholder={m.dashboard.payments.searchPlaceholder}
             initialQuery={paymentsPage.query}
           />
 
           {paymentsPage.items.length === 0 ? (
             <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>No payment activity found</strong>
+              <strong>{m.dashboard.payments.noPaymentsFound}</strong>
               <div className="muted" style={{ marginTop: 8 }}>
                 {paymentsPage.query
-                  ? "Try a different search term."
-                  : "Record a payment using the form on the right, or payments will appear as deposits are collected."}
+                  ? m.common.tryDifferentSearch
+                  : m.dashboard.payments.recordPaymentBody}
               </div>
             </div>
           ) : (
@@ -109,7 +108,7 @@ export default async function PaymentsPage({
 
           <div style={{ marginTop: 16 }}>
             <Link href="/dashboard/orders" className="ghost-btn">
-              View orders for full deposit/balance breakdown
+              {m.dashboard.payments.viewOrdersForBreakdown}
             </Link>
           </div>
         </section>
@@ -117,21 +116,21 @@ export default async function PaymentsPage({
         <aside className="panel">
           <div className="section-header">
             <div>
-              <div className="kicker">Record</div>
-              <h2 style={{ margin: "6px 0 0" }}>New payment</h2>
+              <div className="kicker">{m.dashboard.payments.recordKicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.payments.newPaymentTitle}</h2>
             </div>
           </div>
 
           {orders.length === 0 ? (
             <div className="order-card muted" style={{ textAlign: "center" }}>
-              Create an order first to record payments.
+              {m.dashboard.payments.createOrderFirst}
             </div>
           ) : (
             <>
               <label className="order-card">
-                <strong>Select order</strong>
+                <strong>{m.dashboard.payments.selectOrder}</strong>
                 <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
-                  Choose the order this payment is for, then fill in the details below.
+                  {m.dashboard.payments.selectOrderHint}
                 </div>
               </label>
               {orders.slice(0, 5).map((order) => (
