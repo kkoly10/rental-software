@@ -142,7 +142,8 @@ export async function updateCustomer(
       const { error: addrErr } = await supabase
         .from("customer_addresses")
         .update(addressPayload)
-        .eq("id", existingAddr.id);
+        .eq("id", existingAddr.id)
+        .eq("customer_id", customerId);
 
       if (addrErr) {
         console.error("[customers] Failed to update address:", addrErr.message);
