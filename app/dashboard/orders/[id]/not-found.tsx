@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getMessages } from "@/lib/i18n/server";
 
-export default async function DashboardNotFound() {
+export default async function OrderNotFound() {
   const m = await getMessages();
   return (
     <DashboardShell
@@ -15,9 +15,14 @@ export default async function DashboardNotFound() {
         <div className="muted" style={{ marginBottom: 24 }}>
           {m.errors.notFound.description}
         </div>
-        <Link href="/dashboard" className="primary-btn">
-          {m.dashboard.nav.dashboard}
-        </Link>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link href="/dashboard/orders" className="primary-btn">
+            {m.dashboard.nav.orders}
+          </Link>
+          <Link href="/dashboard" className="secondary-btn">
+            {m.dashboard.nav.dashboard}
+          </Link>
+        </div>
       </section>
     </DashboardShell>
   );
