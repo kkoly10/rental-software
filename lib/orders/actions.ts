@@ -282,7 +282,7 @@ export async function createOrder(
       .from("customers")
       .select("id, first_name, last_name, phone")
       .eq("organization_id", ctx.organizationId)
-      .eq("email", email)
+      .ilike("email", email)
       .is("deleted_at", null)
       .limit(1)
       .maybeSingle();

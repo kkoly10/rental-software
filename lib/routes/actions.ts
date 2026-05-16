@@ -144,7 +144,28 @@ export async function addOrderToRoute(
     scheduled_window_start: scheduledWindowStart,
   });
 
-  if (error) return { ok: false, message: error.message };
+  // Sequence collision from a concurrent insert: retry once using MAX+1
+  if (error?.code === "23505") {
+    const { data: maxRow } = await supabase
+      .from("route_stops")
+      .select("stop_sequence")
+      .eq("route_id", routeId)
+      .order("stop_sequence", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const retrySeq = (maxRow?.stop_sequence ?? 0) + 1;
+    const { error: retryErr } = await supabase.from("route_stops").insert({
+      route_id: routeId,
+      order_id: orderId,
+      stop_type: stopType,
+      stop_sequence: retrySeq,
+      stop_status: "assigned",
+      scheduled_window_start: scheduledWindowStart,
+    });
+    if (retryErr) return { ok: false, message: retryErr.message };
+  } else if (error) {
+    return { ok: false, message: error.message };
+  }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
   revalidatePath("/dashboard/deliveries");
