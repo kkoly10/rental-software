@@ -559,7 +559,7 @@ a:focus-visible {
 }
 
 .sidebar {
-  background: #0f2340;
+  background: #2d1f14;
   color: rgba(255, 255, 255, 0.86);
   padding: 24px 18px;
   display: flex;
@@ -722,7 +722,7 @@ a:focus-visible {
 .mobile-frame {
   width: min(420px, 100%);
   margin: 0 auto;
-  background: #0f2340;
+  background: #2d1f14;
   padding: 18px;
   border-radius: 28px;
 }
