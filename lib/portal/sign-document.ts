@@ -157,7 +157,7 @@ export async function signDocument(
   void import("@/lib/data/notifications").then(({ createNotification }) =>
     createNotification(
       orgId,
-      "new_message",
+      "document_signed",
       "Document signed",
       `${signerName} signed a document`,
       `/dashboard/orders/${order.id}`

@@ -6,6 +6,8 @@ export type NotificationType =
   | "new_order"
   | "payment_received"
   | "order_confirmed"
+  | "quote_sent"
+  | "document_signed"
   | "delivery_scheduled"
   | "new_customer"
   | "low_inventory"

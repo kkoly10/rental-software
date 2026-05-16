@@ -538,7 +538,7 @@ export async function triggerQuoteSentEmail(params: {
 
   await createNotification(
     params.organizationId,
-    "new_order",
+    "quote_sent",
     "Quote sent",
     `#${params.orderNumber} — quote emailed to customer`,
     `/dashboard/orders/${params.orderId}`
