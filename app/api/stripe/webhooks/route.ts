@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
               .select("id")
               .eq("id", orderId)
               .eq("organization_id", orgId)
+              .is("deleted_at", null)
               .maybeSingle();
 
             if (!orderRecord) {
@@ -150,6 +151,7 @@ export async function POST(request: NextRequest) {
                     .select("order_status")
                     .eq("id", orderId)
                     .eq("organization_id", orgId)
+                    .is("deleted_at", null)
                     .maybeSingle();
 
                   if (order?.order_status === "awaiting_deposit") {
@@ -331,6 +333,7 @@ export async function POST(request: NextRequest) {
               .from("orders")
               .select("order_number, organization_id, customer_id")
               .eq("id", originalPayment.order_id)
+              .eq("organization_id", refundOrgId)
               .is("deleted_at", null)
               .maybeSingle();
             if (refundOrder?.customer_id && refundOrder.organization_id) {
