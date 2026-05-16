@@ -90,6 +90,15 @@ export function NotificationCenter({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open, handleClickOutside]);
 
+  // Auto-mark all as read when the panel is opened (opening = acknowledging).
+  useEffect(() => {
+    if (!open) return;
+    const hasUnread = items.some((n) => !n.read);
+    if (!hasUnread) return;
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllNotificationsRead().catch(() => {});
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function handleMarkAllRead() {
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
     markAllNotificationsRead().catch(() => {});
