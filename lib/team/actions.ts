@@ -314,15 +314,20 @@ export async function updateMemberRole(
     return { ok: false, message: "Cannot change the owner's role." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("organization_memberships")
     .update({ role: newRole })
     .eq("id", memberId)
     .eq("organization_id", ctx.organizationId)
-    .eq("status", "active");
+    .eq("status", "active")
+    .select("id");
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  if (!updated || updated.length === 0) {
+    return { ok: false, message: "Member not found or no longer active." };
   }
 
   revalidatePath("/dashboard/settings/team");
