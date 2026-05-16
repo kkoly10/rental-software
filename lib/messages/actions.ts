@@ -141,23 +141,8 @@ export async function sendReply(
     return { ok: false, message: "Failed to save reply." };
   }
 
-  try {
-    const { logCommunication } = await import("@/lib/communications/log");
-    await logCommunication({
-      organizationId: ctx.organizationId,
-      orderId: orderId ?? undefined,
-      customerId: customerId ?? undefined,
-      channel: "portal_message",
-      direction: "outbound",
-      recipient: customerEmail,
-      subject: orderNumber ? `Re: Order #${orderNumber}` : "Reply from operator",
-      bodyPreview: body,
-      status: "sent",
-      metadata: { senderName: profile?.full_name ?? "Operator" },
-    });
-  } catch { /* non-critical — audit trail */ }
-
   // Send email to customer — awaited so operators know delivery succeeded
+  let emailDelivered = false;
   try {
     const { sendEmail } = await import("@/lib/email/send");
     const { data: org } = await supabase
@@ -190,11 +175,31 @@ export async function sendReply(
       replyTo: supportEmail ?? undefined,
       organizationId: ctx.organizationId,
     });
+    emailDelivered = true;
   } catch {
     console.error("[messages] Failed to send reply email — check email provider settings.");
-    // Message row is already saved — returning ok:false here would prompt the
-    // operator to retry, creating a duplicate row.  Return ok:true so the UI
-    // closes the form, but surface the delivery warning in the toast.
+  }
+
+  // Log after send so status reflects actual delivery outcome
+  try {
+    const { logCommunication } = await import("@/lib/communications/log");
+    await logCommunication({
+      organizationId: ctx.organizationId,
+      orderId: orderId ?? undefined,
+      customerId: customerId ?? undefined,
+      channel: "portal_message",
+      direction: "outbound",
+      recipient: customerEmail,
+      subject: orderNumber ? `Re: Order #${orderNumber}` : "Reply from operator",
+      bodyPreview: body,
+      status: emailDelivered ? "sent" : "failed",
+      metadata: { senderName: profile?.full_name ?? "Operator" },
+    });
+  } catch { /* non-critical — audit trail */ }
+
+  if (!emailDelivered) {
+    // Message row is already saved — returning ok:false would prompt the
+    // operator to retry, creating a duplicate row. Return ok:true but warn.
     revalidatePath("/dashboard/messages");
     return { ok: true, message: "Reply saved, but email delivery failed. Check your email provider settings." };
   }

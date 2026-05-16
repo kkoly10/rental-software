@@ -75,6 +75,7 @@ export async function sendCustomerMessage(
     .select("id, customer_id, order_number, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {

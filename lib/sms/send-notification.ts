@@ -37,7 +37,11 @@ export async function sendSmsNotification(
   }
 
   // Check customer-level SMS opt-in (TCPA compliance)
-  if (context?.customerId && organizationId) {
+  if (context?.customerId) {
+    if (!organizationId) {
+      // Cannot verify opt-in without org context — don't send
+      return;
+    }
     try {
       const { createSupabaseServerClient } = await import("@/lib/supabase/server");
       const supabase = await createSupabaseServerClient();
@@ -57,9 +61,13 @@ export async function sendSmsNotification(
     }
   }
 
-  // Build message from template
-  const templateFn = smsTemplates[type] as (p: Record<string, string | undefined>) => string;
-  let body = templateFn(params);
+  // Build message from template — sanitize params so missing keys produce "" not "undefined"
+  const safeParams: Record<string, string> = {};
+  for (const [k, v] of Object.entries(params)) {
+    safeParams[k] = v ?? "";
+  }
+  const templateFn = smsTemplates[type] as (p: Record<string, string>) => string;
+  let body = templateFn(safeParams);
 
   // Append signature if set
   if (settings.signature) {

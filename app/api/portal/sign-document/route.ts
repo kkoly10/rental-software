@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     .select("id, document_status")
     .eq("id", documentId)
     .eq("order_id", order.id)
+    .eq("organization_id", orgId)
     .maybeSingle();
 
   if (!doc) {

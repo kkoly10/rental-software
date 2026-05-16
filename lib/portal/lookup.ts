@@ -183,6 +183,7 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
     `)
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {

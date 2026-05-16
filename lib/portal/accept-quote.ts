@@ -64,13 +64,19 @@ export async function acceptQuote(
     return { ok: false, message: "This quote has already been actioned or is no longer pending." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("orders")
     .update({ order_status: "awaiting_deposit" })
     .eq("id", order.id)
-    .eq("order_status", "quote_sent");
+    .eq("order_status", "quote_sent")
+    .select("id");
 
   if (error) return { ok: false, message: "Failed to accept quote. Please try again." };
+
+  // 0 rows → concurrent request already changed the status
+  if (!updated || updated.length === 0) {
+    return { ok: false, message: "This quote has already been actioned or is no longer pending." };
+  }
 
   // Reserve inventory so this date/product can't be double-booked
   if (order.product_id && order.event_date) {

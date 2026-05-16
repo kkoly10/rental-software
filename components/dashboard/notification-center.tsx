@@ -81,6 +81,8 @@ function NotificationIcon({ type }: { type: NotificationType }) {
           <line x1="12" y1="17" x2="12.01" y2="17" />
         </svg>
       );
+    default:
+      return null;
   }
 }
 

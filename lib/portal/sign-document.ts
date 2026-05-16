@@ -91,6 +91,7 @@ export async function signDocument(
     .select("id, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!order) {
@@ -108,6 +109,7 @@ export async function signDocument(
     .select("id, document_status")
     .eq("id", documentId)
     .eq("order_id", order.id)
+    .eq("organization_id", orgId)
     .maybeSingle();
 
   if (!doc) {

@@ -243,6 +243,7 @@ export async function removeTeamMember(
     .select("profile_id, role")
     .eq("id", memberId)
     .eq("organization_id", ctx.organizationId)
+    .eq("status", "active")
     .maybeSingle();
 
   if (!target) {
@@ -302,6 +303,7 @@ export async function updateMemberRole(
     .select("role")
     .eq("id", memberId)
     .eq("organization_id", ctx.organizationId)
+    .eq("status", "active")
     .maybeSingle();
 
   if (!target) {
@@ -316,7 +318,8 @@ export async function updateMemberRole(
     .from("organization_memberships")
     .update({ role: newRole })
     .eq("id", memberId)
-    .eq("organization_id", ctx.organizationId);
+    .eq("organization_id", ctx.organizationId)
+    .eq("status", "active");
 
   if (error) {
     return { ok: false, message: error.message };
