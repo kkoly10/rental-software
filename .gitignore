@@ -11,6 +11,7 @@ coverage
 .env.production.local
 .vercel
 *.log
+*.zip
 .DS_Store
 next-env.d.ts
 .claude/
