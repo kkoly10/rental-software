@@ -45,6 +45,7 @@ export async function geocodeZipServer(
     const res = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
       next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       cache.set(key, { coords: null, expiresAt: Date.now() + NEGATIVE_TTL_MS });

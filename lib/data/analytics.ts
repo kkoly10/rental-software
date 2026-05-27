@@ -102,7 +102,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
       supabase
         .from("order_items")
         .select(
-          "item_name_snapshot, quantity, unit_price, orders!inner(organization_id, order_status)"
+          "item_name_snapshot, quantity, unit_price, line_total, orders!inner(organization_id, order_status)"
         )
         .eq("orders.organization_id", ctx.organizationId)
         .not("orders.order_status", "eq", "cancelled")
@@ -276,9 +276,12 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     const name = item.item_name_snapshot ?? "Unknown";
     const qty = typeof item.quantity === "number" ? item.quantity : 1;
     const price = typeof item.unit_price === "number" ? item.unit_price : 0;
+    // line_total is authoritative (per-day orders store the multi-day total
+    // there while unit_price is only the per-day rate); fall back to price*qty.
+    const lineRevenue = typeof item.line_total === "number" ? item.line_total : price * qty;
     const existing = productMap.get(name) ?? { count: 0, revenue: 0 };
     existing.count += qty;
-    existing.revenue += price * qty;
+    existing.revenue += lineRevenue;
     productMap.set(name, existing);
   }
   const topProducts = Array.from(productMap.entries())

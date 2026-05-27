@@ -103,7 +103,7 @@ export async function updateCustomer(
     return { ok: false, message: "You don't have permission to update customers." };
   }
 
-  const { error: updateError } = await supabase
+  const { data: updatedCustomer, error: updateError } = await supabase
     .from("customers")
     .update({
       first_name: firstName,
@@ -114,10 +114,17 @@ export async function updateCustomer(
     })
     .eq("id", customerId)
     .eq("organization_id", ctx.organizationId)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .select("id");
 
   if (updateError) {
     return { ok: false, message: updateError.message };
+  }
+
+  // customer_addresses has no organization_id column, so confirm the customer
+  // actually belongs to this org before touching addresses by raw customer_id.
+  if (!updatedCustomer || updatedCustomer.length === 0) {
+    return { ok: false, message: "Customer not found." };
   }
 
   // Upsert default delivery address if address fields provided

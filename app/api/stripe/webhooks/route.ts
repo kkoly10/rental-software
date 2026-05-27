@@ -123,7 +123,13 @@ export async function POST(request: NextRequest) {
             const alreadyRecorded = (count ?? 0) > 0;
 
             if (!alreadyRecorded) {
-              const amountPaid = (session.amount_total ?? 0) / 100;
+              // amount_total is in the currency's minor unit; zero-decimal
+              // currencies (e.g. JPY) must NOT be divided by 100.
+              const zeroDecimal = new Set(["bif","clp","djf","gnf","jpy","kmf","krw","mga","pyg","rwf","ugx","vnd","vuv","xaf","xof","xpf"]);
+              const currency = (session.currency ?? "usd").toLowerCase();
+              const amountPaid = zeroDecimal.has(currency)
+                ? (session.amount_total ?? 0)
+                : (session.amount_total ?? 0) / 100;
               const paymentType = session.metadata?.payment_type === "balance" ? "balance" : "deposit";
 
               // Insert with conflict guard — the unique index on
