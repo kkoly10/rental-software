@@ -95,7 +95,7 @@ function SignForm({
   );
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
-  if (state.ok && state.message && state.message.includes("successfully")) {
+  if (state.ok && state.message) {
     return (
       <div className="portal-sign-form">
         <div className="badge success" style={{ marginTop: 8 }}>{state.message}</div>

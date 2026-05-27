@@ -48,6 +48,22 @@ export async function POST(request: NextRequest) {
 
   const admin = createSupabaseAdminClient();
 
+  // Idempotency: claim this Stripe event id before processing. Retries and
+  // replays of the same event hit the primary-key conflict and are skipped,
+  // preventing double side effects (duplicate refund emails, repeated
+  // subscription syncs). The claim is released on handler failure below so a
+  // genuine retry can reprocess.
+  const { error: claimError } = await admin
+    .from("stripe_webhook_events")
+    .insert({ event_id: event.id, event_type: event.type });
+  if (claimError) {
+    if ((claimError as { code?: string }).code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    // Dedup ledger unavailable — fall open and process rather than drop the event.
+    console.error("[stripe-webhook] dedup claim failed, processing anyway:", claimError.message);
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -433,6 +449,8 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (error) {
+    // Release the idempotency claim so Stripe's retry can reprocess this event.
+    await admin.from("stripe_webhook_events").delete().eq("event_id", event.id);
     console.error(`[stripe-webhook] Handler error for ${event.type}:`, error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       { error: "Webhook handler failed" },

@@ -22,7 +22,7 @@ export function CustomerMessageForm({ portalToken }: Props) {
     m.portal.message.subjects.other,
   ];
 
-  if (state.ok && state.message && state.message.includes("sent")) {
+  if (state.ok && state.message) {
     return (
       <div className="panel" style={{ marginTop: 16 }}>
         <div className="section-header">

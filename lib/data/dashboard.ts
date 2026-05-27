@@ -142,7 +142,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
             year: "numeric",
           })
         : "No date",
-      total: `$${Number(o.total_amount ?? 0).toLocaleString()}`,
+      total: `$${Number(o.total_amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       status: formatStatus(status),
       tone: statusTone(status),
     };

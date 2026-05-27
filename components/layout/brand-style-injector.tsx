@@ -17,11 +17,17 @@ const GOOGLE_FONT_MAP: Record<string, string> = {
  * Darken a hex color by a given factor (0 = unchanged, 1 = black).
  */
 function darkenHex(hex: string, factor: number): string {
-  const cleaned = hex.replace("#", "");
-  const r = Math.round(parseInt(cleaned.slice(0, 2), 16) * (1 - factor));
-  const g = Math.round(parseInt(cleaned.slice(2, 4), 16) * (1 - factor));
-  const b = Math.round(parseInt(cleaned.slice(4, 6), 16) * (1 - factor));
-  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+  let cleaned = hex.replace("#", "");
+  // Expand 3/4-digit shorthand (#abc -> #aabbcc) so fixed-offset slicing works.
+  if (cleaned.length === 3 || cleaned.length === 4) {
+    cleaned = cleaned.split("").map((c) => c + c).join("");
+  }
+  const r = parseInt(cleaned.slice(0, 2), 16);
+  const g = parseInt(cleaned.slice(2, 4), 16);
+  const b = parseInt(cleaned.slice(4, 6), 16);
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return hex;
+  const d = (c: number) => Math.round(c * (1 - factor)).toString(16).padStart(2, "0");
+  return `#${d(r)}${d(g)}${d(b)}`;
 }
 
 function isSafeHex(value: string | null | undefined): boolean {
