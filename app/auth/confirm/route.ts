@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
       return redirectWithError(request, error.message);
     }
   } else if (tokenHash && type) {
+    const allowedOtpTypes = ["signup", "recovery", "email_change", "email"] as const;
+    if (!allowedOtpTypes.includes(type as (typeof allowedOtpTypes)[number])) {
+      return redirectWithError(request, "The verification link is invalid or incomplete.");
+    }
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: type as "signup" | "recovery" | "email_change" | "email",

@@ -17,6 +17,7 @@ export function WeatherAlert({
 
   useEffect(() => {
     if (!zipCode || !eventDate) {
+      setForecast(null);
       setLoading(false);
       return;
     }
@@ -24,9 +25,14 @@ export function WeatherAlert({
     // Parse the event date to YYYY-MM-DD format
     const parsed = parseDate(eventDate);
     if (!parsed) {
+      setForecast(null);
       setLoading(false);
       return;
     }
+
+    // Clear any stale forecast from previous inputs while the new one loads.
+    setForecast(null);
+    setLoading(true);
 
     const controller = new AbortController();
     fetch(`/api/weather?zip=${encodeURIComponent(zipCode)}&date=${parsed}`, {

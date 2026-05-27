@@ -8,7 +8,13 @@ export default async function AcceptInvitePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const [result, m] = await Promise.all([acceptTeamInvite(token), getMessages()]);
+  const [result, m] = await Promise.all([
+    acceptTeamInvite(token).catch(() => ({
+      ok: false,
+      message: "This invite could not be processed. Please try again or request a new one.",
+    })),
+    getMessages(),
+  ]);
 
   return (
     <div

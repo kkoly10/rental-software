@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { TeamMember } from "@/lib/team/data";
 import { removeTeamMember, updateMemberRole } from "@/lib/team/actions";
 import { useI18n } from "@/lib/i18n/provider";
@@ -28,6 +29,7 @@ export function TeamMemberCard({
     crew: m.dashboard.team.roles.crew,
     viewer: m.dashboard.team.roles.viewer,
   };
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -40,6 +42,9 @@ export function TeamMemberCard({
     const result = await updateMemberRole(member.id, newRole);
     setMessage(result.message);
     setPending(false);
+    // Refresh so the server-rendered role (the controlled <select> value)
+    // reflects the change instead of snapping back to the stale prop.
+    if (result.ok) router.refresh();
   }
 
   async function handleRemove() {
@@ -49,6 +54,7 @@ export function TeamMemberCard({
     const result = await removeTeamMember(member.id);
     setMessage(result.message);
     setPending(false);
+    if (result.ok) router.refresh();
   }
 
   return (

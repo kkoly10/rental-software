@@ -56,6 +56,10 @@ export async function recordPayment(
     return { ok: false, message: "You must be signed in to record payments." };
   }
 
+  const { blockDemoWrites } = await import("@/lib/demo/guard");
+  const demoCheck = await blockDemoWrites(ctx.organizationId);
+  if (demoCheck.blocked) return { ok: false, message: demoCheck.message };
+
   try {
     const clientKey = await getActionClientKey();
     const [userLimit, clientLimit] = await Promise.all([
@@ -166,6 +170,8 @@ export async function recordPayment(
 
   revalidatePath("/dashboard/payments");
   revalidatePath(`/dashboard/orders/${orderId}`);
+  revalidatePath("/dashboard/customers/[id]", "page");
+  revalidatePath("/dashboard");
   revalidatePath("/order-status");
 
   try {
