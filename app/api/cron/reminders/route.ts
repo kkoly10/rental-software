@@ -9,6 +9,10 @@ import {
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
 
+// This job iterates matching orders and sends emails; give it headroom over
+// the default serverless timeout.
+export const maxDuration = 60;
+
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 function verifyCronSecret(request: NextRequest): boolean {

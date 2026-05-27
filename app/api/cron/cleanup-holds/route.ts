@@ -4,6 +4,8 @@ import {
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
 
+export const maxDuration = 60;
+
 /**
  * Cron job: Clean up expired availability holds from abandoned checkouts.
  *

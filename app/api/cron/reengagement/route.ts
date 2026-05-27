@@ -4,6 +4,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { logCommunication } from "@/lib/communications/log";
 
+// This job iterates all orgs and sends emails; give it headroom over the
+// default serverless timeout.
+export const maxDuration = 60;
+
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 function verifyCronSecret(request: NextRequest): boolean {

@@ -15,7 +15,9 @@ if (dsn) {
   if (typeof window !== "undefined") {
     const addReplay = async () => {
       const { replayIntegration } = await import("@sentry/nextjs");
-      Sentry.addIntegration(replayIntegration());
+      // Mask text and block media so session replays don't capture customer
+      // PII (names, emails, addresses) on dashboard/checkout error replays.
+      Sentry.addIntegration(replayIntegration({ maskAllText: true, blockAllMedia: true }));
     };
     if (document.readyState === "complete") {
       addReplay();
