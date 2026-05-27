@@ -24,7 +24,16 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
     }
   }, [uploadState]);
 
-  const state = uploadState.message ? uploadState : removeState;
+  // Only clear the preview once the server confirms removal — otherwise a
+  // failed remove would hide an image that is still persisted.
+  useEffect(() => {
+    if (removeState.ok && removeState.message) {
+      setUrl("");
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [removeState]);
+
+  const state = removing || removeState.message ? removeState : uploadState;
 
   return (
     <div className="order-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -65,8 +74,6 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
               onClick={() => {
                 const fd = new FormData();
                 removeAction(fd);
-                setUrl("");
-                if (fileRef.current) fileRef.current.value = "";
               }}
             >
               {removing ? m.removing : m.removeButton}

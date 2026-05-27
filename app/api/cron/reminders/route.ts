@@ -238,7 +238,7 @@ async function sendDayBeforeReminders(
 
       if (!claimed || claimed.length === 0) continue;
 
-      await sendEmail({
+      const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
         subject: `Reminder: Your rental from ${branding.businessName} is tomorrow!`,
@@ -255,6 +255,16 @@ async function sendDayBeforeReminders(
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
+
+      if (!emailed) {
+        // Release the claim so a later run retries instead of silently dropping
+        // the reminder when the email send failed.
+        await supabase
+          .from("orders")
+          .update({ day_before_reminder_sent_at: null })
+          .eq("id", order.id);
+        continue;
+      }
 
       sent++;
 
