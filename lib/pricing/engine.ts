@@ -26,11 +26,14 @@ export function calculatePrice(
     .sort((a, b) => b.priority - a.priority);
 
   const eventDateObj = new Date(context.eventDate + "T00:00:00");
+  const now = new Date();
   const bookingDateObj = context.bookingDate
     ? new Date(context.bookingDate + "T00:00:00")
-    : new Date();
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const daysUntilEvent = Math.floor(
+  // Both operands are at local midnight, so the difference is whole days
+  // (round guards against DST hour shifts).
+  const daysUntilEvent = Math.round(
     (eventDateObj.getTime() - bookingDateObj.getTime()) / (1000 * 60 * 60 * 24)
   );
 

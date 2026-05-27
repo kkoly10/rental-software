@@ -8,11 +8,12 @@ export type PaginatedResult<T> = {
 };
 
 export function normalizePage(value?: string | number | null) {
-  const raw = typeof value === "number" ? value : Number.parseInt(String(value ?? "1"), 10);
+  // Use Number (not parseInt) so "3abc" is rejected rather than parsed as 3.
+  const raw = typeof value === "number" ? value : Number(String(value ?? "1").trim());
   if (!Number.isFinite(raw) || raw < 1) {
     return 1;
   }
-  return raw;
+  return Math.floor(raw);
 }
 
 export function normalizeQuery(value?: string | null) {

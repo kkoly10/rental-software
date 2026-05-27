@@ -151,6 +151,7 @@ create table if not exists orders (
   portal_access_token_hash text,
   portal_access_token_created_at timestamptz,
   created_at timestamptz not null default now(),
+  deleted_at timestamptz,
   unique (organization_id, order_number)
 );
 

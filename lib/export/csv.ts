@@ -7,8 +7,10 @@ import { checkFeatureAccess } from "@/lib/stripe/gate";
 import { getOrderFinancials } from "@/lib/payments/financials";
 
 function escapeCsvField(value: string): string {
-  // Prefix formula-trigger characters to prevent CSV injection in spreadsheet apps
-  if (/^[=+\-@\t\r]/.test(value)) value = "'" + value;
+  // Prefix formula-trigger characters to prevent CSV injection in spreadsheet apps.
+  // Spreadsheets strip leading whitespace before evaluating, so also catch a
+  // trigger char that follows leading spaces (e.g. " =cmd").
+  if (/^[=+\-@\t\r]/.test(value) || /^\s+[=+\-@]/.test(value)) value = "'" + value;
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
     return `"${value.replace(/"/g, '""')}"`;
   }

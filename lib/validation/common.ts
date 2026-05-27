@@ -64,7 +64,9 @@ export const optionalPhoneSchema = z
   .string()
   .transform((value) => sanitizePlainText(value))
   .refine(
-    (value) => value.length === 0 || phoneRegex.test(value),
+    (value) =>
+      value.length === 0 ||
+      (phoneRegex.test(value) && value.replace(/\D/g, "").length >= 7),
     "Enter a valid phone number."
   )
   .transform((value) => value || undefined);
@@ -104,10 +106,23 @@ export function moneySchema(label: string, options?: { min?: number; max?: numbe
   const min = options?.min ?? 0;
   const max = options?.max ?? 100000;
 
-  return z.coerce
-    .number({ invalid_type_error: `${label} must be a valid number.` })
-    .finite(`${label} must be a valid number.`)
-    .min(min, `${label} must be at least ${min}.`)
-    .max(max, `${label} must be ${max} or less.`)
-    .transform((value) => Number(value.toFixed(2)));
+  return z.preprocess(
+    (val) => {
+      // Strip currency symbols and thousands separators so "$1,000" parses,
+      // and treat a blank field as missing (invalid) rather than silently 0.
+      if (typeof val === "string") {
+        const cleaned = val.replace(/[$,\s]/g, "");
+        if (cleaned === "") return undefined;
+        const n = Number(cleaned);
+        return Number.isNaN(n) ? val : n;
+      }
+      return val;
+    },
+    z
+      .number({ invalid_type_error: `${label} must be a valid number.` })
+      .finite(`${label} must be a valid number.`)
+      .min(min, `${label} must be at least ${min}.`)
+      .max(max, `${label} must be ${max} or less.`)
+      .transform((value) => Number(value.toFixed(2)))
+  );
 }

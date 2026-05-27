@@ -52,10 +52,8 @@ function extractProviderText(payload: any): string | null {
     return payload.content[0].text;
   }
 
-  if (typeof payload?.error?.message === "string") {
-    return payload.error.message;
-  }
-
+  // Never surface a provider error body as the assistant's reply — returning
+  // null lets the caller fall back to the local response instead.
   return null;
 }
 

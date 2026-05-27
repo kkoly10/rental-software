@@ -354,6 +354,7 @@ export async function createCheckoutOrder(
       eventDate,
       startTime,
       endTime,
+      rentalEndDate,
     });
 
     if (!availability.available) {
@@ -633,6 +634,7 @@ export async function createCheckoutOrder(
       eventDate,
       startTime,
       endTime,
+      rentalEndDate,
       source: willUseStripe ? "checkout" : "dashboard",
     });
 
