@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
+import { mergeOrgSettings } from "./merge-settings";
 
 async function getUserRole(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
@@ -99,32 +100,14 @@ export async function updateWebsiteSettings(
     return { ok: false, message: "Only owners and admins can update website settings." };
   }
 
-  // Read existing settings
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        hero_message: heroMessage || null,
-        hero_headline: heroHeadline || null,
-        service_area_text: serviceAreaText || null,
-        booking_message: bookingMessage || null,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    hero_message: heroMessage || null,
+    hero_headline: heroHeadline || null,
+    service_area_text: serviceAreaText || null,
+    booking_message: bookingMessage || null,
+  });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/website");
@@ -187,33 +170,16 @@ export async function updateBookingPolicies(
     return { ok: false, message: "Only the organization owner can update booking policies." };
   }
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        deposit_percentage: depositPercentage,
-        deposit_minimum: depositMinimum,
-        require_deposit_to_confirm: requireDepositToConfirm,
-        cancellation_policy_text: cancellationPolicyText || null,
-        booking_lead_time_hours: bookingLeadTimeHours,
-        max_advance_booking_days: maxAdvanceBookingDays,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    deposit_percentage: depositPercentage,
+    deposit_minimum: depositMinimum,
+    require_deposit_to_confirm: requireDepositToConfirm,
+    cancellation_policy_text: cancellationPolicyText || null,
+    booking_lead_time_hours: bookingLeadTimeHours,
+    max_advance_booking_days: maxAdvanceBookingDays,
+  });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/settings");

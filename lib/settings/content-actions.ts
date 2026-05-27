@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SettingsActionState } from "./actions";
 import { isSafeHref } from "@/lib/utils/safe-href";
+import { mergeOrgSettings } from "./merge-settings";
 
 const MAX_JSON_BYTES = 50_000;
 
@@ -85,28 +86,9 @@ async function readMergeWrite(
     return { ok: false, message: "Only owners and admins can update website content." };
   }
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        [key]: value,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, { [key]: value });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/website");

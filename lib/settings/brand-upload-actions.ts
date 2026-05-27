@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { SettingsActionState } from "./actions";
 import { isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
 import { sniffImageType } from "@/lib/utils/image-signature";
+import { mergeOrgSettings } from "./merge-settings";
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase();
@@ -104,22 +105,8 @@ async function saveSetting(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existing = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({ settings: { ...existing, [key]: value } })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, { [key]: value });
+  if (!merged.ok) return { ok: false, message: merged.message };
 
   revalidatePath("/dashboard/website");
   revalidatePath("/");
@@ -221,30 +208,13 @@ export async function updateSocialLinks(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existing = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existing,
-        social_facebook: facebook || null,
-        social_instagram: instagram || null,
-        social_tiktok: tiktok || null,
-        social_google_business: googleBusiness || null,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    social_facebook: facebook || null,
+    social_instagram: instagram || null,
+    social_tiktok: tiktok || null,
+    social_google_business: googleBusiness || null,
+  });
+  if (!merged.ok) return { ok: false, message: merged.message };
 
   revalidatePath("/dashboard/website");
   revalidatePath("/");

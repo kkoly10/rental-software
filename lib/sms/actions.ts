@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import type { SettingsActionState } from "@/lib/settings/actions";
+import { mergeOrgSettings } from "@/lib/settings/merge-settings";
 
 export async function updateSmsSettings(
   _prevState: SettingsActionState,
@@ -46,37 +47,20 @@ export async function updateSmsSettings(
     return { ok: false, message: "Only owners and admins can update SMS settings." };
   }
 
-  // Read existing settings
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    sms_settings: {
+      sms_enabled: smsEnabled,
+      sms_order_confirmation: smsOrderConfirmation,
+      sms_deposit_reminder: smsDepositReminder,
+      sms_delivery_updates: smsDeliveryUpdates,
+      sms_payment_confirmation: smsPaymentConfirmation,
+      sms_weather_alerts: smsWeatherAlerts,
+      sms_signature: smsSignature || null,
+    },
+  });
 
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        sms_settings: {
-          sms_enabled: smsEnabled,
-          sms_order_confirmation: smsOrderConfirmation,
-          sms_deposit_reminder: smsDepositReminder,
-          sms_delivery_updates: smsDeliveryUpdates,
-          sms_payment_confirmation: smsPaymentConfirmation,
-          sms_weather_alerts: smsWeatherAlerts,
-          sms_signature: smsSignature || null,
-        },
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/settings");

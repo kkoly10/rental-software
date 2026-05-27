@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import { checkContrastOnWhite } from "@/lib/utils/contrast";
+import { mergeOrgSettings } from "./merge-settings";
 
 export type SettingsActionState = {
   ok: boolean;
@@ -101,31 +102,13 @@ export async function updateBrandSettings(
     return { ok: false, message: "Only owners and admins can update brand settings." };
   }
 
-  // Read existing settings
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        brand_primary_color: primaryColor || null,
-        brand_accent_color: accentColor || null,
-        brand_font_family: fontFamily || null,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    brand_primary_color: primaryColor || null,
+    brand_accent_color: accentColor || null,
+    brand_font_family: fontFamily || null,
+  });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   try {
