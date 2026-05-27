@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import dns from "dns/promises";
+import crypto from "node:crypto";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestClientKey } from "@/lib/security/request-client";
+
+// dns/promises has no built-in timeout; bound each lookup so a slow resolver
+// can't hang the serverless invocation.
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    p.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 export async function POST(request: NextRequest) {
   if (!hasSupabaseEnv()) {
@@ -49,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("custom_domain, custom_domain_verified")
+    .select("custom_domain, custom_domain_verified, settings")
     .eq("id", ctx.organizationId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -66,31 +76,44 @@ export async function POST(request: NextRequest) {
   }
 
   const domain = org.custom_domain;
-  let verified = false;
+  const settings = (org.settings as Record<string, unknown>) ?? {};
 
-  try {
-    // Check CNAME records
-    const cnameRecords: string[] = await dns.resolveCname(domain).catch(() => [] as string[]);
-    if (
-      cnameRecords.some(
-        (r) =>
-          r === "cname.vercel-dns.com" ||
-          r.endsWith(".vercel-dns.com")
-      )
-    ) {
-      verified = true;
-    }
-
-    // Check A records (for apex domains)
-    if (!verified) {
-      const aRecords: string[] = await dns.resolve4(domain).catch(() => [] as string[]);
-      if (aRecords.includes("76.76.21.21")) {
-        verified = true;
-      }
-    }
-  } catch {
-    // DNS lookup failed — not verified
+  // Per-org ownership token: anyone can point a domain at the shared Vercel
+  // ingress, so pointing-to-Vercel alone does NOT prove ownership. Require a
+  // TXT record only the domain's real owner can publish. Generate+persist the
+  // token on first verify if it doesn't exist yet.
+  let token = typeof settings.domain_verification_token === "string"
+    ? settings.domain_verification_token
+    : "";
+  if (!token) {
+    token = crypto.randomBytes(16).toString("hex");
+    await supabase
+      .from("organizations")
+      .update({ settings: { ...settings, domain_verification_token: token } })
+      .eq("id", ctx.organizationId)
+      .is("deleted_at", null);
   }
+
+  const txtName = `_korent-verify.${domain}`;
+  const expectedTxt = `korent-verify=${token}`;
+
+  // Ownership: the verification TXT record must be present.
+  const txtRecords = await withTimeout(dns.resolveTxt(txtName), 5000, [] as string[][]);
+  const flatTxt = txtRecords.map((parts) => parts.join(""));
+  const ownershipProven = flatTxt.includes(expectedTxt) || flatTxt.includes(token);
+
+  // Routing: the domain must also point at Vercel.
+  let pointsToVercel = false;
+  const cnameRecords = await withTimeout(dns.resolveCname(domain), 5000, [] as string[]);
+  if (cnameRecords.some((r) => r === "cname.vercel-dns.com" || r.endsWith(".vercel-dns.com"))) {
+    pointsToVercel = true;
+  }
+  if (!pointsToVercel) {
+    const aRecords = await withTimeout(dns.resolve4(domain), 5000, [] as string[]);
+    if (aRecords.includes("76.76.21.21")) pointsToVercel = true;
+  }
+
+  const verified = ownershipProven && pointsToVercel;
 
   if (verified) {
     await supabase
@@ -105,7 +128,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     verified: false,
     domain,
-    message:
-      "DNS records not found yet. Make sure your CNAME points to cname.vercel-dns.com, or your A record points to 76.76.21.21. DNS changes can take up to 48 hours.",
+    verificationRecord: { type: "TXT", name: txtName, value: expectedTxt },
+    message: !ownershipProven
+      ? `Add a TXT record at "${txtName}" with the value "${expectedTxt}" to prove ownership, then point the domain to Vercel (CNAME → cname.vercel-dns.com, or A → 76.76.21.21). DNS changes can take up to 48 hours.`
+      : "Ownership confirmed. Now point the domain to Vercel (CNAME → cname.vercel-dns.com, or A → 76.76.21.21). DNS changes can take up to 48 hours.",
   });
 }

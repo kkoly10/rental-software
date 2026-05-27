@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { sniffImageType } from "@/lib/utils/image-signature";
 
 export type ProductImageActionState = {
   ok: boolean;
@@ -48,6 +49,12 @@ export async function uploadProductImage(
 
   if (file.size > MAX_SIZE) {
     return { ok: false, message: "Image must be under 10 MB." };
+  }
+
+  // Verify the actual file bytes, not just the (forgeable) declared type.
+  const sniffedType = await sniffImageType(file);
+  if (!sniffedType || !ALLOWED_TYPES.includes(sniffedType)) {
+    return { ok: false, message: "File content doesn't match a supported image format." };
   }
 
   if (!hasSupabaseEnv()) {

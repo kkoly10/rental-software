@@ -81,7 +81,7 @@ export async function getWeatherForecast(
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York`;
 
-    const res = await fetch(url, { next: { revalidate: 1800 } });
+    const res = await fetch(url, { next: { revalidate: 1800 }, signal: AbortSignal.timeout(10_000) });
     if (!res.ok) return null;
 
     const data = await res.json();

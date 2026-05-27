@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { mergeOrgSettings } from "@/lib/settings/merge-settings";
 
 export type CopilotAction = {
   type:
@@ -68,16 +69,6 @@ export async function executeCopilotAction(
     return { ok: false, message: "Only owners and admins can apply AI suggestions." };
   }
 
-  // Read existing settings
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
   // Parse value for FAQ (expects JSON array)
   let parsedValue: unknown = action.value;
   if (settingsKey === "custom_faq") {
@@ -97,19 +88,11 @@ export async function executeCopilotAction(
     }
   }
 
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        [settingsKey]: parsedValue || null,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    [settingsKey]: parsedValue || null,
+  });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   return {

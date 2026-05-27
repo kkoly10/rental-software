@@ -6,6 +6,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import { issueTrackingToken } from "@/lib/tracking/access-token";
 import { getSiteUrl } from "@/lib/site-url";
+import { sniffImageType } from "@/lib/utils/image-signature";
 import { sendSmsNotification } from "@/lib/sms/send-notification";
 
 export type StopActionState = {
@@ -199,6 +200,12 @@ export async function uploadProofPhoto(
 
   if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
     return { ok: false, message: "Only JPEG, PNG, or WebP photos are allowed." };
+  }
+
+  // Verify the actual file bytes, not just the (forgeable) declared type.
+  const sniffedPhotoType = await sniffImageType(file);
+  if (!sniffedPhotoType || !ALLOWED_PHOTO_TYPES.includes(sniffedPhotoType)) {
+    return { ok: false, message: "File content doesn't match a supported image format." };
   }
 
   if (file.size > MAX_PHOTO_SIZE) {

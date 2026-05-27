@@ -6,6 +6,7 @@ import { getContentSettings } from "@/lib/data/content-settings";
 import { MobileMenuToggle } from "./mobile-menu-toggle";
 import { LanguageSwitcher } from "./language-switcher";
 import { getTranslator } from "@/lib/i18n/server";
+import { sanitizeHref } from "@/lib/utils/safe-href";
 
 export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
   const [brand, settings, orgCtx, contentSettings, { locale, messages }] = await Promise.all([
@@ -50,7 +51,7 @@ export async function PublicHeader({ logoUrl }: { logoUrl?: string } = {}) {
 
           <nav className="nav-links public-nav-links public-nav-desktop">
             {visibleNavLinks.map((link) => (
-              <Link key={link.key} href={link.href}>{link.label}</Link>
+              <Link key={link.key} href={sanitizeHref(link.href)}>{link.label}</Link>
             ))}
           </nav>
 

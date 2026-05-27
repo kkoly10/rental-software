@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { mergeOrgSettings } from "@/lib/settings/merge-settings";
 
 export type PricingActionState = {
   ok: boolean;
@@ -90,29 +91,9 @@ export async function savePricingRules(
     return { ok: false, message: "Only owners and admins can manage pricing rules." };
   }
 
-  // Read existing settings
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        pricing_rules: rules,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, { pricing_rules: rules });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/pricing");

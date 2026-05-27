@@ -5,6 +5,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import type { SettingsActionState } from "./actions";
+import { isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
+import { sniffImageType } from "@/lib/utils/image-signature";
+import { mergeOrgSettings } from "./merge-settings";
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase();
@@ -19,10 +22,11 @@ function getBucketName() {
 const LOGO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
 const HERO_MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+// SVG is intentionally excluded: it can carry inline <script>/onload and is
+// served from a public bucket and rendered via <img src>, enabling stored XSS.
 const LOGO_TYPES = [
   "image/png",
   "image/jpeg",
-  "image/svg+xml",
   "image/webp",
 ];
 
@@ -41,6 +45,12 @@ async function uploadBrandAsset(
 
   if (!allowedTypes.includes(file.type)) {
     return { ok: false, message: `Unsupported file type: ${file.type}` };
+  }
+
+  // Verify the actual file bytes, not just the (forgeable) declared type.
+  const sniffed = await sniffImageType(file);
+  if (!sniffed || !allowedTypes.includes(sniffed)) {
+    return { ok: false, message: "File content doesn't match a supported image format." };
   }
 
   const ctx = await getOrgContext();
@@ -95,22 +105,8 @@ async function saveSetting(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existing = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({ settings: { ...existing, [key]: value } })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, { [key]: value });
+  if (!merged.ok) return { ok: false, message: merged.message };
 
   revalidatePath("/dashboard/website");
   revalidatePath("/");
@@ -196,10 +192,9 @@ export async function updateSocialLinks(
     ["Google Business", googleBusiness],
   ] as const) {
     if (url) {
-      try {
-        new URL(url);
-      } catch {
-        return { ok: false, message: `${label} URL is not valid.` };
+      // new URL() accepts javascript:/data: — require an absolute http(s) URL.
+      if (!isAbsoluteHttpUrl(url)) {
+        return { ok: false, message: `${label} URL must be a valid http(s) link.` };
       }
     }
   }
@@ -213,30 +208,13 @@ export async function updateSocialLinks(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existing = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existing,
-        social_facebook: facebook || null,
-        social_instagram: instagram || null,
-        social_tiktok: tiktok || null,
-        social_google_business: googleBusiness || null,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    social_facebook: facebook || null,
+    social_instagram: instagram || null,
+    social_tiktok: tiktok || null,
+    social_google_business: googleBusiness || null,
+  });
+  if (!merged.ok) return { ok: false, message: merged.message };
 
   revalidatePath("/dashboard/website");
   revalidatePath("/");

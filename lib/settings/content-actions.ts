@@ -6,6 +6,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SettingsActionState } from "./actions";
+import { isSafeHref } from "@/lib/utils/safe-href";
+import { mergeOrgSettings } from "./merge-settings";
 
 const MAX_JSON_BYTES = 50_000;
 
@@ -50,7 +52,10 @@ const navLinkSchema = z.array(
   z.object({
     key: z.string().min(1),
     label: z.string().min(1, "Label is required").max(30, "Label must be 30 characters or fewer"),
-    href: z.string().min(1),
+    href: z
+      .string()
+      .min(1)
+      .refine(isSafeHref, "Link must be a relative path or an http(s) URL."),
     visible: z.boolean(),
   })
 );
@@ -81,28 +86,9 @@ async function readMergeWrite(
     return { ok: false, message: "Only owners and admins can update website content." };
   }
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-
-  const { error } = await supabase
-    .from("organizations")
-    .update({
-      settings: {
-        ...existingSettings,
-        [key]: value,
-      },
-    })
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null);
-
-  if (error) {
-    return { ok: false, message: error.message };
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, { [key]: value });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/website");

@@ -32,6 +32,15 @@ export async function createRoute(
 
   if (!routeDate) return { ok: false, message: "Route date is required." };
 
+  // Don't let an arbitrary/foreign profile id be assigned as the driver.
+  if (driverProfileId) {
+    const { data: driver } = await supabase.from("organization_memberships").select("profile_id")
+      .eq("organization_id", ctx.organizationId).eq("profile_id", driverProfileId).eq("status", "active").maybeSingle();
+    if (!driver) {
+      return { ok: false, message: "Selected driver is not a member of this organization." };
+    }
+  }
+
   const { data, error } = await supabase
     .from("routes")
     .insert({
@@ -269,6 +278,14 @@ export async function updateStopStatus(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Dispatcher+ only (matches every other route-management action); crew use
+  // the separate crew action which enforces route assignment.
+  const { data: ssrm } = await supabase.from("organization_memberships").select("role")
+    .eq("organization_id", ctx.organizationId).eq("profile_id", ctx.userId).eq("status", "active").maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(ssrm?.role ?? "")) {
+    return { ok: false, message: "Only dispatchers and above can manage routes." };
+  }
 
   // Verify the stop belongs to a route owned by this org before updating
   const { data: stop } = await supabase
