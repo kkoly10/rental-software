@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import type { Locale } from "@/lib/i18n/config";
+import { sanitizeHref } from "@/lib/utils/safe-href";
 
 interface NavLink {
   key: string;
@@ -164,7 +165,7 @@ export function MobileMenuToggle({
 
             <nav className="mobile-menu-nav">
               {links.map((link) => (
-                <Link key={link.key} href={link.href} onClick={close}>{link.label}</Link>
+                <Link key={link.key} href={sanitizeHref(link.href)} onClick={close}>{link.label}</Link>
               ))}
             </nav>
 

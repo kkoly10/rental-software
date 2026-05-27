@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import type { SettingsActionState } from "./actions";
+import { isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase();
@@ -19,10 +20,11 @@ function getBucketName() {
 const LOGO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
 const HERO_MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+// SVG is intentionally excluded: it can carry inline <script>/onload and is
+// served from a public bucket and rendered via <img src>, enabling stored XSS.
 const LOGO_TYPES = [
   "image/png",
   "image/jpeg",
-  "image/svg+xml",
   "image/webp",
 ];
 
@@ -196,10 +198,9 @@ export async function updateSocialLinks(
     ["Google Business", googleBusiness],
   ] as const) {
     if (url) {
-      try {
-        new URL(url);
-      } catch {
-        return { ok: false, message: `${label} URL is not valid.` };
+      // new URL() accepts javascript:/data: — require an absolute http(s) URL.
+      if (!isAbsoluteHttpUrl(url)) {
+        return { ok: false, message: `${label} URL must be a valid http(s) link.` };
       }
     }
   }
