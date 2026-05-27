@@ -108,11 +108,12 @@ export function moneySchema(label: string, options?: { min?: number; max?: numbe
 
   return z.preprocess(
     (val) => {
-      // Strip currency symbols and thousands separators so "$1,000" parses,
-      // and treat a blank field as missing (invalid) rather than silently 0.
+      // Strip currency symbols and thousands separators so "$1,000" parses.
+      // A blank field coerces to 0 (forms default money inputs to 0); an
+      // unparseable value is passed through to fail with a clear message.
       if (typeof val === "string") {
         const cleaned = val.replace(/[$,\s]/g, "");
-        if (cleaned === "") return undefined;
+        if (cleaned === "") return 0;
         const n = Number(cleaned);
         return Number.isNaN(n) ? val : n;
       }
