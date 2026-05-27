@@ -291,8 +291,19 @@ export async function POST(request: NextRequest) {
         if (!originalPayment) break;
         const refundOrgId = (originalPayment.orders as unknown as { organization_id: string }).organization_id;
 
-        // Process each individual refund object; each has a unique id for dedup
-        const refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
+        // Process each individual refund object; each has a unique id for dedup.
+        // Webhook Charge payloads don't reliably expand the `refunds` sub-list
+        // (it's paginated and often empty/truncated), so fetch authoritatively
+        // from the API to avoid silently dropping refunds.
+        let refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
+        if (refunds.length === 0 && charge.id) {
+          try {
+            const refundList = await stripe.refunds.list({ charge: charge.id, limit: 100 });
+            refunds = refundList.data.map((r) => ({ id: r.id, amount: r.amount }));
+          } catch (err) {
+            console.error("[webhook] charge.refunded: failed to list refunds", err instanceof Error ? err.message : String(err));
+          }
+        }
         for (const refund of refunds) {
           const refundKey = `refund_${refund.id}`;
           const { count: existing } = await admin

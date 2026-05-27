@@ -288,6 +288,8 @@ async function handleOpenAI(
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      // Bound the outbound call so a hung provider doesn't block the function.
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
@@ -350,6 +352,8 @@ async function handleAnthropic(
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
+      // Bound the outbound call so a hung provider doesn't block the function.
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 600,
