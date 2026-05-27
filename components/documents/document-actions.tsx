@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateDocumentStatus, createDocumentsForOrder } from "@/lib/documents/actions";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -16,6 +17,7 @@ export function DocumentStatusButton({
   label: string;
 }) {
   const { messages: m } = useI18n();
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -28,7 +30,7 @@ export function DocumentStatusButton({
     setMessage(result.message);
     setPending(false);
     if (result.ok) {
-      window.location.reload();
+      router.refresh();
     }
   }
 
@@ -51,6 +53,7 @@ export function DocumentStatusButton({
 
 export function CreateDocumentsButton({ orderId }: { orderId: string }) {
   const { messages: m } = useI18n();
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -61,7 +64,7 @@ export function CreateDocumentsButton({ orderId }: { orderId: string }) {
     setMessage(result.message);
     setPending(false);
     if (result.ok) {
-      window.location.reload();
+      router.refresh();
     }
   }
 

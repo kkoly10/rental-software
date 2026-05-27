@@ -70,10 +70,13 @@ export async function getCustomersPage(options?: {
   }
 
   const mapped: CustomerSummary[] = data.map((customer) => {
-    const orders =
-      ((customer as Record<string, unknown>).orders as
+    const orders = [
+      ...(((customer as Record<string, unknown>).orders as
         | { order_number?: string | null; event_date?: string | null; order_status?: string | null }[]
-        | null) ?? [];
+        | null) ?? []),
+    ];
+    // The embed isn't ordered, so sort by event_date desc to get the real latest.
+    orders.sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""));
     const latest = orders[0];
 
     return {
@@ -85,10 +88,11 @@ export async function getCustomersPage(options?: {
       phone: customer.phone ?? "",
       latestBooking: latest?.order_number ?? "No bookings",
       latestDate: latest?.event_date
-        ? new Date(latest.event_date + "T00:00:00").toLocaleDateString("en-US", {
+        ? new Date(latest.event_date + "T00:00:00Z").toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "UTC",
           })
         : "N/A",
     };

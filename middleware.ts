@@ -99,9 +99,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Set tenant host header for downstream resolution
-    supabaseResponse.headers.set("x-tenant-host", tenantHost);
-    return supabaseResponse;
+    // Forward the tenant host on the REQUEST headers so downstream server
+    // components (which read it via headers()) can resolve the org. Setting it
+    // on the response headers was invisible to headers().
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-tenant-host", tenantHost);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── Standard auth flow (root domain / localhost / preview) ──

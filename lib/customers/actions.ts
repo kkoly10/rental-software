@@ -164,6 +164,15 @@ export async function updateCustomer(
         return { ok: false, message: "Customer info saved but address could not be stored. Please try again." };
       }
     }
+  } else {
+    // Address fields were cleared in the form — soft-delete the stored default
+    // delivery address so a removed address doesn't keep displaying.
+    await supabase
+      .from("customer_addresses")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("customer_id", customerId)
+      .eq("is_default_delivery", true)
+      .is("deleted_at", null);
   }
 
   revalidatePath(`/dashboard/customers/${customerId}`);

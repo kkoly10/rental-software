@@ -222,6 +222,7 @@ export async function createOrder(
         eventDate,
         startTime,
         endTime,
+        rentalEndDate,
       });
 
       if (!availability.available) {
@@ -472,6 +473,7 @@ export async function createOrder(
       eventDate,
       startTime,
       endTime,
+      rentalEndDate,
     });
 
     if (!reserveResult.ok) {

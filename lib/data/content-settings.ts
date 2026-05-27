@@ -70,7 +70,12 @@ export async function getContentSettings(): Promise<ContentSettings> {
   let navLinks: NavLink[];
   if (storedNav) {
     const storedMap = new Map(storedNav.map((l) => [l.key, l]));
-    navLinks = defaultNavLinks.map((d) => storedMap.get(d.key) ?? d);
+    const merged = defaultNavLinks.map((d) => storedMap.get(d.key) ?? d);
+    // Preserve operator-added custom links (keys not present in defaults)
+    // instead of silently dropping them on read.
+    const defaultKeys = new Set(defaultNavLinks.map((d) => d.key));
+    const customLinks = storedNav.filter((l) => !defaultKeys.has(l.key));
+    navLinks = [...merged, ...customLinks];
   } else {
     navLinks = defaultNavLinks;
   }

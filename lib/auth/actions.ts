@@ -27,7 +27,12 @@ function getValidationMessage(error: ZodError) {
 
 function safeRedirectPath(value?: string) {
   if (!value) return "/dashboard";
-  return value.startsWith("/") ? value : "/dashboard";
+  // Must be a same-site absolute path. Reject protocol-relative ("//host") and
+  // backslash tricks ("/\\host") that browsers normalize to an off-site URL.
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return "/dashboard";
+  }
+  return value;
 }
 
 async function checkAuthRateLimit(options: {

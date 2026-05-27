@@ -4,6 +4,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { logCommunication } from "@/lib/communications/log";
 
+// This job iterates all orgs and sends emails; give it headroom over the
+// default serverless timeout.
+export const maxDuration = 60;
+
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 function verifyCronSecret(request: NextRequest): boolean {
@@ -205,8 +209,14 @@ export async function GET(request: NextRequest) {
       day3Orgs.push({ id: org.id, name: org.name ?? "there", supportEmail });
     }
 
-    // Day 7 nudge: onboarded >= 7 days ago, not yet sent day7
-    if (onboardingDate <= day7Cutoff && !reengagement.day7_sent_at) {
+    // Day 7 nudge: onboarded >= 7 days ago, not yet sent day7, and only AFTER
+    // the day-3 nudge has gone out — otherwise an org first seen when it's
+    // already 7+ days old would receive both nudges in the same run.
+    else if (
+      onboardingDate <= day7Cutoff &&
+      !reengagement.day7_sent_at &&
+      reengagement.day3_sent_at
+    ) {
       day7Orgs.push({ id: org.id, name: org.name ?? "there", supportEmail });
     }
   }

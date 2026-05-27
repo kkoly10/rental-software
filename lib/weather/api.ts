@@ -91,21 +91,36 @@ export async function getWeatherForecast(
     const dayIndex = daily.time.indexOf(date);
     if (dayIndex === -1) return null;
 
-    const tempHigh = daily.temperature_2m_max[dayIndex];
-    const tempLow = daily.temperature_2m_min[dayIndex];
-    const precipitationChance = daily.precipitation_probability_max[dayIndex];
-    const windSpeed = daily.wind_speed_10m_max[dayIndex];
-    const weatherCode = daily.weather_code[dayIndex];
+    const tempHigh = daily.temperature_2m_max?.[dayIndex];
+    const tempLow = daily.temperature_2m_min?.[dayIndex];
+    const precipitationChance = daily.precipitation_probability_max?.[dayIndex];
+    const windSpeed = daily.wind_speed_10m_max?.[dayIndex];
+    const weatherCode = daily.weather_code?.[dayIndex];
+
+    // Open-Meteo can return null entries for a day; don't fabricate a "0°/low
+    // risk" forecast from missing data — report no forecast instead.
+    if (
+      tempHigh == null ||
+      tempLow == null ||
+      weatherCode == null ||
+      !Number.isFinite(tempHigh) ||
+      !Number.isFinite(tempLow)
+    ) {
+      return null;
+    }
+
+    const safeWind = Number.isFinite(windSpeed) ? windSpeed : 0;
+    const safePrecip = Number.isFinite(precipitationChance) ? precipitationChance : 0;
 
     return {
       date,
       tempHigh: Math.round(tempHigh),
       tempLow: Math.round(tempLow),
-      precipitationChance,
-      windSpeed: Math.round(windSpeed),
+      precipitationChance: safePrecip,
+      windSpeed: Math.round(safeWind),
       weatherCode,
       description: getDescription(weatherCode),
-      riskLevel: assessRisk(weatherCode, windSpeed, precipitationChance),
+      riskLevel: assessRisk(weatherCode, safeWind, safePrecip),
     };
   } catch {
     return null;

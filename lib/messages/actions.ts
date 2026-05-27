@@ -196,10 +196,12 @@ export async function sendReply(
     // operator to retry, creating a duplicate row.  Return ok:true so the UI
     // closes the form, but surface the delivery warning in the toast.
     revalidatePath("/dashboard/messages");
+    revalidatePath("/dashboard/messages/[id]", "page");
     return { ok: true, message: "Reply saved, but email delivery failed. Check your email provider settings." };
   }
 
   revalidatePath("/dashboard/messages");
+  revalidatePath("/dashboard/messages/[id]", "page");
 
   return { ok: true, message: "Reply sent successfully." };
 }

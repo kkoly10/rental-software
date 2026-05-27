@@ -136,14 +136,21 @@ export async function updateBookingPolicies(
   _prevState: SettingsActionState,
   formData: FormData
 ): Promise<SettingsActionState> {
-  const depositPercentage = Number(formData.get("deposit_percentage") ?? 30);
+  // formData.get returns "" for present-but-empty fields, which Number("")
+  // coerces to 0 — so fall back to the default for null OR empty values.
+  const numField = (key: string, fallback: number): number => {
+    const raw = formData.get(key);
+    if (raw === null || (typeof raw === "string" && raw.trim() === "")) return fallback;
+    return Number(raw);
+  };
+  const depositPercentage = numField("deposit_percentage", 30);
   const depositMinimum = formData.get("deposit_minimum")
     ? Number(formData.get("deposit_minimum"))
     : null;
   const requireDepositToConfirm = formData.get("require_deposit_to_confirm") === "on";
   const cancellationPolicyText = String(formData.get("cancellation_policy_text") ?? "").trim();
-  const bookingLeadTimeHours = Number(formData.get("booking_lead_time_hours") ?? 24);
-  const maxAdvanceBookingDays = Number(formData.get("max_advance_booking_days") ?? 180);
+  const bookingLeadTimeHours = numField("booking_lead_time_hours", 24);
+  const maxAdvanceBookingDays = numField("max_advance_booking_days", 180);
 
   if (Number.isNaN(depositPercentage) || depositPercentage < 0 || depositPercentage > 100) {
     return { ok: false, message: "Deposit percentage must be between 0 and 100." };

@@ -123,8 +123,7 @@ export async function getOrdersPage(options?: {
             timeZone: "UTC",
           })
         : "TBD",
-      total:
-        typeof order.total_amount === "number" ? `$${order.total_amount}` : "$0",
+      total: `$${Number(order.total_amount ?? 0).toFixed(2)}`,
       status: formatStatus(status),
       tone: statusTone(status),
       eventDateRaw: order.event_date ?? undefined,

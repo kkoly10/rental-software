@@ -17,10 +17,16 @@ export function WeatherBadge({
   const { messages: m } = useI18n();
 
   useEffect(() => {
-    if (!zipCode || !eventDate) return;
+    if (!zipCode || !eventDate) {
+      setForecast(null);
+      return;
+    }
 
     const parsed = parseDate(eventDate);
-    if (!parsed) return;
+    if (!parsed) {
+      setForecast(null);
+      return;
+    }
 
     const controller = new AbortController();
     fetch(`/api/weather?zip=${encodeURIComponent(zipCode)}&date=${parsed}`, {

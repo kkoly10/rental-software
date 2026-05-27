@@ -100,7 +100,6 @@ export function OnboardingForm() {
               setSlug(v);
               setSlugEdited(true);
             }}
-            onBlur={() => checkSlug(slug)}
             style={{ width: 200, fontFamily: "monospace" }}
             maxLength={63}
           />

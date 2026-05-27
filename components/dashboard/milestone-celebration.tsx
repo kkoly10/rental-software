@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 
 type MilestoneKey =
@@ -33,20 +33,24 @@ export function MilestoneCelebration({
   const { messages: m } = useI18n();
   const mappedKey = MILESTONE_KEY_MAP[milestoneKey];
   const config = mappedKey ? m.milestones[mappedKey] : null;
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setExiting(true);
-      setTimeout(() => setVisible(false), 400);
+      exitTimerRef.current = setTimeout(() => setVisible(false), 400);
     }, 6000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
   }, []);
 
   if (!visible || !config) return null;
 
   function handleDismiss() {
     setExiting(true);
-    setTimeout(() => setVisible(false), 400);
+    exitTimerRef.current = setTimeout(() => setVisible(false), 400);
   }
 
   return (

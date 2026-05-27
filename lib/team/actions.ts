@@ -9,6 +9,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { sendEmail } from "@/lib/email/send";
 import { checkPlanLimit } from "@/lib/stripe/gate";
+import { requiredEmailSchema } from "@/lib/validation/common";
 
 export type TeamActionState = {
   ok: boolean;
@@ -50,12 +51,13 @@ export async function inviteTeamMember(
   _prevState: TeamActionState,
   formData: FormData
 ): Promise<TeamActionState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "viewer");
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const emailParse = requiredEmailSchema.safeParse(formData.get("email") ?? "");
+  if (!emailParse.success) {
     return { ok: false, message: "Please enter a valid email address." };
   }
+  const email = emailParse.data;
 
   if (!isValidRole(role)) {
     return { ok: false, message: "Invalid role selected." };

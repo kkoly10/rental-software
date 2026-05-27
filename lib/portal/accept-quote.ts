@@ -49,7 +49,7 @@ export async function acceptQuote(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status, portal_access_token_created_at, order_number, product_id, event_date, event_start_time, event_end_time, customer_id")
+    .select("id, order_status, portal_access_token_created_at, order_number, product_id, event_date, event_start_time, event_end_time, rental_end_date, customer_id")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .is("deleted_at", null)
@@ -76,13 +76,21 @@ export async function acceptQuote(
   if (order.product_id && order.event_date) {
     try {
       const { reserveProductAvailabilityBlock } = await import("@/lib/availability/blocks");
+      // event_start_time/event_end_time are full timestamps; the window builder
+      // expects HH:MM, so derive that (in UTC, matching how they were stored).
+      const toHHMM = (ts: string | null) => {
+        if (!ts) return null;
+        const d = new Date(ts);
+        return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(11, 16);
+      };
       await reserveProductAvailabilityBlock({
         organizationId: orgId,
         productId: order.product_id,
         orderId: order.id,
         eventDate: order.event_date,
-        startTime: order.event_start_time,
-        endTime: order.event_end_time,
+        startTime: toHHMM(order.event_start_time),
+        endTime: toHHMM(order.event_end_time),
+        rentalEndDate: order.rental_end_date,
         source: "dashboard", // permanent hold — no expiry
       });
     } catch {

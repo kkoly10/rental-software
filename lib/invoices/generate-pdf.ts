@@ -126,14 +126,22 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
   doc.setFontSize(10);
 
   // Table rows
+  const pageHeight = doc.internal.pageSize.getHeight();
   for (let i = 0; i < data.items.length; i++) {
     const item = data.items[i];
+    // Start a new page before a row would run off the bottom.
+    if (y + 24 > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
     if (i % 2 === 0) {
       doc.setFillColor(249, 251, 254);
       doc.rect(margin, y, contentWidth, 24, "F");
     }
 
-    doc.text(item.name, margin + 12, y + 16);
+    // Clamp the name to the name column so it can't overrun the numeric columns.
+    const nameLine = (doc.splitTextToSize(item.name, 290)[0] as string) ?? item.name;
+    doc.text(nameLine, margin + 12, y + 16);
     doc.text(String(item.quantity), margin + 320, y + 16, { align: "right" });
     doc.text(formatMoney(item.unitPrice), margin + 400, y + 16, { align: "right" });
     doc.text(formatMoney(item.lineTotal), margin + contentWidth - 12, y + 16, { align: "right" });

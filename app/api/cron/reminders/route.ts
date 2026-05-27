@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
+import { hasResendEnv } from "@/lib/email/client";
 import {
   eventReminderEmail,
   dailyScheduleEmail,
   postEventFollowUpEmail,
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
+
+// This job iterates matching orders and sends emails; give it headroom over
+// the default serverless timeout.
+export const maxDuration = 60;
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
@@ -238,7 +243,7 @@ async function sendDayBeforeReminders(
 
       if (!claimed || claimed.length === 0) continue;
 
-      await sendEmail({
+      const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
         subject: `Reminder: Your rental from ${branding.businessName} is tomorrow!`,
@@ -255,6 +260,19 @@ async function sendDayBeforeReminders(
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
+
+      if (!emailed) {
+        // Release the claim so a later run retries a *transient* failure. Only
+        // do so when email is actually configured — a missing provider is a
+        // permanent condition and releasing would loop forever.
+        if (hasResendEnv()) {
+          await supabase
+            .from("orders")
+            .update({ day_before_reminder_sent_at: null })
+            .eq("id", order.id);
+        }
+        continue;
+      }
 
       sent++;
 
@@ -440,7 +458,7 @@ async function sendPostEventFollowUps(
 
       if (!claimed || claimed.length === 0) continue;
 
-      await sendEmail({
+      const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
         subject: `How was your event? — ${branding.businessName}`,
@@ -457,6 +475,18 @@ async function sendPostEventFollowUps(
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
       });
+
+      if (!emailed) {
+        // Release only transient failures (see day-before note); skip when no
+        // email provider is configured to avoid an every-run retry loop.
+        if (hasResendEnv()) {
+          await supabase
+            .from("orders")
+            .update({ follow_up_sent_at: null })
+            .eq("id", order.id);
+        }
+        continue;
+      }
 
       sent++;
     } catch (err) {

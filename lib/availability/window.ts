@@ -16,7 +16,8 @@ export type AvailabilityWindow = {
 export function getAvailabilityWindowForDate(
   eventDate?: string | null,
   startTime?: string | null,
-  endTime?: string | null
+  endTime?: string | null,
+  endDate?: string | null
 ): AvailabilityWindow | null {
   if (!eventDate) {
     return null;
@@ -25,6 +26,20 @@ export function getAvailabilityWindowForDate(
   const dayStart = new Date(`${eventDate}T00:00:00.000Z`);
   if (Number.isNaN(dayStart.getTime())) {
     return null;
+  }
+
+  // Multi-day rental: span from the start day's midnight through the day AFTER
+  // the end date, so every day in the range is reserved/checked (not just day 1).
+  if (endDate && endDate > eventDate) {
+    const endDayStart = new Date(`${endDate}T00:00:00.000Z`);
+    if (!Number.isNaN(endDayStart.getTime())) {
+      const end = new Date(endDayStart);
+      end.setUTCDate(end.getUTCDate() + 1);
+      return {
+        startsAt: dayStart.toISOString(),
+        endsAt: end.toISOString(),
+      };
+    }
   }
 
   // When both start and end times are provided, use the exact time window

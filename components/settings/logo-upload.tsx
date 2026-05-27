@@ -22,7 +22,15 @@ export function LogoUpload({ currentUrl }: { currentUrl: string }) {
     }
   }, [uploadState]);
 
-  const state = uploadState.message ? uploadState : removeState;
+  // Only clear the preview once the server confirms removal.
+  useEffect(() => {
+    if (removeState.ok && removeState.message) {
+      setUrl("");
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [removeState]);
+
+  const state = removing || removeState.message ? removeState : uploadState;
 
   return (
     <div className="brand-form-section">
@@ -59,8 +67,6 @@ export function LogoUpload({ currentUrl }: { currentUrl: string }) {
               onClick={() => {
                 const fd = new FormData();
                 removeAction(fd);
-                setUrl("");
-                if (fileRef.current) fileRef.current.value = "";
               }}
             >
               {removing ? m.logoUpload.removing : m.logoUpload.remove}

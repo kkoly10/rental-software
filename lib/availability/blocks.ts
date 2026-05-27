@@ -18,9 +18,15 @@ export async function reserveProductAvailabilityBlock(options: {
   eventDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  rentalEndDate?: string | null;
   source?: "checkout" | "dashboard";
 }) {
-  const window = getAvailabilityWindowForDate(options.eventDate, options.startTime, options.endTime);
+  const window = getAvailabilityWindowForDate(
+    options.eventDate,
+    options.startTime,
+    options.endTime,
+    options.rentalEndDate
+  );
   if (!window) {
     return { ok: true } as const;
   }

@@ -65,7 +65,13 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
     }
 
     initMap();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, []);
 
   /* ── Fetch last known position on mount ── */

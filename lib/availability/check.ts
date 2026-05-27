@@ -16,8 +16,14 @@ export async function checkProductAvailability(options: {
   eventDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  rentalEndDate?: string | null;
 }): Promise<AvailabilityCheckResult> {
-  const window = getAvailabilityWindowForDate(options.eventDate, options.startTime, options.endTime);
+  const window = getAvailabilityWindowForDate(
+    options.eventDate,
+    options.startTime,
+    options.endTime,
+    options.rentalEndDate
+  );
 
   if (!window) {
     return {

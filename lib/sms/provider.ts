@@ -9,6 +9,24 @@ export type SmsResult = {
   error?: string;
 };
 
+/**
+ * Normalize a phone number to E.164 so the provider does not reject common
+ * stored formats like "(555) 123-4567" or "555-123-4567". Defaults to the
+ * North American Numbering Plan (+1) for 10-digit input. Returns null when the
+ * input cannot be confidently normalized.
+ */
+export function normalizePhoneE164(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (/^\+[1-9]\d{6,14}$/.test(trimmed)) return trimmed;
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (trimmed.startsWith("+") && digits.length >= 7 && digits.length <= 15) {
+    return `+${digits}`;
+  }
+  return null;
+}
+
 export async function sendSms(message: SmsMessage): Promise<SmsResult> {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -19,9 +37,14 @@ export async function sendSms(message: SmsMessage): Promise<SmsResult> {
     return { ok: true, messageId: `demo-${Date.now()}` };
   }
 
+  const to = normalizePhoneE164(message.to);
+  if (!to) {
+    return { ok: false, error: "Invalid recipient phone number" };
+  }
+
   try {
     const params = new URLSearchParams();
-    params.set("To", message.to);
+    params.set("To", to);
     params.set("From", fromNumber);
     params.set("Body", message.body);
 

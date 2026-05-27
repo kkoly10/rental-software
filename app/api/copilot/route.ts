@@ -52,10 +52,8 @@ function extractProviderText(payload: any): string | null {
     return payload.content[0].text;
   }
 
-  if (typeof payload?.error?.message === "string") {
-    return payload.error.message;
-  }
-
+  // Never surface a provider error body as the assistant's reply — returning
+  // null lets the caller fall back to the local response instead.
   return null;
 }
 
@@ -290,6 +288,8 @@ async function handleOpenAI(
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      // Bound the outbound call so a hung provider doesn't block the function.
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
@@ -352,6 +352,8 @@ async function handleAnthropic(
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
+      // Bound the outbound call so a hung provider doesn't block the function.
+      signal: AbortSignal.timeout(15_000),
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 600,
