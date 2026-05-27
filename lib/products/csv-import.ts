@@ -65,6 +65,8 @@ export async function importProductsFromCsv(
     header: true,
     skipEmptyLines: true,
     transformHeader: normaliseHeader,
+    // Stop parsing past the row cap so a crafted file can't force unbounded work.
+    preview: 501,
   });
 
   if (parseErrors.length > 0 && rawRows.length === 0) {

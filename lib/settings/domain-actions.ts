@@ -19,6 +19,20 @@ export async function setCustomDomain(
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid domain." };
   }
 
+  // Don't allow claiming the app's own domain, its subdomains, or *.vercel.app.
+  const appDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN ?? "").toLowerCase().split(":")[0];
+  const candidate = parsed.data.domain;
+  const blocked =
+    candidate === "vercel.app" ||
+    candidate.endsWith(".vercel.app") ||
+    (!!appDomain &&
+      (candidate === appDomain ||
+        candidate === `www.${appDomain}` ||
+        candidate.endsWith(`.${appDomain}`)));
+  if (blocked) {
+    return { ok: false, message: "That domain can't be used as a custom domain." };
+  }
+
   if (!hasSupabaseEnv()) {
     return { ok: true, message: `Demo: ${parsed.data.domain} would be saved.` };
   }

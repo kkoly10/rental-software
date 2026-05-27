@@ -6,6 +6,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import type { SettingsActionState } from "./actions";
 import { isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
+import { sniffImageType } from "@/lib/utils/image-signature";
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").toLowerCase();
@@ -43,6 +44,12 @@ async function uploadBrandAsset(
 
   if (!allowedTypes.includes(file.type)) {
     return { ok: false, message: `Unsupported file type: ${file.type}` };
+  }
+
+  // Verify the actual file bytes, not just the (forgeable) declared type.
+  const sniffed = await sniffImageType(file);
+  if (!sniffed || !allowedTypes.includes(sniffed)) {
+    return { ok: false, message: "File content doesn't match a supported image format." };
   }
 
   const ctx = await getOrgContext();
