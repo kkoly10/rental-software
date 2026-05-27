@@ -8,11 +8,13 @@ export default async function ResetPasswordPage() {
 
   if (hasSupabaseEnv()) {
     const supabase = await createSupabaseServerClient();
+    // getUser() revalidates the token with the auth server; getSession() only
+    // reads the (possibly stale) cookie.
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    hasRecoverySession = Boolean(session);
+    hasRecoverySession = Boolean(user);
   }
 
   const m = await getMessages();

@@ -39,7 +39,7 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
             value={basePrice}
             min={0}
             step={10}
-            onChange={(e) => setBasePrice(Number(e.target.value))}
+            onChange={(e) => setBasePrice(Number(e.target.value) || 0)}
             style={{ width: "100%" }}
           />
         </label>
@@ -60,7 +60,7 @@ export function PricingPreview({ rules }: { rules: PricingRule[] }) {
             type="number"
             value={rentalDays}
             min={1}
-            onChange={(e) => setRentalDays(Number(e.target.value))}
+            onChange={(e) => setRentalDays(Math.max(1, Number(e.target.value) || 1))}
             style={{ width: "100%" }}
           />
         </label>

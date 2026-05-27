@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AvailabilityBlock } from "@/lib/availability/data";
 import { removeAvailabilityBlock } from "@/lib/availability/actions";
 import { useI18n } from "@/lib/i18n/provider";
@@ -14,6 +15,7 @@ const BLOCK_TYPE_KEY_MAP: Record<string, { key: "order" | "manual" | "maintenanc
 };
 
 export function AvailabilityBlockCard({ block }: { block: AvailabilityBlock }) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const { messages: m, locale } = useI18n();
@@ -39,6 +41,8 @@ export function AvailabilityBlockCard({ block }: { block: AvailabilityBlock }) {
     const result = await removeAvailabilityBlock(block.id);
     setMessage(result.message);
     setPending(false);
+    // Refresh so the removed block disappears from the list immediately.
+    if (result.ok) router.refresh();
   }
 
   return (
