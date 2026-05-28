@@ -6,6 +6,7 @@ import {
   paginateItems,
   type PaginatedResult,
   normalizeQuery,
+  normalizePage,
 } from "@/lib/listing/pagination";
 import type { PaymentSummary } from "@/lib/types";
 
@@ -65,68 +66,108 @@ export async function getPaymentsPage(options?: {
   }
 
   const supabase = await createSupabaseServerClient();
+  const selectFields =
+    "id, payment_type, payment_status, amount, paid_at, order_id, orders!inner(organization_id, order_number, customers(first_name, last_name, deleted_at))";
+  const pageSize = options?.pageSize ?? 20;
+
+  // No-query path: paginate + count at the DB so totals are accurate and
+  // payments past row 500 are reachable.
+  if (!query) {
+    const currentPage = normalizePage(options?.page);
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize - 1;
+    const { data, error, count } = await supabase
+      .from("payments")
+      .select(selectFields, { count: "exact" })
+      .eq("orders.organization_id", ctx.organizationId)
+      .order("paid_at", { ascending: false, nullsFirst: false })
+      .range(start, end);
+
+    if (error) {
+      console.error("[payments] Query failed:", error.message);
+      return paginateItems([], { page: options?.page, pageSize, query });
+    }
+
+    const mappedPage = (data ?? []).map(mapPaymentRow);
+    const totalItems = count ?? mappedPage.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    return {
+      items: mappedPage,
+      page: Math.min(currentPage, totalPages),
+      pageSize,
+      totalItems,
+      totalPages,
+      query: "",
+    };
+  }
+
+  // Search path: pull a larger window and JS-filter (query spans embedded
+  // order/customer columns).
   const { data, error } = await supabase
     .from("payments")
-    .select(
-      "id, payment_type, payment_status, amount, paid_at, order_id, orders!inner(organization_id, order_number, customers(first_name, last_name, deleted_at))"
-    )
+    .select(selectFields)
     .eq("orders.organization_id", ctx.organizationId)
     .order("paid_at", { ascending: false, nullsFirst: false })
-    .limit(500);
+    .limit(5000);
 
   if (error) {
     console.error("[payments] Query failed:", error.message);
-    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
+    return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: PaymentSummary[] = data.map((payment) => {
-    const order = (payment as Record<string, unknown>).orders as
-      | {
-          order_number?: string | null;
-          customers?: {
-            first_name?: string | null;
-            last_name?: string | null;
-            deleted_at?: string | null;
-          } | null;
-        }
-      | null;
-
-    const customer = order?.customers;
-    const type = payment.payment_type ?? "payment";
-    const status = payment.payment_status ?? "pending";
-    const amount = typeof payment.amount === "number" ? payment.amount : 0;
-
-    const customerLabel =
-      customer && !customer.deleted_at
-        ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
-        : "";
-
-    return {
-      id: payment.id,
-      customer: customerLabel || order?.order_number || "Order",
-      label: `$${amount.toFixed(2)} ${type} ${status}`,
-      item: order?.order_number ?? "N/A",
-      date: payment.paid_at
-        ? new Date(payment.paid_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "Pending",
-      type,
-      status,
-    };
-  });
-
-  const filtered = mapped.filter((payment) =>
-    matchesPaymentQuery(payment, query)
-  );
+  const mapped: PaymentSummary[] = data.map(mapPaymentRow);
+  const filtered = mapped.filter((payment) => matchesPaymentQuery(payment, query));
 
   return paginateItems(filtered, {
     page: options?.page,
-    pageSize: options?.pageSize ?? 20,
+    pageSize,
     query,
   });
+}
+
+type PaymentRow = {
+  id: string;
+  payment_type: string | null;
+  payment_status: string | null;
+  amount: number | string | null;
+  paid_at: string | null;
+  order_id: string | null;
+};
+
+function mapPaymentRow(payment: PaymentRow): PaymentSummary {
+  const order = (payment as Record<string, unknown>).orders as
+    | {
+        order_number?: string | null;
+        customers?: {
+          first_name?: string | null;
+          last_name?: string | null;
+          deleted_at?: string | null;
+        } | null;
+      }
+    | null;
+  const customer = order?.customers;
+  const type = payment.payment_type ?? "payment";
+  const status = payment.payment_status ?? "pending";
+  const amount = typeof payment.amount === "number" ? payment.amount : 0;
+  const customerLabel =
+    customer && !customer.deleted_at
+      ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
+      : "";
+  return {
+    id: payment.id,
+    customer: customerLabel || order?.order_number || "Order",
+    label: `$${amount.toFixed(2)} ${type} ${status}`,
+    item: order?.order_number ?? "N/A",
+    date: payment.paid_at
+      ? new Date(payment.paid_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "Pending",
+    type,
+    status,
+  };
 }
 
 export async function getPayments(): Promise<PaymentSummary[]> {
