@@ -65,9 +65,13 @@ export function WeatherAlert({
         : m.weatherAlert.clear;
 
   return (
-    <div className={`weather-alert weather-alert-${forecast.riskLevel}`}>
+    <div
+      role={forecast.riskLevel === "high" ? "alert" : "status"}
+      aria-live={forecast.riskLevel === "high" ? "assertive" : "polite"}
+      className={`weather-alert weather-alert-${forecast.riskLevel}`}
+    >
       <div className="weather-alert-header">
-        <span className="weather-alert-icon">{icon}</span>
+        <span className="weather-alert-icon" aria-hidden="true">{icon}</span>
         <span className="weather-alert-message">{message}</span>
       </div>
       <div className="weather-details">

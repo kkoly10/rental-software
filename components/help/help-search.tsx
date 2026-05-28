@@ -27,6 +27,7 @@ export function HelpSearch() {
       <input
         type="text"
         placeholder={m.dashboard.help.searchPlaceholder}
+        aria-label={m.dashboard.help.searchPlaceholder}
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
         style={{ width: "100%", marginBottom: 16 }}

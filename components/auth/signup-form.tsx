@@ -58,7 +58,7 @@ export function SignupForm() {
         </span>
       </label>
 
-      {state.message ? <div className="muted">{state.message}</div> : null}
+      {state.message ? <div role="alert" aria-live="assertive" className="muted">{state.message}</div> : null}
 
       <div style={{ display: "flex", gap: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>

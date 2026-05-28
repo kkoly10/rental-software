@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { markWelcomeSeen } from "@/lib/guidance/actions";
 import type { MiniTour } from "@/lib/guidance/tour-config";
 import { useI18n } from "@/lib/i18n/provider";
@@ -18,6 +18,8 @@ export function WelcomeModal({
   const [open, setOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
   const { messages: m } = useI18n();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = "welcome-modal-title";
 
   function close() {
     setOpen(false);
@@ -25,6 +27,18 @@ export function WelcomeModal({
       markWelcomeSeen();
     });
   }
+
+  // Focus the dialog on mount and close on Escape so keyboard/AT users can
+  // perceive the dialog opening and dismiss it.
+  useEffect(() => {
+    if (!open) return;
+    modalRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function handleStartTour(tourId: string) {
     close();
@@ -39,10 +53,18 @@ export function WelcomeModal({
 
   return (
     <div className="welcome-overlay" onClick={close}>
-      <div className="welcome-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="welcome-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        ref={modalRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="welcome-header">
-          <div className="welcome-icon">&#9889;</div>
-          <h2 style={{ margin: "12px 0 6px", fontSize: "1.6rem" }}>
+          <div className="welcome-icon" aria-hidden="true">&#9889;</div>
+          <h2 id={titleId} style={{ margin: "12px 0 6px", fontSize: "1.6rem" }}>
             {greeting}
           </h2>
           <p className="muted" style={{ maxWidth: 440, margin: "0 auto" }}>

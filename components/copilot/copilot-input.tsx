@@ -28,6 +28,7 @@ export function CopilotInput({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={m.copilot.placeholder}
+        aria-label={m.copilot.placeholder}
         disabled={disabled}
         style={{ flex: 1 }}
       />

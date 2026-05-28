@@ -177,10 +177,15 @@ export function CopilotPanel({
   );
 
   return (
-    <div className="copilot-panel">
+    <div
+      className="copilot-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="copilot-panel-title"
+    >
       <div className="copilot-panel-header">
         <div>
-          <strong style={{ fontSize: 14 }}>{i18n.copilot.title}</strong>
+          <strong id="copilot-panel-title" style={{ fontSize: 14 }}>{i18n.copilot.title}</strong>
           <div className="muted" style={{ fontSize: 12 }}>
             {i18n.copilot.subtitle}
           </div>
@@ -188,9 +193,10 @@ export function CopilotPanel({
         <button
           onClick={onClose}
           className="ghost-btn"
+          aria-label={i18n.common.close}
           style={{ fontSize: 18, padding: "2px 8px", lineHeight: 1 }}
         >
-          &times;
+          <span aria-hidden="true">&times;</span>
         </button>
       </div>
 

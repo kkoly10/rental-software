@@ -91,7 +91,7 @@ export function TestimonialsManager({ defaults }: { defaults: Testimonial[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); removeItem(index); }}
                   style={{ color: "var(--danger)" }}
-                  title={m.deleteTitle}
+                  aria-label={m.deleteTitle} title={m.deleteTitle}
                 >
                   ✕
                 </button>

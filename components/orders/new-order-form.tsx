@@ -339,6 +339,8 @@ export function NewOrderForm({
 
       {state.message && (
         <div
+          role={state.ok ? "status" : "alert"}
+          aria-live={state.ok ? "polite" : "assertive"}
           className={state.ok ? "badge success" : "badge warning"}
           style={{ padding: "10px 14px" }}
         >

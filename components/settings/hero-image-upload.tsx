@@ -56,6 +56,7 @@ export function HeroImageUpload({ currentUrl }: { currentUrl: string }) {
           name="hero_file"
           type="file"
           accept="image/png,image/jpeg,image/webp"
+          aria-label={m.heading}
           style={{ fontSize: 13 }}
         />
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>

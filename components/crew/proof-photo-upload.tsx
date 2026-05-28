@@ -44,6 +44,7 @@ export function ProofPhotoUpload({ stopId, existingUrl }: { stopId: string; exis
           type="file"
           accept="image/*"
           capture="environment"
+          aria-label="Proof of delivery photo"
           onChange={handleChange}
           style={{ fontSize: 13, flex: 1 }}
         />
