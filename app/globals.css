@@ -4264,3 +4264,92 @@ textarea[aria-invalid="true"] {
     font-size: 0.72rem !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Tenant storefront's "powered by Korent" banner.
+   Sticky at the bottom on desktop. On mobile it was wrapping to two
+   lines + a bulky CTA, eating ~150px of viewport, so collapse to a
+   single thin row with a compact CTA.
+   ───────────────────────────────────────────────────────────────── */
+
+.demo-storefront-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: center;
+  flex-wrap: wrap;
+  /* Reserve space at the bottom of the page so fixed banner doesn't cover
+     the final section. iOS safe area inset is added on top. */
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+.demo-storefront-banner-text {
+  white-space: normal;
+}
+.demo-storefront-banner-cta {
+  display: inline-block;
+  padding: 5px 14px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .demo-storefront-banner {
+    padding: 6px 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    gap: 8px;
+    font-size: 0.74rem;
+    line-height: 1.2;
+    flex-wrap: nowrap;
+  }
+  .demo-storefront-banner-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .demo-storefront-banner-cta {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    border-radius: 5px;
+    flex-shrink: 0;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tenant storefront hero: tighter on mobile so the trust signals
+   below start peeking above the fold.
+   ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .public-hero-copy {
+    padding: 16px 14px;
+    margin: 8px 0;
+  }
+  .public-hero-copy h1 {
+    margin: 4px 0 8px;
+    font-size: clamp(1.75rem, 9.5vw, 2.25rem);
+  }
+  .public-hero-copy p {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+  .storefront-search-card {
+    margin-top: 10px;
+    padding: 10px;
+  }
+}
