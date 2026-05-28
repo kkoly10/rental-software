@@ -8,31 +8,12 @@ export function DemoModeBanner() {
   if (!isDemoMode()) return null;
 
   return (
-    <div
-      style={{
-        background: "linear-gradient(90deg, #f59e0b, #f97316)",
-        color: "#1a1a1a",
-        textAlign: "center",
-        padding: "10px 16px",
-        fontSize: 14,
-        fontWeight: 600,
-        letterSpacing: "0.01em",
-        lineHeight: "1.4",
-        position: "sticky",
-        top: 0,
-        zIndex: 9999,
-      }}
-    >
-      DEMO MODE — Data is not being saved. Connect your accounts to go live.{" "}
-      <a
-        href="/dashboard/settings"
-        style={{
-          color: "#1a1a1a",
-          textDecoration: "underline",
-          fontWeight: 700,
-          marginLeft: 6,
-        }}
-      >
+    <div className="demo-mode-banner" role="status" aria-live="polite">
+      <span className="demo-mode-banner-full">
+        DEMO MODE — Data is not being saved. Connect your accounts to go live.
+      </span>
+      <span className="demo-mode-banner-short" aria-hidden="true">DEMO MODE</span>
+      <a href="/dashboard/settings" className="demo-mode-banner-cta">
         Set up now &rarr;
       </a>
     </div>
