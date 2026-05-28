@@ -194,6 +194,7 @@ export async function createProduct(
   } catch { /* non-critical */ }
 
   revalidatePath("/inventory");
+  revalidatePath("/dashboard/products");
   redirect(`/dashboard/products/${inserted.id}?created=1`);
 }
 
@@ -308,7 +309,8 @@ export async function updateProduct(
     if (error.code === "23505") {
       return { ok: false, message: "A product with that name already exists. Please choose a different name." };
     }
-    return { ok: false, message: error.message };
+    console.error("[products] update failed:", error.message);
+    return { ok: false, message: "Couldn't update the product. Please try again." };
   }
 
   // If the product is being activated, ensure it has at least one bookable asset.
@@ -342,6 +344,20 @@ export async function updateProduct(
     } catch { /* non-critical */ }
   }
 
+  // #362 — pricing/visibility/description all need to refresh on operator
+  // list + detail and storefront catalog + detail; the previous code only
+  // hit /inventory.
   revalidatePath("/inventory");
+  revalidatePath("/dashboard/products");
+  revalidatePath(`/dashboard/products/${parsed.data.productId}`);
+  {
+    const { data: product } = await supabase
+      .from("products")
+      .select("slug")
+      .eq("id", parsed.data.productId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    if (product?.slug) revalidatePath(`/inventory/${product.slug}`);
+  }
   redirect(`/dashboard/products/${parsed.data.productId}`);
 }

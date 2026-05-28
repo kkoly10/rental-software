@@ -313,7 +313,8 @@ export async function createOrder(
         : { error: null };
 
       if (updateCustomerError) {
-        return { ok: false, message: updateCustomerError.message };
+        console.error("[orders] update customer failed:", updateCustomerError.message);
+        return { ok: false, message: "Couldn't update the customer record." };
       }
     } else {
       const { data: newCust, error: custErr } = await supabase
@@ -332,10 +333,8 @@ export async function createOrder(
         .single();
 
       if (custErr || !newCust) {
-        return {
-          ok: false,
-          message: custErr?.message ?? "Failed to create customer.",
-        };
+        if (custErr) console.error("[orders] create customer failed:", custErr.message);
+        return { ok: false, message: "Failed to create customer." };
       }
 
       customerId = newCust.id;
@@ -356,10 +355,8 @@ export async function createOrder(
       .single();
 
     if (custErr || !newCust) {
-      return {
-        ok: false,
-        message: custErr?.message ?? "Failed to create customer.",
-      };
+      if (custErr) console.error("[orders] create customer failed:", custErr.message);
+      return { ok: false, message: "Failed to create customer." };
     }
 
     customerId = newCust.id;
@@ -437,11 +434,9 @@ export async function createOrder(
     .single();
 
   if (orderError || !createdOrder) {
+    if (orderError) console.error("[orders] create order failed:", orderError.message);
     await rollbackAddress();
-    return {
-      ok: false,
-      message: orderError?.message ?? "Unable to create order.",
-    };
+    return { ok: false, message: "Unable to create order." };
   }
 
   if (productId) {
@@ -456,12 +451,10 @@ export async function createOrder(
     });
 
     if (itemError) {
+      console.error("[orders] create order item failed:", itemError.message);
       await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
-      return {
-        ok: false,
-        message: itemError.message,
-      };
+      return { ok: false, message: "Unable to add items to the order." };
     }
   }
 
@@ -585,14 +578,19 @@ export async function updateOrderStatus(
   // Enforce state machine — only allow transitions that make business sense.
   // Automatic transitions (e.g. awaiting_deposit → confirmed on payment) bypass
   // this action and update the DB directly, so they are not affected here.
+  // #338 `delivered` must be a valid forward transition from `confirmed`,
+  // because crew completion (lib/crew/actions.ts) and route stop completion
+  // (lib/routes/actions.ts) both write `delivered` from `confirmed`.
+  // #345 `delivered → cancelled` lets operators cancel misdeliveries from
+  // the dashboard instead of requiring a manual SQL fix.
   const VALID_TRANSITIONS: Record<string, string[]> = {
     inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled"],
     quote_sent:       ["awaiting_deposit", "confirmed", "cancelled"],
     awaiting_deposit: ["confirmed", "cancelled"],
-    confirmed:        ["scheduled", "out_for_delivery", "cancelled"],
-    scheduled:        ["out_for_delivery", "confirmed", "cancelled"],
+    confirmed:        ["scheduled", "out_for_delivery", "delivered", "cancelled"],
+    scheduled:        ["out_for_delivery", "delivered", "cancelled"],
     out_for_delivery: ["delivered", "cancelled"],
-    delivered:        ["completed"],
+    delivered:        ["completed", "cancelled"],
     completed:        [],
     cancelled:        [],
     refunded:         [],
@@ -618,15 +616,28 @@ export async function updateOrderStatus(
     };
   }
 
-  const { error } = await supabase
+  // #339 TOCTOU guard — only update if the row is still in the state we
+  // validated above, so two concurrent operators can't both pass the
+  // VALID_TRANSITIONS check and silently overwrite each other.
+  const { data: updated, error } = await supabase
     .from("orders")
     .update({ order_status: parsed.data.newStatus })
     .eq("id", parsed.data.orderId)
     .eq("organization_id", ctx.organizationId)
-    .is("deleted_at", null);
+    .eq("order_status", currentOrder.order_status)
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) {
-    return { ok: false, message: error.message };
+    console.error("[orders] update order status failed:", error.message);
+    return { ok: false, message: "Couldn't update order status." };
+  }
+
+  if (!updated || updated.length === 0) {
+    return {
+      ok: false,
+      message: "Order status changed while you were editing. Please reload and try again.",
+    };
   }
 
   // Release availability blocks when order is cancelled — awaited so inventory is freed immediately
@@ -634,8 +645,16 @@ export async function updateOrderStatus(
     try {
       const { releaseOrderAvailability } = await import("@/lib/availability/actions");
       await releaseOrderAvailability(ctx.organizationId, parsed.data.orderId);
-    } catch {
-      console.error("[orders] Failed to release availability for cancelled order", parsed.data.orderId);
+    } catch (err) {
+      // #397 surface the failure in the central log so operators can see it,
+      // not just stdout where it disappears in production
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "orders.updateOrderStatus",
+        message: "Failed to release availability for cancelled order",
+        context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
+      });
     }
   }
 
@@ -724,6 +743,13 @@ export async function updateOrderStatus(
 
   revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);
   revalidatePath("/dashboard/orders");
+  // #346 / #369 — customer portal, delivery board, calendar, and counts
+  // tile all read from `orders.order_status`; revalidate so they reflect
+  // the new status immediately.
+  revalidatePath("/order-status");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/deliveries");
+  revalidatePath("/dashboard/calendar");
 
   return {
     ok: true,

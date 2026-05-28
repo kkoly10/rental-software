@@ -423,7 +423,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: updateCustomerError.message,
+        message: "We couldn't update your contact details. Please try again or contact the operator.",
       };
     }
   } else {
@@ -452,7 +452,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: customerError?.message ?? "Unable to create customer.",
+        message: "We couldn't create your account. Please try again.",
       };
     }
 
@@ -491,7 +491,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: addressError?.message ?? "Unable to create address.",
+        message: "We couldn't save your delivery address. Please check the address and try again.",
       };
     }
 
@@ -578,7 +578,7 @@ export async function createCheckoutOrder(
 
     return {
       ok: false,
-      message: orderError?.message ?? "Unable to create order.",
+      message: "We couldn't create your booking. Please try again or contact the operator.",
     };
   }
 
@@ -617,7 +617,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: itemError.message,
+        message: "We couldn't save your booking line items. Please try again.",
       };
     }
   }

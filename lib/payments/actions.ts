@@ -130,7 +130,8 @@ export async function recordPayment(
   });
 
   if (rpcError) {
-    return { ok: false, message: rpcError.message };
+    console.error("[payments] record_manual_payment RPC failed:", rpcError.message);
+    return { ok: false, message: "Couldn't record the payment. Please try again." };
   }
 
   const result = rpcResult as { ok: boolean; message?: string; new_balance?: number; net_paid?: number } | null;
@@ -142,7 +143,10 @@ export async function recordPayment(
   const netPaid = result.net_paid ?? 0;
   const updatedFinancials = { remainingBalance: newBalance, depositFulfilled: netPaid >= Number(order.deposit_due_amount ?? 0) };
 
-  // Auto-confirm orders when deposit is fulfilled
+  // Auto-confirm orders when deposit is fulfilled.
+  // #342 TOCTOU — gate the UPDATE on the still-current order_status so a
+  // concurrent operator cancellation between the SELECT above and this
+  // UPDATE isn't silently overwritten by "confirmed".
   if (
     paymentType !== "refund" &&
     updatedFinancials?.depositFulfilled &&
@@ -153,6 +157,7 @@ export async function recordPayment(
       .update({ order_status: "confirmed" })
       .eq("id", orderId)
       .eq("organization_id", ctx.organizationId)
+      .eq("order_status", "awaiting_deposit")
       .is("deleted_at", null);
   }
 

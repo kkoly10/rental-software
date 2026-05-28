@@ -295,6 +295,10 @@ const EMAIL_WORTHY_STATUSES = [
   "delivered",
   "completed",
   "cancelled",
+  // #353 webhook flips delivered → refunded after a full refund; without
+  // this the customer only gets the refund-payment receipt, never the
+  // booking-status update.
+  "refunded",
 ];
 
 export async function triggerOrderStatusEmail(params: {

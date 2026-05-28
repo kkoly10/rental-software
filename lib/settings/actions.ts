@@ -166,8 +166,12 @@ export async function updateBookingPolicies(
 
   const supabase = await createSupabaseServerClient();
   const role = await getUserRole(supabase, ctx.organizationId, ctx.userId);
-  if (role !== "owner") {
-    return { ok: false, message: "Only the organization owner can update booking policies." };
+  // #326 sibling actions (updateBusinessProfile, updateWebsiteSettings) accept
+  // owner OR admin; matching that here removes the inconsistency where admin
+  // can rename the org and rewrite the homepage but is blocked from editing
+  // deposit/cancellation policy.
+  if (!["owner", "admin"].includes(role ?? "")) {
+    return { ok: false, message: "Only owners and admins can update booking policies." };
   }
 
   const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
@@ -183,5 +187,9 @@ export async function updateBookingPolicies(
   }
 
   revalidatePath("/dashboard/settings");
+  // #374 deposit %, lead time, max-advance days are read by getCheckoutPricing
+  // and the storefront date picker.
+  revalidatePath("/checkout");
+  revalidatePath("/inventory", "layout");
   return { ok: true, message: "Booking policies updated." };
 }

@@ -81,31 +81,40 @@ export async function createBalancePaymentSession(
   const siteUrl = await getSiteUrl();
   const stripe = getStripe();
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `Balance — Order ${order.order_number}`,
-            description: "Remaining rental balance",
+  // #391 If Stripe is misconfigured or unreachable the create() call throws,
+  // which would become a Next 16 500 page for the customer mid-checkout.
+  // Catch and return a stable ok:false instead.
+  let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `Balance — Order ${order.order_number}`,
+              description: "Remaining rental balance",
+            },
+            unit_amount: Math.round(balance * 100),
           },
-          unit_amount: Math.round(balance * 100),
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      customer_email: customer.email ?? undefined,
+      success_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}&paid=1`,
+      cancel_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}`,
+      metadata: {
+        organization_id: orgId,
+        order_id: order.id,
+        order_number: order.order_number,
+        payment_type: "balance",
       },
-    ],
-    customer_email: customer.email ?? undefined,
-    success_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}&paid=1`,
-    cancel_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}`,
-    metadata: {
-      organization_id: orgId,
-      order_id: order.id,
-      order_number: order.order_number,
-      payment_type: "balance",
-    },
-  });
+    });
+  } catch (err) {
+    console.error("[pay-balance] Stripe session create failed:", err instanceof Error ? err.message : err);
+    return { ok: false, message: "Payments are temporarily unavailable. Please try again in a moment." };
+  }
 
   if (!session.url) {
     return { ok: false, message: "Could not create payment session. Please try again." };

@@ -93,6 +93,7 @@ async function buildPortalOrder(order: OrderBase, customer: { first_name: string
     delivered: "Delivered",
     completed: "Completed",
     cancelled: "Cancelled",
+    refunded: "Refunded",
   };
 
   const financials = await getOrderFinancials(order.id);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
   // are intentionally excluded — only the webhook/payment action should promote those.
   const { data: expiredBlocks, error: fetchError } = await admin
     .from("availability_blocks")
-    .select("id, source_order_id, orders!inner(order_status)")
+    .select("id, source_order_id, organization_id, orders!inner(order_status)")
     .eq("block_type", "checkout_hold")
     .lt("expires_at", now)
     .eq("orders.order_status", "awaiting_deposit");
@@ -94,6 +95,38 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  // #344 Tell the customer their pending booking has been released, so
+  // they're not waiting indefinitely after their payment session timed out.
+  // Each call is wrapped — one failed email must not stop the others.
+  if (orderIds.length > 0) {
+    const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+    const orgByOrder = new Map<string, string>();
+    for (const b of expiredBlocks) {
+      if (b.source_order_id && b.organization_id) {
+        orgByOrder.set(b.source_order_id, b.organization_id);
+      }
+    }
+    await Promise.allSettled(
+      Array.from(orgByOrder.entries()).map(([orderId, organizationId]) =>
+        triggerOrderStatusEmail({
+          organizationId,
+          orderId,
+          newStatus: "cancelled",
+        }).catch((err) =>
+          console.error("[cleanup-holds] status email failed", orderId, err instanceof Error ? err.message : err)
+        )
+      )
+    );
+  }
+
+  // #344 Dashboard counts and storefront availability both need to refresh
+  // when the cron releases holds; otherwise operators see ghost orders and
+  // customers see false sold-out badges.
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/inventory", "layout");
+  revalidatePath("/order-status");
 
   console.log(
     `Cleanup: released ${blockIds.length} expired holds, cancelled ${orderIds.length} orders`

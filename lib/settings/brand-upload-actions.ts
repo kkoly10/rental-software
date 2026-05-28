@@ -32,6 +32,24 @@ const LOGO_TYPES = [
 
 const HERO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
+async function requireBrandManager(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  profileId: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("profile_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can manage brand settings." };
+  }
+  return { ok: true };
+}
+
 async function uploadBrandAsset(
   file: File,
   kind: "logo" | "hero",
@@ -60,16 +78,8 @@ async function uploadBrandAsset(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: uploadMembership } = await supabase
-    .from("organization_memberships")
-    .select("role")
-    .eq("organization_id", ctx.organizationId)
-    .eq("profile_id", ctx.userId)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!["owner", "admin"].includes(uploadMembership?.role ?? "")) {
-    return { ok: false, message: "Only owners and admins can upload brand assets." };
-  }
+  const auth = await requireBrandManager(supabase, ctx.organizationId, ctx.userId);
+  if (!auth.ok) return auth;
 
   const bucket = getBucketName();
   const filePath = `${ctx.organizationId}/brand/${kind}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
@@ -104,12 +114,14 @@ async function saveSetting(
   if (!ctx) return { ok: false, message: "Not authenticated." };
 
   const supabase = await createSupabaseServerClient();
+  const auth = await requireBrandManager(supabase, ctx.organizationId, ctx.userId);
+  if (!auth.ok) return auth;
 
   const merged = await mergeOrgSettings(supabase, ctx.organizationId, { [key]: value });
   if (!merged.ok) return { ok: false, message: merged.message };
 
   revalidatePath("/dashboard/website");
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   return { ok: true, message: "Saved successfully." };
 }
 
@@ -207,6 +219,8 @@ export async function updateSocialLinks(
   if (!ctx) return { ok: false, message: "Not authenticated." };
 
   const supabase = await createSupabaseServerClient();
+  const auth = await requireBrandManager(supabase, ctx.organizationId, ctx.userId);
+  if (!auth.ok) return auth;
 
   const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
     social_facebook: facebook || null,
@@ -217,6 +231,6 @@ export async function updateSocialLinks(
   if (!merged.ok) return { ok: false, message: merged.message };
 
   revalidatePath("/dashboard/website");
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   return { ok: true, message: "Social links updated." };
 }

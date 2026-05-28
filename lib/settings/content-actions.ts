@@ -92,7 +92,10 @@ async function readMergeWrite(
   }
 
   revalidatePath("/dashboard/website");
-  revalidatePath("/");
+  // #377 nav links, FAQ, testimonials, badges render via PublicHeader/Footer
+  // on every storefront subpage — revalidate at layout level so subpages
+  // don't keep the old content until ISR.
+  revalidatePath("/", "layout");
   return { ok: true, message: "Saved successfully." };
 }
 

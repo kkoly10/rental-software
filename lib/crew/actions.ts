@@ -50,8 +50,12 @@ export async function updateStopStatus(
     return { ok: false, message: "Stop not found." };
   }
 
-  // Crew members may only update stops on routes they are assigned to
+  // Positive allowlist — viewer (and any unknown role) cannot mutate stops.
+  // Crew members additionally must be assigned to this route.
   const role = membership?.role ?? "";
+  if (!["owner", "admin", "dispatcher", "crew"].includes(role)) {
+    return { ok: false, message: "You don't have permission to update this stop." };
+  }
   if (role === "crew" && routeData.assigned_driver_profile_id !== ctx.userId) {
     return { ok: false, message: "You are not assigned to this route." };
   }
@@ -87,10 +91,13 @@ export async function updateStopStatus(
       .not("stop_status", "in", "(completed,skipped)");
 
     if (remaining && remaining.length === 0) {
+      // Don't flip a route that's already terminal (cancelled/completed) back
+      // to a non-current state via the auto-promotion path.
       await supabase
         .from("routes")
         .update({ route_status: "completed" })
-        .eq("id", stop.route_id);
+        .eq("id", stop.route_id)
+        .in("route_status", ["planned", "in_progress"]);
     }
 
     // Sync order status when a delivery stop (not pickup) is completed.
@@ -176,6 +183,13 @@ export async function updateStopStatus(
   revalidatePath("/crew/today");
   revalidatePath("/dashboard/deliveries");
   revalidatePath(`/dashboard/deliveries/${stop.route_id}`);
+  // When the stop flipped an order to "delivered" above, the operator order
+  // pages and the customer portal both need to refresh.
+  if (newStatus === "completed" && stop.order_id && stop.stop_type === "delivery") {
+    revalidatePath("/dashboard/orders");
+    revalidatePath(`/dashboard/orders/${stop.order_id}`);
+    revalidatePath("/order-status");
+  }
 
   return { ok: true, message: `Stop marked as ${newStatus.replace(/_/g, " ")}.` };
 }
@@ -237,7 +251,11 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Stop not found." };
   }
 
-  if ((photoMembership?.role ?? "") === "crew" && photoRouteData.assigned_driver_profile_id !== ctx.userId) {
+  const photoRole = photoMembership?.role ?? "";
+  if (!["owner", "admin", "dispatcher", "crew"].includes(photoRole)) {
+    return { ok: false, message: "You don't have permission to upload proof photos." };
+  }
+  if (photoRole === "crew" && photoRouteData.assigned_driver_profile_id !== ctx.userId) {
     return { ok: false, message: "You are not assigned to this route." };
   }
 
@@ -316,7 +334,11 @@ export async function saveSignature(
     return { ok: false, message: "Stop not found." };
   }
 
-  if ((sigMembership?.role ?? "") === "crew" && sigRouteData.assigned_driver_profile_id !== ctx.userId) {
+  const sigRole = sigMembership?.role ?? "";
+  if (!["owner", "admin", "dispatcher", "crew"].includes(sigRole)) {
+    return { ok: false, message: "You don't have permission to save signatures." };
+  }
+  if (sigRole === "crew" && sigRouteData.assigned_driver_profile_id !== ctx.userId) {
     return { ok: false, message: "You are not assigned to this route." };
   }
 

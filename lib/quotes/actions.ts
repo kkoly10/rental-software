@@ -70,10 +70,15 @@ export async function sendQuote(orderId: string): Promise<QuoteActionState> {
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null);
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    console.error("[quotes] sendQuote update failed:", error.message);
+    return { ok: false, message: "Couldn't send the quote. Please try again." };
+  }
 
   revalidatePath(`/dashboard/orders/${orderId}`);
   revalidatePath("/dashboard/orders");
+  // #370 quote_sent flows to the customer portal too
+  revalidatePath("/order-status");
 
   // Send quote email — awaited so it completes before the Lambda returns
   try {

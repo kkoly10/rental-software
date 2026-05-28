@@ -133,11 +133,23 @@ export async function uploadProductImage(
   });
 
   if (insertError) {
-    return { ok: false, message: insertError.message };
+    console.error("[products.image] insert failed:", insertError.message);
+    return { ok: false, message: "Couldn't save the image. Please try again." };
   }
 
   revalidatePath(`/dashboard/products/${productId}`);
   revalidatePath("/dashboard/products");
+  // #363 storefront catalog + detail render product images too
+  revalidatePath("/inventory");
+  {
+    const { data: prod } = await supabase
+      .from("products")
+      .select("slug")
+      .eq("id", productId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    if (prod?.slug) revalidatePath(`/inventory/${prod.slug}`);
+  }
 
   return {
     ok: true,

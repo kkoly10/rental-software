@@ -125,6 +125,9 @@ export async function acceptQuote(
   revalidatePath("/order-status");
   revalidatePath(`/dashboard/orders/${order.id}`);
   revalidatePath("/dashboard/orders");
+  // #373 home tile/counters and storefront availability also need refresh
+  revalidatePath("/dashboard");
+  revalidatePath("/inventory", "layout");
 
   return { ok: true, message: "Quote accepted! Please pay your deposit to confirm your booking." };
 }
