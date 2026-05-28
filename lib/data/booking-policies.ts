@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPublicOrgId } from "@/lib/auth/org-context";
+import { getOrgContext, getPublicOrgId } from "@/lib/auth/org-context";
 
 export type BookingPolicies = {
   depositPercentage: number;
@@ -31,7 +31,12 @@ const DEFAULTS: BookingPolicies = {
 export const getBookingPolicies = cache(async (): Promise<BookingPolicies> => {
   if (!hasSupabaseEnv()) return DEFAULTS;
 
-  const organizationId = await getPublicOrgId();
+  // Try operator session first (dashboard /dashboard/settings reads here too —
+  // without this, the dashboard form pre-fills from DEFAULTS instead of saved
+  // values, and every edit overwrites the un-touched fields back to defaults).
+  // Falls back to host-based resolution for the public storefront / checkout.
+  const ctx = await getOrgContext();
+  const organizationId = ctx?.organizationId ?? (await getPublicOrgId());
   if (!organizationId) return DEFAULTS;
 
   const supabase = await createSupabaseServerClient();
