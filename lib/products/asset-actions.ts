@@ -101,6 +101,8 @@ export async function addProductAsset(
 
   revalidatePath(`/dashboard/products/${productId}`);
   revalidatePath("/dashboard/products");
+  revalidatePath("/inventory");
+  if (product.slug) revalidatePath(`/inventory/${product.slug}`);
   return { ok: true, message: "Asset added." };
 }
 
@@ -139,6 +141,8 @@ export async function updateProductAssetStatus(
 
   if (productId) revalidatePath(`/dashboard/products/${productId}`);
   revalidatePath("/dashboard/products");
+  revalidatePath("/inventory");
+  await revalidateInventorySlug(supabase, ctx.organizationId, productId);
   return { ok: true, message: "Status updated." };
 }
 
@@ -173,5 +177,22 @@ export async function removeProductAsset(
 
   if (productId) revalidatePath(`/dashboard/products/${productId}`);
   revalidatePath("/dashboard/products");
+  revalidatePath("/inventory");
+  await revalidateInventorySlug(supabase, ctx.organizationId, productId);
   return { ok: true, message: "Asset removed." };
+}
+
+async function revalidateInventorySlug(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  productId: string
+): Promise<void> {
+  if (!productId) return;
+  const { data } = await supabase
+    .from("products")
+    .select("slug")
+    .eq("id", productId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  if (data?.slug) revalidatePath(`/inventory/${data.slug}`);
 }
