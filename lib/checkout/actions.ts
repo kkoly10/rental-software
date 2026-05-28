@@ -338,19 +338,28 @@ export async function createCheckoutOrder(
     return { ok: false, message: "Please select an event date to check availability." };
   }
 
-  // Enforce booking date policies (lead time and max advance)
+  // Enforce booking date policies (lead time and max advance).
+  // event_date is a YYYY-MM-DD calendar day; we compare it to the calendar
+  // day that's `lead_time_hours` from now, not to "now" directly — otherwise
+  // any same-day booking fails even when lead_time = 0, because midnight UTC
+  // of "today" is in the past once the day has started.
   if (eventDate) {
     const bookingPolicies = await getBookingPolicies();
     const eventDateMs = new Date(`${eventDate}T00:00:00Z`).getTime();
     const nowMs = Date.now();
-    const minDateMs = nowMs + bookingPolicies.bookingLeadTimeHours * 60 * 60 * 1000;
+    const leadTimeMs = bookingPolicies.bookingLeadTimeHours * 60 * 60 * 1000;
+    const earliestMs = nowMs + leadTimeMs;
+    // Round earliestMs down to the start of that UTC day so a calendar-day
+    // comparison vs eventDateMs (also at 00:00 UTC) is fair.
+    const earliestDayMs = new Date(earliestMs).setUTCHours(0, 0, 0, 0);
     const maxDateMs = nowMs + bookingPolicies.maxAdvanceBookingDays * 24 * 60 * 60 * 1000;
 
-    if (eventDateMs < minDateMs) {
-      return {
-        ok: false,
-        message: `Bookings require at least ${bookingPolicies.bookingLeadTimeHours} hours advance notice.`,
-      };
+    if (eventDateMs < earliestDayMs) {
+      const friendly =
+        bookingPolicies.bookingLeadTimeHours === 0
+          ? "This event date has already passed."
+          : `Bookings require at least ${bookingPolicies.bookingLeadTimeHours} hours advance notice.`;
+      return { ok: false, message: friendly };
     }
 
     if (eventDateMs > maxDateMs) {
