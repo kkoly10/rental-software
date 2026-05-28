@@ -4152,3 +4152,115 @@ textarea[aria-invalid="true"] {
     width: 100%;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Demo-mode banner (top of every page in demo deployments)
+   Sticky on desktop; compact on mobile so it doesn't eat the viewport.
+   ───────────────────────────────────────────────────────────────── */
+
+.demo-mode-banner {
+  background: linear-gradient(90deg, #f59e0b, #f97316);
+  color: #1a1a1a;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.demo-mode-banner-full { display: inline; }
+.demo-mode-banner-short { display: none; }
+.demo-mode-banner-cta {
+  color: #1a1a1a;
+  text-decoration: underline;
+  font-weight: 700;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .demo-mode-banner {
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.25;
+    gap: 6px;
+  }
+  .demo-mode-banner-full { display: none; }
+  .demo-mode-banner-short { display: inline; }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   SaaS landing: feature comparison
+   Desktop: 3-column grid. Mobile: stacked cards per feature with
+   self-labeling badges ("Korent ✓" / "Others ✗"), header hidden.
+   ───────────────────────────────────────────────────────────────── */
+
+.saas-compare-header,
+.saas-compare-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+}
+.saas-compare-header > [role="columnheader"] {
+  padding: 12px 16px;
+  text-align: center;
+}
+.saas-compare-header > [role="columnheader"]:first-child {
+  text-align: left;
+}
+.saas-compare-feature { padding: 10px 16px; }
+.saas-compare-cell {
+  padding: 10px 16px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.saas-compare-mobile-label { display: none; }
+
+@media (max-width: 640px) {
+  .saas-compare-header { display: none; }
+  .saas-compare-row {
+    grid-template-columns: 1fr;
+    padding: 14px 16px;
+    gap: 8px;
+  }
+  .saas-compare-feature {
+    padding: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .saas-compare-cell {
+    padding: 0;
+    justify-content: flex-start;
+    font-size: 0.9rem;
+  }
+  .saas-compare-cell-korent { color: #047857; }
+  .saas-compare-cell-other { color: #b91c1c; }
+  .saas-compare-mobile-label {
+    display: inline;
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.9;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   SaaS landing: dashboard-preview booking calendar
+   7-col grid is fine on mobile; just tighten cell padding/font so
+   two-digit day numbers don't wrap.
+   ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .saas-cal > div {
+    padding: 4px 0 !important;
+    font-size: 0.72rem !important;
+  }
+}

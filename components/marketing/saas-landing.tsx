@@ -307,6 +307,7 @@ export async function SaasLanding() {
             <div className="panel" style={{ padding: 24 }}>
               <div className="kicker" style={{ marginBottom: 8 }}>{s.dashboardPreview.bookingCalendar}</div>
               <div
+                className="saas-cal"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(7, 1fr)",
@@ -579,6 +580,9 @@ export async function SaasLanding() {
           </div>
 
           <div
+            className="saas-compare"
+            role="table"
+            aria-label={s.comparison.title}
             style={{
               border: "1px solid var(--border, #e5e7eb)",
               borderRadius: 12,
@@ -587,19 +591,19 @@ export async function SaasLanding() {
             }}
           >
             <div
+              className="saas-compare-header"
+              role="row"
               style={{
-                display: "grid",
-                gridTemplateColumns: "2fr 1fr 1fr",
                 background: "var(--surface-soft, #f8f9fa)",
                 borderBottom: "1px solid var(--border, #e5e7eb)",
                 fontWeight: 700,
               }}
             >
-              <div style={{ padding: "12px 16px" }}></div>
-              <div style={{ padding: "12px 16px", textAlign: "center", color: "var(--primary, #2563eb)" }}>
+              <div role="columnheader" />
+              <div role="columnheader" style={{ color: "var(--primary, #2563eb)" }}>
                 {s.comparison.korentColumn}
               </div>
-              <div style={{ padding: "12px 16px", textAlign: "center", color: "var(--text-muted, #6b7280)" }}>
+              <div role="columnheader" style={{ color: "var(--text-muted, #6b7280)" }}>
                 {s.comparison.otherColumn}
               </div>
             </div>
@@ -607,19 +611,21 @@ export async function SaasLanding() {
             {s.comparison.rows.map((feature, i) => (
               <div
                 key={feature}
+                className="saas-compare-row"
+                role="row"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1fr 1fr",
                   borderBottom: i < s.comparison.rows.length - 1 ? "1px solid var(--border, #e5e7eb)" : undefined,
                   background: i % 2 === 0 ? "#fff" : "var(--surface-soft, #f8f9fa)",
                 }}
               >
-                <div style={{ padding: "10px 16px" }}>{feature}</div>
-                <div style={{ padding: "10px 16px", textAlign: "center", color: "#059669", fontWeight: 700 }}>
-                  ✓
+                <div role="cell" className="saas-compare-feature">{feature}</div>
+                <div role="cell" className="saas-compare-cell saas-compare-cell-korent">
+                  <span className="saas-compare-mobile-label" aria-hidden="true">{s.comparison.korentColumn}</span>
+                  <span style={{ color: "#059669", fontWeight: 700 }} aria-label={`${s.comparison.korentColumn}: yes`}>✓</span>
                 </div>
-                <div style={{ padding: "10px 16px", textAlign: "center", color: "#dc2626", fontWeight: 700 }}>
-                  ✗
+                <div role="cell" className="saas-compare-cell saas-compare-cell-other">
+                  <span className="saas-compare-mobile-label" aria-hidden="true">{s.comparison.otherColumn}</span>
+                  <span style={{ color: "#dc2626", fontWeight: 700 }} aria-label={`${s.comparison.otherColumn}: no`}>✗</span>
                 </div>
               </div>
             ))}
