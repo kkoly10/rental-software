@@ -65,7 +65,10 @@ export async function getRouteDetail(routeId: string): Promise<RouteDetail> {
       "id, stop_sequence, stop_type, scheduled_window_start, stop_status, orders(order_number, customers(first_name, last_name))"
     )
     .eq("route_id", routeId)
-    .order("stop_sequence", { ascending: true });
+    .order("stop_sequence", { ascending: true })
+    // Explicit cap so a route with an unexpectedly huge stop list is bounded
+    // instead of relying on PostgREST's default 1000-row truncation.
+    .limit(500);
 
   const driver = (route as Record<string, unknown>).profiles as {
     full_name: string;

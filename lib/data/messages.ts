@@ -253,9 +253,14 @@ export async function getThreadMessages(
 
   let query = supabase
     .from("messages")
-    .select("*")
+    .select(
+      "id, organization_id, order_id, customer_id, direction, channel, sender_email, sender_name, body, read, created_at"
+    )
     .eq("organization_id", ctx.organizationId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    // Bound long threads explicitly so we're not at the mercy of the default
+    // 1000-row PostgREST cap; also drops the unused select("*") over-fetch.
+    .limit(500);
 
   if (isUuid) {
     query = query.eq("customer_id", conversationKey);
