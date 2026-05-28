@@ -15,44 +15,11 @@ export function DemoBanner() {
     : `https://${appDomain}/signup`;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-        padding: "10px 16px",
-        background: "rgba(15, 23, 42, 0.82)",
-        backdropFilter: "blur(8px)",
-        color: "#fff",
-        fontSize: "0.85rem",
-        lineHeight: 1.4,
-        textAlign: "center",
-        flexWrap: "wrap",
-      }}
-    >
-      <span>
+    <div className="demo-storefront-banner" role="complementary">
+      <span className="demo-storefront-banner-text">
         {m.demoBanner.poweredBy} <strong>{m.common.appName}</strong>.
       </span>
-      <a
-        href={signupUrl}
-        style={{
-          display: "inline-block",
-          padding: "5px 14px",
-          background: "#2563eb",
-          color: "#fff",
-          borderRadius: 6,
-          fontWeight: 600,
-          fontSize: "0.82rem",
-          textDecoration: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <a href={signupUrl} className="demo-storefront-banner-cta">
         {m.demoBanner.createOwn}
       </a>
     </div>
