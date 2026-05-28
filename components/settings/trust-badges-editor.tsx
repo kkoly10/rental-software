@@ -54,7 +54,7 @@ export function TrustBadgesEditor({ defaults }: { defaults: TrustBadge[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); removeItem(index); }}
                   style={{ color: "var(--danger)" }}
-                  title={m.deleteTitle}
+                  aria-label={m.deleteTitle} title={m.deleteTitle}
                 >
                   ✕
                 </button>

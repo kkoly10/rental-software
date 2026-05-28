@@ -6,6 +6,7 @@ import {
   paginateItems,
   type PaginatedResult,
   normalizeQuery,
+  normalizePage,
 } from "@/lib/listing/pagination";
 import type { OrderSummary } from "@/lib/types";
 
@@ -28,6 +29,53 @@ function statusTone(status: string): OrderSummary["tone"] {
     return "danger";
   }
   return "default";
+}
+
+type OrderRow = {
+  id: string;
+  order_number: string | null;
+  order_status: string | null;
+  event_date: string | null;
+  total_amount: number | string | null;
+};
+
+function mapOrderRow(order: OrderRow): OrderSummary {
+  const customer = (order as Record<string, unknown>).customers as
+    | { first_name?: string | null; last_name?: string | null; deleted_at?: string | null }
+    | null;
+  const items =
+    ((order as Record<string, unknown>).order_items as
+      | { item_name_snapshot?: string | null }[]
+      | null) ?? [];
+  const address = (order as Record<string, unknown>).customer_addresses as
+    | { postal_code?: string | null }
+    | null;
+  const status = order.order_status ?? "inquiry";
+  const customerLabel =
+    customer && !customer.deleted_at
+      ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
+      : "";
+  return {
+    id: order.id,
+    customer: customerLabel || (order.order_number ?? "Order"),
+    item:
+      items.length > 0
+        ? items.map((i) => i.item_name_snapshot).filter(Boolean).join(", ")
+        : "Rental booking",
+    date: order.event_date
+      ? new Date(order.event_date + "T00:00:00").toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+      : "TBD",
+    total: `$${Number(order.total_amount ?? 0).toFixed(2)}`,
+    status: formatStatus(status),
+    tone: statusTone(status),
+    eventDateRaw: order.event_date ?? undefined,
+    postalCode: address?.postal_code ?? undefined,
+  };
 }
 
 function matchesOrderQuery(order: OrderSummary, query: string) {
@@ -71,65 +119,59 @@ export async function getOrdersPage(options?: {
   }
 
   const supabase = await createSupabaseServerClient();
+  const selectFields =
+    "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses!delivery_address_id(postal_code)";
+  const pageSize = options?.pageSize ?? 20;
+
+  // No-query path: paginate + count at the DB so every order is reachable and
+  // totals are accurate (no silent 500-row JS truncation).
+  if (!query) {
+    const currentPage = normalizePage(options?.page);
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize - 1;
+    const { data, error, count } = await supabase
+      .from("orders")
+      .select(selectFields, { count: "exact" })
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .range(start, end);
+
+    if (error) {
+      console.error("[orders] Query failed:", error.message);
+      return paginateItems([], { page: options?.page, pageSize, query });
+    }
+
+    const mappedPage = (data ?? []).map(mapOrderRow);
+    const totalItems = count ?? mappedPage.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    return {
+      items: mappedPage,
+      page: Math.min(currentPage, totalPages),
+      pageSize,
+      totalItems,
+      totalPages,
+      query: "",
+    };
+  }
+
+  // Search path: pull a larger window and JS-filter (search spans embedded
+  // customer/items so it can't be expressed purely at the DB layer without
+  // a multi-step query).
   const { data, error } = await supabase
     .from("orders")
-    .select(
-      "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses!delivery_address_id(postal_code)"
-    )
+    .select(selectFields)
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(5000);
 
   if (error) {
     console.error("[orders] Query failed:", error.message);
-    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
+    return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: OrderSummary[] = data.map((order) => {
-    const customer = (order as Record<string, unknown>).customers as
-      | {
-          first_name?: string | null;
-          last_name?: string | null;
-          deleted_at?: string | null;
-        }
-      | null;
-    const items =
-      ((order as Record<string, unknown>).order_items as
-        | { item_name_snapshot?: string | null }[]
-        | null) ?? [];
-    const address = (order as Record<string, unknown>).customer_addresses as
-      | { postal_code?: string | null }
-      | null;
-    const status = order.order_status ?? "inquiry";
-
-    const customerLabel =
-      customer && !customer.deleted_at
-        ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
-        : "";
-
-    return {
-      id: order.id,
-      customer: customerLabel || (order.order_number ?? "Order"),
-      item:
-        items.length > 0
-          ? items.map((i) => i.item_name_snapshot).filter(Boolean).join(", ")
-          : "Rental booking",
-      date: order.event_date
-        ? new Date(order.event_date + "T00:00:00").toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            timeZone: "UTC",
-          })
-        : "TBD",
-      total: `$${Number(order.total_amount ?? 0).toFixed(2)}`,
-      status: formatStatus(status),
-      tone: statusTone(status),
-      eventDateRaw: order.event_date ?? undefined,
-      postalCode: address?.postal_code ?? undefined,
-    };
-  });
+  const mapped: OrderSummary[] = data.map(mapOrderRow);
 
   const filtered = mapped.filter((order) => matchesOrderQuery(order, query));
 

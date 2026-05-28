@@ -19,6 +19,7 @@ export async function ListSearchForm({
           name="q"
           defaultValue={initialQuery ?? ""}
           placeholder={placeholder}
+          aria-label={placeholder}
           style={{ flex: "1 1 280px", minWidth: 220 }}
         />
         <button type="submit" className="secondary-btn">

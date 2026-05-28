@@ -171,9 +171,10 @@ export async function updateCustomer(
         return { ok: false, message: "Customer info saved but address could not be stored. Please try again." };
       }
     }
-  } else {
-    // Address fields were cleared in the form — soft-delete the stored default
-    // delivery address so a removed address doesn't keep displaying.
+  } else if (!addressLine1 && !addressCity) {
+    // Both address fields were cleared — soft-delete the stored default
+    // delivery address. (Partial input is treated as a no-op so a half-filled
+    // edit doesn't silently destroy stored data.)
     await supabase
       .from("customer_addresses")
       .update({ deleted_at: new Date().toISOString() })

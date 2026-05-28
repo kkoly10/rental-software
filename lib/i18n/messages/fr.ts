@@ -768,6 +768,7 @@ export const fr: Messages = {
       selectOrderHint: "Choisissez la commande concernée, puis remplissez les détails ci-dessous.",
     },
     deliveries: {
+      liveBadge: "En direct",
       title: "Tableau des livraisons",
       description: "Suivez les tournées, l’état des arrêts et l’avancement des équipes.",
       kickerDispatch: "Dispatch",
@@ -834,6 +835,8 @@ export const fr: Messages = {
       generate: "Générer les documents",
       create: "Créer les documents",
       download: "Télécharger",
+      markSent: "Marquer envoyé",
+      markSigned: "Marquer signé",
     },
     analytics: {
       title: "Analytique",
@@ -1199,6 +1202,7 @@ export const fr: Messages = {
     invoice: {
       download: "Télécharger la facture",
       generating: "Génération...",
+      errorGenerate: "Impossible de générer la facture. Veuillez réessayer.",
     },
   },
 

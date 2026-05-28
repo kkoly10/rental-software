@@ -49,6 +49,7 @@ export function LogoUpload({ currentUrl }: { currentUrl: string }) {
           name="logo_file"
           type="file"
           accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          aria-label={m.logoUpload.label}
           style={{ fontSize: 13 }}
         />
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>

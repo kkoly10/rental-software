@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -23,8 +24,11 @@ const DEFAULTS: BookingPolicies = {
 /**
  * Fetch booking policies for the current org (dashboard or public storefront).
  * Returns sensible defaults if not configured.
+ *
+ * Wrapped in React cache() so callers in the same request (e.g. the checkout
+ * page loader and the pricing helper) share a single DB round trip.
  */
-export async function getBookingPolicies(): Promise<BookingPolicies> {
+export const getBookingPolicies = cache(async (): Promise<BookingPolicies> => {
   if (!hasSupabaseEnv()) return DEFAULTS;
 
   const organizationId = await getPublicOrgId();
@@ -50,7 +54,7 @@ export async function getBookingPolicies(): Promise<BookingPolicies> {
     bookingLeadTimeHours: clampNumber(settings.booking_lead_time_hours, 0, 720, DEFAULTS.bookingLeadTimeHours),
     maxAdvanceBookingDays: clampNumber(settings.max_advance_booking_days, 1, 730, DEFAULTS.maxAdvanceBookingDays),
   };
-}
+});
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;

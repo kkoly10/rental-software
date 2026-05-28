@@ -77,11 +77,14 @@ export async function updateStopStatus(
 
   // If stop is completed, check if all stops on route are done → update route status
   if (newStatus === "completed") {
+    // Skipped stops are "done" for the purpose of route completion — leaving
+    // them out of the "remaining" set would block the route from ever
+    // auto-completing whenever a single stop was skipped.
     const { data: remaining } = await supabase
       .from("route_stops")
       .select("id")
       .eq("route_id", stop.route_id)
-      .neq("stop_status", "completed");
+      .not("stop_status", "in", "(completed,skipped)");
 
     if (remaining && remaining.length === 0) {
       await supabase

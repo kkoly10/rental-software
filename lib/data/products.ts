@@ -2,7 +2,7 @@ import { mockProducts } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-import { paginateItems, type PaginatedResult, normalizeQuery } from "@/lib/listing/pagination";
+import { paginateItems, type PaginatedResult, normalizeQuery, normalizePage } from "@/lib/listing/pagination";
 import type { ProductSummary } from "@/lib/types";
 
 function matchesProductQuery(product: ProductSummary, query: string) {
@@ -44,47 +44,90 @@ export async function getProductsPage(options?: {
   }
 
   const supabase = await createSupabaseServerClient();
+  const selectFields = "id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at)";
+  const pageSize = options?.pageSize ?? 20;
+
+  // No-query path: DB-side paginate + count so every product is reachable.
+  if (!query) {
+    const currentPage = normalizePage(options?.page);
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize - 1;
+    const { data, error, count } = await supabase
+      .from("products")
+      .select(selectFields, { count: "exact" })
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .order("name", { ascending: true })
+      .range(start, end);
+
+    if (error) {
+      console.error("[products] Query failed:", error.message);
+      return paginateItems([], { page: options?.page, pageSize, query });
+    }
+
+    const mappedPage = (data ?? []).map(mapProductRow);
+    const totalItems = count ?? mappedPage.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    return {
+      items: mappedPage,
+      page: Math.min(currentPage, totalPages),
+      pageSize,
+      totalItems,
+      totalPages,
+      query: "",
+    };
+  }
+
+  // Search path: pull a larger window and JS-filter (query spans category name
+  // via embedded join).
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at)")
+    .select(selectFields)
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
     .order("name", { ascending: true })
-    .limit(500);
+    .limit(5000);
 
   if (error) {
     console.error("[products] Query failed:", error.message);
-    return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
+    return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: ProductSummary[] = data.map((product) => {
-    const category = (product as Record<string, unknown>).categories as
-      | { name?: string | null; deleted_at?: string | null }
-      | null;
-
-    return {
-      id: product.id,
-      name: product.name ?? "Unnamed",
-      category:
-        category && !category.deleted_at ? category.name ?? "Rental" : "Rental",
-      price:
-        typeof product.base_price === "number"
-          ? `$${product.base_price}/day`
-          : "$0/day",
-      status: product.is_active ? "Active" : "Hidden",
-      tone: (product.is_active ? "success" : "default") as ProductSummary["tone"],
-    };
-  });
-
-  const filtered = mapped.filter((product) =>
-    matchesProductQuery(product, query)
-  );
+  const mapped: ProductSummary[] = data.map(mapProductRow);
+  const filtered = mapped.filter((product) => matchesProductQuery(product, query));
 
   return paginateItems(filtered, {
     page: options?.page,
-    pageSize: options?.pageSize ?? 20,
+    pageSize,
     query,
   });
+}
+
+type ProductRow = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  base_price: number | string | null;
+  is_active: boolean | null;
+  deleted_at: string | null;
+};
+
+function mapProductRow(product: ProductRow): ProductSummary {
+  const category = (product as Record<string, unknown>).categories as
+    | { name?: string | null; deleted_at?: string | null }
+    | null;
+  return {
+    id: product.id,
+    name: product.name ?? "Unnamed",
+    category:
+      category && !category.deleted_at ? category.name ?? "Rental" : "Rental",
+    price:
+      typeof product.base_price === "number"
+        ? `$${product.base_price}/day`
+        : "$0/day",
+    status: product.is_active ? "Active" : "Hidden",
+    tone: (product.is_active ? "success" : "default") as ProductSummary["tone"],
+  };
 }
 
 export async function getProducts(): Promise<ProductSummary[]> {

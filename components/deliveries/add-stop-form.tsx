@@ -35,10 +35,10 @@ export function AddStopForm({
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div style={{ flex: "2 1 180px" }}>
-          <label style={{ fontSize: 12, color: "var(--text-soft)", display: "block", marginBottom: 4 }}>
+          <label htmlFor="add-stop-order" style={{ fontSize: 12, color: "var(--text-soft)", display: "block", marginBottom: 4 }}>
             {t.orderLabel}
           </label>
-          <select name="order_id" required style={{ width: "100%" }}>
+          <select id="add-stop-order" name="order_id" required style={{ width: "100%" }}>
             <option value="">{t.selectOrder}</option>
             {unroutedOrders.map((o) => (
               <option key={o.id} value={o.id}>
@@ -49,20 +49,20 @@ export function AddStopForm({
         </div>
 
         <div style={{ flex: "1 1 100px" }}>
-          <label style={{ fontSize: 12, color: "var(--text-soft)", display: "block", marginBottom: 4 }}>
+          <label htmlFor="add-stop-type" style={{ fontSize: 12, color: "var(--text-soft)", display: "block", marginBottom: 4 }}>
             {t.stopTypeLabel}
           </label>
-          <select name="stop_type" style={{ width: "100%" }}>
+          <select id="add-stop-type" name="stop_type" style={{ width: "100%" }}>
             <option value="delivery">{t.stopTypes.delivery}</option>
             <option value="pickup">{t.stopTypes.pickup}</option>
           </select>
         </div>
 
         <div style={{ flex: "1 1 100px" }}>
-          <label style={{ fontSize: 12, color: "var(--text-soft)", display: "block", marginBottom: 4 }}>
+          <label htmlFor="add-stop-time" style={{ fontSize: 12, color: "var(--text-soft)", display: "block", marginBottom: 4 }}>
             {t.timeLabel}
           </label>
-          <input name="scheduled_time" type="time" style={{ width: "100%" }} />
+          <input id="add-stop-time" name="scheduled_time" type="time" style={{ width: "100%" }} />
         </div>
 
         <button type="submit" className="secondary-btn" disabled={pending} style={{ flexShrink: 0 }}>
@@ -72,6 +72,8 @@ export function AddStopForm({
 
       {state.message && (
         <div
+          role={state.ok ? "status" : "alert"}
+          aria-live={state.ok ? "polite" : "assertive"}
           className={`badge ${state.ok ? "success" : "warning"}`}
           style={{ marginTop: 8, padding: "6px 10px", fontSize: 13 }}
         >

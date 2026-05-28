@@ -158,13 +158,17 @@ export function TrackingMap({ routeId, isLive, initialStatus }: Props) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
       <div ref={containerRef} style={{ flex: 1, minHeight: 400 }} />
-      <div style={{
-        position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
-        background: "white", borderRadius: 20, padding: "8px 16px",
-        boxShadow: "0 2px 12px rgba(0,0,0,.15)", fontSize: 13,
-        display: "flex", alignItems: "center", gap: 8, zIndex: 1000,
-      }}>
-        <span style={{
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
+          background: "white", borderRadius: 20, padding: "8px 16px",
+          boxShadow: "0 2px 12px rgba(0,0,0,.15)", fontSize: 13,
+          display: "flex", alignItems: "center", gap: 8, zIndex: 1000,
+        }}
+      >
+        <span aria-hidden="true" style={{
           width: 8, height: 8, borderRadius: "50%", display: "inline-block",
           background: connectionState === "live" ? "#20b486" : "#f5a623",
         }} />

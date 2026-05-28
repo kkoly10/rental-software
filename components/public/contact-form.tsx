@@ -45,6 +45,8 @@ export function ContactForm() {
 
       {state.message && (
         <div
+          role={state.ok ? "status" : "alert"}
+          aria-live={state.ok ? "polite" : "assertive"}
           className={`badge ${state.ok ? "success" : "warning"}`}
           style={{ textAlign: "center", padding: "10px 16px", marginTop: 8 }}
         >

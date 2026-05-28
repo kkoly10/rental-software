@@ -216,6 +216,7 @@ export function CommandPalette() {
             type="text"
             className="cmd-palette-input"
             placeholder={m.commandPalette.placeholder}
+            aria-label={m.commandPalette.placeholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleInputKeyDown}

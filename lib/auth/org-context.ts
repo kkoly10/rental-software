@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
@@ -15,8 +16,11 @@ export type OrgContext = {
  * Resolves the current authenticated user's organization via organization_memberships.
  * Returns null if not authenticated or no membership exists.
  * This is the correct multi-tenant approach — never use "first org in DB".
+ *
+ * Wrapped in React cache() so a single request rendering multiple server
+ * components/data loaders only runs the auth.getUser + membership lookup once.
  */
-export async function getOrgContext(): Promise<OrgContext | null> {
+const resolveOrgContext = cache(async (): Promise<OrgContext | null> => {
   if (!hasSupabaseEnv()) return null;
 
   const supabase = await createSupabaseServerClient();
@@ -46,6 +50,10 @@ export async function getOrgContext(): Promise<OrgContext | null> {
     organizationId: membership.organization_id,
     businessType,
   };
+});
+
+export async function getOrgContext(): Promise<OrgContext | null> {
+  return resolveOrgContext();
 }
 
 /**
@@ -53,13 +61,18 @@ export async function getOrgContext(): Promise<OrgContext | null> {
  * Uses hostname-based tenant resolution in production (subdomains and custom domains).
  * Falls back to first org on localhost / Vercel previews for development.
  */
-export async function getPublicOrgId(): Promise<string | null> {
+// Per-request cache: storefront pages call this from multiple data loaders.
+const resolvePublicOrgId = cache(async (): Promise<string | null> => {
   if (!hasSupabaseEnv()) return null;
 
   const headersList = await headers();
   const host = headersList.get("host") ?? headersList.get("x-forwarded-host") ?? "localhost";
 
   return resolveOrgFromHostname(host);
+});
+
+export async function getPublicOrgId(): Promise<string | null> {
+  return resolvePublicOrgId();
 }
 
 /**

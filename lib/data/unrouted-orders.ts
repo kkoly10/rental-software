@@ -26,7 +26,10 @@ export async function getUnroutedOrdersForDate(
     .from("route_stops")
     .select("order_id, routes!inner(route_date, organization_id)")
     .eq("routes.route_date", routeDate)
-    .eq("routes.organization_id", ctx.organizationId);
+    .eq("routes.organization_id", ctx.organizationId)
+    // Bound explicitly so we don't silently use the default 1000-row cap to
+    // build the exclusion set.
+    .limit(2000);
 
   const routedOrderIds = new Set((routedStops ?? []).map((s) => s.order_id));
 

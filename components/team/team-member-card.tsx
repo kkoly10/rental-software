@@ -76,6 +76,7 @@ export function TeamMemberCard({
               value={member.role}
               onChange={(e) => handleRoleChange(e.target.value)}
               disabled={pending}
+              aria-label={`Role for ${member.name}`}
               style={{ minHeight: 36, fontSize: 13, borderRadius: 8 }}
             >
               <option value="admin">{m.dashboard.team.roles.admin}</option>

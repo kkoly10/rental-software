@@ -62,7 +62,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); moveItem(index, "up"); }}
                   disabled={index === 0}
-                  title={m.moveUpTitle}
+                  aria-label={m.moveUpTitle} title={m.moveUpTitle}
                 >
                   ↑
                 </button>
@@ -71,7 +71,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); moveItem(index, "down"); }}
                   disabled={index === items.length - 1}
-                  title={m.moveDownTitle}
+                  aria-label={m.moveDownTitle} title={m.moveDownTitle}
                 >
                   ↓
                 </button>
@@ -80,7 +80,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                   className="ghost-btn"
                   onClick={(e) => { e.stopPropagation(); removeItem(index); }}
                   style={{ color: "var(--danger)" }}
-                  title={m.deleteTitle}
+                  aria-label={m.deleteTitle} title={m.deleteTitle}
                 >
                   ✕
                 </button>

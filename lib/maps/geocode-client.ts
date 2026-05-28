@@ -7,8 +7,12 @@ const USER_AGENT = "Korent/1.0 (support@korent.app)";
 const MIN_DELAY_MS = 1100;
 
 type Coords = { lat: number; lng: number };
+type CacheEntry = { coords: Coords | null; expiresAt: number };
 
-const cache = new Map<string, Coords | null>();
+// Negative results expire so a single transient Nominatim failure doesn't
+// poison a ZIP for the entire page session; positives stay cached.
+const NEGATIVE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map<string, CacheEntry>();
 
 let queue: Promise<void> = Promise.resolve();
 
@@ -23,37 +27,47 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function readCache(key: string): Coords | null | undefined {
+  const cached = cache.get(key);
+  if (!cached) return undefined;
+  if (cached.coords !== null || cached.expiresAt > Date.now()) {
+    return cached.coords;
+  }
+  return undefined;
+}
+
 export async function geocodeZipClient(zip: string): Promise<Coords | null> {
   const key = zip.trim().slice(0, 5);
   if (!/^\d{5}$/.test(key)) return null;
-  if (cache.has(key)) return cache.get(key) ?? null;
+  const cached = readCache(key);
+  if (cached !== undefined) return cached;
 
   return enqueue(async () => {
-    // Re-check cache — may have been populated while waiting in queue
-    if (cache.has(key)) return cache.get(key) ?? null;
+    const cachedInQueue = readCache(key);
+    if (cachedInQueue !== undefined) return cachedInQueue;
 
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?postalcode=${key}&country=US&format=json&limit=1`,
-        { headers: { "User-Agent": USER_AGENT } }
+        { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
       );
       if (!res.ok) {
-        cache.set(key, null);
+        cache.set(key, { coords: null, expiresAt: Date.now() + NEGATIVE_TTL_MS });
         return null;
       }
       const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) {
-        cache.set(key, null);
+        cache.set(key, { coords: null, expiresAt: Date.now() + NEGATIVE_TTL_MS });
         return null;
       }
       const result: Coords = {
         lat: parseFloat(data[0].lat),
         lng: parseFloat(data[0].lon),
       };
-      cache.set(key, result);
+      cache.set(key, { coords: result, expiresAt: Infinity });
       return result;
     } catch {
-      cache.set(key, null);
+      cache.set(key, { coords: null, expiresAt: Date.now() + NEGATIVE_TTL_MS });
       return null;
     }
   });

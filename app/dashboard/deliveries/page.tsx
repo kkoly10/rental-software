@@ -46,7 +46,7 @@ export default async function DeliveriesPage() {
               <div className="kicker">{m.dashboard.deliveries.kickerOperations}</div>
               <h2 className="page-title-sm">{m.dashboard.deliveries.sectionBoard}</h2>
             </div>
-            <StatusBadge label="Live" tone="success" />
+            <StatusBadge label={m.dashboard.deliveries.liveBadge} tone="success" />
           </div>
 
           <div className="board-columns">

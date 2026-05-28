@@ -80,7 +80,7 @@ export function ProductionEnvGuard({ children }: { children: React.ReactNode }) 
           </ul>
         </div>
 
-        <p style={{ color: "#94a3b8", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>
           Add these variables to your hosting provider&rsquo;s environment settings and redeploy.
         </p>
       </div>

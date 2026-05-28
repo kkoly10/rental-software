@@ -100,9 +100,9 @@ export async function deleteAccount(
           });
 
           for (const sub of subscriptions.data) {
-            await stripe.subscriptions.cancel(sub.id, {
-              prorate: true,
-            });
+            // `prorate` isn't a valid option on subscriptions.cancel in the
+            // current API; calling it with that flag silently ignores it.
+            await stripe.subscriptions.cancel(sub.id);
           }
         } catch (stripeError) {
           await logAppError({

@@ -26,7 +26,9 @@ function relativeTime(dateStr: string | null | undefined): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   if (isNaN(then)) return "—";
-  const diffMs = now - then;
+  // Floor at 0 so a future-dated timestamp (clock skew, scheduled item) still
+  // renders sensibly as "just now" instead of "Xm ago" with a negative count.
+  const diffMs = Math.max(0, now - then);
   const diffMin = Math.floor(diffMs / 60000);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;

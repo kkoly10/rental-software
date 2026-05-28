@@ -39,7 +39,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   ]);
 
   const name = settings.businessName || "Rental Business";
-  const themeColor = /^#[0-9a-fA-F]{3,8}$/.test(brand.primaryColor)
+  // Allow only the valid hex lengths (3/4/6/8); the previous {3,8} range
+  // accepted invalid 5/7-char hex values.
+  const themeColor = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(brand.primaryColor)
     ? brand.primaryColor
     : "#e8590c";
 

@@ -97,7 +97,7 @@ export function InvoiceDownload({ order }: { order: PortalOrder }) {
 
       doc.save(`Invoice-${order.orderNumber}.pdf`);
     } catch {
-      alert("Unable to generate invoice. Please try again.");
+      alert(m.portal.invoice.errorGenerate);
     } finally {
       setGenerating(false);
     }
