@@ -34,7 +34,13 @@ export async function GET(request: NextRequest) {
 
   const checks: Record<string, "ok" | "missing" | "error"> = {
     env_supabase: hasSupabaseEnv() ? "ok" : "missing",
-    env_site_url: process.env.NEXT_PUBLIC_SITE_URL ? "ok" : "missing",
+    env_site_url:
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.SITE_URL ||
+      process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+      process.env.VERCEL_URL
+        ? "ok"
+        : "missing",
   };
 
   // DB connectivity check

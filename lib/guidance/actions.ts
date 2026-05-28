@@ -117,6 +117,11 @@ export async function dismissMilestone(key: string) {
     return;
   }
   const state = await getGuidanceState();
+  // Dedup so re-dismissing the same milestone (or a double-fire) doesn't bloat
+  // the array.
+  if (state.dismissedMilestones.includes(key)) {
+    return;
+  }
   const milestones = [...state.dismissedMilestones, key];
   await upsertGuidance({ dismissed_milestones: milestones });
   revalidatePath("/dashboard");

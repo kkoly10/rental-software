@@ -63,7 +63,10 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
     .eq("visibility", "public")
     .eq("is_active", true)
     .is("deleted_at", null)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true })
+    // Explicit cap so any catalog past this size is observable rather than
+    // silently truncated by PostgREST's default 1000-row limit.
+    .limit(2000);
 
   if (error) {
     console.error("[catalog-list] Failed to fetch products:", error.message);

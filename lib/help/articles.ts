@@ -720,11 +720,16 @@ export function searchArticles(query: string): HelpArticle[] {
   const q = query.toLowerCase().trim();
   if (!q) return helpArticles;
 
-  return helpArticles.filter(
-    (a) =>
-      a.title.toLowerCase().includes(q) ||
-      a.summary.toLowerCase().includes(q) ||
-      a.body.toLowerCase().includes(q) ||
-      a.section.toLowerCase().includes(q)
-  );
+  // Match every whitespace-separated token against any indexed field so
+  // multi-word natural-language queries hit the right article instead of
+  // requiring an exact full-phrase substring.
+  const tokens = q.split(/\s+/).filter((t) => t.length > 1);
+  if (tokens.length === 0) tokens.push(q);
+
+  return helpArticles.filter((a) => {
+    const haystack = [a.title, a.summary, a.body, a.section]
+      .join(" ")
+      .toLowerCase();
+    return tokens.every((t) => haystack.includes(t));
+  });
 }
