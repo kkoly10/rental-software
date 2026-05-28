@@ -768,6 +768,7 @@ export const es: Messages = {
       selectOrderHint: "Elige el pedido al que corresponde el pago y rellena los detalles abajo.",
     },
     deliveries: {
+      liveBadge: "En vivo",
       title: "Tablero de entregas",
       description: "Sigue rutas, estado de paradas y avance del equipo.",
       kickerDispatch: "Despacho",
@@ -834,6 +835,8 @@ export const es: Messages = {
       generate: "Generar documentos",
       create: "Crear documentos",
       download: "Descargar",
+      markSent: "Marcar como enviado",
+      markSigned: "Marcar como firmado",
     },
     analytics: {
       title: "Analítica",
@@ -1199,6 +1202,7 @@ export const es: Messages = {
     invoice: {
       download: "Descargar factura",
       generating: "Generando...",
+      errorGenerate: "No se pudo generar la factura. Inténtelo de nuevo.",
     },
   },
 

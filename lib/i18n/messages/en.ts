@@ -769,6 +769,7 @@ const enValues = {
       selectOrderHint: "Choose the order this payment is for, then fill in the details below.",
     },
     deliveries: {
+      liveBadge: "Live",
       title: "Delivery Board",
       description: "Track routes, stop status, and crew progress.",
       kickerDispatch: "Dispatch",
@@ -835,6 +836,8 @@ const enValues = {
       generate: "Generate Documents",
       create: "Create Documents",
       download: "Download",
+      markSent: "Mark Sent",
+      markSigned: "Mark Signed",
     },
     analytics: {
       title: "Analytics",
@@ -1200,6 +1203,7 @@ const enValues = {
     invoice: {
       download: "Download Invoice",
       generating: "Generating...",
+      errorGenerate: "Unable to generate invoice. Please try again.",
     },
   },
 

@@ -101,13 +101,13 @@ export default async function DocumentsPage({
                           documentId={doc.agreementId}
                           currentStatus={doc.agreementStatus}
                           targetStatus="sent"
-                          label="Mark Sent"
+                          label={m.dashboard.documents.markSent}
                         />
                         <DocumentStatusButton
                           documentId={doc.agreementId}
                           currentStatus={doc.agreementStatus}
                           targetStatus="signed"
-                          label="Mark Signed"
+                          label={m.dashboard.documents.markSigned}
                         />
                       </>
                     )}
@@ -132,13 +132,13 @@ export default async function DocumentsPage({
                           documentId={doc.waiverId}
                           currentStatus={doc.waiverStatus}
                           targetStatus="sent"
-                          label="Mark Sent"
+                          label={m.dashboard.documents.markSent}
                         />
                         <DocumentStatusButton
                           documentId={doc.waiverId}
                           currentStatus={doc.waiverStatus}
                           targetStatus="signed"
-                          label="Mark Signed"
+                          label={m.dashboard.documents.markSigned}
                         />
                       </>
                     )}
