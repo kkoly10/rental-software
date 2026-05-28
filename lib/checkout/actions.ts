@@ -3,6 +3,10 @@
 import { headers } from "next/headers";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { checkoutOrderSchema } from "@/lib/validation/checkout";
 import { createOrderNumber } from "@/lib/orders/order-number";
@@ -209,7 +213,17 @@ export async function createCheckoutOrder(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
+  // The public checkout runs anonymously, so the cookie-bound RLS-scoped
+  // client can't see (or RETURNING-fetch back) the customer / address / order
+  // / order_items rows it inserts on behalf of the storefront tenant — the
+  // existing anon INSERT policies allow the write but not the RETURNING via
+  // PostgREST. Use the admin client when available; org isolation is enforced
+  // explicitly by .eq("organization_id", orgId) on every read and the
+  // organization_id field on every insert. orgId itself is derived from
+  // getPublicOrgId() (host-resolved, trusted server-side).
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
 
   // Service area lookup is only required for delivery orders.
   // Pickup orders skip it and carry zero delivery fee.
