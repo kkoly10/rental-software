@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageManager } from "@/components/products/product-image-manager";
+import { AssetManager } from "@/components/products/asset-manager";
 import { getProductById, getCategories } from "@/lib/data/products";
 import { getProductImages } from "@/lib/data/product-images";
+import { getProductAssets } from "@/lib/data/product-assets";
 import { getTranslator } from "@/lib/i18n/server";
 
 export default async function ProductDetailEditorPage({
@@ -17,10 +19,11 @@ export default async function ProductDetailEditorPage({
   const { id } = await params;
   const { created } = await searchParams;
   const justCreated = created === "1";
-  const [product, categories, images, { messages: m, t }] = await Promise.all([
+  const [product, categories, images, assets, { messages: m, t }] = await Promise.all([
     getProductById(id),
     getCategories(),
     getProductImages(id),
+    getProductAssets(id),
     getTranslator(),
   ]);
 
@@ -53,6 +56,8 @@ export default async function ProductDetailEditorPage({
           <div style={{ marginTop: 18 }}>
             <ProductImageManager productId={product.id} images={images} />
           </div>
+
+          <AssetManager productId={product.id} assets={assets} />
         </section>
 
         <aside className="panel">
@@ -75,6 +80,9 @@ export default async function ProductDetailEditorPage({
             </div>
             <div className="order-card">
               {m.dashboard.products.detail.images}: {t(m.dashboard.products.detail.imagesUploaded, { count: images.length })}
+            </div>
+            <div className="order-card">
+              Inventory: {assets.filter((a) => a.isAvailable).length} ready / {assets.length} total
             </div>
           </div>
 
