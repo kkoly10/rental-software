@@ -141,8 +141,8 @@ function AssetRow({ productId, asset }: { productId: string; asset: ProductAsset
 
       {(statusState.message || removeState.message) && (
         <div
-          role={(statusState.ok && !statusState.message.startsWith("S")) || removeState.ok ? "status" : "alert"}
-          aria-live="polite"
+          role={statusState.ok || removeState.ok ? "status" : "alert"}
+          aria-live={statusState.ok || removeState.ok ? "polite" : "assertive"}
           className="muted"
           style={{ width: "100%", fontSize: 12, marginTop: 4 }}
         >
