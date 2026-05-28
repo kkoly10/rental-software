@@ -149,8 +149,20 @@ export async function deleteAccount(
       status: "success",
     });
 
-    // 4. Sign out
-    await supabase.auth.signOut();
+    // 4. Sign out — wrapped so a cookie/write hiccup after a successful
+    // org delete doesn't drop the user into the generic catch below
+    // ("an unexpected error occurred") when the org is in fact gone.
+    try {
+      await supabase.auth.signOut();
+    } catch (signOutErr) {
+      await logAppError({
+        organizationId: ctx.organizationId,
+        userId: ctx.userId,
+        source: "account.delete.signout",
+        message: "signOut failed after successful org delete; proceeding to redirect",
+        error: signOutErr,
+      });
+    }
   } catch (error) {
     await logAppError({
       organizationId: ctx.organizationId,

@@ -105,14 +105,67 @@ export async function updateStopStatus(
     // auth checks and rate limiting; org isolation is already enforced above via
     // the routes!inner join check.
     const stopOrderId = stop.order_id as string | null;
+    let didFlipToDelivered = false;
     if (stopOrderId && stop.stop_type === "delivery") {
-      await supabase
+      const { data: flipped } = await supabase
         .from("orders")
         .update({ order_status: "delivered" })
         .eq("id", stopOrderId)
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
-        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
+        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"])
+        .select("id");
+      didFlipToDelivered = !!(flipped && flipped.length > 0);
+    }
+
+    // #340 The operator flow (updateOrderStatus) fires triggerOrderStatusEmail
+    // and the delivery SMS on "delivered" — the crew flow used to skip both
+    // entirely so the customer never knew the rental was complete. Mirror
+    // the operator behavior here.
+    if (didFlipToDelivered && stopOrderId) {
+      try {
+        const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+        await triggerOrderStatusEmail({
+          organizationId: ctx.organizationId,
+          orderId: stopOrderId,
+          newStatus: "delivered",
+        });
+      } catch (err) {
+        console.error("[crew] delivered email failed for", stopOrderId, err instanceof Error ? err.message : err);
+      }
+
+      try {
+        const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+        const { data: deliveredOrder } = await supabase
+          .from("orders")
+          .select("order_number, customer_id")
+          .eq("id", stopOrderId)
+          .eq("organization_id", ctx.organizationId)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (deliveredOrder?.customer_id) {
+          const { data: deliveredCustomer } = await supabase
+            .from("customers")
+            .select("phone, sms_opt_in")
+            .eq("id", deliveredOrder.customer_id)
+            .is("deleted_at", null)
+            .maybeSingle();
+          if (deliveredCustomer?.phone && deliveredCustomer?.sms_opt_in) {
+            const { data: org } = await supabase
+              .from("organizations")
+              .select("name")
+              .eq("id", ctx.organizationId)
+              .is("deleted_at", null)
+              .maybeSingle();
+            await sendSmsNotification("deliveryCompleted", deliveredCustomer.phone, {
+              orderNumber: deliveredOrder.order_number,
+              businessName: org?.name ?? "Your rental company",
+            }, ctx.organizationId, { orderId: stopOrderId, customerId: deliveredOrder.customer_id });
+          }
+        }
+      } catch (err) {
+        console.error("[crew] delivered SMS failed for", stopOrderId, err instanceof Error ? err.message : err);
+      }
     }
 
     // Clear tracking token so the link can't be replayed after delivery

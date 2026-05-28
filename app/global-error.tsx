@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { reportClientError } from "@/lib/observability/client";
+
 export default function GlobalError({
   error,
   reset,
@@ -7,6 +10,21 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // #403 Root-layout errors land here and were previously the only error
+  // class with zero observability — mirror what app/error.tsx does so
+  // Sentry sees the most catastrophic failures too.
+  useEffect(() => {
+    reportClientError({
+      source: "app/global-error",
+      message: error.message || "Unknown global error",
+      route: typeof window !== "undefined" ? window.location.pathname : undefined,
+      stack: error.stack,
+      digest: error.digest,
+      userAgent:
+        typeof window !== "undefined" ? window.navigator.userAgent : undefined,
+    });
+  }, [error]);
+
   return (
     <html lang="en">
       <body

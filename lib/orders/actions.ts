@@ -665,8 +665,9 @@ export async function updateOrderStatus(
       orderId: parsed.data.orderId,
       newStatus: parsed.data.newStatus,
     });
-  } catch {
-    console.error("[orders] Failed to send status update email for order", parsed.data.orderId);
+  } catch (err) {
+    // #405 keep the error payload — pass `err`, not a bare string.
+    console.error("[orders] status update email failed for", parsed.data.orderId, err instanceof Error ? err.message : err);
   }
 
   try {
@@ -737,8 +738,20 @@ export async function updateOrderStatus(
         }
       }
     }
-  } catch {
-    console.error("[orders] Failed to send status update SMS for order", parsed.data.orderId);
+  } catch (err) {
+    // #396 SMS catch was eating the actual error — surface it so SMS
+    // provider misconfig is visible.
+    console.error("[orders] status update SMS failed for", parsed.data.orderId, err instanceof Error ? err.message : err);
+    try {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "orders.updateOrderStatus.sms",
+        message: "Failed to send status update SMS",
+        context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
+        error: err,
+      });
+    } catch { /* logger failures must not break the action */ }
   }
 
   revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);

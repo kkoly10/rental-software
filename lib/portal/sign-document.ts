@@ -153,16 +153,20 @@ export async function signDocument(
   revalidatePath(`/dashboard/orders/${order.id}`);
   revalidatePath("/dashboard/documents");
 
-  // Notify operator that the customer signed a document
-  void import("@/lib/data/notifications").then(({ createNotification }) =>
-    createNotification(
+  // #398 Awaited so the Lambda doesn't terminate before the notification
+  // insert completes — fire-and-forget here drops operator alerts.
+  try {
+    const { createNotification } = await import("@/lib/data/notifications");
+    await createNotification(
       orgId,
       "new_message",
       "Document signed",
       `${signerName} signed a document`,
       `/dashboard/orders/${order.id}`
-    )
-  );
+    );
+  } catch (err) {
+    console.error("[sign-document] notify operator failed:", err instanceof Error ? err.message : err);
+  }
 
   return { ok: true, message: "Document signed successfully." };
 }

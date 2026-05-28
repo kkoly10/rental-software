@@ -517,10 +517,27 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseAdminClient();
 
+  // #399 Capture the actual exception so a failing section is visible in
+  // logs and Sentry instead of just returning `{sent:0, errors:1}` silently.
+  const cronCatch = (label: string) => async (err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[cron/reminders] ${label} failed:`, msg);
+    try {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        source: `cron.reminders.${label}`,
+        message: `Cron section "${label}" threw`,
+        context: { reason: msg },
+        error: err,
+      });
+    } catch { /* logger failures must not break the cron */ }
+    return { sent: 0, errors: 1 };
+  };
+
   const [dayBefore, morningDigest, followUp] = await Promise.all([
-    sendDayBeforeReminders(supabase).catch(() => ({ sent: 0, errors: 1 })),
-    sendMorningDigests(supabase).catch(() => ({ sent: 0, errors: 1 })),
-    sendPostEventFollowUps(supabase).catch(() => ({ sent: 0, errors: 1 })),
+    sendDayBeforeReminders(supabase).catch(cronCatch("dayBefore")),
+    sendMorningDigests(supabase).catch(cronCatch("morningDigest")),
+    sendPostEventFollowUps(supabase).catch(cronCatch("followUp")),
   ]);
 
   return NextResponse.json({

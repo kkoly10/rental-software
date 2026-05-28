@@ -710,8 +710,10 @@ export async function createCheckoutOrder(
         total,
         depositDue: deposit,
       });
-    } catch {
-      console.error("[checkout] Confirmation email failed for order", orderNumber);
+    } catch (err) {
+      // #407 preserve the actual error so we can diagnose; the form
+      // continues regardless (customer has already paid in the success path).
+      console.error("[checkout] confirmation email failed for", orderNumber, err instanceof Error ? err.message : err);
     }
   }
 
@@ -730,7 +732,11 @@ export async function createCheckoutOrder(
         orderNumber,
         businessName: org?.name ?? "Your rental company",
       }, orgId, { orderId: order.id, customerId });
-    } catch { /* non-critical — email confirmation already sent */ }
+    } catch (smsErr) {
+      // Non-critical — email confirmation already sent — but log centrally
+      // so SMS provider misconfig is visible in production.
+      console.error("[checkout] confirmation SMS failed for", orderNumber, smsErr instanceof Error ? smsErr.message : smsErr);
+    }
   }
 
   // Attempt Stripe Checkout for deposit payment

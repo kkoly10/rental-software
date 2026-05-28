@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -111,6 +112,12 @@ export async function POST(request: NextRequest) {
   if (!signed || signed.length === 0) {
     return NextResponse.json({ error: "This document has already been signed." }, { status: 409 });
   }
+
+  // #355 Match the server-action variant (lib/portal/sign-document.ts) so the
+  // dashboard documents list, order detail, and customer portal all refresh.
+  revalidatePath("/dashboard/documents");
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/order-status");
 
   return NextResponse.json({ ok: true, message: "Document signed successfully." });
 }
