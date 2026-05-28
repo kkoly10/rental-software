@@ -97,5 +97,10 @@ export async function savePricingRules(
   }
 
   revalidatePath("/dashboard/pricing");
+  // #368 pricing rules feed getCheckoutPricing and the storefront product
+  // detail price displays; without these every customer-facing price stays
+  // at the previous rule set until ISR.
+  revalidatePath("/checkout");
+  revalidatePath("/inventory", "layout");
   return { ok: true, message: `${rules.length} pricing rule(s) saved.` };
 }

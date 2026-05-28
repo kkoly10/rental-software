@@ -154,8 +154,20 @@ export async function completeOnboarding(
         replyTo: "support@korent.app",
         organizationId: orgId,
       });
-    } catch {
-      console.error("[onboarding] Failed to send welcome email — check email provider settings.");
+    } catch (err) {
+      // #406 surface the actual reason in Sentry / app_error_logs so the
+      // operator can see when welcome emails stop sending.
+      console.error("[onboarding] welcome email failed:", err instanceof Error ? err.message : err);
+      try {
+        const { logAppError } = await import("@/lib/observability/server");
+        await logAppError({
+          organizationId: orgId,
+          source: "onboarding.welcome_email",
+          message: "Failed to send welcome email after onboarding",
+          context: { reason: err instanceof Error ? err.message : String(err) },
+          error: err,
+        });
+      } catch { /* don't let the logger break onboarding */ }
     }
   }
 

@@ -288,5 +288,9 @@ export async function importProductsFromCsv(
     ? `${parts.join(", ")} out of ${total} rows.`
     : "Nothing to import — all rows were already in your catalog.";
 
-  return { ok: true, imported, skipped, errors, message };
+  // #389 When nothing imported and we have errors, the UI shouldn't render
+  // the result as success — flip ok to false so the form treats it as a
+  // failure state and surfaces the per-row errors prominently.
+  const ok = !(imported === 0 && errors.length > 0);
+  return { ok, imported, skipped, errors, message };
 }

@@ -129,7 +129,7 @@ export async function sendCustomerMessage(
     return { ok: false, message: "Unable to send your message right now." };
   }
 
-  await supabase.from("messages").insert({
+  const { error: insertErr } = await supabase.from("messages").insert({
     organization_id: orgId,
     order_id: order.id,
     customer_id: order.customer_id,
@@ -141,6 +141,11 @@ export async function sendCustomerMessage(
     sender_email: senderEmail,
     read: false,
   });
+
+  if (insertErr) {
+    console.error("[portal] message insert failed:", insertErr.message);
+    return { ok: false, message: "We couldn't deliver your message. Please try again or call the operator." };
+  }
 
   try {
     const { logCommunication } = await import("@/lib/communications/log");

@@ -101,11 +101,23 @@ export async function blockProductDates(
   });
 
   if (error) {
-    return { ok: false, message: error.message };
+    console.error("[availability] block insert failed:", error.message);
+    return { ok: false, message: "Couldn't save the availability block." };
   }
 
   revalidatePath("/dashboard/calendar");
   revalidatePath(`/dashboard/products/${productId}`);
+  // #367 storefront date picker reads the same blocks
+  revalidatePath("/inventory");
+  if (product) {
+    const { data: prod } = await supabase
+      .from("products")
+      .select("slug")
+      .eq("id", productId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    if (prod?.slug) revalidatePath(`/inventory/${prod.slug}`);
+  }
 
   return {
     ok: true,
@@ -143,7 +155,7 @@ export async function removeAvailabilityBlock(
 
   const { data: block } = await supabase
     .from("availability_blocks")
-    .select("id, block_type, source_order_id")
+    .select("id, block_type, source_order_id, product_id")
     .eq("id", blockId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
@@ -163,10 +175,21 @@ export async function removeAvailabilityBlock(
     .eq("organization_id", ctx.organizationId);
 
   if (error) {
-    return { ok: false, message: error.message };
+    console.error("[availability] block delete failed:", error.message);
+    return { ok: false, message: "Couldn't remove the availability block." };
   }
 
   revalidatePath("/dashboard/calendar");
+  revalidatePath("/inventory");
+  if (block.product_id) {
+    const { data: prod } = await supabase
+      .from("products")
+      .select("slug")
+      .eq("id", block.product_id)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    if (prod?.slug) revalidatePath(`/inventory/${prod.slug}`);
+  }
   return { ok: true, message: "Availability block removed." };
 }
 
@@ -189,4 +212,9 @@ export async function releaseOrderAvailability(
     .eq("source_order_id", orderId);
 
   if (error) throw new Error(`Failed to release availability blocks: ${error.message}`);
+
+  // #371 Without these, /inventory and /dashboard/calendar keep showing the
+  // cancelled order's dates as reserved until the next ISR cycle.
+  revalidatePath("/dashboard/calendar");
+  revalidatePath("/inventory", "layout");
 }

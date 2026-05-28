@@ -100,7 +100,7 @@ function AssetRow({ productId, asset }: { productId: string; asset: ProductAsset
       <div style={{ minWidth: 0 }}>
         <strong style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{asset.assetTag}</strong>
         <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-          Added {asset.createdAt ? new Date(asset.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+          Added {asset.updatedAt ? new Date(asset.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
         </div>
       </div>
 

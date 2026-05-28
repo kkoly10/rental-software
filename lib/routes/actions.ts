@@ -231,7 +231,11 @@ export async function updateRouteStatus(
   const routeId = String(formData.get("route_id") ?? "");
   const status = String(formData.get("status") ?? "");
 
-  const VALID_ROUTE_STATUSES = ["planned", "in_progress", "completed", "cancelled"];
+  // #341 Drop "cancelled" — the rest of the codebase (analytics, delivery
+  // board, crew auto-complete) treats only planned/in_progress/completed,
+  // so accepting cancelled here just creates zombie rows. Operators who
+  // actually need to abandon a route can delete it instead.
+  const VALID_ROUTE_STATUSES = ["planned", "in_progress", "completed"];
   if (!VALID_ROUTE_STATUSES.includes(status)) {
     return { ok: false, message: "Invalid route status." };
   }
@@ -243,13 +247,20 @@ export async function updateRouteStatus(
     return { ok: false, message: "Only dispatchers and above can manage routes." };
   }
 
+  // #349 Don't allow terminal → non-terminal transitions; without this guard
+  // an operator could flip a completed route back to planned and wipe out
+  // historical state implicitly.
   const { error } = await supabase
     .from("routes")
     .update({ route_status: status })
     .eq("id", routeId)
-    .eq("organization_id", ctx.organizationId);
+    .eq("organization_id", ctx.organizationId)
+    .not("route_status", "in", "(completed)");
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    console.error("[routes] updateRouteStatus failed:", error.message);
+    return { ok: false, message: "Couldn't update the route status." };
+  }
 
   revalidatePath("/dashboard/deliveries");
   revalidatePath(`/dashboard/deliveries/${routeId}`);
@@ -368,5 +379,12 @@ export async function updateStopStatus(
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
   revalidatePath("/dashboard/deliveries");
+  // #366 stop completion flips order to "delivered"; operator order pages
+  // and customer portal both need to refresh.
+  if (status === "completed" && resolvedOrderId && stop.stop_type === "delivery") {
+    revalidatePath("/dashboard/orders");
+    revalidatePath(`/dashboard/orders/${resolvedOrderId}`);
+    revalidatePath("/order-status");
+  }
   return { ok: true, message: "Stop updated." };
 }

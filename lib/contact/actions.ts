@@ -110,8 +110,18 @@ export async function submitContactForm(
         `,
         organizationId: orgId ?? undefined,
       });
-    } catch {
-      // Email delivery is non-blocking
+    } catch (err) {
+      // #400 Non-blocking for the customer, but log centrally so the
+      // operator notices when their inbound contact emails stop delivering.
+      try {
+        const { logAppError } = await import("@/lib/observability/server");
+        await logAppError({
+          organizationId: orgId ?? undefined,
+          source: "contact.form",
+          message: "Failed to deliver contact form email to operator",
+          context: { reason: err instanceof Error ? err.message : String(err) },
+        });
+      } catch { /* logger failures must not break the contact form */ }
     }
   }
 

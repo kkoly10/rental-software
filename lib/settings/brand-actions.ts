@@ -117,7 +117,10 @@ export async function updateBrandSettings(
   } catch { /* non-critical */ }
 
   revalidatePath("/dashboard/website");
-  revalidatePath("/");
+  // #375 brand styles inject via root layout into every storefront route.
+  // Revalidate at the layout level so subpages get the new palette/font
+  // immediately, not just the home page.
+  revalidatePath("/", "layout");
   return {
     ok: true,
     message: contrastWarnings.length > 0

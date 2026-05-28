@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getOptionalEnv } from "@/lib/env";
 import { getStripe, getPlanByPriceId, hasStripeEnv } from "@/lib/stripe/config";
 import {
@@ -6,6 +7,22 @@ import {
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
 import type Stripe from "stripe";
+
+// #360 After each material order/payment state change, invalidate the pages
+// that render it so the operator dashboard, customer portal, and storefront
+// catalog don't lag behind Stripe events until the next ISR cycle.
+function revalidateOrderAndPayments(orderId: string): void {
+  revalidatePath(`/dashboard/orders/${orderId}`);
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/payments");
+  revalidatePath("/dashboard");
+  revalidatePath("/order-status");
+}
+
+function revalidateBilling(): void {
+  revalidatePath("/dashboard/settings/billing");
+  revalidatePath("/dashboard");
+}
 
 export async function POST(request: NextRequest) {
   if (!hasStripeEnv() || !hasSupabaseServiceRoleEnv()) {
@@ -161,30 +178,26 @@ export async function POST(request: NextRequest) {
               const financials = await getOrderFinancialsAdmin(admin, orderId);
 
               if (financials) {
-                const updates: Record<string, unknown> = {
-                  balance_due_amount: financials.remainingBalance,
-                };
-
-                // Auto-confirm if deposit is fulfilled and order is still awaiting
-                if (financials.depositFulfilled) {
-                  const { data: order } = await admin
-                    .from("orders")
-                    .select("order_status")
-                    .eq("id", orderId)
-                    .eq("organization_id", orgId)
-                    .maybeSingle();
-
-                  if (order?.order_status === "awaiting_deposit") {
-                    updates.order_status = "confirmed";
-                  }
-                }
-
+                // Balance update is unconditional — it just mirrors recomputed payments.
                 await admin
                   .from("orders")
-                  .update(updates)
+                  .update({ balance_due_amount: financials.remainingBalance })
                   .eq("id", orderId)
                   .eq("organization_id", orgId)
                   .is("deleted_at", null);
+
+                // #343 TOCTOU — perform the awaiting_deposit → confirmed flip
+                // as an atomic conditional update so a concurrent operator
+                // cancellation isn't silently overwritten by the webhook.
+                if (financials.depositFulfilled) {
+                  await admin
+                    .from("orders")
+                    .update({ order_status: "confirmed" })
+                    .eq("id", orderId)
+                    .eq("organization_id", orgId)
+                    .eq("order_status", "awaiting_deposit")
+                    .is("deleted_at", null);
+                }
               }
 
               // Convert temporary checkout hold to permanent order hold
@@ -271,6 +284,8 @@ export async function POST(request: NextRequest) {
               } catch {
                 // Non-critical
               }
+
+              revalidateOrderAndPayments(orderId);
             }
           }
         }
@@ -392,6 +407,8 @@ export async function POST(request: NextRequest) {
           } catch (refundEmailErr) {
             console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);
           }
+
+          revalidateOrderAndPayments(originalPayment.order_id);
         }
         break;
       }
@@ -400,6 +417,7 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         await syncSubscription(admin, subscription);
+        revalidateBilling();
         break;
       }
 
@@ -432,6 +450,8 @@ export async function POST(request: NextRequest) {
             })
             .eq("id", orgId)
             .is("deleted_at", null);
+
+          revalidateBilling();
         }
         break;
       }
@@ -444,6 +464,7 @@ export async function POST(request: NextRequest) {
         if (successSubId) {
           const subscription = await stripe.subscriptions.retrieve(successSubId);
           await syncSubscription(admin, subscription);
+          revalidateBilling();
         }
         break;
       }
@@ -457,6 +478,7 @@ export async function POST(request: NextRequest) {
         if (subId) {
           const subscription = await stripe.subscriptions.retrieve(subId);
           await syncSubscription(admin, subscription);
+          revalidateBilling();
         }
         break;
       }

@@ -88,7 +88,8 @@ export async function logMaintenance(
       .single();
 
     if (assetError || !newAsset) {
-      return { ok: false, message: assetError?.message ?? "Failed to create asset." };
+      if (assetError) console.error("[maintenance] auto-create asset failed:", assetError.message);
+      return { ok: false, message: "Failed to create the asset record." };
     }
     assetId = newAsset.id;
   }
@@ -102,9 +103,16 @@ export async function logMaintenance(
     cost_amount: costRaw,
   });
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    console.error("[maintenance] log insert failed:", error.message);
+    return { ok: false, message: "Couldn't save the maintenance record." };
+  }
 
   revalidatePath("/dashboard/maintenance");
+  // #372 maintenance writes can flip asset operational_status, which affects
+  // product detail visibility and storefront availability.
+  revalidatePath("/dashboard/products", "layout");
+  revalidatePath("/inventory", "layout");
   return { ok: true, message: "Maintenance record created." };
 }
 
@@ -154,8 +162,13 @@ export async function updateMaintenanceStatus(
     .eq("id", recordId)
     .eq("organization_id", ctx.organizationId);
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    console.error("[maintenance] updateStatus failed:", error.message);
+    return { ok: false, message: "Couldn't update the maintenance status." };
+  }
 
   revalidatePath("/dashboard/maintenance");
+  revalidatePath("/dashboard/products", "layout");
+  revalidatePath("/inventory", "layout");
   return { ok: true, message: `Marked as ${newStatus}.` };
 }

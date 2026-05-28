@@ -423,7 +423,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: updateCustomerError.message,
+        message: "We couldn't update your contact details. Please try again or contact the operator.",
       };
     }
   } else {
@@ -452,7 +452,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: customerError?.message ?? "Unable to create customer.",
+        message: "We couldn't create your account. Please try again.",
       };
     }
 
@@ -491,7 +491,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: addressError?.message ?? "Unable to create address.",
+        message: "We couldn't save your delivery address. Please check the address and try again.",
       };
     }
 
@@ -578,7 +578,7 @@ export async function createCheckoutOrder(
 
     return {
       ok: false,
-      message: orderError?.message ?? "Unable to create order.",
+      message: "We couldn't create your booking. Please try again or contact the operator.",
     };
   }
 
@@ -617,7 +617,7 @@ export async function createCheckoutOrder(
 
       return {
         ok: false,
-        message: itemError.message,
+        message: "We couldn't save your booking line items. Please try again.",
       };
     }
   }
@@ -710,8 +710,10 @@ export async function createCheckoutOrder(
         total,
         depositDue: deposit,
       });
-    } catch {
-      console.error("[checkout] Confirmation email failed for order", orderNumber);
+    } catch (err) {
+      // #407 preserve the actual error so we can diagnose; the form
+      // continues regardless (customer has already paid in the success path).
+      console.error("[checkout] confirmation email failed for", orderNumber, err instanceof Error ? err.message : err);
     }
   }
 
@@ -730,7 +732,11 @@ export async function createCheckoutOrder(
         orderNumber,
         businessName: org?.name ?? "Your rental company",
       }, orgId, { orderId: order.id, customerId });
-    } catch { /* non-critical — email confirmation already sent */ }
+    } catch (smsErr) {
+      // Non-critical — email confirmation already sent — but log centrally
+      // so SMS provider misconfig is visible in production.
+      console.error("[checkout] confirmation SMS failed for", orderNumber, smsErr instanceof Error ? smsErr.message : smsErr);
+    }
   }
 
   // Attempt Stripe Checkout for deposit payment

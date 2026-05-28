@@ -50,8 +50,12 @@ export async function updateStopStatus(
     return { ok: false, message: "Stop not found." };
   }
 
-  // Crew members may only update stops on routes they are assigned to
+  // Positive allowlist — viewer (and any unknown role) cannot mutate stops.
+  // Crew members additionally must be assigned to this route.
   const role = membership?.role ?? "";
+  if (!["owner", "admin", "dispatcher", "crew"].includes(role)) {
+    return { ok: false, message: "You don't have permission to update this stop." };
+  }
   if (role === "crew" && routeData.assigned_driver_profile_id !== ctx.userId) {
     return { ok: false, message: "You are not assigned to this route." };
   }
@@ -87,10 +91,13 @@ export async function updateStopStatus(
       .not("stop_status", "in", "(completed,skipped)");
 
     if (remaining && remaining.length === 0) {
+      // Don't flip a route that's already terminal (cancelled/completed) back
+      // to a non-current state via the auto-promotion path.
       await supabase
         .from("routes")
         .update({ route_status: "completed" })
-        .eq("id", stop.route_id);
+        .eq("id", stop.route_id)
+        .in("route_status", ["planned", "in_progress"]);
     }
 
     // Sync order status when a delivery stop (not pickup) is completed.
@@ -98,14 +105,67 @@ export async function updateStopStatus(
     // auth checks and rate limiting; org isolation is already enforced above via
     // the routes!inner join check.
     const stopOrderId = stop.order_id as string | null;
+    let didFlipToDelivered = false;
     if (stopOrderId && stop.stop_type === "delivery") {
-      await supabase
+      const { data: flipped } = await supabase
         .from("orders")
         .update({ order_status: "delivered" })
         .eq("id", stopOrderId)
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
-        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"]);
+        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"])
+        .select("id");
+      didFlipToDelivered = !!(flipped && flipped.length > 0);
+    }
+
+    // #340 The operator flow (updateOrderStatus) fires triggerOrderStatusEmail
+    // and the delivery SMS on "delivered" — the crew flow used to skip both
+    // entirely so the customer never knew the rental was complete. Mirror
+    // the operator behavior here.
+    if (didFlipToDelivered && stopOrderId) {
+      try {
+        const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+        await triggerOrderStatusEmail({
+          organizationId: ctx.organizationId,
+          orderId: stopOrderId,
+          newStatus: "delivered",
+        });
+      } catch (err) {
+        console.error("[crew] delivered email failed for", stopOrderId, err instanceof Error ? err.message : err);
+      }
+
+      try {
+        const { sendSmsNotification } = await import("@/lib/sms/send-notification");
+        const { data: deliveredOrder } = await supabase
+          .from("orders")
+          .select("order_number, customer_id")
+          .eq("id", stopOrderId)
+          .eq("organization_id", ctx.organizationId)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (deliveredOrder?.customer_id) {
+          const { data: deliveredCustomer } = await supabase
+            .from("customers")
+            .select("phone, sms_opt_in")
+            .eq("id", deliveredOrder.customer_id)
+            .is("deleted_at", null)
+            .maybeSingle();
+          if (deliveredCustomer?.phone && deliveredCustomer?.sms_opt_in) {
+            const { data: org } = await supabase
+              .from("organizations")
+              .select("name")
+              .eq("id", ctx.organizationId)
+              .is("deleted_at", null)
+              .maybeSingle();
+            await sendSmsNotification("deliveryCompleted", deliveredCustomer.phone, {
+              orderNumber: deliveredOrder.order_number,
+              businessName: org?.name ?? "Your rental company",
+            }, ctx.organizationId, { orderId: stopOrderId, customerId: deliveredOrder.customer_id });
+          }
+        }
+      } catch (err) {
+        console.error("[crew] delivered SMS failed for", stopOrderId, err instanceof Error ? err.message : err);
+      }
     }
 
     // Clear tracking token so the link can't be replayed after delivery
@@ -176,6 +236,13 @@ export async function updateStopStatus(
   revalidatePath("/crew/today");
   revalidatePath("/dashboard/deliveries");
   revalidatePath(`/dashboard/deliveries/${stop.route_id}`);
+  // When the stop flipped an order to "delivered" above, the operator order
+  // pages and the customer portal both need to refresh.
+  if (newStatus === "completed" && stop.order_id && stop.stop_type === "delivery") {
+    revalidatePath("/dashboard/orders");
+    revalidatePath(`/dashboard/orders/${stop.order_id}`);
+    revalidatePath("/order-status");
+  }
 
   return { ok: true, message: `Stop marked as ${newStatus.replace(/_/g, " ")}.` };
 }
@@ -237,7 +304,11 @@ export async function uploadProofPhoto(
     return { ok: false, message: "Stop not found." };
   }
 
-  if ((photoMembership?.role ?? "") === "crew" && photoRouteData.assigned_driver_profile_id !== ctx.userId) {
+  const photoRole = photoMembership?.role ?? "";
+  if (!["owner", "admin", "dispatcher", "crew"].includes(photoRole)) {
+    return { ok: false, message: "You don't have permission to upload proof photos." };
+  }
+  if (photoRole === "crew" && photoRouteData.assigned_driver_profile_id !== ctx.userId) {
     return { ok: false, message: "You are not assigned to this route." };
   }
 
@@ -316,7 +387,11 @@ export async function saveSignature(
     return { ok: false, message: "Stop not found." };
   }
 
-  if ((sigMembership?.role ?? "") === "crew" && sigRouteData.assigned_driver_profile_id !== ctx.userId) {
+  const sigRole = sigMembership?.role ?? "";
+  if (!["owner", "admin", "dispatcher", "crew"].includes(sigRole)) {
+    return { ok: false, message: "You don't have permission to save signatures." };
+  }
+  if (sigRole === "crew" && sigRouteData.assigned_driver_profile_id !== ctx.userId) {
     return { ok: false, message: "You are not assigned to this route." };
   }
 

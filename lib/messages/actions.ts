@@ -223,6 +223,26 @@ export async function fetchUnreadMessageCount(): Promise<number> {
   return count ?? 0;
 }
 
+// #327/#328 Notifications are organization-scoped (no per-user read_by),
+// so one user marking them affects everyone. Viewers can see notifications
+// but must not be able to hide operator alerts.
+const NOTIFICATION_OPERATOR_ROLES = ["owner", "admin", "dispatcher", "crew"];
+
+async function isNotificationOperator(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  profileId: string
+): Promise<boolean> {
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("profile_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+  return NOTIFICATION_OPERATOR_ROLES.includes(membership?.role ?? "");
+}
+
 export async function markAllNotificationsRead(): Promise<{ ok: boolean }> {
   if (!hasSupabaseEnv()) return { ok: true };
 
@@ -230,6 +250,10 @@ export async function markAllNotificationsRead(): Promise<{ ok: boolean }> {
   if (!ctx) return { ok: false };
 
   const supabase = await createSupabaseServerClient();
+  if (!(await isNotificationOperator(supabase, ctx.organizationId, ctx.userId))) {
+    return { ok: false };
+  }
+
   const { error: markAllError } = await supabase
     .from("notifications")
     .update({ read: true })
@@ -250,6 +274,10 @@ export async function markNotificationRead(
   if (!ctx) return { ok: false };
 
   const supabase = await createSupabaseServerClient();
+  if (!(await isNotificationOperator(supabase, ctx.organizationId, ctx.userId))) {
+    return { ok: false };
+  }
+
   const { error: markError } = await supabase
     .from("notifications")
     .update({ read: true })
