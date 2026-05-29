@@ -66,6 +66,7 @@ export async function PartyClassicHeader() {
                 {link.label}
               </Link>
             ))}
+            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
             {showPhone && (
               <a href={`tel:${settings.phone.replace(/\D/g, "")}`} className="st-nav-phone">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -76,12 +77,11 @@ export async function PartyClassicHeader() {
             )}
           </nav>
 
-          <div className="st-nav-right">
-            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
+          <div className="st-nav-mobile">
             {showPhone && (
               <a
                 href={`tel:${settings.phone.replace(/\D/g, "")}`}
-                className="st-mobile-phone st-mobile-only"
+                className="st-mobile-phone"
                 aria-label={m.nav.call ?? "Call"}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">

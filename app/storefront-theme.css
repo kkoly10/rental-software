@@ -72,9 +72,10 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Reset (storefront pages only)
+ * Reset (storefront pages only — gated off the dashboard by absence
+ * of .sidebar-layout, so dashboard styling is unaffected).
  * ────────────────────────────────────────────────────────────────── */
-body:has(.st-shell):not(:has(.sidebar-layout)) {
+body:not(:has(.sidebar-layout)) {
   background: var(--st-bg);
   color: var(--st-text);
   font-family: var(--st-font);
@@ -144,15 +145,14 @@ body:has(.st-shell):not(:has(.sidebar-layout)) {
   display: inline-flex !important; align-items: center; gap: 6px;
 }
 .st-nav-phone svg { width: 14px; height: 14px; }
-.st-nav-right { display: flex; gap: 8px; align-items: center; }
-.st-mobile-only { display: none; }
+.st-nav-mobile { display: none; gap: 8px; align-items: center; }
 @media (max-width: 800px) {
-  .st-nav-links, .st-nav-right > :not(.st-mobile-phone) { display: none; }
-  .st-mobile-only { display: inline-flex; }
+  .st-nav-links { display: none; }
+  .st-nav-mobile { display: flex; }
   .st-nav { padding: 12px 0; }
 }
 .st-mobile-phone {
-  display: none;
+  display: inline-flex;
   align-items: center; gap: 6px;
   color: var(--st-primary);
   background: var(--st-primary-soft);
@@ -160,9 +160,9 @@ body:has(.st-shell):not(:has(.sidebar-layout)) {
   border-radius: var(--st-radius-pill);
   font-size: 13px;
   font-weight: 700;
+  text-decoration: none;
 }
 .st-mobile-phone svg { width: 13px; height: 13px; }
-@media (max-width: 800px) { .st-mobile-phone { display: inline-flex; } }
 
 /* ──────────────────────────────────────────────────────────────────
  * Hero

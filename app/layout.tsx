@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./storefront-theme.css";
 import "leaflet/dist/leaflet.css";
 import type { Metadata, Viewport } from "next";
 import { getSiteBaseUrl } from "@/lib/seo/metadata";
