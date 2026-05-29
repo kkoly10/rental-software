@@ -1,6 +1,8 @@
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getContentSettings } from "@/lib/data/content-settings";
 import { getThemeSettings } from "@/lib/data/theme-settings";
 import { getReadyAssetCount } from "@/lib/data/storefront-counts";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { getTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_HERO_IMAGE =
@@ -32,12 +34,41 @@ function splitHeadlineForAccent(headline: string): { lead: string; accent: strin
 }
 
 export async function PartyClassicHero() {
-  const [settings, theme, readyCount, { messages: m, t }] = await Promise.all([
+  const [settings, content, theme, readyCount, categories, { messages: m, t }] = await Promise.all([
     getOrganizationSettings(),
+    getContentSettings(),
     getThemeSettings(),
     getReadyAssetCount(),
+    getCategoryGridItems(),
     getTranslator(),
   ]);
+
+  // Derive the cheapest real "from" price across categories — hide the
+  // hero price pill entirely when we have no real price (rather than
+  // showing a fake "$145/day" that doesn't match any actual product).
+  // getCategoryGridItems() is cache()'d so the category-tiles section
+  // below shares this fetch — no extra round-trip.
+  const realPrices = categories
+    .map((c) => c.startingPrice)
+    .filter((p): p is number => typeof p === "number" && p > 0);
+  const fromPrice = realPrices.length > 0 ? Math.min(...realPrices) : null;
+
+  // Social-proof inline row — only surface a star/rating block when the
+  // operator actually has testimonials we can derive it from. New operators
+  // see insurance + same-day-quote bullets without the fake "4.9 / 500+"
+  // claim. avgRating clamps to 0–5 and rounds to 1 decimal.
+  const testimonialCount = content.testimonials.length;
+  const ratingSum = content.testimonials.reduce(
+    (sum, t) => sum + (typeof t.rating === "number" ? Math.max(0, Math.min(5, t.rating)) : 0),
+    0
+  );
+  const avgRating = testimonialCount > 0 ? ratingSum / testimonialCount : 0;
+  // Need at least 3 ratings averaging ≥4 to surface a star block — anything
+  // less reads as fabricated and hurts trust more than helps it.
+  const showRating = testimonialCount >= 3 && avgRating >= 4;
+  const showInsured = content.trustBadges.some((b) =>
+    /insur|liab/i.test(b.title) || /insur|liab/i.test(b.description)
+  );
 
   const headlineRaw = settings.heroHeadline || m.storefront.hero.defaultHeadline;
   const { lead, accent } = splitHeadlineForAccent(headlineRaw);
@@ -74,7 +105,7 @@ export async function PartyClassicHero() {
             </label>
             <label className="st-av-field">
               <span className="st-av-field-label">{m.storefront.hero.deliveryZip}</span>
-              <input name="zip" type="text" placeholder="22554" inputMode="numeric" />
+              <input name="zip" type="text" placeholder={m.storefront.hero.zipPlaceholder} inputMode="numeric" />
             </label>
           </div>
           <div className="st-av-actions">
@@ -93,24 +124,37 @@ export async function PartyClassicHero() {
         </form>
 
         <div className="st-social-row">
-          <span className="st-stars">
-            <span className="st-stars-glyphs">★★★★★</span>
-            <strong>4.9</strong>
-            <span>· 500+ events</span>
-          </span>
-          <span className="st-dot"></span>
-          <span>{t(m.storefront.hero.insuredInline, { amount: "$2M" })}</span>
-          <span className="st-dot"></span>
+          {showRating && (
+            <>
+              <span className="st-stars">
+                <span className="st-stars-glyphs">
+                  {"★".repeat(Math.round(avgRating))}
+                  {"☆".repeat(5 - Math.round(avgRating))}
+                </span>
+                <strong>{avgRating.toFixed(1)}</strong>
+                <span>· {testimonialCount}+ reviews</span>
+              </span>
+              <span className="st-dot"></span>
+            </>
+          )}
+          {showInsured && (
+            <>
+              <span>{m.storefront.hero.insuredInline}</span>
+              <span className="st-dot"></span>
+            </>
+          )}
           <span>{m.storefront.hero.sameDayQuotes}</span>
         </div>
       </div>
 
       <div className="st-hero-visual">
         <img src={heroImage} alt={`${settings.businessName} event setup`} className="st-hero-photo" />
-        <div className="st-price-pill">
-          <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
-          <span>$145/day</span>
-        </div>
+        {fromPrice !== null && (
+          <div className="st-price-pill">
+            <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
+            <span>${fromPrice}/day</span>
+          </div>
+        )}
         <div className="st-delivery-pill">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7" />
