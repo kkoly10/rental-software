@@ -5,8 +5,28 @@ import { getReadyAssetCount } from "@/lib/data/storefront-counts";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { getTranslator } from "@/lib/i18n/server";
 
+// Bouncy castle photo at hero resolution. Re-uses the same Unsplash
+// photo id the storefront's "bounce" product fallback already uses
+// (lib/media/storefront-fallback-images.ts) so we keep a single source
+// of party imagery. The previous default (1607113284254-1ab1f6b48e21)
+// was 404 on Unsplash, leaving every tenant without a custom hero
+// image with a broken-image placeholder in the hero panel.
 const DEFAULT_HERO_IMAGE =
-  "https://images.unsplash.com/photo-1607113284254-1ab1f6b48e21?auto=format&fit=crop&w=1400&q=85";
+  "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=1400&q=85";
+
+// Unsplash photo ids that used to be defaults but have since been removed
+// from Unsplash (HTTP 404). Tenants provisioned while those were the
+// defaults have the dead URL persisted in organizations.settings
+// .hero_image_url, so swapping the constant above is not enough — we
+// also need to ignore the dead URL at render time and fall through to
+// DEFAULT_HERO_IMAGE. Match by photo id so we catch query-string
+// variants too. Drop an entry here once a follow-up data migration
+// clears the corresponding hero_image_url rows.
+const DEAD_HERO_PHOTO_IDS = ["1607113284254-1ab1f6b48e21"] as const;
+
+function isDeadHeroUrl(url: string): boolean {
+  return DEAD_HERO_PHOTO_IDS.some((id) => url.includes(id));
+}
 
 /**
  * Split the headline into a leading clause + the final 1-2 words for the
@@ -72,7 +92,9 @@ export async function PartyClassicHero() {
 
   const headlineRaw = settings.heroHeadline || m.storefront.hero.defaultHeadline;
   const { lead, accent } = splitHeadlineForAccent(headlineRaw);
-  const heroImage = settings.heroImageUrl || DEFAULT_HERO_IMAGE;
+  const storedHero = settings.heroImageUrl?.trim() ?? "";
+  const heroImage =
+    storedHero && !isDeadHeroUrl(storedHero) ? storedHero : DEFAULT_HERO_IMAGE;
   const showLiveChip = theme.availabilityChipVisible && readyCount > 0;
   const showSecondaryCta = theme.ctaSecondary === "request_quote";
 
@@ -148,7 +170,14 @@ export async function PartyClassicHero() {
       </div>
 
       <div className="st-hero-visual">
-        <img src={heroImage} alt={`${settings.businessName} event setup`} className="st-hero-photo" />
+        <img
+          src={heroImage}
+          alt={`${settings.businessName} event setup`}
+          className="st-hero-photo"
+          width="1400"
+          height="1120"
+          fetchPriority="high"
+        />
         {fromPrice !== null && (
           <div className="st-price-pill">
             <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
