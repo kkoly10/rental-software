@@ -2,6 +2,10 @@ import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
+import {
   getStorefrontFallbackGallery,
   getStorefrontFallbackImage,
 } from "@/lib/media/storefront-fallback-images";
@@ -87,7 +91,13 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
     notFound();
   }
 
-  const supabase = await createSupabaseServerClient();
+  // Same anon-RLS-RETURNING pattern as #111/#112/#115/#117 — the storefront
+  // detail page runs anonymously, RLS on products/categories/etc. is gated
+  // to org members, and the cookie-bound client returns null even for valid
+  // public products. Org isolation enforced via .eq("organization_id", ...).
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
   // product_attributes does NOT have a deleted_at column — migration
   // 20260327_020000_updated_at_soft_delete_foundation.sql only added it to
   // categories, product_images, and the other soft-delete-bearing tables;
