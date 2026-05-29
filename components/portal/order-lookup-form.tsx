@@ -8,6 +8,7 @@ import { DocumentSign } from "./document-sign";
 import { CustomerMessageForm } from "./customer-message-form";
 import { InvoiceDownload } from "./invoice-download";
 import { PayBalanceButton } from "./pay-balance-button";
+import { CancelBookingButton } from "./cancel-booking-button";
 import { AcceptQuoteButton } from "./accept-quote-button";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatMessage } from "@/lib/i18n/format";
@@ -189,6 +190,7 @@ export function OrderLookupForm({ initialState }: Props) {
               {state.order.status !== "Quote Sent" && state.order.status !== "Inquiry" && (
                 <PayBalanceButton portalToken={activeToken} balanceDue={state.order.balanceDue} />
               )}
+              <CancelBookingButton portalToken={activeToken} currentStatus={state.order.status} />
             </div>
           </div>
 
