@@ -50,11 +50,13 @@ export async function PartyClassicCategoryTiles() {
       <div className="st-cat-grid">
         {display.map((cat) => {
           const imageUrl = cat.imageUrl ?? getPlaceholderImage(cat.slug);
-          const subParts: string[] = [];
-          if (cat.startingPrice !== null) {
-            subParts.push(t(m.storefront.categoryGrid.startingPrice, { amount: String(cat.startingPrice) }));
-          }
-          subParts.push(t(m.storefront.categoryGrid.optionCount, { count: cat.productCount }));
+          // Pill at top-left already conveys the option count; show the
+          // starting price (or omit) in the bottom subtext so the two
+          // never duplicate the same metric.
+          const subText =
+            cat.startingPrice !== null
+              ? t(m.storefront.categoryGrid.startingPrice, { amount: String(cat.startingPrice) })
+              : "";
           return (
             <Link
               key={cat.slug}
@@ -71,7 +73,7 @@ export async function PartyClassicCategoryTiles() {
               </div>
               <div className="st-cat-tile-content">
                 <h3 className="st-cat-tile-name">{cat.name}</h3>
-                <div className="st-cat-tile-sub">{subParts.join(" · ")}</div>
+                {subText && <div className="st-cat-tile-sub">{subText}</div>}
               </div>
             </Link>
           );
