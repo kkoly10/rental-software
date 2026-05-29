@@ -139,6 +139,14 @@ const enValues = {
       title: "Find the right party setup faster",
       description: "Browse by type before diving into specific rentals.",
       startingPrice: "Starting ${amount}",
+      optionCount: "{count} options",
+      viewAllWithCount: "View all {count} →",
+    },
+    themeChips: {
+      all: "All categories",
+    },
+    press: {
+      label: "As seen on",
     },
     about: {
       kicker: "Our story",
@@ -147,11 +155,17 @@ const enValues = {
     testimonials: {
       kicker: "Reviews",
       title: "What our customers say",
+      titleVertical: "Real Saturdays",
+      subtitleVertical: "From the families and event organizers we've delivered for.",
+      readMoreLink: "Read 500+ reviews →",
+      eventInline: "{location} · {eventType}{date, select, none {} other { · {date}}}",
     },
     serviceArea: {
       kicker: "Service area",
       title: "Delivered across your local market",
       description: "We deliver, set up, and pick up within our service zone. Check our coverage below.",
+      notListed: "Not on the list? Call us — we probably still cover you.",
+      moreZipsCount: "+ {count} more",
       primaryCoverage: "Primary ZIP coverage",
       coverageServing: "Serving {areas} and surrounding delivery-ready areas.",
       coverageContact: "Contact us to confirm delivery availability for your ZIP code.",

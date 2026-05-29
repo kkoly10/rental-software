@@ -138,6 +138,14 @@ export const pt: Messages = {
       title: "Encontre a configuração certa mais depressa",
       description: "Explore por tipo antes de escolher alugueres específicos.",
       startingPrice: "A partir de ${amount}",
+      optionCount: "{count} opções",
+      viewAllWithCount: "Ver {count} →",
+    },
+    themeChips: {
+      all: "Todas as categorias",
+    },
+    press: {
+      label: "Visto em",
     },
     about: {
       kicker: "A nossa história",
@@ -146,11 +154,17 @@ export const pt: Messages = {
     testimonials: {
       kicker: "Avaliações",
       title: "O que dizem os nossos clientes",
+      titleVertical: "Sábados reais",
+      subtitleVertical: "Das famílias e organizadores para quem já entregámos.",
+      readMoreLink: "Ler 500+ avaliações →",
+      eventInline: "{location} · {eventType}{date, select, none {} other { · {date}}}",
     },
     serviceArea: {
       kicker: "Área de serviço",
       title: "Entrega no seu mercado local",
       description: "Entregamos, montamos e recolhemos dentro da nossa zona de serviço. Veja a cobertura abaixo.",
+      notListed: "Não está na lista? Ligue-nos — provavelmente cobrimos a sua zona.",
+      moreZipsCount: "+ {count} mais",
       primaryCoverage: "Cobertura principal",
       coverageServing: "Servimos {areas} e áreas próximas prontas para entrega.",
       coverageContact: "Contacte-nos para confirmar a disponibilidade de entrega no seu código postal.",
