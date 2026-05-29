@@ -4,6 +4,10 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -83,7 +87,11 @@ export async function signDocument(
     return { ok: false, message: demoCheck.message };
   }
 
-  const supabase = await createSupabaseServerClient();
+  // Customer signs are anon — cookie-bound RLS can't see orders/documents.
+  // Org isolation via the explicit .eq("organization_id", orgId).
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
 
   const tokenHash = hashPortalAccessToken(portalToken);
   const { data: order } = await supabase

@@ -2,6 +2,10 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -67,7 +71,9 @@ export async function sendCustomerMessage(
     return { ok: false, message: demoCheck.message };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
   const tokenHash = hashPortalAccessToken(portalToken);
 
   const { data: order } = await supabase
