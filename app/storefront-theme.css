@@ -72,10 +72,19 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Reset (storefront pages only — gated off the dashboard by absence
- * of .sidebar-layout, so dashboard styling is unaffected).
+ * Reset — storefront pages only.
+ *
+ * Gated on the presence of `.st-header` (rendered by PartyClassicHeader,
+ * which all PublicHeader consumers go through) so this body-level
+ * styling does NOT leak onto:
+ *   • the dashboard (has .sidebar-layout)
+ *   • the SaaS marketing landing on the root domain
+ *   • /login, /signup, /pricing, /onboarding, /forgot-password,
+ *     /reset-password, /offline, and similar non-storefront pages
+ * Each of those pages keeps the original Plus Jakarta + globals.css
+ * background it was designed with.
  * ────────────────────────────────────────────────────────────────── */
-body:not(:has(.sidebar-layout)) {
+body:has(.st-header):not(:has(.sidebar-layout)) {
   background: var(--st-bg);
   color: var(--st-text);
   font-family: var(--st-font);

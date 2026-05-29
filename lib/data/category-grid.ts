@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -15,7 +16,7 @@ export type CategoryGridItem = {
   themeEmoji: string | null;
 };
 
-export async function getCategoryGridItems(): Promise<CategoryGridItem[]> {
+export const getCategoryGridItems = cache(async function getCategoryGridItems(): Promise<CategoryGridItem[]> {
   if (!hasSupabaseEnv()) return [];
 
   const organizationId = await getPublicOrgId();
@@ -116,4 +117,4 @@ export async function getCategoryGridItems(): Promise<CategoryGridItem[]> {
   }
 
   return items;
-}
+});

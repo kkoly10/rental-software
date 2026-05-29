@@ -2,6 +2,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { getThemeSettings } from "@/lib/data/theme-settings";
 import { getReadyAssetCount } from "@/lib/data/storefront-counts";
+import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { getTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_HERO_IMAGE =
@@ -33,13 +34,24 @@ function splitHeadlineForAccent(headline: string): { lead: string; accent: strin
 }
 
 export async function PartyClassicHero() {
-  const [settings, content, theme, readyCount, { messages: m, t }] = await Promise.all([
+  const [settings, content, theme, readyCount, categories, { messages: m, t }] = await Promise.all([
     getOrganizationSettings(),
     getContentSettings(),
     getThemeSettings(),
     getReadyAssetCount(),
+    getCategoryGridItems(),
     getTranslator(),
   ]);
+
+  // Derive the cheapest real "from" price across categories — hide the
+  // hero price pill entirely when we have no real price (rather than
+  // showing a fake "$145/day" that doesn't match any actual product).
+  // getCategoryGridItems() is cache()'d so the category-tiles section
+  // below shares this fetch — no extra round-trip.
+  const realPrices = categories
+    .map((c) => c.startingPrice)
+    .filter((p): p is number => typeof p === "number" && p > 0);
+  const fromPrice = realPrices.length > 0 ? Math.min(...realPrices) : null;
 
   // Social-proof inline row — only surface a star/rating block when the
   // operator actually has testimonials we can derive it from. New operators
@@ -93,7 +105,7 @@ export async function PartyClassicHero() {
             </label>
             <label className="st-av-field">
               <span className="st-av-field-label">{m.storefront.hero.deliveryZip}</span>
-              <input name="zip" type="text" placeholder="22554" inputMode="numeric" />
+              <input name="zip" type="text" placeholder={m.storefront.hero.zipPlaceholder} inputMode="numeric" />
             </label>
           </div>
           <div className="st-av-actions">
@@ -127,7 +139,7 @@ export async function PartyClassicHero() {
           )}
           {showInsured && (
             <>
-              <span>{t(m.storefront.hero.insuredInline, { amount: "$2M" })}</span>
+              <span>{m.storefront.hero.insuredInline}</span>
               <span className="st-dot"></span>
             </>
           )}
@@ -137,10 +149,12 @@ export async function PartyClassicHero() {
 
       <div className="st-hero-visual">
         <img src={heroImage} alt={`${settings.businessName} event setup`} className="st-hero-photo" />
-        <div className="st-price-pill">
-          <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
-          <span>$145/day</span>
-        </div>
+        {fromPrice !== null && (
+          <div className="st-price-pill">
+            <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
+            <span>${fromPrice}/day</span>
+          </div>
+        )}
         <div className="st-delivery-pill">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7" />
