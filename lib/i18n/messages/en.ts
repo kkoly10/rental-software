@@ -100,6 +100,7 @@ const enValues = {
     rentalsLogin: "Rentals Login",
     operatorView: "Operator View",
     publicSite: "Public Site",
+    call: "Call",
   },
 
   storefront: {
@@ -110,6 +111,13 @@ const enValues = {
       eventDate: "Event Date",
       deliveryZip: "Delivery ZIP",
       checkAvailability: "Check Availability",
+      liveChip: "{count} units ready for booking",
+      checkOpenCta: "See what's open",
+      requestQuoteCta: "Request a quote",
+      priceFromLabel: "from",
+      deliveryIncludedLabel: "Delivery + setup included",
+      insuredInline: "Fully insured · {amount}",
+      sameDayQuotes: "Same-day quotes",
     },
     popularRentals: {
       kicker: "Explore by rentals",

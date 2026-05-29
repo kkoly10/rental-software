@@ -1,7 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
-import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
 import { TrustBar } from "@/components/public/trust-bar";
 import { CategoryGrid } from "@/components/public/category-grid";
@@ -11,6 +9,9 @@ import { ServiceAreaSection } from "@/components/public/service-area-section";
 import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
+import { StorefrontShell } from "@/components/public/themes/party-classic/storefront-shell";
+import { PartyClassicHeader } from "@/components/public/themes/party-classic/header";
+import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
 import { SaasLanding } from "@/components/marketing/saas-landing";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
@@ -75,74 +76,15 @@ export default async function HomePage() {
       : m.storefront.faq.defaults.map((f) => ({ question: f.question, answer: f.answer }));
 
   return (
-    <>
-      <PublicHeader />
+    <StorefrontShell>
+      <PartyClassicHeader />
       <JsonLdScript data={organizationJsonLd({ ...settings, websiteMessage: settings.websiteMessage || undefined }, origin)} />
       {vis.faq_section !== false && (
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}
 
       <main>
-        {/* Hero */}
-        <section className="public-hero">
-          <div className="public-hero-visual">
-            <Image
-              src={settings.heroImageUrl || "https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"}
-              alt={`${settings.businessName} event setup`}
-              fill
-              priority
-              sizes="100vw"
-              className="public-hero-photo"
-            />
-          </div>
-
-          <div className="public-hero-overlay" />
-
-          <div className="container">
-            <div className="public-hero-copy">
-              {settings.businessName && (
-                <div className="kicker public-kicker">
-                  {settings.businessName}
-                </div>
-              )}
-
-              <h1>
-                {settings.heroHeadline || m.storefront.hero.defaultHeadline}
-              </h1>
-
-              <p>
-                {settings.websiteMessage || m.storefront.hero.defaultMessage}{" "}
-                {t(m.storefront.hero.checkAvailabilityAcross, { area: settings.serviceAreaLabel ?? "" })}
-              </p>
-
-              <form action="/inventory" className="storefront-search-card">
-                <div className="storefront-search-grid">
-                  <label className="storefront-field">
-                    <span>{m.storefront.hero.eventDate}</span>
-                    <input name="date" type="date" />
-                  </label>
-
-                  <label className="storefront-field">
-                    <span>{m.storefront.hero.deliveryZip}</span>
-                    <input
-                      name="zip"
-                      type="text"
-                      placeholder="22554"
-                      inputMode="numeric"
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    className="primary-btn storefront-search-btn"
-                  >
-                    {m.storefront.hero.checkAvailability}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </section>
+        <PartyClassicHero />
 
         {/* Trust signals */}
         {vis.trust_bar !== false && (
@@ -219,6 +161,6 @@ export default async function HomePage() {
       </main>
 
       {isDemo && <DemoBanner />}
-    </>
+    </StorefrontShell>
   );
 }

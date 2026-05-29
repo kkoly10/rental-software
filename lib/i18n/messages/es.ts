@@ -99,6 +99,7 @@ export const es: Messages = {
     rentalsLogin: "Acceso de alquileres",
     operatorView: "Vista de operador",
     publicSite: "Sitio público",
+    call: "Llamar",
   },
 
   storefront: {
@@ -109,6 +110,13 @@ export const es: Messages = {
       eventDate: "Fecha del evento",
       deliveryZip: "Código postal de entrega",
       checkAvailability: "Comprobar disponibilidad",
+      liveChip: "{count} unidades listas para reservar",
+      checkOpenCta: "Ver disponibilidad",
+      requestQuoteCta: "Solicitar presupuesto",
+      priceFromLabel: "desde",
+      deliveryIncludedLabel: "Entrega + montaje incluidos",
+      insuredInline: "Totalmente asegurado · {amount}",
+      sameDayQuotes: "Presupuestos en el día",
     },
     popularRentals: {
       kicker: "Explorar por alquileres",
