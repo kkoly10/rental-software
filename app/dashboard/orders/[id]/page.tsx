@@ -8,6 +8,7 @@ import { WeatherAlert } from "@/components/weather/weather-alert";
 import { CommunicationList } from "@/components/communications/communication-list";
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
+import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { getMessages } from "@/lib/i18n/server";
 
 function extractZip(address: string): string | undefined {
@@ -234,6 +235,7 @@ export default async function OrderDetailPage({
             <Link href="/dashboard/deliveries" className="ghost-btn">
               Delivery board
             </Link>
+            <CancelOrderButton orderId={id} currentStatus={order.status} />
           </div>
         </aside>
       </div>
