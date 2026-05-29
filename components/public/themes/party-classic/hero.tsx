@@ -5,8 +5,14 @@ import { getReadyAssetCount } from "@/lib/data/storefront-counts";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { getTranslator } from "@/lib/i18n/server";
 
+// Bouncy castle photo at hero resolution. Re-uses the same Unsplash
+// photo id the storefront's "bounce" product fallback already uses
+// (lib/media/storefront-fallback-images.ts) so we keep a single source
+// of party imagery. The previous default (1607113284254-1ab1f6b48e21)
+// was 404 on Unsplash, leaving every tenant without a custom hero
+// image with a broken-image placeholder in the hero panel.
 const DEFAULT_HERO_IMAGE =
-  "https://images.unsplash.com/photo-1607113284254-1ab1f6b48e21?auto=format&fit=crop&w=1400&q=85";
+  "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=1400&q=85";
 
 /**
  * Split the headline into a leading clause + the final 1-2 words for the
@@ -148,7 +154,14 @@ export async function PartyClassicHero() {
       </div>
 
       <div className="st-hero-visual">
-        <img src={heroImage} alt={`${settings.businessName} event setup`} className="st-hero-photo" />
+        <img
+          src={heroImage}
+          alt={`${settings.businessName} event setup`}
+          className="st-hero-photo"
+          width="1400"
+          height="1120"
+          fetchPriority="high"
+        />
         {fromPrice !== null && (
           <div className="st-price-pill">
             <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
