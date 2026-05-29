@@ -573,3 +573,193 @@ test("D04 — attach order with address to today's route and see a real map mark
 
   await ctx.close();
 });
+
+// ─── 8. Two-stop route — verify polyline draws between stops and the
+//        "Open route in maps" link is a real Google Maps directions URL
+//        with origin, destination, and waypoint encoded. ──────────────────
+
+test("D05 — two-stop route shows polyline and exposes a real directions URL", async ({
+  browser,
+}) => {
+  // This test creates two orders, a route, and attaches two stops — that's
+  // a lot of form-fill round trips against live korent.app, so we override
+  // the dashboard config's 90s default with a longer budget.
+  test.setTimeout(240_000);
+  const ctx = await operatorContext(browser);
+  const page = await ctx.newPage();
+  const today = new Date().toISOString().split("T")[0];
+  const stamp = Date.now();
+
+  // Two real, geocodable Atlanta addresses inside the operator's "Metro
+  // Atlanta" service area.  Both must be on confirmed orders for today
+  // so the route detail page's Add-Stop dropdown surfaces them.
+  const stops = [
+    {
+      label: "A",
+      line1: "265 Park Ave W NW", // Centennial Olympic Park
+      zip: "30313",
+    },
+    {
+      label: "B",
+      line1: "600 W Peachtree St NW", // Bank of America Plaza
+      zip: "30308",
+    },
+  ];
+
+  async function createConfirmedOrder(label: string, line1: string, zip: string) {
+    await page.goto(`${DASHBOARD}/dashboard/orders/new`, {
+      waitUntil: "networkidle",
+    });
+    await page.locator('input[name="first_name"]').fill(`Routing${label}`);
+    await page
+      .locator('input[name="last_name"]')
+      .fill(`Customer${stamp}-${label}`);
+    await page.locator('input[name="phone"]').fill("4045550199");
+    await page
+      .locator('input[name="email"]')
+      .fill(`routing+${stamp}-${label}@example.com`);
+    await page.locator('input[name="event_date"]').fill(today);
+    await page
+      .locator('select[name="order_status"]')
+      .selectOption("confirmed")
+      .catch(async () => {
+        await page
+          .locator('select[name="order_status"]')
+          .selectOption({ index: 1 })
+          .catch(() => {});
+      });
+    const productSel = page.locator('select[name="product_id"]');
+    for (const o of await productSel.locator("option").all()) {
+      const v = await o.getAttribute("value");
+      if (v) {
+        await productSel.selectOption(v);
+        break;
+      }
+    }
+    await page.locator('input[name="delivery_line1"]').fill(line1);
+    await page.locator('input[name="delivery_city"]').fill("Atlanta");
+    await page.locator('input[name="delivery_state"]').fill("GA");
+    await page.locator('input[name="delivery_zip"]').fill(zip);
+    await page.locator('input[name="subtotal"]').fill("250").catch(() => {});
+
+    await Promise.all([
+      page
+        .waitForURL(/\/dashboard\/orders\/(?!new)/, { timeout: 20_000 })
+        .catch(() => undefined),
+      page
+        .locator('button[type="submit"]')
+        .filter({ hasText: /create order/i })
+        .first()
+        .click(),
+    ]);
+    await page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  for (const s of stops) await createConfirmedOrder(s.label, s.line1, s.zip);
+
+  // Create a fresh route for today.
+  await page.goto(`${DASHBOARD}/dashboard/deliveries`, {
+    waitUntil: "networkidle",
+  });
+  await page.locator('input[name="name"]').fill(`E2E Directions ${stamp}`);
+  await page.locator('input[name="route_date"]').fill(today).catch(() => {});
+  await page
+    .locator('input[name="assigned_vehicle"]')
+    .fill("Truck Routing")
+    .catch(() => {});
+  await Promise.all([
+    page
+      .waitForURL(/\/dashboard\/deliveries\/[0-9a-f-]{36}/, { timeout: 15_000 })
+      .catch(() => undefined),
+    page
+      .locator('button[type="submit"]')
+      .filter({ hasText: /create route/i })
+      .first()
+      .click(),
+  ]);
+  await page.waitForLoadState("networkidle").catch(() => {});
+  await ss(page, "D05a-route-detail-empty");
+
+  // Attach both orders as stops via the Add-Stop form.
+  async function attachStopForOrderLabel(label: string) {
+    const orderSelect = page.locator('select[name="order_id"]');
+    await orderSelect.waitFor({ timeout: 8_000 }).catch(() => {});
+    let targetValue = "";
+    for (const opt of (await orderSelect.locator("option").all()).slice(1)) {
+      const value = await opt.getAttribute("value");
+      const text = (await opt.innerText()).trim();
+      if (value && text.includes(`-${label}`)) {
+        targetValue = value;
+        break;
+      }
+    }
+    if (!targetValue) {
+      throw new Error(
+        `Could not find order labelled "${label}" in Add Stop dropdown — found ${
+          (await orderSelect.locator("option").count()) - 1
+        } candidate(s)`
+      );
+    }
+    // Scope to the Add-Stop form specifically — the route detail page also
+    // has "Complete Route" / "Mark En Route" / "Remove" submit buttons that
+    // would otherwise be selected by a generic form button[type="submit"]
+    // query and silently move the route to Completed instead of attaching
+    // the stop.  The Add-Stop form is the only one on the page that has
+    // the order_id select inside it.
+    const addStopForm = page
+      .locator("form")
+      .filter({ has: page.locator('select[name="order_id"]') })
+      .first();
+    await orderSelect.selectOption(targetValue);
+    await addStopForm
+      .locator('select[name="stop_type"]')
+      .selectOption("delivery")
+      .catch(() => {});
+    await addStopForm
+      .locator('input[name="scheduled_time"]')
+      .fill(label === "A" ? "11:00" : "13:30")
+      .catch(() => {});
+    await addStopForm.locator('button[type="submit"]').click();
+    await page.waitForLoadState("networkidle").catch(() => {});
+    await page.waitForTimeout(2500); // geocode + map re-render
+  }
+
+  await attachStopForOrderLabel("A");
+  await attachStopForOrderLabel("B");
+  await ss(page, "D05b-route-with-two-stops");
+
+  // a) Marker count ≥ 2 — both stops on the map.
+  const markerCount = await page.locator(".leaflet-marker-icon").count();
+  console.log(`  leaflet markers : ${markerCount}`);
+
+  // b) Polyline drawn — Leaflet renders polylines as <path> elements inside
+  //    the .leaflet-overlay-pane SVG.  Our route-map.tsx draws an orange
+  //    dashed line, so we look for any path inside that pane.
+  const polyCount = await page
+    .locator(".leaflet-overlay-pane svg path")
+    .count();
+  console.log(`  leaflet polyline paths : ${polyCount}`);
+
+  // c) "Open route in maps" — extract the actual directions URL and verify
+  //    it contains both stop addresses (URL-encoded).
+  const mapsLink = page
+    .locator('a[href*="/maps/dir/?"]')
+    .first();
+  const mapsHref = (await mapsLink.getAttribute("href").catch(() => null)) ?? "";
+  console.log("  open-route-in-maps href :", mapsHref);
+
+  expect(markerCount, "two markers on the map").toBeGreaterThanOrEqual(2);
+  expect(polyCount, "polyline drawn between stops").toBeGreaterThanOrEqual(1);
+  expect(mapsHref, "directions link is a Google Maps directions URL").toContain(
+    "google.com/maps/dir/"
+  );
+  expect(mapsHref, "directions URL encodes first stop address").toContain(
+    encodeURIComponent("265 Park Ave W NW")
+  );
+  expect(mapsHref, "directions URL encodes second stop address").toContain(
+    encodeURIComponent("600 W Peachtree St NW")
+  );
+  expect(mapsHref, "driving travel mode").toContain("travelmode=driving");
+
+  await ctx.close();
+});
