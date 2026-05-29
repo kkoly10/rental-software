@@ -2,6 +2,10 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -58,7 +62,12 @@ function formatMoney(val: number): string {
 }
 
 async function buildPortalOrder(order: OrderBase, customer: { first_name: string | null; last_name: string | null }) {
-  const supabase = await createSupabaseServerClient();
+  // Same anon-RLS issue: order_items, documents, payments have no anon SELECT,
+  // so the cookie-bound client returns nothing and the portal renders an
+  // empty order summary.
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
 
   const [{ data: items }, { data: docs }, { data: paymentRows }] = await Promise.all([
     supabase.from("order_items").select("item_name_snapshot").eq("order_id", order.id),
@@ -171,7 +180,11 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
   const orgId = await getPublicOrgId();
   if (!orgId) return { ok: false, message: "Service not available." };
 
-  const supabase = await createSupabaseServerClient();
+  // Same anon-RLS issue as the email/order# lookup above — magic-link arrival
+  // is also anonymous.
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
   const tokenHash = hashPortalAccessToken(normalized);
   const { data: order } = await supabase
     .from("orders")
@@ -269,7 +282,14 @@ export async function lookupOrder(
     return { ok: false, message: "Service not available." };
   }
 
-  const supabase = await createSupabaseServerClient();
+  // The customer portal is hit anonymously, and `orders` / `customers` have
+  // no anon SELECT policies — so the cookie-bound client returns 0 rows and
+  // every lookup says "Order not found." even with valid credentials. Use
+  // admin when configured. Org isolation is enforced via the explicit
+  // .eq("organization_id", orgId) on every read; orgId is host-resolved.
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
 
   const { data: order } = await supabase
     .from("orders")
