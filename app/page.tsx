@@ -138,7 +138,7 @@ export default async function HomePage() {
           <AboutSection text={contentSettings.aboutText} />
         )}
 
-        <PartyClassicReviewsCards />
+        {vis.testimonials && <PartyClassicReviewsCards />}
 
         {vis.faq_section !== false && <FaqSection customFaqs={faqItems} />}
 

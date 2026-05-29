@@ -1,5 +1,4 @@
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
-import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getTranslator } from "@/lib/i18n/server";
 
 // Pseudo-random map pin positions derived from the ZIP string so each ZIP
@@ -15,9 +14,8 @@ function pinPosition(zip: string, index: number) {
 }
 
 export async function PartyClassicServiceArea() {
-  const [areas, settings, { messages: m }] = await Promise.all([
+  const [areas, { messages: m, t }] = await Promise.all([
     getServiceAreasGeo(),
-    getOrganizationSettings(),
     getTranslator(),
   ]);
 
@@ -35,17 +33,12 @@ export async function PartyClassicServiceArea() {
         <div className="st-service-text">
           <div>
             <span className="st-service-kicker">{m.storefront.serviceArea.kicker}</span>
-            <h2 className="st-service-title">
-              {settings.businessName
-                ? `${settings.businessName} delivers across your area`
-                : m.storefront.serviceArea.title}
-            </h2>
+            <h2 className="st-service-title">{m.storefront.serviceArea.title}</h2>
           </div>
           <p className="st-service-body">{m.storefront.serviceArea.description}</p>
           <div className="st-zip-grid">
             {displayed.map((a) => {
-              const locale = [a.city, a.state].filter(Boolean).join(", ");
-              const label = locale ? `${a.zipCode} ${a.city ?? ""}`.trim() : a.zipCode;
+              const label = a.city ? `${a.zipCode} ${a.city}` : a.zipCode;
               return (
                 <span key={a.id} className="st-zip-pill">
                   {label}
@@ -54,7 +47,7 @@ export async function PartyClassicServiceArea() {
             })}
             {remaining > 0 && (
               <span className="st-zip-pill more">
-                {m.storefront.serviceArea.moreZipsCount.replace("{count}", String(remaining))}
+                {t(m.storefront.serviceArea.moreZipsCount, { count: remaining })}
               </span>
             )}
           </div>
