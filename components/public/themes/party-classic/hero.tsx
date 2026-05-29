@@ -1,4 +1,5 @@
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getContentSettings } from "@/lib/data/content-settings";
 import { getThemeSettings } from "@/lib/data/theme-settings";
 import { getReadyAssetCount } from "@/lib/data/storefront-counts";
 import { getTranslator } from "@/lib/i18n/server";
@@ -32,12 +33,30 @@ function splitHeadlineForAccent(headline: string): { lead: string; accent: strin
 }
 
 export async function PartyClassicHero() {
-  const [settings, theme, readyCount, { messages: m, t }] = await Promise.all([
+  const [settings, content, theme, readyCount, { messages: m, t }] = await Promise.all([
     getOrganizationSettings(),
+    getContentSettings(),
     getThemeSettings(),
     getReadyAssetCount(),
     getTranslator(),
   ]);
+
+  // Social-proof inline row — only surface a star/rating block when the
+  // operator actually has testimonials we can derive it from. New operators
+  // see insurance + same-day-quote bullets without the fake "4.9 / 500+"
+  // claim. avgRating clamps to 0–5 and rounds to 1 decimal.
+  const testimonialCount = content.testimonials.length;
+  const ratingSum = content.testimonials.reduce(
+    (sum, t) => sum + (typeof t.rating === "number" ? Math.max(0, Math.min(5, t.rating)) : 0),
+    0
+  );
+  const avgRating = testimonialCount > 0 ? ratingSum / testimonialCount : 0;
+  // Need at least 3 ratings averaging ≥4 to surface a star block — anything
+  // less reads as fabricated and hurts trust more than helps it.
+  const showRating = testimonialCount >= 3 && avgRating >= 4;
+  const showInsured = content.trustBadges.some((b) =>
+    /insur|liab/i.test(b.title) || /insur|liab/i.test(b.description)
+  );
 
   const headlineRaw = settings.heroHeadline || m.storefront.hero.defaultHeadline;
   const { lead, accent } = splitHeadlineForAccent(headlineRaw);
@@ -93,14 +112,25 @@ export async function PartyClassicHero() {
         </form>
 
         <div className="st-social-row">
-          <span className="st-stars">
-            <span className="st-stars-glyphs">★★★★★</span>
-            <strong>4.9</strong>
-            <span>· 500+ events</span>
-          </span>
-          <span className="st-dot"></span>
-          <span>{t(m.storefront.hero.insuredInline, { amount: "$2M" })}</span>
-          <span className="st-dot"></span>
+          {showRating && (
+            <>
+              <span className="st-stars">
+                <span className="st-stars-glyphs">
+                  {"★".repeat(Math.round(avgRating))}
+                  {"☆".repeat(5 - Math.round(avgRating))}
+                </span>
+                <strong>{avgRating.toFixed(1)}</strong>
+                <span>· {testimonialCount}+ reviews</span>
+              </span>
+              <span className="st-dot"></span>
+            </>
+          )}
+          {showInsured && (
+            <>
+              <span>{t(m.storefront.hero.insuredInline, { amount: "$2M" })}</span>
+              <span className="st-dot"></span>
+            </>
+          )}
           <span>{m.storefront.hero.sameDayQuotes}</span>
         </div>
       </div>
