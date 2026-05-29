@@ -99,6 +99,7 @@ export const es: Messages = {
     rentalsLogin: "Acceso de alquileres",
     operatorView: "Vista de operador",
     publicSite: "Sitio público",
+    call: "Llamar",
   },
 
   storefront: {
@@ -109,6 +110,13 @@ export const es: Messages = {
       eventDate: "Fecha del evento",
       deliveryZip: "Código postal de entrega",
       checkAvailability: "Comprobar disponibilidad",
+      liveChip: "{count} unidades listas para reservar",
+      checkOpenCta: "Ver disponibilidad",
+      requestQuoteCta: "Solicitar presupuesto",
+      priceFromLabel: "desde",
+      deliveryIncludedLabel: "Entrega + montaje incluidos",
+      insuredInline: "Totalmente asegurado · {amount}",
+      sameDayQuotes: "Presupuestos en el día",
     },
     popularRentals: {
       kicker: "Explorar por alquileres",
@@ -130,6 +138,14 @@ export const es: Messages = {
       title: "Encuentra la configuración adecuada más rápido",
       description: "Explora por tipo antes de elegir alquileres específicos.",
       startingPrice: "Desde ${amount}",
+      optionCount: "{count} opciones",
+      viewAllWithCount: "Ver los {count} →",
+    },
+    themeChips: {
+      all: "Todas las categorías",
+    },
+    press: {
+      label: "Visto en",
     },
     about: {
       kicker: "Nuestra historia",
@@ -138,11 +154,17 @@ export const es: Messages = {
     testimonials: {
       kicker: "Reseñas",
       title: "Lo que dicen nuestros clientes",
+      titleVertical: "Sábados reales",
+      subtitleVertical: "De las familias y organizadores a los que hemos entregado.",
+      readMoreLink: "Leer 500+ reseñas →",
+      eventInline: "{location} · {eventType}{date, select, none {} other { · {date}}}",
     },
     serviceArea: {
       kicker: "Área de servicio",
       title: "Entrega en tu mercado local",
       description: "Entregamos, montamos y recogemos dentro de nuestra zona de servicio. Consulta nuestra cobertura abajo.",
+      notListed: "¿No estás en la lista? Llámanos — probablemente cubrimos tu zona.",
+      moreZipsCount: "+ {count} más",
       primaryCoverage: "Cobertura principal",
       coverageServing: "Servimos {areas} y áreas cercanas listas para entrega.",
       coverageContact: "Contáctanos para confirmar la disponibilidad de entrega en tu código postal.",

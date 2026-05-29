@@ -1,16 +1,18 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
-import { PublicHeader } from "@/components/layout/public-header";
 import { ProductCard } from "@/components/public/product-card";
-import { TrustBar } from "@/components/public/trust-bar";
-import { CategoryGrid } from "@/components/public/category-grid";
 import { HowItWorks } from "@/components/public/how-it-works";
 import { FaqSection } from "@/components/public/faq-section";
-import { ServiceAreaSection } from "@/components/public/service-area-section";
-import { TestimonialsSection } from "@/components/public/testimonials-section";
 import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
+import { StorefrontShell } from "@/components/public/themes/party-classic/storefront-shell";
+import { PartyClassicHeader } from "@/components/public/themes/party-classic/header";
+import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
+import { PartyClassicTrustStrip } from "@/components/public/themes/party-classic/trust-strip";
+import { PartyClassicPressRow } from "@/components/public/themes/party-classic/press-row";
+import { PartyClassicCategoryTiles } from "@/components/public/themes/party-classic/category-tiles";
+import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
+import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
 import { SaasLanding } from "@/components/marketing/saas-landing";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
@@ -18,7 +20,6 @@ import { getFeaturedCatalogList } from "@/lib/data/catalog-list";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { isTenantHost } from "@/lib/auth/org-context";
-import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
@@ -57,10 +58,9 @@ export default async function HomePage() {
 
   await requirePublicOrg();
 
-  const [featured, settings, geoAreas, contentSettings, isDemo, origin, { messages, t }] = await Promise.all([
+  const [featured, settings, contentSettings, isDemo, origin, { messages }] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
-    getServiceAreasGeo(),
     getContentSettings(),
     isCurrentTenantDemo(),
     getRequestOrigin(),
@@ -75,100 +75,36 @@ export default async function HomePage() {
       : m.storefront.faq.defaults.map((f) => ({ question: f.question, answer: f.answer }));
 
   return (
-    <>
-      <PublicHeader />
+    <StorefrontShell>
+      <PartyClassicHeader />
       <JsonLdScript data={organizationJsonLd({ ...settings, websiteMessage: settings.websiteMessage || undefined }, origin)} />
       {vis.faq_section !== false && (
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}
 
       <main>
-        {/* Hero */}
-        <section className="public-hero">
-          <div className="public-hero-visual">
-            <Image
-              src={settings.heroImageUrl || "https://images.unsplash.com/photo-1633846764938-548112c2dcee?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=80&w=2400"}
-              alt={`${settings.businessName} event setup`}
-              fill
-              priority
-              sizes="100vw"
-              className="public-hero-photo"
-            />
-          </div>
+        <PartyClassicHero />
 
-          <div className="public-hero-overlay" />
+        <PartyClassicPressRow />
 
-          <div className="container">
-            <div className="public-hero-copy">
-              {settings.businessName && (
-                <div className="kicker public-kicker">
-                  {settings.businessName}
-                </div>
-              )}
+        {vis.trust_bar !== false && <PartyClassicTrustStrip />}
 
-              <h1>
-                {settings.heroHeadline || m.storefront.hero.defaultHeadline}
-              </h1>
+        {vis.category_grid !== false && <PartyClassicCategoryTiles />}
 
-              <p>
-                {settings.websiteMessage || m.storefront.hero.defaultMessage}{" "}
-                {t(m.storefront.hero.checkAvailabilityAcross, { area: settings.serviceAreaLabel ?? "" })}
-              </p>
-
-              <form action="/inventory" className="storefront-search-card">
-                <div className="storefront-search-grid">
-                  <label className="storefront-field">
-                    <span>{m.storefront.hero.eventDate}</span>
-                    <input name="date" type="date" />
-                  </label>
-
-                  <label className="storefront-field">
-                    <span>{m.storefront.hero.deliveryZip}</span>
-                    <input
-                      name="zip"
-                      type="text"
-                      placeholder="22554"
-                      inputMode="numeric"
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    className="primary-btn storefront-search-btn"
-                  >
-                    {m.storefront.hero.checkAvailability}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </section>
-
-        {/* Trust signals */}
-        {vis.trust_bar !== false && (
-          <TrustBar customBadges={contentSettings.trustBadges} />
-        )}
-
-        {/* Category browsing */}
-        {vis.category_grid !== false && <CategoryGrid />}
-
-        {/* Popular rentals */}
+        {/* Popular rentals — kept on the existing CSS classes for now;
+             the tile-style version comes in a follow-up. */}
         <section className="section storefront-section-soft">
           <div className="container">
             <div className="section-header">
               <div>
                 <div className="kicker">{m.storefront.popularRentals.kicker}</div>
                 <h2>{m.storefront.popularRentals.title}</h2>
-                <div className="muted">
-                  {m.storefront.popularRentals.description}
-                </div>
+                <div className="muted">{m.storefront.popularRentals.description}</div>
               </div>
-
               <Link href="/inventory" className="ghost-btn">
                 {m.storefront.popularRentals.browseAll}
               </Link>
             </div>
-
             <div className="grid grid-4">
               {featured.map((product) => (
                 <ProductCard
@@ -186,39 +122,30 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* How it works */}
         {vis.how_it_works !== false && (
           <div id="how-it-works">
             <HowItWorks />
           </div>
         )}
 
-        {/* Service area */}
         {vis.service_area_map !== false && (
           <div id="service-area">
-            <ServiceAreaSection areas={geoAreas} />
+            <PartyClassicServiceArea />
           </div>
         )}
 
-        {/* About */}
         {vis.about_section !== false && (
           <AboutSection text={contentSettings.aboutText} />
         )}
 
-        {/* Testimonials */}
-        {vis.testimonials !== false && (
-          <TestimonialsSection testimonials={contentSettings.testimonials} />
-        )}
+        <PartyClassicReviewsCards />
 
-        {/* FAQ */}
-        {vis.faq_section !== false && (
-          <FaqSection customFaqs={faqItems} />
-        )}
+        {vis.faq_section !== false && <FaqSection customFaqs={faqItems} />}
 
         <PublicFooter />
       </main>
 
       {isDemo && <DemoBanner />}
-    </>
+    </StorefrontShell>
   );
 }

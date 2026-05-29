@@ -100,6 +100,7 @@ const enValues = {
     rentalsLogin: "Rentals Login",
     operatorView: "Operator View",
     publicSite: "Public Site",
+    call: "Call",
   },
 
   storefront: {
@@ -110,6 +111,13 @@ const enValues = {
       eventDate: "Event Date",
       deliveryZip: "Delivery ZIP",
       checkAvailability: "Check Availability",
+      liveChip: "{count} units ready for booking",
+      checkOpenCta: "See what's open",
+      requestQuoteCta: "Request a quote",
+      priceFromLabel: "from",
+      deliveryIncludedLabel: "Delivery + setup included",
+      insuredInline: "Fully insured · {amount}",
+      sameDayQuotes: "Same-day quotes",
     },
     popularRentals: {
       kicker: "Explore by rentals",
@@ -131,6 +139,14 @@ const enValues = {
       title: "Find the right party setup faster",
       description: "Browse by type before diving into specific rentals.",
       startingPrice: "Starting ${amount}",
+      optionCount: "{count} options",
+      viewAllWithCount: "View all {count} →",
+    },
+    themeChips: {
+      all: "All categories",
+    },
+    press: {
+      label: "As seen on",
     },
     about: {
       kicker: "Our story",
@@ -139,11 +155,17 @@ const enValues = {
     testimonials: {
       kicker: "Reviews",
       title: "What our customers say",
+      titleVertical: "Real Saturdays",
+      subtitleVertical: "From the families and event organizers we've delivered for.",
+      readMoreLink: "Read 500+ reviews →",
+      eventInline: "{location} · {eventType}{date, select, none {} other { · {date}}}",
     },
     serviceArea: {
       kicker: "Service area",
       title: "Delivered across your local market",
       description: "We deliver, set up, and pick up within our service zone. Check our coverage below.",
+      notListed: "Not on the list? Call us — we probably still cover you.",
+      moreZipsCount: "+ {count} more",
       primaryCoverage: "Primary ZIP coverage",
       coverageServing: "Serving {areas} and surrounding delivery-ready areas.",
       coverageContact: "Contact us to confirm delivery availability for your ZIP code.",
