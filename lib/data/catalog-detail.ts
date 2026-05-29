@@ -88,10 +88,16 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   }
 
   const supabase = await createSupabaseServerClient();
+  // product_attributes does NOT have a deleted_at column — migration
+  // 20260327_020000_updated_at_soft_delete_foundation.sql only added it to
+  // categories, product_images, and the other soft-delete-bearing tables;
+  // product_attributes only got updated_at. Selecting a non-existent column
+  // makes PostgREST error, .maybeSingle() returns null, and notFound() fires
+  // on every product detail page. Every active product 404s.
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
+      "id, name, slug, base_price, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -113,11 +119,12 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
       | {
           attribute_key: string;
           attribute_value: string;
-          deleted_at?: string | null;
         }[]
       | null) ?? [];
 
-  const activeAttributes = attributes.filter((attribute) => !attribute.deleted_at);
+  // No deleted_at column on product_attributes (see select comment above);
+  // every row that comes back is active.
+  const activeAttributes = attributes;
 
   const images =
     ((data as Record<string, unknown>).product_images as
