@@ -5,6 +5,7 @@ import { getCalendarEvents } from "@/lib/data/calendar";
 import { BlockDatesForm } from "@/components/availability/block-dates-form";
 import { AvailabilityBlockCard } from "@/components/availability/availability-block-card";
 import { MonthGrid } from "@/components/calendar/month-grid";
+import { getProducts } from "@/lib/data/products";
 import { getMessages } from "@/lib/i18n/server";
 
 export default async function CalendarPage({
@@ -17,9 +18,10 @@ export default async function CalendarPage({
   const year = params.year ? parseInt(params.year, 10) : now.getFullYear();
   const month = params.month ? parseInt(params.month, 10) : now.getMonth() + 1;
 
-  const [events, blocks, m] = await Promise.all([
+  const [events, blocks, products, m] = await Promise.all([
     getCalendarEvents(year, month),
     getUpcomingBlocks(30),
+    getProducts(),
     getMessages(),
   ]);
 
@@ -56,7 +58,9 @@ export default async function CalendarPage({
             <p className="muted" style={{ marginBottom: 12, fontSize: 13 }}>
               {m.dashboard.calendar.blockHint}
             </p>
-            <BlockDatesForm />
+            <BlockDatesForm
+              products={products.map((p) => ({ id: p.id, name: p.name }))}
+            />
           </div>
 
           <div className="panel">

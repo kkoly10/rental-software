@@ -2,6 +2,10 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { getOrderFinancials } from "@/lib/payments/financials";
@@ -49,7 +53,9 @@ export async function createBalancePaymentSession(
     return { ok: false, message: "Online payments are not available. Please contact us to pay your balance." };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
   const tokenHash = hashPortalAccessToken(token);
 
   const { data: order } = await supabase
