@@ -1878,6 +1878,11 @@ export const pt: Messages = {
         remove: "Remover",
         updating: "A atualizar…",
         done: "Concluído",
+        noStopsHint: "Adicione pelo menos uma paragem antes de iniciar a rota.",
+        completeRouteConfirm:
+          "Marcar esta rota como concluída? As paragens não poderão ser editadas depois.",
+        removeStopConfirm:
+          "Remover esta paragem da rota? A encomenda ficará sem atribuição e poderá ser adicionada novamente mais tarde.",
       },
       stats: {
         totalStops: "Total de paragens",

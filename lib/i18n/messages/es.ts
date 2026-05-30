@@ -1878,6 +1878,11 @@ export const es: Messages = {
         remove: "Quitar",
         updating: "Actualizando…",
         done: "Hecho",
+        noStopsHint: "Añade al menos una parada antes de iniciar la ruta.",
+        completeRouteConfirm:
+          "¿Marcar esta ruta como completada? Las paradas no podrán editarse después.",
+        removeStopConfirm:
+          "¿Quitar esta parada de la ruta? El pedido quedará sin asignar y podrá añadirse de nuevo más tarde.",
       },
       stats: {
         totalStops: "Paradas totales",

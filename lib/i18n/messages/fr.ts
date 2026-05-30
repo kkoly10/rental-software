@@ -1878,6 +1878,11 @@ export const fr: Messages = {
         remove: "Supprimer",
         updating: "Mise à jour…",
         done: "Terminé",
+        noStopsHint: "Ajoutez au moins un arrêt avant de démarrer la tournée.",
+        completeRouteConfirm:
+          "Marquer cette tournée comme terminée ? Les arrêts ne pourront plus être modifiés.",
+        removeStopConfirm:
+          "Retirer cet arrêt de la tournée ? La commande deviendra non assignée et pourra être rajoutée plus tard.",
       },
       stats: {
         totalStops: "Arrêts au total",

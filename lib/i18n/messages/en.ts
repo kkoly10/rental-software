@@ -1879,6 +1879,11 @@ const enValues = {
         remove: "Remove",
         updating: "Updating…",
         done: "Done",
+        noStopsHint: "Add at least one stop before starting the route.",
+        completeRouteConfirm:
+          "Mark this route as complete? Stops can no longer be edited after this.",
+        removeStopConfirm:
+          "Remove this stop from the route? The order will become unassigned and can be re-added later.",
       },
       stats: {
         totalStops: "Total stops",
