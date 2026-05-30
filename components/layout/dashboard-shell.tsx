@@ -151,6 +151,17 @@ export function DashboardShell({
     };
   }, [mobileNavOpen]);
 
+  // Cross-platform shortcut hint. SSR returns "⌘K" so the markup matches
+  // initial paint on Mac; on mount we swap to "Ctrl K" if userAgent
+  // looks like Windows/Linux. Avoids hydration mismatch by only
+  // touching state after mount.
+  const [shortcutLabel, setShortcutLabel] = useState<string>("⌘K");
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+    if (!isMac) setShortcutLabel("Ctrl K");
+  }, []);
+
   const renderMessagesBadge = () =>
     badgeCount > 0 ? (
       <span className="dashboard-nav-badge">{badgeCount > 9 ? "9+" : badgeCount}</span>
@@ -220,51 +231,84 @@ export function DashboardShell({
     </Link>
   );
 
-  const renderGroupHeader = (id: NavGroup, isCollapsed: boolean) => (
-    <button
-      type="button"
-      className="sidebar-group-header"
-      aria-expanded={!isCollapsed}
-      aria-controls={`sidebar-group-${id}`}
-      onClick={() => toggleGroup(id)}
-      title={
-        isCollapsed
-          ? m.dashboard.navGroups.expandGroup
-          : m.dashboard.navGroups.collapseGroup
-      }
-    >
-      <span>{m.dashboard.navGroups[id]}</span>
-      <span className="sidebar-group-chevron" aria-hidden="true">
-        {isCollapsed ? "▸" : "▾"}
-      </span>
-    </button>
-  );
+  const renderGroupHeader = (
+    id: NavGroup,
+    isCollapsed: boolean,
+    isLocked: boolean
+  ) => {
+    // When the active route is inside this group we render the header as
+    // a static section label.  Clicking would otherwise write a "collapsed"
+    // value to localStorage that takes effect later — a ghost write the
+    // operator can't trace.
+    if (isLocked) {
+      return (
+        <div
+          className="sidebar-group-header"
+          aria-label={m.dashboard.navGroups[id]}
+          data-locked="true"
+        >
+          <span>{m.dashboard.navGroups[id]}</span>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="sidebar-group-header"
+        aria-expanded={!isCollapsed}
+        aria-controls={`sidebar-group-${id}`}
+        onClick={() => toggleGroup(id)}
+        title={
+          isCollapsed
+            ? m.dashboard.navGroups.expandGroup
+            : m.dashboard.navGroups.collapseGroup
+        }
+      >
+        <span>{m.dashboard.navGroups[id]}</span>
+        <span className="sidebar-group-chevron" aria-hidden="true">
+          {isCollapsed ? "▸" : "▾"}
+        </span>
+      </button>
+    );
+  };
 
   const renderSidebarNavBody = (onItemClick?: () => void) => {
     if (!groupedNav) {
-      // Skeleton during business-type load. 4 group headers + a few row
-      // placeholders so the grouped layout doesn't shift on hydrate.
+      // Skeleton during business-type load.  Mirrors the live grouped
+      // layout (one Dashboard row above 4 group sections, items per
+      // section roughly matches the real counts) so the first paint
+      // doesn't visibly reshuffle when groupedNav resolves.
+      const skeletonGroups: number[] = [5, 4, 3, 4]; // Ops/Catalog/Finance/Admin
       return (
         <>
-          {Array.from({ length: 4 }).map((_, gi) => (
-            <div key={gi} style={{ marginBottom: 14 }}>
+          {/* Dashboard placeholder */}
+          <div
+            style={{
+              height: 22,
+              margin: "0 0 12px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,.10)",
+            }}
+          />
+          {skeletonGroups.map((rows, gi) => (
+            <div key={gi} style={{ marginTop: gi === 0 ? 6 : 14 }}>
               <div
                 style={{
-                  height: 10,
-                  width: 60,
-                  margin: "10px 14px 8px",
+                  height: 8,
+                  width: 56,
+                  margin: "8px 14px 10px",
                   borderRadius: 4,
-                  background: "rgba(255,255,255,.08)",
+                  background: "rgba(255,255,255,.18)",
                 }}
               />
-              {Array.from({ length: 3 }).map((__, ii) => (
+              {Array.from({ length: rows }).map((__, ii) => (
                 <div
                   key={ii}
                   style={{
-                    height: 18,
-                    margin: "8px 14px",
-                    borderRadius: 6,
-                    background: "rgba(255,255,255,.12)",
+                    height: 20,
+                    margin: "6px 0",
+                    borderRadius: 10,
+                    background: "rgba(255,255,255,.08)",
                   }}
                 />
               ))}
@@ -283,7 +327,7 @@ export function DashboardShell({
           const isCollapsed = !forcedOpen && Boolean(collapsedGroups[id]);
           return (
             <div key={id} className="sidebar-group">
-              {renderGroupHeader(id, isCollapsed)}
+              {renderGroupHeader(id, isCollapsed, forcedOpen)}
               <div
                 id={`sidebar-group-${id}`}
                 hidden={isCollapsed}
@@ -332,9 +376,7 @@ export function DashboardShell({
           <span className="sidebar-search-placeholder">
             {m.dashboard.navGroups.searchPlaceholder}
           </span>
-          <span className="sidebar-search-shortcut">
-            {m.dashboard.navGroups.searchShortcut}
-          </span>
+          <span className="sidebar-search-shortcut">{shortcutLabel}</span>
         </button>
 
         {/* Ask AI entry — pairs with the floating Copilot launcher.
