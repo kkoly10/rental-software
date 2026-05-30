@@ -746,6 +746,14 @@ a:focus-visible {
   flex-direction: column;
 }
 
+/* `display: flex` above wins over the [hidden] attribute's default
+   `display: none`, so we need an explicit override for the collapsed
+   state — otherwise clicking a group header toggles the chevron but
+   leaves the items visible. */
+.sidebar-group-items[hidden] {
+  display: none;
+}
+
 .sidebar-group-trailing {
   margin-top: 18px;
 }
