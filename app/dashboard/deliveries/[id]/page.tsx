@@ -6,7 +6,7 @@ import { RouteDetailMapWrapper } from "./route-detail-map-wrapper";
 import { RouteDetailTimeline } from "./route-detail-timeline";
 import { RouteStatusControls, StopStatusButton, RemoveStopButton } from "@/components/deliveries/route-controls";
 import { AddStopForm } from "@/components/deliveries/add-stop-form";
-import { getUnroutedOrdersForDate } from "@/lib/data/unrouted-orders";
+import { getOrdersForRouteDate } from "@/lib/data/unrouted-orders";
 import { getTranslator } from "@/lib/i18n/server";
 
 export default async function DeliveryDetailPage({
@@ -16,8 +16,8 @@ export default async function DeliveryDetailPage({
 }) {
   const { id } = await params;
   const route = await getRouteDetailEnhanced(id);
-  const [unroutedOrders, { messages: m, t }] = await Promise.all([
-    getUnroutedOrdersForDate(route.routeDateRaw),
+  const [ordersForDate, { messages: m, t }] = await Promise.all([
+    getOrdersForRouteDate(route.routeDateRaw, id),
     getTranslator(),
   ]);
 
@@ -120,7 +120,8 @@ export default async function DeliveryDetailPage({
             <AddStopForm
               routeId={id}
               routeDate={route.routeDateRaw}
-              unroutedOrders={unroutedOrders}
+              eligibleOrders={ordersForDate.eligible}
+              blockedOrders={ordersForDate.blocked}
             />
           </div>
 

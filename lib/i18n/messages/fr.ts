@@ -1842,6 +1842,33 @@ export const fr: Messages = {
         submit: "Ajouter l’arrêt",
         submitting: "Ajout…",
         noUnroutedOrders: "Aucune commande confirmée sans tournée pour cette date.",
+        empty: {
+          noOrdersTitle: "Aucune commande pour cette date",
+          noOrdersBody:
+            "Créez une commande avec la date d’événement {date} et le client apparaîtra ici pour l’ajouter comme arrêt.",
+          createOrderCta: "Créer une commande pour cette date",
+          blockedTitle: "{count} commande(s) à corriger pour cette date",
+          blockedBody:
+            "Chacune a un prérequis manquant avant de pouvoir être ajoutée comme arrêt. Ouvrez la commande pour la corriger.",
+          blockedHintTail: "(ouvrir pour corriger)",
+          fixCta: {
+            confirm: "Confirmer la commande →",
+            addAddress: "Ajouter l’adresse →",
+            viewOrder: "Voir la commande →",
+          },
+          reason: {
+            notConfirmed: "Actuellement {status} — à confirmer avant d’ajouter.",
+            noAddress: "Adresse de livraison manquante — ajoutez rue, ville et code postal.",
+            onOtherRoute: "Déjà rattachée à une autre tournée pour cette date.",
+          },
+          statusLabels: {
+            inquiry: "Demande",
+            quoteSent: "Devis envoyé",
+            awaitingDeposit: "En attente d’acompte",
+            confirmed: "Confirmée",
+            scheduled: "Planifiée",
+          },
+        },
       },
       routeControls: {
         startRoute: "Démarrer la tournée",

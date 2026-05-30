@@ -1843,6 +1843,33 @@ const enValues = {
         submit: "Add Stop",
         submitting: "Adding…",
         noUnroutedOrders: "No confirmed orders without a route for this date.",
+        empty: {
+          noOrdersTitle: "No orders for this date yet",
+          noOrdersBody:
+            "Create an order with event date {date} and the customer will appear here to attach as a stop.",
+          createOrderCta: "Create an order for this date",
+          blockedTitle: "{count} order(s) on this date need a fix first",
+          blockedBody:
+            "Each one is missing a prerequisite before it can be added as a stop. Open the order to fix it.",
+          blockedHintTail: "(open one to fix)",
+          fixCta: {
+            confirm: "Confirm order →",
+            addAddress: "Add address →",
+            viewOrder: "View order →",
+          },
+          reason: {
+            notConfirmed: "Currently {status} — confirm before routing.",
+            noAddress: "Missing delivery address — add a street, city and ZIP.",
+            onOtherRoute: "Already attached to another route for this date.",
+          },
+          statusLabels: {
+            inquiry: "Inquiry",
+            quoteSent: "Quote Sent",
+            awaitingDeposit: "Awaiting deposit",
+            confirmed: "Confirmed",
+            scheduled: "Scheduled",
+          },
+        },
       },
       routeControls: {
         startRoute: "Start Route",

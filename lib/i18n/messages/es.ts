@@ -1842,6 +1842,33 @@ export const es: Messages = {
         submit: "Agregar parada",
         submitting: "Agregando…",
         noUnroutedOrders: "No hay pedidos confirmados sin ruta para esta fecha.",
+        empty: {
+          noOrdersTitle: "Aún no hay pedidos para esta fecha",
+          noOrdersBody:
+            "Crea un pedido con fecha de evento {date} y el cliente aparecerá aquí para añadirlo como parada.",
+          createOrderCta: "Crear un pedido para esta fecha",
+          blockedTitle: "{count} pedido(s) en esta fecha necesitan una corrección",
+          blockedBody:
+            "A cada uno le falta un requisito previo antes de poder añadirlo como parada. Abre el pedido para corregirlo.",
+          blockedHintTail: "(abrir para corregir)",
+          fixCta: {
+            confirm: "Confirmar pedido →",
+            addAddress: "Añadir dirección →",
+            viewOrder: "Ver pedido →",
+          },
+          reason: {
+            notConfirmed: "Actualmente {status} — confirma antes de añadir a la ruta.",
+            noAddress: "Falta la dirección de entrega — añade calle, ciudad y código postal.",
+            onOtherRoute: "Ya está en otra ruta para esta fecha.",
+          },
+          statusLabels: {
+            inquiry: "Consulta",
+            quoteSent: "Presupuesto enviado",
+            awaitingDeposit: "Esperando depósito",
+            confirmed: "Confirmado",
+            scheduled: "Programado",
+          },
+        },
       },
       routeControls: {
         startRoute: "Iniciar ruta",
