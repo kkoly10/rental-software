@@ -564,6 +564,15 @@ a:focus-visible {
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
+  /* Stick the sidebar to the top of the viewport with its own internal
+     scroll, so Help Center / Sign Out never clip below the fold even on
+     short displays.  align-self: start prevents the grid from stretching
+     the sidebar to match main-content height. */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  max-height: 100vh;
 }
 
 .dashboard-mobile-bar {
@@ -619,7 +628,7 @@ a:focus-visible {
 
 .sidebar a {
   display: block;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-radius: 12px;
   margin-bottom: 2px;
   font-size: 14px;
@@ -672,36 +681,56 @@ a:focus-visible {
   letter-spacing: 0.02em;
 }
 
+/* Ask AI is a visible affordance, but it should not be louder than the
+   active-page highlight.  Solid muted-orange background, no gradient
+   pop, no drop-shadow.  The brightest signal in the sidebar stays on
+   the currently-active nav item. */
 .sidebar-ask-ai {
   display: flex;
   align-items: center;
   gap: 9px;
   width: 100%;
   margin: 0 0 18px;
-  padding: 10px 14px;
-  border: none;
+  padding: 11px 14px;
+  border: 1px solid rgba(232, 89, 12, 0.35);
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary, #e8590c), #ff8c42);
-  color: #fff;
+  background: rgba(232, 89, 12, 0.16);
+  color: rgba(255, 255, 255, 0.92);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
-  box-shadow: 0 2px 8px rgba(232, 89, 12, 0.25);
-  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .sidebar-ask-ai:hover,
 .sidebar-ask-ai:focus-visible {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(232, 89, 12, 0.35);
+  background: rgba(232, 89, 12, 0.28);
+  border-color: rgba(232, 89, 12, 0.55);
   outline: none;
 }
 
+/* The scrollable middle of the sidebar.  flex:1 takes whatever vertical
+   space is left after the pinned-top affordances (logo/search/Ask AI)
+   and the pinned-bottom footer (Language/Public Site/Sign Out).
+   min-height:0 lets the flex child shrink so overflow-y kicks in. */
 .sidebar-nav-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  /* Slim scrollbar so it doesn't crowd the layout. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.sidebar-nav-body::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 99px;
 }
 
 .sidebar-group {
@@ -717,28 +746,44 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 4px 14px 6px;
+  padding: 6px 14px 8px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.72);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   cursor: pointer;
 }
 
 .sidebar-group-header:hover,
 .sidebar-group-header:focus-visible {
-  color: rgba(255, 255, 255, 0.85);
+  color: #fff;
   outline: none;
+}
+
+/* When the active route lives inside a group, the group is force-expanded
+   and the click is a no-op.  Reflect that visually so the operator
+   doesn't try to collapse a group that doesn't move. */
+.sidebar-group-header[data-locked="true"] {
+  cursor: default;
+  color: rgba(255, 255, 255, 0.55);
+}
+.sidebar-group-header[data-locked="true"]:hover {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .sidebar-group-chevron {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.55);
   margin-left: 6px;
+}
+.sidebar-group-header[data-locked="true"] .sidebar-group-chevron {
+  /* Active group is always open — no chevron needed.  Hide it so the
+     header reads as a section label, not a toggle. */
+  display: none;
 }
 
 .sidebar-group-items {
