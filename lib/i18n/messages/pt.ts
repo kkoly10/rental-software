@@ -555,6 +555,18 @@ export const pt: Messages = {
       publicSite: "Site público",
       signOut: "Sair",
     },
+    navGroups: {
+      ops: "Operações",
+      catalog: "Catálogo",
+      finance: "Finanças",
+      admin: "Admin",
+      searchPlaceholder: "Pesquisar…",
+      searchShortcut: "⌘K",
+      searchAriaLabel: "Pesquisar no painel",
+      askAi: "Perguntar à IA",
+      collapseGroup: "Recolher grupo",
+      expandGroup: "Expandir grupo",
+    },
     shell: {
       kicker: "Plataforma de aluguer",
       mobileMenu: "Menu do painel",

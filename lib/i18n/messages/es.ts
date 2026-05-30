@@ -555,6 +555,18 @@ export const es: Messages = {
       publicSite: "Sitio público",
       signOut: "Cerrar sesión",
     },
+    navGroups: {
+      ops: "Operaciones",
+      catalog: "Catálogo",
+      finance: "Finanzas",
+      admin: "Admin",
+      searchPlaceholder: "Buscar…",
+      searchShortcut: "⌘K",
+      searchAriaLabel: "Buscar en el panel",
+      askAi: "Preguntar a la IA",
+      collapseGroup: "Contraer grupo",
+      expandGroup: "Expandir grupo",
+    },
     shell: {
       kicker: "Plataforma de alquiler",
       mobileMenu: "Menú del panel",
