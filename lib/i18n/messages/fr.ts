@@ -1870,6 +1870,35 @@ export const fr: Messages = {
           },
         },
       },
+      assignToRoute: {
+        sectionKicker: "Tournée",
+        eligibleTitle: "Ajouter cette commande à une tournée de livraison le {date}",
+        pickRouteBody:
+          "Choisissez une tournée existante ci-dessous, ou créez-en une nouvelle pour cette date.",
+        noRoutesBody:
+          "Aucune tournée pour cette date. Créez-en une et cette commande en sera le premier arrêt.",
+        attachCta: "Ajouter à cette tournée",
+        attaching: "Ajout…",
+        createRouteCta: "Créer une nouvelle tournée pour cette date",
+        viewRouteCta: "Voir la tournée →",
+        alreadyOnRoute: "Sur la tournée : {name}",
+        alreadyOnRouteBody:
+          "Cette commande est déjà un arrêt d’une tournée. Les modifications d’arrêt se font sur la page de la tournée.",
+        blockedTitle: "Impossible d’ajouter cette commande à une tournée pour l’instant",
+        blockerReason: {
+          no_event_date: "Définissez une date d’événement avant d’ajouter cette commande à une tournée.",
+          not_confirmed:
+            "Confirmez la commande avant de l’ajouter à une tournée — seules les commandes confirmées ou planifiées peuvent l’être.",
+          no_address:
+            "Ajoutez une adresse de livraison (rue, ville, code postal) avant d’ajouter cette commande à une tournée.",
+        },
+        stopCount: "{n} arrêt(s)",
+        routeStatus: {
+          planned: "Planifiée",
+          inProgress: "En cours",
+          completed: "Terminée",
+        },
+      },
       routeControls: {
         startRoute: "Démarrer la tournée",
         completeRoute: "Terminer la tournée",

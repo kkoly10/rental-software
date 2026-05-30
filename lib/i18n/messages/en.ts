@@ -1871,6 +1871,35 @@ const enValues = {
           },
         },
       },
+      assignToRoute: {
+        sectionKicker: "Routing",
+        eligibleTitle: "Add this order to a delivery route on {date}",
+        pickRouteBody:
+          "Pick an existing route below, or create a new one for this date.",
+        noRoutesBody:
+          "No routes exist for this date yet. Create one and this order will be its first stop.",
+        attachCta: "Attach to this route",
+        attaching: "Attaching…",
+        createRouteCta: "Create a new route for this date",
+        viewRouteCta: "View route →",
+        alreadyOnRoute: "On route: {name}",
+        alreadyOnRouteBody:
+          "This order is already a stop on a route. Edits to the stop happen on the route page.",
+        blockedTitle: "Can't route this order yet",
+        blockerReason: {
+          no_event_date: "Set an event date on this order before routing it.",
+          not_confirmed:
+            "Confirm the order before routing it — only confirmed and scheduled orders can be attached as stops.",
+          no_address:
+            "Add a delivery address (street, city, ZIP) before routing this order.",
+        },
+        stopCount: "{n} stop(s)",
+        routeStatus: {
+          planned: "Planned",
+          inProgress: "In progress",
+          completed: "Completed",
+        },
+      },
       routeControls: {
         startRoute: "Start Route",
         completeRoute: "Complete Route",

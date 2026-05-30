@@ -9,6 +9,8 @@ import { CommunicationList } from "@/components/communications/communication-lis
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
+import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
+import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
 
 function extractZip(address: string): string | undefined {
@@ -30,9 +32,10 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications, m] = await Promise.all([
+  const [order, communications, routingState, m] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
+    getOrderRoutingState(id),
     getMessages(),
   ]);
 
@@ -152,6 +155,15 @@ export default async function OrderDetailPage({
               </div>
             )}
           </div>
+
+          {routingState && (
+            <div style={{ marginTop: 18 }}>
+              <div className="kicker" style={{ marginBottom: 6 }}>
+                {m.forms.routing.assignToRoute.sectionKicker}
+              </div>
+              <AssignToRouteCard orderId={id} state={routingState} />
+            </div>
+          )}
 
           <div style={{ marginTop: 18 }}>
             <div className="kicker" style={{ marginBottom: 6 }}>{m.dashboard.orders.detail.recordPayment}</div>
