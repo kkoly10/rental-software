@@ -1842,6 +1842,33 @@ export const pt: Messages = {
         submit: "Adicionar paragem",
         submitting: "A adicionar…",
         noUnroutedOrders: "Não há encomendas confirmadas sem rota para esta data.",
+        empty: {
+          noOrdersTitle: "Ainda não há encomendas para esta data",
+          noOrdersBody:
+            "Crie uma encomenda com data de evento {date} e o cliente aparecerá aqui para o adicionar como paragem.",
+          createOrderCta: "Criar uma encomenda para esta data",
+          blockedTitle: "{count} encomenda(s) nesta data precisam de uma correção",
+          blockedBody:
+            "Cada uma tem um pré-requisito em falta antes de poder ser adicionada como paragem. Abra a encomenda para a corrigir.",
+          blockedHintTail: "(abrir para corrigir)",
+          fixCta: {
+            confirm: "Confirmar encomenda →",
+            addAddress: "Adicionar morada →",
+            viewOrder: "Ver encomenda →",
+          },
+          reason: {
+            notConfirmed: "Atualmente {status} — confirmar antes de adicionar à rota.",
+            noAddress: "Morada de entrega em falta — adicione rua, cidade e código postal.",
+            onOtherRoute: "Já está noutra rota para esta data.",
+          },
+          statusLabels: {
+            inquiry: "Pedido",
+            quoteSent: "Orçamento enviado",
+            awaitingDeposit: "À espera de depósito",
+            confirmed: "Confirmada",
+            scheduled: "Agendada",
+          },
+        },
       },
       routeControls: {
         startRoute: "Iniciar rota",

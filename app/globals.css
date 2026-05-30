@@ -4534,3 +4534,81 @@ textarea[aria-invalid="true"] {
     padding: 10px;
   }
 }
+
+/* ── Add Stop diagnostic empty state ─────────────────────────────────────
+   Replaces the dead "No confirmed orders without a route for this date."
+   with one of two actionable surfaces:
+     1. "No orders for this date" + Create-order CTA
+     2. A list of blocked orders, each with the missing prereq named
+        ("Currently Inquiry — confirm before routing") and a deep link. */
+.add-stop-empty {
+  margin-top: 6px;
+  padding: 14px 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+}
+
+.add-stop-empty-headline {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--text, #111);
+}
+
+.add-stop-empty-body {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--text-soft, #555);
+  line-height: 1.45;
+}
+
+.add-stop-blocked-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-stop-blocked-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  background: var(--surface-muted, #fafafa);
+}
+
+.add-stop-blocked-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.add-stop-blocked-row-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text, #111);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-stop-blocked-row-reason {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-soft, #555);
+  line-height: 1.4;
+}
+
+.add-stop-blocked-row-cta {
+  flex-shrink: 0;
+}
+
+.add-stop-blocked-hint {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--text-soft, #555);
+}

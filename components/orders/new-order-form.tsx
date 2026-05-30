@@ -14,9 +14,13 @@ const initialState = { ok: false, message: "" };
 export function NewOrderForm({
   products,
   serviceAreas,
+  initialEventDate,
 }: {
   products: OrderFormProductOption[];
   serviceAreas: OrderFormServiceAreaOption[];
+  /** Pre-fill the event_date input — used by deep links from the route
+      detail page's empty Add-Stop state ("Create order for this date"). */
+  initialEventDate?: string;
 }) {
   const [state, formAction, pending] = useActionState(createOrder, initialState);
   const { messages } = useI18n();
@@ -80,6 +84,7 @@ export function NewOrderForm({
           <input
             name="event_date"
             type="date"
+            defaultValue={initialEventDate}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
