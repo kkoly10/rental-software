@@ -555,6 +555,18 @@ export const fr: Messages = {
       publicSite: "Site public",
       signOut: "Se déconnecter",
     },
+    navGroups: {
+      ops: "Ops",
+      catalog: "Catalogue",
+      finance: "Finance",
+      admin: "Admin",
+      searchPlaceholder: "Rechercher…",
+      searchShortcut: "⌘K",
+      searchAriaLabel: "Rechercher dans le tableau de bord",
+      askAi: "Demander à l’IA",
+      collapseGroup: "Réduire le groupe",
+      expandGroup: "Développer le groupe",
+    },
     shell: {
       kicker: "Plateforme de location",
       mobileMenu: "Menu du tableau de bord",

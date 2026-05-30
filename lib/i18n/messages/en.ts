@@ -556,6 +556,18 @@ const enValues = {
       publicSite: "Public Site",
       signOut: "Sign Out",
     },
+    navGroups: {
+      ops: "Ops",
+      catalog: "Catalog",
+      finance: "Finance",
+      admin: "Admin",
+      searchPlaceholder: "Search…",
+      searchShortcut: "⌘K",
+      searchAriaLabel: "Search the dashboard",
+      askAi: "Ask AI",
+      collapseGroup: "Collapse group",
+      expandGroup: "Expand group",
+    },
     shell: {
       kicker: "Rental platform",
       mobileMenu: "Dashboard menu",

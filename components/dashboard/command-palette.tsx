@@ -93,6 +93,17 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Programmatic open via window event — lets non-keyboard surfaces
+  // (e.g. the sidebar's "Search…" affordance) trigger the same palette
+  // without lifting state up into the shell.
+  useEffect(() => {
+    function handleOpen() {
+      setOpen(true);
+    }
+    window.addEventListener("korent:open-command-palette", handleOpen);
+    return () => window.removeEventListener("korent:open-command-palette", handleOpen);
+  }, []);
+
   // Focus input on open
   useEffect(() => {
     if (open) {

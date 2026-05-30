@@ -619,9 +619,9 @@ a:focus-visible {
 
 .sidebar a {
   display: block;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-radius: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-size: 14px;
   transition: 0.15s ease;
 }
@@ -630,6 +630,134 @@ a:focus-visible {
 .sidebar a:hover {
   background: rgba(255, 255, 255, 0.12);
   color: white;
+}
+
+/* ── Grouped sidebar (operator nav, Linear/Notion-style collapsible groups) ── */
+
+.sidebar-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-search-trigger:hover,
+.sidebar-search-trigger:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  outline: none;
+}
+
+.sidebar-search-placeholder {
+  flex: 1;
+}
+
+.sidebar-search-shortcut {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.02em;
+}
+
+.sidebar-ask-ai {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary, #e8590c), #ff8c42);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(232, 89, 12, 0.25);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.sidebar-ask-ai:hover,
+.sidebar-ask-ai:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(232, 89, 12, 0.35);
+  outline: none;
+}
+
+.sidebar-nav-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-group {
+  margin-top: 14px;
+}
+
+.sidebar-group:first-child {
+  margin-top: 6px;
+}
+
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 14px 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.sidebar-group-header:hover,
+.sidebar-group-header:focus-visible {
+  color: rgba(255, 255, 255, 0.85);
+  outline: none;
+}
+
+.sidebar-group-chevron {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 6px;
+}
+
+.sidebar-group-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-group-trailing {
+  margin-top: 18px;
+}
+
+.sidebar-group-footer {
+  margin-top: 8px;
+}
+
+.sidebar-search-trigger--mobile {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--border, #e5e7eb);
+  color: var(--text-muted, #6b7280);
 }
 
 .main-shell {

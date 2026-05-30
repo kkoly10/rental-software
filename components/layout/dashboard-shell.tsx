@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useState, useEffect, useRef, useCallback } from "react";
-import { getNavItemsForVertical } from "@/lib/navigation/dashboard-nav";
+import { type ReactNode, useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  getGroupedNavItemsForVertical,
+  type NavGroup,
+  type NavItem,
+} from "@/lib/navigation/dashboard-nav";
 import { CopilotLauncher } from "@/components/copilot/copilot-launcher";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
@@ -18,6 +22,29 @@ import { LanguageSwitcher } from "@/components/layout/language-switcher";
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const GROUP_COLLAPSE_KEY = "korent-sidebar-collapsed-groups";
+
+function loadCollapsedGroups(): Partial<Record<NavGroup, boolean>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(GROUP_COLLAPSE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed;
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function persistCollapsedGroups(state: Partial<Record<NavGroup, boolean>>) {
+  try {
+    window.localStorage.setItem(GROUP_COLLAPSE_KEY, JSON.stringify(state));
+  } catch {
+    // storage unavailable — silently skip; collapse state just won't persist.
+  }
 }
 
 export function DashboardShell({
@@ -129,29 +156,200 @@ export function DashboardShell({
       <span className="dashboard-nav-badge">{badgeCount > 9 ? "9+" : badgeCount}</span>
     ) : null;
 
+  // Sidebar group collapse state. Persisted in localStorage, but the group
+  // containing the active route is force-expanded so the operator never
+  // navigates into a folded section without seeing its siblings.
+  const [collapsedGroups, setCollapsedGroups] = useState<
+    Partial<Record<NavGroup, boolean>>
+  >({});
+  useEffect(() => {
+    setCollapsedGroups(loadCollapsedGroups());
+  }, []);
+
+  const groupedNav = useMemo(
+    () => (businessType ? getGroupedNavItemsForVertical(businessType) : null),
+    [businessType]
+  );
+
+  // Which group does the current route belong to? That group must stay
+  // expanded regardless of saved collapse state.
+  const activeGroup: NavGroup | null = useMemo(() => {
+    if (!groupedNav) return null;
+    for (const g of groupedNav.groups) {
+      if (g.items.some((i) => isNavItemActive(pathname, i.href))) return g.id;
+    }
+    return null;
+  }, [groupedNav, pathname]);
+
+  const toggleGroup = useCallback(
+    (id: NavGroup) => {
+      setCollapsedGroups((prev) => {
+        const next = { ...prev, [id]: !prev[id] };
+        persistCollapsedGroups(next);
+        return next;
+      });
+    },
+    []
+  );
+
+  const openCommandPalette = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("korent:open-command-palette"));
+  }, []);
+  const openCopilot = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("korent:open-copilot"));
+  }, []);
+
+  // Shared item renderer — used by both the desktop sidebar and the
+  // mobile drawer so badges/active state/translation lookups stay in
+  // exactly one place.
+  const renderNavLink = (item: NavItem, onClick?: () => void) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      onClick={onClick}
+      className={isNavItemActive(pathname, item.href) ? "active" : undefined}
+      data-tour={item.tourId}
+      style={
+        item.key === "messages"
+          ? { display: "flex", alignItems: "center", justifyContent: "space-between" }
+          : undefined
+      }
+    >
+      {m.dashboard.nav[item.key]}
+      {item.key === "messages" && renderMessagesBadge()}
+    </Link>
+  );
+
+  const renderGroupHeader = (id: NavGroup, isCollapsed: boolean) => (
+    <button
+      type="button"
+      className="sidebar-group-header"
+      aria-expanded={!isCollapsed}
+      aria-controls={`sidebar-group-${id}`}
+      onClick={() => toggleGroup(id)}
+      title={
+        isCollapsed
+          ? m.dashboard.navGroups.expandGroup
+          : m.dashboard.navGroups.collapseGroup
+      }
+    >
+      <span>{m.dashboard.navGroups[id]}</span>
+      <span className="sidebar-group-chevron" aria-hidden="true">
+        {isCollapsed ? "▸" : "▾"}
+      </span>
+    </button>
+  );
+
+  const renderSidebarNavBody = (onItemClick?: () => void) => {
+    if (!groupedNav) {
+      // Skeleton during business-type load. 4 group headers + a few row
+      // placeholders so the grouped layout doesn't shift on hydrate.
+      return (
+        <>
+          {Array.from({ length: 4 }).map((_, gi) => (
+            <div key={gi} style={{ marginBottom: 14 }}>
+              <div
+                style={{
+                  height: 10,
+                  width: 60,
+                  margin: "10px 14px 8px",
+                  borderRadius: 4,
+                  background: "rgba(255,255,255,.08)",
+                }}
+              />
+              {Array.from({ length: 3 }).map((__, ii) => (
+                <div
+                  key={ii}
+                  style={{
+                    height: 18,
+                    margin: "8px 14px",
+                    borderRadius: 6,
+                    background: "rgba(255,255,255,.12)",
+                  }}
+                />
+              ))}
+            </div>
+          ))}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {groupedNav.top.map((item) => renderNavLink(item, onItemClick))}
+
+        {groupedNav.groups.map(({ id, items }) => {
+          const forcedOpen = activeGroup === id;
+          const isCollapsed = !forcedOpen && Boolean(collapsedGroups[id]);
+          return (
+            <div key={id} className="sidebar-group">
+              {renderGroupHeader(id, isCollapsed)}
+              <div
+                id={`sidebar-group-${id}`}
+                hidden={isCollapsed}
+                className="sidebar-group-items"
+              >
+                {items.map((item) => renderNavLink(item, onItemClick))}
+              </div>
+            </div>
+          );
+        })}
+
+        {groupedNav.trailing.length > 0 && (
+          <div className="sidebar-group-trailing">
+            {groupedNav.trailing.map((item) => renderNavLink(item, onItemClick))}
+          </div>
+        )}
+
+        {groupedNav.footer.length > 0 && (
+          <div className="sidebar-group-footer">
+            {groupedNav.footer.map((item) => renderNavLink(item, onItemClick))}
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="sidebar-layout">
       <aside className="sidebar dashboard-sidebar-desktop">
-        <Link href="/dashboard" className="logo" style={{ color: "white", marginBottom: 20, display: "block" }}>
+        <Link href="/dashboard" className="logo" style={{ color: "white", marginBottom: 14, display: "block" }}>
           Korent
         </Link>
 
-        {businessType === null
-          ? Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} style={{ height: 18, margin: "12px 14px", borderRadius: 6, background: "rgba(255,255,255,.12)" }} />
-            ))
-          : getNavItemsForVertical(businessType).map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={isNavItemActive(pathname, item.href) ? "active" : undefined}
-            data-tour={item.tourId}
-            style={item.key === "messages" ? { display: "flex", alignItems: "center", justifyContent: "space-between" } : undefined}
-          >
-            {m.dashboard.nav[item.key]}
-            {item.key === "messages" && renderMessagesBadge()}
-          </Link>
-        ))}
+        {/* Search affordance — opens the existing Cmd-K palette so the
+            feature stops being hidden behind a keyboard shortcut. */}
+        <button
+          type="button"
+          className="sidebar-search-trigger"
+          onClick={openCommandPalette}
+          aria-label={m.dashboard.navGroups.searchAriaLabel}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+          <span className="sidebar-search-placeholder">
+            {m.dashboard.navGroups.searchPlaceholder}
+          </span>
+          <span className="sidebar-search-shortcut">
+            {m.dashboard.navGroups.searchShortcut}
+          </span>
+        </button>
+
+        {/* Ask AI entry — pairs with the floating Copilot launcher.
+            Surfaces the existing AI panel as a discoverable nav item
+            instead of relying on a bottom-right circle. */}
+        <button
+          type="button"
+          className="sidebar-ask-ai"
+          onClick={openCopilot}
+        >
+          <span aria-hidden="true">✦</span>
+          <span>{m.dashboard.navGroups.askAi}</span>
+        </button>
+
+        <div className="sidebar-nav-body">{renderSidebarNavBody()}</div>
 
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.12)" }}>
           <div style={{ padding: "0 14px 12px" }}>
@@ -245,21 +443,35 @@ export function DashboardShell({
               </button>
             </div>
             <nav className="mobile-menu-nav">
-              {businessType === null
-                ? Array.from({ length: 7 }).map((_, i) => (
-                    <div key={i} style={{ height: 18, margin: "12px 14px", borderRadius: 6, background: "rgba(255,255,255,.12)" }} />
-                  ))
-                : getNavItemsForVertical(businessType).map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={closeMobileNav}
-                      className={isNavItemActive(pathname, item.href) ? "active" : undefined}
-                    >
-                      {m.dashboard.nav[item.key]}
-                      {item.key === "messages" && renderMessagesBadge()}
-                    </Link>
-                  ))}
+              <button
+                type="button"
+                className="sidebar-search-trigger sidebar-search-trigger--mobile"
+                onClick={() => {
+                  closeMobileNav();
+                  openCommandPalette();
+                }}
+                aria-label={m.dashboard.navGroups.searchAriaLabel}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <span className="sidebar-search-placeholder">
+                  {m.dashboard.navGroups.searchPlaceholder}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="sidebar-ask-ai"
+                onClick={() => {
+                  closeMobileNav();
+                  openCopilot();
+                }}
+              >
+                <span aria-hidden="true">✦</span>
+                <span>{m.dashboard.navGroups.askAi}</span>
+              </button>
+              {renderSidebarNavBody(closeMobileNav)}
             </nav>
             <div className="mobile-menu-footer">
               <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
