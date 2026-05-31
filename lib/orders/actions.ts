@@ -512,6 +512,36 @@ export async function createOrder(
     }
   }
 
+  // #PR-C — Same auto-attach behaviour as updateOrderStatus, applied to
+  // the new-order path so an operator who picks status="confirmed" in
+  // the create form gets the same magic.  Same conservative guards
+  // (single non-completed route, address + date, org setting on).
+  if (orderStatus === "confirmed" || orderStatus === "scheduled") {
+    try {
+      const { autoAttachOrderToRouteIfEligible } = await import(
+        "@/lib/routes/auto-attach"
+      );
+      const result = await autoAttachOrderToRouteIfEligible(
+        ctx.organizationId,
+        createdOrder.id,
+        supabase,
+      );
+      if (result.attached) {
+        // Revalidate so the route detail picks up the new stop on next visit.
+        const { revalidatePath } = await import("next/cache");
+        revalidatePath(`/dashboard/deliveries/${result.routeId}`);
+        revalidatePath("/dashboard/deliveries");
+      }
+    } catch (err) {
+      // Never block order creation on an auto-attach hiccup.
+      console.error(
+        "[orders] auto-attach during createOrder failed for",
+        createdOrder.id,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
 }
 
