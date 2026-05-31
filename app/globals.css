@@ -4746,3 +4746,93 @@ textarea[aria-invalid="true"] {
 .assign-route-row-cta {
   flex-shrink: 0;
 }
+
+/* ── Mobile polish for recently-shipped surfaces ─────────────────────
+   Bumps tap targets to the iOS HIG 44px floor and stacks tight
+   flex-rows that would otherwise push their button off-screen on
+   narrow viewports.  Limited to ≤640px (sm/mobile breakpoint). */
+@media (max-width: 640px) {
+  /* Sidebar drawer nav items — desktop has a 100vh layout with
+     internal scroll, mobile uses the drawer.  Bump per-item height
+     to 44px so finger-targets clear the iOS HIG floor. */
+  .mobile-menu-nav a,
+  .mobile-menu-nav button {
+    min-height: 44px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  /* Sidebar group headers in the drawer — were 32px tall.  Cursor-
+     style stays the same; just give them air. */
+  .mobile-menu-nav .sidebar-group-header {
+    min-height: 44px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* Search / Ask AI affordances at the top of the drawer. */
+  .mobile-menu-nav .sidebar-search-trigger,
+  .mobile-menu-nav .sidebar-ask-ai {
+    min-height: 44px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* Assign-to-Route card rows — were flex-row with title left + CTA
+     right.  On narrow widths the CTA gets pushed and the title
+     ellipsises away.  Stack them so the title reads first and the
+     CTA spans full width. */
+  .assign-route-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .assign-route-row-cta {
+    width: 100%;
+    text-align: center;
+    min-height: 44px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+  .assign-route-row-title {
+    white-space: normal; /* let the title wrap on mobile so it doesn't
+                            get ellipsised when there's plenty of
+                            vertical room */
+  }
+
+  /* Same treatment for the Add-Stop diagnostic blocked-order rows. */
+  .add-stop-blocked-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .add-stop-blocked-row-cta {
+    width: 100%;
+    text-align: center;
+    min-height: 44px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+  .add-stop-blocked-row-title {
+    white-space: normal;
+  }
+
+  /* Route detail action buttons — Start Route / Complete Route /
+     Remove on the route-overview card.  Their natural padding was
+     fine on desktop but the new outlined-secondary style on
+     Complete Route inherited 9px top/bottom which crossed under 44px
+     on real device pixel ratios. */
+  .route-status-complete-btn {
+    min-height: 44px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+  .route-stop-remove-btn {
+    min-height: 36px;       /* per-stop secondary action — softer
+                                floor since it's clearly destructive
+                                and operators are deliberate when
+                                clicking it */
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+}
