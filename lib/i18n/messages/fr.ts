@@ -666,6 +666,8 @@ export const fr: Messages = {
         sendQuote: "Envoyer un devis",
         sendQuoteToCustomer: "Envoyer le devis au client",
         sendingQuote: "Envoi…",
+        confirmOrderCta: "Marquer comme confirmée",
+        confirmingOrder: "Confirmation…",
         createDocuments: "Créer les documents",
         downloadPdf: "Télécharger le PDF",
         downloadQuote: "Télécharger le devis (PDF)",

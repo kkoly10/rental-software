@@ -666,6 +666,8 @@ export const es: Messages = {
         sendQuote: "Enviar presupuesto",
         sendQuoteToCustomer: "Enviar presupuesto al cliente",
         sendingQuote: "Enviando…",
+        confirmOrderCta: "Marcar como confirmado",
+        confirmingOrder: "Confirmando…",
         createDocuments: "Crear documentos",
         downloadPdf: "Descargar PDF",
         downloadQuote: "Descargar presupuesto (PDF)",

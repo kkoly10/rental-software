@@ -667,6 +667,8 @@ const enValues = {
         sendQuote: "Send quote",
         sendQuoteToCustomer: "Send Quote to Customer",
         sendingQuote: "Sending…",
+        confirmOrderCta: "Mark Confirmed",
+        confirmingOrder: "Confirming…",
         createDocuments: "Create documents",
         downloadPdf: "Download PDF",
         downloadQuote: "Download Quote PDF",
