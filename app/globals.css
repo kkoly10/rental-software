@@ -559,8 +559,8 @@ a:focus-visible {
 }
 
 .sidebar {
-  background: #0f2340;
-  color: rgba(255, 255, 255, 0.86);
+  background: var(--surface, #ffffff);
+  color: var(--text, #2d1f14);
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
@@ -573,6 +573,7 @@ a:focus-visible {
   align-self: start;
   height: 100vh;
   max-height: 100vh;
+  border-right: 1px solid var(--border, #f0e0d0);
 }
 
 .dashboard-mobile-bar {
@@ -632,13 +633,19 @@ a:focus-visible {
   border-radius: 12px;
   margin-bottom: 2px;
   font-size: 14px;
+  color: var(--text-soft, #6b5545);
   transition: 0.15s ease;
 }
 
-.sidebar a.active,
 .sidebar a:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
+  background: var(--primary-bg-subtle, #fff8f3);
+  color: var(--text, #2d1f14);
+}
+
+.sidebar a.active {
+  background: var(--primary-bg, #fff1e8);
+  color: var(--primary, #e8590c);
+  font-weight: 600;
 }
 
 /* ── Grouped sidebar (operator nav, Linear/Notion-style collapsible groups) ── */
@@ -650,10 +657,10 @@ a:focus-visible {
   width: 100%;
   margin: 0 0 8px;
   padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--border, #f0e0d0);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--surface-muted, #fff1e8);
+  color: var(--text-soft, #6b5545);
   font: inherit;
   font-size: 13.5px;
   cursor: pointer;
@@ -663,8 +670,8 @@ a:focus-visible {
 
 .sidebar-search-trigger:hover,
 .sidebar-search-trigger:focus-visible {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: var(--primary-bg-subtle, #fff8f3);
+  border-color: var(--border-strong, #e0cdbf);
   outline: none;
 }
 
@@ -676,8 +683,8 @@ a:focus-visible {
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.55);
+  background: var(--border, #f0e0d0);
+  color: var(--text-muted, #8a7565);
   letter-spacing: 0.02em;
 }
 
@@ -694,8 +701,8 @@ a:focus-visible {
   padding: 11px 14px;
   border: 1px solid rgba(232, 89, 12, 0.35);
   border-radius: 12px;
-  background: rgba(232, 89, 12, 0.16);
-  color: rgba(255, 255, 255, 0.92);
+  background: var(--primary-bg, #fff1e8);
+  color: var(--primary, #e8590c);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -706,7 +713,7 @@ a:focus-visible {
 
 .sidebar-ask-ai:hover,
 .sidebar-ask-ai:focus-visible {
-  background: rgba(232, 89, 12, 0.28);
+  background: rgba(232, 89, 12, 0.18);
   border-color: rgba(232, 89, 12, 0.55);
   outline: none;
 }
@@ -723,13 +730,13 @@ a:focus-visible {
   min-height: 0;
   /* Slim scrollbar so it doesn't crowd the layout. */
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: var(--border, #f0e0d0) transparent;
 }
 .sidebar-nav-body::-webkit-scrollbar {
   width: 6px;
 }
 .sidebar-nav-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--border, #f0e0d0);
   border-radius: 99px;
 }
 
@@ -749,7 +756,7 @@ a:focus-visible {
   padding: 6px 14px 8px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-muted, #8a7565);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -760,7 +767,7 @@ a:focus-visible {
 
 .sidebar-group-header:hover,
 .sidebar-group-header:focus-visible {
-  color: #fff;
+  color: var(--text, #2d1f14);
   outline: none;
 }
 
@@ -769,15 +776,15 @@ a:focus-visible {
    doesn't try to collapse a group that doesn't move. */
 .sidebar-group-header[data-locked="true"] {
   cursor: default;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-soft, #6b5545);
 }
 .sidebar-group-header[data-locked="true"]:hover {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-soft, #6b5545);
 }
 
 .sidebar-group-chevron {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted, #8a7565);
   margin-left: 6px;
 }
 .sidebar-group-header[data-locked="true"] .sidebar-group-chevron {
