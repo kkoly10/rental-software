@@ -4836,3 +4836,36 @@ textarea[aria-invalid="true"] {
     padding-bottom: 9px;
   }
 }
+
+/* ── Calendar month grid mobile fix ──────────────────────────────────
+   The MonthGrid uses `grid-template-columns: repeat(7, 1fr)`, which
+   should distribute width evenly across 7 columns.  But the event
+   labels inside each cell use `white-space: nowrap` (so single-line
+   names don't wrap mid-word) and the cells themselves have no
+   `min-width: 0` — combined, a long event label like
+   "KOMLAN KOUHIKO" stretches its cell past `1fr`, breaking the
+   distribution and pushing Fri/Sat columns off the right of a
+   390px viewport.
+
+   Fixes:
+     • `min-width: 0` on every grid item so they can shrink below
+       content size (the standard grid/flex fix for nowrap children)
+     • Tighter padding on mobile so 7 columns × small cell still
+       fits 390px comfortably */
+.calendar-month-grid > * {
+  min-width: 0;
+}
+.calendar-month-grid > * > * {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .calendar-month-grid > * {
+    padding: 4px 2px !important;
+    min-height: 70px !important;
+    font-size: 11px;
+  }
+  .calendar-month-grid > * > * {
+    font-size: 10px !important;
+    padding: 1px 3px !important;
+  }
+}

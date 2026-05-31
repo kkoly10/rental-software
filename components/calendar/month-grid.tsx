@@ -94,6 +94,7 @@ export function MonthGrid({ year, month, events }: Props) {
       </div>
 
       <div
+        className="calendar-month-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
