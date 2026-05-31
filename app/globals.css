@@ -4869,3 +4869,93 @@ textarea[aria-invalid="true"] {
     padding: 1px 3px !important;
   }
 }
+
+/* ── Mobile tap-target sweep ─────────────────────────────────────────
+   Full mobile audit (24 pages) turned up small tap targets on
+   shared layout components used everywhere:
+
+     * Dashboard mobile bar — Menu button (95x40), notification bell
+       (40x40), logo (68x29), breadcrumb links (~17px tall)
+     * Storefront header — logo (54x36), Call link (71x36)
+     * Storefront footer social icons — 20x27 each (bare <a> wrapping
+       a 20px SVG with no padding)
+     * Generic small "×" close buttons in info banners (32x26)
+     * Various .primary-btn / .ghost-btn / .secondary-btn that landed
+       at 30-32px tall with the existing padding
+
+   Single @media block hits the iOS HIG 44px floor for every
+   interactive element on mobile. */
+@media (max-width: 640px) {
+  /* Dashboard mobile bar — appears on every dashboard page */
+  .dashboard-mobile-menu-btn {
+    min-height: 44px;
+  }
+  .notif-bell-btn {
+    width: 44px;
+    height: 44px;
+  }
+  /* The Korent logo links in the mobile bar — give them a tap area */
+  .dashboard-mobile-bar .logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+  }
+  /* Breadcrumb links land at ~17px tall — bump to 36px so the
+     active tap area is comfortable.  Below 44 because they're a
+     navigation aid, not a primary action, and 44 would force the
+     breadcrumbs into multi-line layouts on most pages. */
+  .breadcrumbs-link,
+  .breadcrumbs-current {
+    padding: 8px 6px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+  }
+
+  /* Storefront header — appears on every storefront page */
+  .st-logo {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 0;
+  }
+  .st-mobile-phone {
+    min-height: 44px;
+    padding: 11px 14px;
+  }
+
+  /* Storefront footer social icons — they were bare anchors wrapping
+     a 20px SVG.  Give them tap-area padding so the visible icon
+     stays the same size but the touchable area is 44x44. */
+  .public-footer-social-row a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+  }
+
+  /* Generic button minimums — many existing .primary-btn /
+     .secondary-btn / .ghost-btn instances rendered at 30-32px tall
+     because their padding was set for desktop density.  Floor them
+     all at 44px on mobile.  Tap-area only — visual padding can
+     still be smaller via `padding` if the design needs it; the
+     min-height absorbs the difference. */
+  .primary-btn,
+  .secondary-btn,
+  .ghost-btn {
+    min-height: 44px;
+  }
+
+  /* The little "×" dismissal buttons in info banners that were 32x26
+     — they get the generic .ghost-btn floor above, but they also
+     need width so they don't render as a vertical pill. */
+  .info-banner .ghost-btn,
+  .banner-close,
+  button.ghost-btn[aria-label*="lose" i],
+  button.ghost-btn[aria-label*="ismiss" i] {
+    min-width: 44px;
+  }
+}
