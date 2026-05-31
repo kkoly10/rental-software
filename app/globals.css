@@ -4975,3 +4975,85 @@ textarea[aria-invalid="true"] {
     min-height: 44px;
   }
 }
+
+/* ── Dashboard home polish (lifted from the Korent dashboard mockup) ─
+   The mockup's design tokens are already wired into :root above —
+   warm cream bg, brand orange, generous radii, soft warm shadows.
+   These rules just upgrade the dashboard *home* surface to match
+   the mockup's hierarchy and feel.  Other dashboard pages keep
+   today's look. */
+
+/* Personalised greeting row above the stats grid */
+.dashboard-greeting {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 22px;
+}
+
+.dashboard-greeting-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dashboard-greeting-headline {
+  font-family: "Sora", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.15;
+}
+
+.dashboard-greeting-tagline {
+  font-size: 15px;
+  color: var(--text-soft);
+  margin: 6px 0 0;
+  line-height: 1.45;
+}
+
+.dashboard-greeting-cta {
+  flex-shrink: 0;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+@media (max-width: 640px) {
+  .dashboard-greeting {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .dashboard-greeting-headline {
+    font-size: 24px;
+  }
+  .dashboard-greeting-cta {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Stat card hierarchy — match the mockup's tight label / huge value /
+   muted meta stack.  The existing .stat-card rule above sets the
+   panel chrome; these refine the inner typography. */
+.stat-card .muted:first-child {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+.stat-card strong {
+  font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-top: 12px;
+  color: var(--text);
+}
+.stat-card .muted:last-child {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}

@@ -575,6 +575,13 @@ export const es: Messages = {
     overview: {
       title: "Panel del operador",
       description: "Resumen diario de reservas, entregas, pagos y tareas.",
+      greeting: {
+        morning: "Buenos días, {name}",
+        afternoon: "Buenas tardes, {name}",
+        evening: "Buenas noches, {name}",
+        tagline: "Aquí tienes tu resumen diario de reservas, entregas y pagos.",
+        fallbackName: "qué tal",
+      },
       stats: {
         todayBookings: "Reservas de hoy",
         todayBookingsMeta: "Pipeline en vivo",
