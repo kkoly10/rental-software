@@ -14,6 +14,7 @@ import { SetupChecklistCard } from "@/components/guidance/setup-checklist-card";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { MilestoneCelebration } from "@/components/dashboard/milestone-celebration";
 import { SetupProgressBar } from "@/components/dashboard/setup-progress-bar";
+import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getNotifications } from "@/lib/data/notifications";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
@@ -63,6 +64,8 @@ export default async function DashboardPage() {
           dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false}
         />
       )}
+
+      <DashboardGreeting businessName={settings.businessName} />
 
       {!guidanceState.dismissedChecklist && (
         <div style={{ marginBottom: 16 }}>

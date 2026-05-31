@@ -576,6 +576,13 @@ const enValues = {
     overview: {
       title: "Operator Dashboard",
       description: "Daily overview for bookings, deliveries, payments, and tasks.",
+      greeting: {
+        morning: "Good morning, {name}",
+        afternoon: "Good afternoon, {name}",
+        evening: "Good evening, {name}",
+        tagline: "Here’s your daily overview for bookings, deliveries, and payments.",
+        fallbackName: "there",
+      },
       stats: {
         todayBookings: "Today’s bookings",
         todayBookingsMeta: "Live order pipeline",

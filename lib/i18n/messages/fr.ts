@@ -575,6 +575,13 @@ export const fr: Messages = {
     overview: {
       title: "Tableau de bord opérateur",
       description: "Aperçu quotidien des réservations, livraisons, paiements et tâches.",
+      greeting: {
+        morning: "Bonjour, {name}",
+        afternoon: "Bon après-midi, {name}",
+        evening: "Bonsoir, {name}",
+        tagline: "Voici votre aperçu du jour : réservations, livraisons et paiements.",
+        fallbackName: "vous",
+      },
       stats: {
         todayBookings: "Réservations du jour",
         todayBookingsMeta: "Pipeline en direct",
