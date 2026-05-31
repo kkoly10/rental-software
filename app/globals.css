@@ -4958,4 +4958,20 @@ textarea[aria-invalid="true"] {
   button.ghost-btn[aria-label*="ismiss" i] {
     min-width: 44px;
   }
+
+  /* Search input on list pages (Orders / Products / Customers /
+     Payments / Documents).  ListSearchForm renders <input
+     type="search"> with default browser height (~30px); bump to
+     44 on mobile so the search field is a comfortable tap+keyboard
+     target. */
+  input[type="search"] {
+    min-height: 44px;
+  }
+
+  /* "Mark all read" button inside the NotificationCenter dropdown
+     was 101x25 — a ghost-style action button that didn't share the
+     generic .ghost-btn class.  Floor it explicitly. */
+  .notif-mark-all-btn {
+    min-height: 44px;
+  }
 }
