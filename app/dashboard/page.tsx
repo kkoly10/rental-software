@@ -52,6 +52,7 @@ export default async function DashboardPage() {
       description={m.dashboard.overview.description}
       notifications={notifications}
       subscriptionStatus={subscriptionStatus}
+      hideHeader
     >
       <DashboardGuidance
         guidanceState={guidanceState}

@@ -54,6 +54,7 @@ export function DashboardShell({
   notifications = [],
   unreadMessages = 0,
   subscriptionStatus: initialSubscriptionStatus,
+  hideHeader = false,
 }: {
   title: string;
   description: string;
@@ -61,6 +62,11 @@ export function DashboardShell({
   notifications?: Notification[];
   unreadMessages?: number;
   subscriptionStatus?: string | null;
+  /** When the page renders its own headline (e.g. /dashboard's
+      `<DashboardGreeting>` replaces the generic "Operator Dashboard"
+      title), set this to true so the shell omits the section-header
+      stack and avoids two competing headlines on the same page. */
+  hideHeader?: boolean;
 }) {
   const pathname = usePathname();
   const { locale, messages: m } = useI18n();
@@ -287,7 +293,7 @@ export function DashboardShell({
               height: 22,
               margin: "0 0 12px",
               borderRadius: 10,
-              background: "rgba(255,255,255,.10)",
+              background: "rgba(45,31,20,.08)",
             }}
           />
           {skeletonGroups.map((rows, gi) => (
@@ -298,7 +304,7 @@ export function DashboardShell({
                   width: 56,
                   margin: "8px 14px 10px",
                   borderRadius: 4,
-                  background: "rgba(255,255,255,.18)",
+                  background: "rgba(45,31,20,.14)",
                 }}
               />
               {Array.from({ length: rows }).map((__, ii) => (
@@ -308,7 +314,7 @@ export function DashboardShell({
                     height: 20,
                     margin: "6px 0",
                     borderRadius: 10,
-                    background: "rgba(255,255,255,.08)",
+                    background: "rgba(45,31,20,.06)",
                   }}
                 />
               ))}
@@ -357,7 +363,7 @@ export function DashboardShell({
   return (
     <div className="sidebar-layout">
       <aside className="sidebar dashboard-sidebar-desktop">
-        <Link href="/dashboard" className="logo" style={{ color: "white", marginBottom: 14, display: "block" }}>
+        <Link href="/dashboard" className="logo" style={{ color: "var(--primary)", marginBottom: 14, display: "block" }}>
           Korent
         </Link>
 
@@ -393,19 +399,19 @@ export function DashboardShell({
 
         <div className="sidebar-nav-body">{renderSidebarNavBody()}</div>
 
-        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.12)" }}>
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <div style={{ padding: "0 14px 12px" }}>
             <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
           </div>
-          <a href={publicSiteUrl} style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, opacity: 0.7 }}>
+          <a href={publicSiteUrl} style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, color: "var(--text-soft)" }}>
             {m.dashboard.nav.publicSite}
           </a>
           <button
             type="button"
             style={{
-              background: "rgba(255,255,255,.08)",
-              color: "rgba(255,255,255,.7)",
-              border: "none",
+              background: "var(--surface-muted)",
+              color: "var(--text-soft)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "12px 14px",
               width: "100%",
@@ -447,7 +453,7 @@ export function DashboardShell({
         </div>
         <SubscriptionBanner status={subStatus} />
         <Breadcrumbs />
-        <div className="section-header">
+        <div className="section-header" hidden={hideHeader} aria-hidden={hideHeader || undefined}>
           <div>
             <div className="kicker">{m.dashboard.shell.kicker}</div>
             <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>

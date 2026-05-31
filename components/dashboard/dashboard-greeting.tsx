@@ -19,18 +19,6 @@ function pickGreetingKey(): "morning" | "afternoon" | "evening" {
   return "evening";
 }
 
-function pickEmoji(slot: "morning" | "afternoon" | "evening"): string {
-  // Subtle by design — these are tone markers, not decoration.
-  switch (slot) {
-    case "morning":
-      return "☀️";
-    case "afternoon":
-      return "🌤";
-    case "evening":
-      return "🌙";
-  }
-}
-
 export async function DashboardGreeting({
   businessName,
 }: {
@@ -38,7 +26,6 @@ export async function DashboardGreeting({
 }) {
   const { messages: m, t } = await getTranslator();
   const slot = pickGreetingKey();
-  const emoji = pickEmoji(slot);
   const greetingTemplate = m.dashboard.overview.greeting[slot];
   // Fall back to the business name if no value is set yet — the
   // existing organization-settings fallback returns "" when the
@@ -50,8 +37,7 @@ export async function DashboardGreeting({
     <div className="dashboard-greeting">
       <div className="dashboard-greeting-text">
         <h2 className="dashboard-greeting-headline">
-          {t(greetingTemplate, { name })}{" "}
-          <span aria-hidden="true">{emoji}</span>
+          {t(greetingTemplate, { name })}
         </h2>
         <p className="dashboard-greeting-tagline">
           {m.dashboard.overview.greeting.tagline}
