@@ -666,6 +666,8 @@ export const pt: Messages = {
         sendQuote: "Enviar orçamento",
         sendQuoteToCustomer: "Enviar orçamento ao cliente",
         sendingQuote: "A enviar…",
+        confirmOrderCta: "Marcar como confirmada",
+        confirmingOrder: "A confirmar…",
         createDocuments: "Criar documentos",
         downloadPdf: "Descarregar PDF",
         downloadQuote: "Descarregar orçamento (PDF)",

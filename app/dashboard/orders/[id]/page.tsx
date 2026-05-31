@@ -9,6 +9,7 @@ import { CommunicationList } from "@/components/communications/communication-lis
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
+import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
@@ -222,6 +223,7 @@ export default async function OrderDetailPage({
             {order.status === "Inquiry" && (
               <SendQuoteButton orderId={id} />
             )}
+            <ConfirmOrderButton orderId={id} currentStatus={order.status} />
             {(order.status === "Quote Sent" || order.status === "Inquiry") && (
               <a
                 href={`/api/quotes/${id}`}
