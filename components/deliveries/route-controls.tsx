@@ -14,30 +14,68 @@ const initial: RouteActionState = { ok: false, message: "" };
 export function RouteStatusControls({
   routeId,
   currentStatus,
+  stopCount,
 }: {
   routeId: string;
   currentStatus: string;
+  /** Number of stops on this route — required for the no-stops guard.
+      The "Start Route" button is disabled when stopCount === 0 because
+      dispatching an empty route makes no sense; "Complete Route" is
+      also disabled in that case for symmetry. */
+  stopCount: number;
 }) {
   const { messages } = useI18n();
   const t = messages.forms.routing.routeControls;
   const [state, action, pending] = useActionState(updateRouteStatus, initial);
 
+  // The state machine: planned → in_progress → completed.  Surface only
+  // the next valid transition (one button at a time).
   const next =
     currentStatus === "planned"
-      ? { status: "in_progress", label: t.startRoute }
+      ? { status: "in_progress", label: t.startRoute, kind: "start" as const }
       : currentStatus === "in_progress"
-        ? { status: "completed", label: t.completeRoute }
+        ? { status: "completed", label: t.completeRoute, kind: "complete" as const }
         : null;
 
   if (!next) return null;
 
+  const noStops = stopCount === 0;
+  const disabledReason = noStops ? t.noStopsHint : "";
+
+  // "Complete Route" is terminal — stops can no longer be edited once
+  // the route is completed.  Gate it behind window.confirm to prevent
+  // accidental clicks (the original button looked identical to "Add
+  // Stop" and we saw the Playwright test trip on that ambiguity).
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (next?.kind === "complete") {
+      const ok = window.confirm(t.completeRouteConfirm);
+      if (!ok) {
+        e.preventDefault();
+      }
+    }
+  }
+
   return (
-    <form action={action}>
+    <form action={action} onSubmit={onSubmit}>
       <input type="hidden" name="route_id" value={routeId} />
       <input type="hidden" name="status" value={next.status} />
-      <button type="submit" className="primary-btn" disabled={pending}>
+      <button
+        type="submit"
+        className={
+          next.kind === "complete"
+            ? "route-status-complete-btn"
+            : "primary-btn"
+        }
+        disabled={pending || noStops}
+        title={disabledReason || undefined}
+      >
         {pending ? t.updating : next.label}
       </button>
+      {noStops && (
+        <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+          {t.noStopsHint}
+        </div>
+      )}
       {state.message && !state.ok && (
         <span className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
           {state.message}
@@ -103,11 +141,23 @@ export function RemoveStopButton({
   const t = messages.forms.routing.routeControls;
   const [state, action, pending] = useActionState(removeStopFromRoute, initial);
 
+  // Removing a stop unassigns the order from this route.  Cheap to undo
+  // (re-add via the Add Stop form) but easy to click accidentally —
+  // window.confirm is the simplest universal guard.
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    const ok = window.confirm(t.removeStopConfirm);
+    if (!ok) e.preventDefault();
+  }
+
   return (
-    <form action={action} style={{ display: "inline" }}>
+    <form action={action} onSubmit={onSubmit} style={{ display: "inline" }}>
       <input type="hidden" name="stop_id" value={stopId} />
       <input type="hidden" name="route_id" value={routeId} />
-      <button type="submit" className="ghost-btn" disabled={pending} style={{ fontSize: 12, color: "var(--text-soft)" }}>
+      <button
+        type="submit"
+        className="route-stop-remove-btn"
+        disabled={pending}
+      >
         {pending ? "…" : t.remove}
       </button>
       {state.message && !state.ok && (

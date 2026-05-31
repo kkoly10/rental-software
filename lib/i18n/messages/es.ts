@@ -1870,6 +1870,35 @@ export const es: Messages = {
           },
         },
       },
+      assignToRoute: {
+        sectionKicker: "Ruta",
+        eligibleTitle: "Añadir este pedido a una ruta de entrega del {date}",
+        pickRouteBody:
+          "Elige una ruta existente abajo, o crea una nueva para esta fecha.",
+        noRoutesBody:
+          "No hay rutas para esta fecha. Crea una y este pedido será su primera parada.",
+        attachCta: "Añadir a esta ruta",
+        attaching: "Añadiendo…",
+        createRouteCta: "Crear una ruta nueva para esta fecha",
+        viewRouteCta: "Ver la ruta →",
+        alreadyOnRoute: "En la ruta: {name}",
+        alreadyOnRouteBody:
+          "Este pedido ya es una parada de una ruta. Los cambios de parada se hacen en la página de la ruta.",
+        blockedTitle: "Aún no se puede añadir este pedido a una ruta",
+        blockerReason: {
+          no_event_date: "Define una fecha de evento en este pedido antes de añadirlo a una ruta.",
+          not_confirmed:
+            "Confirma el pedido antes de añadirlo a una ruta — solo los pedidos confirmados o programados pueden añadirse como paradas.",
+          no_address:
+            "Añade una dirección de entrega (calle, ciudad, código postal) antes de añadirlo a una ruta.",
+        },
+        stopCount: "{n} parada(s)",
+        routeStatus: {
+          planned: "Planificada",
+          inProgress: "En curso",
+          completed: "Completada",
+        },
+      },
       routeControls: {
         startRoute: "Iniciar ruta",
         completeRoute: "Completar ruta",
@@ -1878,6 +1907,11 @@ export const es: Messages = {
         remove: "Quitar",
         updating: "Actualizando…",
         done: "Hecho",
+        noStopsHint: "Añade al menos una parada antes de iniciar la ruta.",
+        completeRouteConfirm:
+          "¿Marcar esta ruta como completada? Las paradas no podrán editarse después.",
+        removeStopConfirm:
+          "¿Quitar esta parada de la ruta? El pedido quedará sin asignar y podrá añadirse de nuevo más tarde.",
       },
       stats: {
         totalStops: "Paradas totales",

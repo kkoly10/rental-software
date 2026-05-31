@@ -1870,6 +1870,35 @@ export const pt: Messages = {
           },
         },
       },
+      assignToRoute: {
+        sectionKicker: "Rota",
+        eligibleTitle: "Adicionar esta encomenda a uma rota de entrega em {date}",
+        pickRouteBody:
+          "Escolha uma rota existente abaixo ou crie uma nova para esta data.",
+        noRoutesBody:
+          "Não há rotas para esta data. Crie uma e esta encomenda será a sua primeira paragem.",
+        attachCta: "Adicionar a esta rota",
+        attaching: "A adicionar…",
+        createRouteCta: "Criar uma nova rota para esta data",
+        viewRouteCta: "Ver a rota →",
+        alreadyOnRoute: "Na rota: {name}",
+        alreadyOnRouteBody:
+          "Esta encomenda já é uma paragem de uma rota. As alterações da paragem fazem-se na página da rota.",
+        blockedTitle: "Ainda não é possível adicionar esta encomenda a uma rota",
+        blockerReason: {
+          no_event_date: "Defina uma data de evento nesta encomenda antes de a adicionar a uma rota.",
+          not_confirmed:
+            "Confirme a encomenda antes de a adicionar a uma rota — apenas encomendas confirmadas ou agendadas podem ser adicionadas como paragens.",
+          no_address:
+            "Adicione uma morada de entrega (rua, cidade, código postal) antes de a adicionar a uma rota.",
+        },
+        stopCount: "{n} paragem(ns)",
+        routeStatus: {
+          planned: "Planeada",
+          inProgress: "Em curso",
+          completed: "Concluída",
+        },
+      },
       routeControls: {
         startRoute: "Iniciar rota",
         completeRoute: "Concluir rota",
@@ -1878,6 +1907,11 @@ export const pt: Messages = {
         remove: "Remover",
         updating: "A atualizar…",
         done: "Concluído",
+        noStopsHint: "Adicione pelo menos uma paragem antes de iniciar a rota.",
+        completeRouteConfirm:
+          "Marcar esta rota como concluída? As paragens não poderão ser editadas depois.",
+        removeStopConfirm:
+          "Remover esta paragem da rota? A encomenda ficará sem atribuição e poderá ser adicionada novamente mais tarde.",
       },
       stats: {
         totalStops: "Total de paragens",

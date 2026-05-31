@@ -4612,3 +4612,137 @@ textarea[aria-invalid="true"] {
   font-size: 12.5px;
   color: var(--text-soft, #555);
 }
+
+/* ── Route detail destructive / terminal action buttons ───────────────
+   Visually distinct from "Add Stop" (the primary action) so the
+   operator can't trip the same trap the Playwright test did, where
+   identical-looking buttons led to clicking "Complete Route" instead
+   of "Add Stop".  Pairs with the window.confirm guards on both
+   actions in components/deliveries/route-controls.tsx. */
+.route-status-complete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #fff);
+  color: var(--text, #111);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.route-status-complete-btn:hover,
+.route-status-complete-btn:focus-visible {
+  background: var(--surface-muted, #fafafa);
+  border-color: var(--text-soft, #777);
+  outline: none;
+}
+.route-status-complete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.route-stop-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--danger, #dc2626);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.route-stop-remove-btn:hover,
+.route-stop-remove-btn:focus-visible {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.3);
+  outline: none;
+}
+.route-stop-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Assign-to-Route card on the order detail page ───────────────────
+   Lets the operator route an order from the order side instead of
+   discovering the Add Stop dropdown on the route page.  Three modes:
+     1. blocked  — explains the prereq that's missing
+     2. eligible — lists candidate routes for this date + create CTA
+     3. already_assigned — links back to the route */
+.assign-route-card {
+  padding: 14px 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+}
+.assign-route-card--info {
+  background: var(--surface-muted, #fafafa);
+}
+.assign-route-card--blocked {
+  background: var(--warning-bg, #fffbeb);
+  border-color: var(--warning, #d97706);
+}
+
+.assign-route-card-headline {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--text, #111);
+}
+
+.assign-route-card-body {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--text-soft, #555);
+  line-height: 1.45;
+}
+
+.assign-route-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assign-route-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  background: var(--surface-muted, #fafafa);
+}
+
+.assign-route-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.assign-route-row-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text, #111);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assign-route-row-meta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-soft, #555);
+}
+
+.assign-route-row-cta {
+  flex-shrink: 0;
+}

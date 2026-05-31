@@ -64,7 +64,11 @@ export default async function DeliveryDetailPage({
               <div className="muted" style={{ marginBottom: 10 }}>
                 {route.routeStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
               </div>
-              <RouteStatusControls routeId={id} currentStatus={route.routeStatus} />
+              <RouteStatusControls
+                routeId={id}
+                currentStatus={route.routeStatus}
+                stopCount={route.totalStops}
+              />
             </div>
 
             <div className="order-card">
