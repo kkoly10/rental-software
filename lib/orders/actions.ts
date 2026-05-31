@@ -764,8 +764,52 @@ export async function updateOrderStatus(
   revalidatePath("/dashboard/deliveries");
   revalidatePath("/dashboard/calendar");
 
+  // #PR-C — Auto-attach the order to today's route for that date when
+  // we transition into `confirmed`.  Conservative: only fires when
+  // exactly one non-completed route exists, the order has an event
+  // date and a delivery address, and the org hasn't disabled the
+  // setting.  Never throws; logs failures and appends success to the
+  // response so the operator sees what happened.
+  let autoAttachSuffix = "";
+  if (parsed.data.newStatus === "confirmed") {
+    try {
+      const { autoAttachOrderToRouteIfEligible } = await import(
+        "@/lib/routes/auto-attach"
+      );
+      const result = await autoAttachOrderToRouteIfEligible(
+        ctx.organizationId,
+        parsed.data.orderId,
+        supabase,
+      );
+      if (result.attached) {
+        autoAttachSuffix = ` Added to route "${result.routeName}".`;
+        // Make sure the deliveries surfaces re-render with the new stop.
+        revalidatePath(`/dashboard/deliveries/${result.routeId}`);
+      } else if (result.reason === "insert_failed") {
+        const { logAppError } = await import("@/lib/observability/server");
+        await logAppError({
+          organizationId: ctx.organizationId,
+          source: "orders.updateOrderStatus.autoAttach",
+          message: "Auto-attach to route failed during order confirmation",
+          context: {
+            orderId: parsed.data.orderId,
+            reason: result.reason,
+            detail: result.detail,
+          },
+        }).catch(() => {});
+      }
+    } catch (err) {
+      // Status update already succeeded — never block on auto-attach.
+      console.error(
+        "[orders] auto-attach to route failed for",
+        parsed.data.orderId,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   return {
     ok: true,
-    message: `Order status updated to ${parsed.data.newStatus}.`,
+    message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}`,
   };
 }
