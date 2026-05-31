@@ -262,6 +262,14 @@ a:focus-visible {
   min-width: 0;
 }
 
+/* `display: flex` above wins over the [hidden] attribute's default
+   display: none, so opt-in callers that pass `hideHeader` to
+   DashboardShell need this explicit override.  Same CSS-specificity
+   trap as .sidebar-group-items[hidden] in PR #126. */
+.section-header[hidden] {
+  display: none;
+}
+
 .section-header > div:first-child {
   min-width: 0;
   flex: 1 1 0;
