@@ -24,12 +24,20 @@ function isNavItemActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const GROUP_COLLAPSE_KEY = "korent-sidebar-collapsed-groups";
+// Per-org localStorage key so a browser shared between operator
+// accounts doesn't leak collapse state across orgs.  We fall back to
+// the global key if the orgId isn't known yet (initial paint /
+// pre-businessType load).
+const GROUP_COLLAPSE_KEY_BASE = "korent-sidebar-collapsed-groups";
 
-function loadCollapsedGroups(): Partial<Record<NavGroup, boolean>> {
+function collapseKey(orgId: string | null): string {
+  return orgId ? `${GROUP_COLLAPSE_KEY_BASE}:${orgId}` : GROUP_COLLAPSE_KEY_BASE;
+}
+
+function loadCollapsedGroups(orgId: string | null): Partial<Record<NavGroup, boolean>> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(GROUP_COLLAPSE_KEY);
+    const raw = window.localStorage.getItem(collapseKey(orgId));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object") return parsed;
@@ -39,9 +47,9 @@ function loadCollapsedGroups(): Partial<Record<NavGroup, boolean>> {
   }
 }
 
-function persistCollapsedGroups(state: Partial<Record<NavGroup, boolean>>) {
+function persistCollapsedGroups(orgId: string | null, state: Partial<Record<NavGroup, boolean>>) {
   try {
-    window.localStorage.setItem(GROUP_COLLAPSE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(collapseKey(orgId), JSON.stringify(state));
   } catch {
     // storage unavailable — silently skip; collapse state just won't persist.
   }
@@ -79,6 +87,7 @@ export function DashboardShell({
   // we kept the skeleton until businessType was truthy, which left brand-
   // new orgs (no businessType set) stuck on the skeleton forever.
   const [businessType, setBusinessType] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -106,13 +115,16 @@ export function DashboardShell({
       })
       .catch(() => {});
     fetch("/api/org-type")
-      .then(async (r) => (r.ok ? (await r.json() as { businessType?: string }) : null))
+      .then(async (r) => (r.ok ? (await r.json() as { businessType?: string; organizationId?: string }) : null))
       .then((data) => {
         // Always transition off the skeleton once the API responds —
         // even if businessType is empty/missing.  `getNavItemsForVertical`
         // handles unknown verticals by including all unverticalised items;
         // empty string is a fine signal for "show every nav".
-        if (data) setBusinessType(data.businessType ?? "");
+        if (data) {
+          setBusinessType(data.businessType ?? "");
+          if (data.organizationId) setOrgId(data.organizationId);
+        }
       })
       .catch(() => {
         // Network/server error — fall back to the unfiltered nav rather
@@ -175,10 +187,19 @@ export function DashboardShell({
   // initial paint on Mac; on mount we swap to "Ctrl K" if userAgent
   // looks like Windows/Linux. Avoids hydration mismatch by only
   // touching state after mount.
+  //
+  // navigator.platform is deprecated and increasingly empty in modern
+  // browsers; prefer the high-entropy userAgentData when available
+  // (Chrome/Edge), fall back to userAgent regex elsewhere.
   const [shortcutLabel, setShortcutLabel] = useState<string>("⌘K");
   useEffect(() => {
     if (typeof navigator === "undefined") return;
-    const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+    const uaData = (navigator as Navigator & {
+      userAgentData?: { platform?: string };
+    }).userAgentData;
+    const platform = uaData?.platform ?? navigator.platform ?? "";
+    const ua = navigator.userAgent ?? "";
+    const isMac = /Mac|iPhone|iPad|iPod/i.test(platform) || /Mac|iPhone|iPad|iPod/i.test(ua);
     if (!isMac) setShortcutLabel("Ctrl K");
   }, []);
 
@@ -194,8 +215,8 @@ export function DashboardShell({
     Partial<Record<NavGroup, boolean>>
   >({});
   useEffect(() => {
-    setCollapsedGroups(loadCollapsedGroups());
-  }, []);
+    setCollapsedGroups(loadCollapsedGroups(orgId));
+  }, [orgId]);
 
   // Render guard: null = still loading (show skeleton).  Empty string
   // = API responded but the org has no businessType set; treat that
@@ -226,11 +247,11 @@ export function DashboardShell({
     (id: NavGroup) => {
       setCollapsedGroups((prev) => {
         const next = { ...prev, [id]: !prev[id] };
-        persistCollapsedGroups(next);
+        persistCollapsedGroups(orgId, next);
         return next;
       });
     },
-    []
+    [orgId]
   );
 
   const openCommandPalette = useCallback(() => {
@@ -477,16 +498,25 @@ export function DashboardShell({
         </div>
         <SubscriptionBanner status={subStatus} />
         <Breadcrumbs />
-        <div className="section-header" hidden={hideHeader} aria-hidden={hideHeader || undefined}>
-          <div>
-            <div className="kicker">{m.dashboard.shell.kicker}</div>
-            <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>
-            <div className="muted">{description}</div>
-          </div>
-          <div className="dashboard-desktop-notifications">
+        {hideHeader ? (
+          // Page renders its own headline (e.g. /dashboard's <DashboardGreeting>).
+          // The shell still owns the notification bell on desktop so it doesn't
+          // vanish along with the section header.
+          <div className="dashboard-desktop-notifications dashboard-desktop-notifications--floating">
             <NotificationCenter initialNotifications={notifications} />
           </div>
-        </div>
+        ) : (
+          <div className="section-header">
+            <div>
+              <div className="kicker">{m.dashboard.shell.kicker}</div>
+              <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>
+              <div className="muted">{description}</div>
+            </div>
+            <div className="dashboard-desktop-notifications">
+              <NotificationCenter initialNotifications={notifications} />
+            </div>
+          </div>
+        )}
         {children}
       </main>
 

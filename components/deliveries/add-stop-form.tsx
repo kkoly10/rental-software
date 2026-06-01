@@ -41,7 +41,7 @@ export function AddStopForm({
             {t.empty.noOrdersBody.replace("{date}", routeDate)}
           </div>
           <Link
-            href={`/dashboard/orders/new?event_date=${routeDate}`}
+            href={`/dashboard/orders/new?event_date=${encodeURIComponent(routeDate)}`}
             className="primary-btn"
             style={{ marginTop: 10, display: "inline-block" }}
           >
@@ -62,9 +62,9 @@ export function AddStopForm({
             <li key={o.id} className="add-stop-blocked-row">
               <div className="add-stop-blocked-row-main">
                 <div className="add-stop-blocked-row-title">
-                  #{o.orderNumber} — {o.customerName}{" "}
+                  #{o.orderNumber} — {o.customerName || messages.common.customerFallback}{" "}
                   <span className="muted" style={{ fontSize: 12 }}>
-                    ({o.productName})
+                    ({o.productName || messages.common.rentalFallback})
                   </span>
                 </div>
                 <div className="add-stop-blocked-row-reason">
@@ -99,7 +99,7 @@ export function AddStopForm({
             <option value="">{t.selectOrder}</option>
             {eligibleOrders.map((o) => (
               <option key={o.id} value={o.id}>
-                #{o.orderNumber} — {o.customerName} ({o.productName})
+                #{o.orderNumber} — {o.customerName || messages.common.customerFallback} ({o.productName || messages.common.rentalFallback})
               </option>
             ))}
           </select>
@@ -186,5 +186,15 @@ function humanStatus(status: string, t: AddStopT): string {
     confirmed: t.empty.statusLabels.confirmed,
     scheduled: t.empty.statusLabels.scheduled,
   };
-  return map[status] ?? status;
+  // Fallback for statuses not in the map (e.g. out_for_delivery,
+  // refunded) — title-case the snake-case identifier so the operator
+  // doesn't see raw "out_for_delivery" text.
+  return map[status] ?? toTitleCase(status);
+}
+
+function toTitleCase(snake: string): string {
+  if (!snake) return "";
+  return snake
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }

@@ -78,10 +78,10 @@ export async function getUnroutedOrdersForDate(
       return {
         id: o.id,
         orderNumber: o.order_number ?? "",
-        customerName: [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") || "Customer",
+        customerName: [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") || "",
         eventDate: o.event_date ?? routeDate,
         status: o.order_status ?? "confirmed",
-        productName: items?.[0]?.item_name_snapshot ?? "Rental",
+        productName: items?.[0]?.item_name_snapshot ?? "",
       };
     });
 }
@@ -150,8 +150,8 @@ export async function getOrdersForRouteDate(
       | null;
     const customerName =
       [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") ||
-      "Customer";
-    const productName = items?.[0]?.item_name_snapshot ?? "Rental";
+      "";
+    const productName = items?.[0]?.item_name_snapshot ?? "";
     const status = (o.order_status as string) ?? "inquiry";
 
     // 1) Already on a different route for the same date.

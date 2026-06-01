@@ -12,6 +12,7 @@ export type AutoAttachResult =
       attached: false;
       reason:
         | "disabled"
+        | "order_not_found"
         | "no_event_date"
         | "no_address"
         | "no_route"
@@ -71,7 +72,7 @@ export async function autoAttachOrderToRouteIfEligible(
       .eq("organization_id", organizationId)
       .is("deleted_at", null)
       .maybeSingle();
-    if (!order) return { attached: false, reason: "no_event_date" };
+    if (!order) return { attached: false, reason: "order_not_found" };
 
     const eventDate = (order.event_date as string | null) ?? "";
     if (!eventDate) return { attached: false, reason: "no_event_date" };
@@ -131,7 +132,7 @@ export async function autoAttachOrderToRouteIfEligible(
     return {
       attached: true,
       routeId: route.id as string,
-      routeName: (route.name as string) ?? "Route",
+      routeName: (route.name as string) ?? "",
     };
   } catch (err) {
     return {

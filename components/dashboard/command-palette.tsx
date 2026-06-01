@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
+import { getNavItemsForVertical } from "@/lib/navigation/dashboard-nav";
 import { useI18n } from "@/lib/i18n/provider";
 
 interface PaletteItem {
@@ -55,6 +55,10 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [recentItems, setRecentItems] = useState<PaletteItem[]>([]);
+  // Same per-vertical filter the sidebar applies — without it the palette
+  // would surface Deliveries / Service Areas / Crew Mobile to verticals
+  // that don't run those features.
+  const [businessType, setBusinessType] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -67,12 +71,14 @@ export function CommandPalette() {
     { id: "qa-help", label: m.commandPalette.openHelpCenter, href: "/dashboard/help", section: "quick", shortcut: "?" },
   ];
 
-  const navigationItems: PaletteItem[] = dashboardNavItems.map((item) => ({
-    id: `nav-${item.href}`,
-    label: item.label,
-    href: item.href,
-    section: "navigation" as const,
-  }));
+  const navigationItems: PaletteItem[] = getNavItemsForVertical(businessType).map(
+    (item) => ({
+      id: `nav-${item.href}`,
+      label: m.dashboard.nav[item.key],
+      href: item.href,
+      section: "navigation" as const,
+    })
+  );
 
   // Load recent items on open
   useEffect(() => {
@@ -80,6 +86,19 @@ export function CommandPalette() {
       setRecentItems(loadRecent());
     }
   }, [open]);
+
+  // Resolve the org's vertical so the navigation section filters the
+  // same way the sidebar does.  We only need this once per mount.
+  useEffect(() => {
+    fetch("/api/org-type")
+      .then(async (r) =>
+        r.ok ? ((await r.json()) as { businessType?: string }) : null
+      )
+      .then((data) => {
+        if (data?.businessType) setBusinessType(data.businessType);
+      })
+      .catch(() => {});
+  }, []);
 
   // Global keyboard shortcut
   useEffect(() => {

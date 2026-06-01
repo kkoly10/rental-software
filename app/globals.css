@@ -635,6 +635,14 @@ a:focus-visible {
   display: block;
 }
 
+/* When the page renders its own headline (hideHeader=true) the bell
+   floats top-right of the main column so it stays reachable. */
+.dashboard-desktop-notifications--floating {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
+}
+
 .sidebar a {
   display: block;
   padding: 11px 14px;
@@ -1096,7 +1104,8 @@ textarea[aria-invalid="true"] {
     display: flex;
   }
 
-  .dashboard-desktop-notifications {
+  .dashboard-desktop-notifications,
+  .dashboard-desktop-notifications--floating {
     display: none;
   }
 
