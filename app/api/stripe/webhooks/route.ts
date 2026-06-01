@@ -6,6 +6,7 @@ import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
+import { logAppError } from "@/lib/observability/server";
 import type Stripe from "stripe";
 
 // #360 After each material order/payment state change, invalidate the pages
@@ -167,7 +168,18 @@ export async function POST(request: NextRequest) {
                 break;
               }
               if (insertErr) {
-                console.error("Payment insert failed:", insertErr.message);
+                await logAppError({
+                  organizationId: orgId,
+                  source: "stripe-webhook",
+                  message: "checkout.session.completed: payment row insert failed",
+                  route: "/api/stripe/webhooks",
+                  context: {
+                    event_id: event.id,
+                    order_id: orderId,
+                    db_error_code: insertErr.code,
+                    db_error_message: insertErr.message,
+                  },
+                });
                 break;
               }
 
@@ -244,7 +256,16 @@ export async function POST(request: NextRequest) {
                         deliveryFee: Number(orderData.delivery_fee_amount ?? 0),
                         total: Number(orderData.total_amount ?? 0),
                         depositDue: Number(orderData.deposit_due_amount ?? 0),
-                      }).catch((e: unknown) => console.error("Stripe webhook: order confirmation email failed:", e));
+                      }).catch((e: unknown) =>
+                        logAppError({
+                          organizationId: orgId,
+                          source: "stripe-webhook",
+                          message: "checkout.session.completed: order confirmation email failed",
+                          route: "/api/stripe/webhooks",
+                          context: { event_id: event.id, order_id: orderId, customer_email: customer.email },
+                          error: e,
+                        })
+                      );
                     }
 
                     await triggerPaymentReceivedEmail({
@@ -260,7 +281,14 @@ export async function POST(request: NextRequest) {
                   }
                 }
               } catch (emailErr) {
-                console.error("Stripe webhook: payment confirmation email failed:", emailErr);
+                await logAppError({
+                  organizationId: orgId,
+                  source: "stripe-webhook",
+                  message: "checkout.session.completed: payment confirmation email failed",
+                  route: "/api/stripe/webhooks",
+                  context: { event_id: event.id, order_id: orderId },
+                  error: emailErr,
+                });
               }
 
               // In-app notification for operator
@@ -281,8 +309,15 @@ export async function POST(request: NextRequest) {
                   `$${amountPaid.toFixed(2)} ${paymentType} via Stripe — Order ${orderNumber}`,
                   `/dashboard/orders/${orderId}`
                 );
-              } catch {
-                // Non-critical
+              } catch (notifErr) {
+                await logAppError({
+                  organizationId: orgId,
+                  source: "stripe-webhook",
+                  message: "checkout.session.completed: operator notification creation failed",
+                  route: "/api/stripe/webhooks",
+                  context: { event_id: event.id, order_id: orderId },
+                  error: notifErr,
+                });
               }
 
               revalidateOrderAndPayments(orderId);
@@ -310,7 +345,24 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (!originalPayment) break;
-        const refundOrgId = (originalPayment.orders as unknown as { organization_id: string }).organization_id;
+        // `orders` arrives as either a single row or an array depending on the
+        // PostgREST embed shape; narrow safely and bail out (logging) if the
+        // joined org is missing rather than dereferencing undefined.
+        const ordersJoin = originalPayment.orders as unknown;
+        const ordersRow = Array.isArray(ordersJoin) ? ordersJoin[0] : ordersJoin;
+        const refundOrgId =
+          typeof ordersRow === "object" && ordersRow !== null && typeof (ordersRow as { organization_id?: unknown }).organization_id === "string"
+            ? (ordersRow as { organization_id: string }).organization_id
+            : null;
+        if (!refundOrgId) {
+          await logAppError({
+            source: "stripe-webhook",
+            message: "charge.refunded: missing organization_id on original payment",
+            route: "/api/stripe/webhooks",
+            context: { event_id: event.id, payment_id: originalPayment.id, order_id: originalPayment.order_id },
+          });
+          break;
+        }
 
         // Process each individual refund object; each has a unique id for dedup.
         // Webhook Charge payloads don't reliably expand the `refunds` sub-list
@@ -405,7 +457,14 @@ export async function POST(request: NextRequest) {
               }
             }
           } catch (refundEmailErr) {
-            console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);
+            await logAppError({
+              organizationId: refundOrgId,
+              source: "stripe-webhook",
+              message: "charge.refunded: refund notification email failed",
+              route: "/api/stripe/webhooks",
+              context: { event_id: event.id, order_id: originalPayment.order_id },
+              error: refundEmailErr,
+            });
           }
 
           revalidateOrderAndPayments(originalPayment.order_id);
@@ -490,7 +549,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Release the idempotency claim so Stripe's retry can reprocess this event.
     await admin.from("stripe_webhook_events").delete().eq("event_id", event.id);
-    console.error(`[stripe-webhook] Handler error for ${event.type}:`, error instanceof Error ? error.message : String(error));
+    await logAppError({
+      source: "stripe-webhook",
+      message: `Handler error for ${event.type}`,
+      route: "/api/stripe/webhooks",
+      context: { event_id: event.id, event_type: event.type },
+      error,
+    });
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
