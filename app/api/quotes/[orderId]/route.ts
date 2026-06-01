@@ -103,6 +103,26 @@ export async function GET(
   const siteUrl = await getSiteUrl();
   const portalUrl = `${siteUrl}/order-status`;
 
+  // Same non-Latin-glyph caveat as the invoice route: jsPDF's bundled
+  // Helvetica drops CJK / Arabic / Hebrew characters. Log so operators
+  // can see when a quote was rendered against an affected name.
+  const nonLatinFields = [
+    customerName,
+    ...orderItems.map((i) => i.item_name_snapshot ?? ""),
+  ].filter((s) => /[^ -ÿ]/.test(s));
+  if (nonLatinFields.length > 0) {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "quotes.pdf",
+      action: "non_latin_render_warning",
+      status: "warning",
+      route: "/api/quotes/[orderId]",
+      metadata: { order_id: orderId, affected_field_count: nonLatinFields.length },
+    });
+  }
+
   const pdfBytes = generateQuotePdf({
     businessName: org?.name ?? "Rental Co",
     supportEmail: org?.support_email ?? "",

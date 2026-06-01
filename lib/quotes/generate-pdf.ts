@@ -130,7 +130,13 @@ export function generateQuotePdf(data: QuotePdfData): Uint8Array {
       doc.setFillColor(249, 251, 254);
       doc.rect(margin, y, contentWidth, 24, "F");
     }
-    const nameLine = (doc.splitTextToSize(item.name, 290)[0] as string) ?? item.name;
+    // Append "…" when the name overflows the column so the truncation
+    // is visible to the recipient rather than silently dropping the tail.
+    const split = doc.splitTextToSize(item.name, 290) as string[];
+    const firstLine = split[0] ?? item.name;
+    const nameLine = split.length > 1 || firstLine.length < item.name.length
+      ? firstLine.replace(/\s*\S{0,3}$/, "") + "…"
+      : firstLine;
     doc.text(nameLine, margin + 12, y + 16);
     doc.text(String(item.quantity), margin + 320, y + 16, { align: "right" });
     doc.text(formatMoney(item.unitPrice), margin + 400, y + 16, { align: "right" });

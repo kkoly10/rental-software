@@ -140,7 +140,15 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
     }
 
     // Clamp the name to the name column so it can't overrun the numeric columns.
-    const nameLine = (doc.splitTextToSize(item.name, 290)[0] as string) ?? item.name;
+    // Previously took splitTextToSize[0] silently — long names lost their
+    // tail with no visual indicator. Append an ellipsis when truncation
+    // actually happened so the operator/customer can tell they're seeing
+    // a shortened name and reach for the full record if needed.
+    const split = doc.splitTextToSize(item.name, 290) as string[];
+    const firstLine = split[0] ?? item.name;
+    const nameLine = split.length > 1 || firstLine.length < item.name.length
+      ? firstLine.replace(/\s*\S{0,3}$/, "") + "…"
+      : firstLine;
     doc.text(nameLine, margin + 12, y + 16);
     doc.text(String(item.quantity), margin + 320, y + 16, { align: "right" });
     doc.text(formatMoney(item.unitPrice), margin + 400, y + 16, { align: "right" });
