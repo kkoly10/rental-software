@@ -21,9 +21,10 @@ function verifyCronSecret(request: NextRequest): boolean {
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
 function daysAgoISO(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString();
+  // UTC arithmetic — `d.setDate(d.getDate() - days)` is local-time
+  // arithmetic, which on the DST spring-forward day can be off by an hour
+  // or roll into a different calendar day after .toISOString().
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 // ─── Email templates ──────────────────────────────────────────────────────
