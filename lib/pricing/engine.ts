@@ -25,14 +25,22 @@ export function calculatePrice(
     .filter((r) => r.isActive)
     .sort((a, b) => b.priority - a.priority);
 
-  const eventDateObj = new Date(context.eventDate + "T00:00:00");
-  const now = new Date();
+  // Anchor both dates to UTC midnight so the day-difference math doesn't
+  // depend on the server's local TZ. The previous version used
+  // `new Date(date + "T00:00:00")` (local) and `new Date(year, month, day)`
+  // (local) which produced different daysUntilEvent values on servers
+  // in different timezones — early-bird/last-minute pricing rules then
+  // applied differently depending on which Vercel region answered the
+  // request.
+  const eventDateObj = new Date(context.eventDate + "T00:00:00Z");
   const bookingDateObj = context.bookingDate
-    ? new Date(context.bookingDate + "T00:00:00")
-    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    ? new Date(context.bookingDate + "T00:00:00Z")
+    : (() => {
+        const n = new Date();
+        return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+      })();
 
-  // Both operands are at local midnight, so the difference is whole days
-  // (round guards against DST hour shifts).
+  // Both operands are at UTC midnight, so the difference is whole days.
   const daysUntilEvent = Math.round(
     (eventDateObj.getTime() - bookingDateObj.getTime()) / (1000 * 60 * 60 * 24)
   );
