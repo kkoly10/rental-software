@@ -845,7 +845,10 @@ export async function updateOrderStatus(
         supabase,
       );
       if (result.attached) {
-        autoAttachSuffix = ` Added to route "${result.routeName}".`;
+        // Unnamed routes are common in newly-created orgs; fall back so
+        // the operator doesn't see literal `Added to route "".`.
+        const displayName = result.routeName?.trim() || "today's route";
+        autoAttachSuffix = ` Added to route "${displayName}".`;
         // Make sure the deliveries surfaces re-render with the new stop.
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
       } else if (result.reason === "insert_failed") {
