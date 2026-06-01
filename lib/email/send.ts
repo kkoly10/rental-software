@@ -36,11 +36,32 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
   try {
     const resend = getResend();
+    // Plain-text MIME fallback: clients that disable HTML (privacy
+    // tools, accessibility readers, some corporate filters) used to
+    // see raw HTML markup. Generate a stripped text version by
+    // removing tags + collapsing whitespace. Resend's `text` field
+    // becomes the multipart/alternative companion to the HTML body.
+    const textFallback = payload.html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
     const { error } = await resend.emails.send({
       from: fromAddress,
       to: payload.to,
       subject: payload.subject,
       html: payload.html,
+      text: textFallback,
       replyTo: payload.replyTo,
     });
 
