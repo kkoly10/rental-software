@@ -33,12 +33,29 @@ export async function updateBusinessProfile(
   formData: FormData
 ): Promise<SettingsActionState> {
   const name = String(formData.get("name") ?? "").trim().slice(0, 255);
-  const supportEmail = String(formData.get("support_email") ?? "").trim().slice(0, 320);
+  const rawSupportEmail = String(formData.get("support_email") ?? "").trim().slice(0, 320);
   const phone = String(formData.get("phone") ?? "").trim().slice(0, 50);
   const timezone = String(formData.get("timezone") ?? "").trim().slice(0, 100);
 
   if (!name) {
     return { ok: false, message: "Business name is required." };
+  }
+
+  // support_email is used as a Reply-To address on outbound mail. A
+  // value with CRLF / semicolons / multiple addresses would let an
+  // owner inject extra mail headers. Validate strictly here; the
+  // input element's type="email" is browser-only and easily bypassed.
+  let supportEmail = "";
+  if (rawSupportEmail) {
+    const { strictParseEmail } = await import("@/lib/security/header-safe");
+    const parsed = strictParseEmail(rawSupportEmail);
+    if (!parsed) {
+      return {
+        ok: false,
+        message: "Support email must be a single valid email address.",
+      };
+    }
+    supportEmail = parsed;
   }
 
   if (!hasSupabaseEnv()) {
