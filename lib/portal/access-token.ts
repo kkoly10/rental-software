@@ -37,3 +37,32 @@ export async function issuePortalAccessToken(options: {
 
   return token;
 }
+
+/**
+ * Invalidate the portal token currently on an order so any outstanding links
+ * (in customer email archives, leaked screenshots, breached inboxes) stop
+ * working immediately. The customer can re-acquire access at /order-status
+ * via the order-number + email lookup form, which will issue a fresh token.
+ *
+ * Idempotent — calling it on an order without a token is a no-op.
+ */
+export async function revokePortalAccessTokenRow(options: {
+  supabase: any;
+  orderId: string;
+  organizationId: string;
+}): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await options.supabase
+    .from("orders")
+    .update({
+      portal_access_token_hash: null,
+      portal_access_token_created_at: null,
+    })
+    .eq("id", options.orderId)
+    .eq("organization_id", options.organizationId)
+    .is("deleted_at", null);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+  return { ok: true };
+}
