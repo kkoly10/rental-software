@@ -458,7 +458,13 @@ export async function resetPassword(
     status: "success",
   });
 
-  await supabase.auth.signOut();
+  // Explicitly invalidate ALL of this user's sessions, not just the
+  // one held by the current request. After a password reset we want
+  // any concurrent attacker session (e.g. from a phishing-stolen
+  // token that prompted the reset in the first place) to lose access
+  // immediately. `scope: 'global'` triggers Supabase to revoke every
+  // active refresh token for this user.
+  await supabase.auth.signOut({ scope: "global" });
   redirect("/login?reset=success");
 }
 
