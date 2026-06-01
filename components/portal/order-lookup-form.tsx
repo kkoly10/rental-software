@@ -77,7 +77,7 @@ export function OrderLookupForm({ initialState }: Props) {
           </div>
 
           {!state.ok && state.message && (
-            <div className="badge warning" style={{ marginTop: 12 }}>
+            <div role="alert" aria-live="assertive" className="badge warning" style={{ marginTop: 12 }}>
               {state.message}
             </div>
           )}
