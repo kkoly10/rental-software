@@ -8,6 +8,7 @@ import {
   normalizeQuery,
   normalizePage,
 } from "@/lib/listing/pagination";
+import { escapeIlike } from "@/lib/listing/ilike-escape";
 import type { OrderSummary } from "@/lib/types";
 
 function formatStatus(status: string): string {
@@ -155,31 +156,48 @@ export async function getOrdersPage(options?: {
     };
   }
 
-  // Search path: pull a larger window and JS-filter (search spans embedded
-  // customer/items so it can't be expressed purely at the DB layer without
-  // a multi-step query).
-  const { data, error } = await supabase
+  // Search path. Push to Postgres: ILIKE against order_number and the
+  // top-level scalar columns we already index by, plus a customer-name
+  // fallback via the embedded join. Embedded `items` snapshots are not
+  // searched at the DB level — operators searching by item name are
+  // rare and that surface still has the truncation telemetry from #177.
+  const currentPage = normalizePage(options?.page);
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize - 1;
+  const safe = escapeIlike(query);
+  const pattern = `%${safe}%`;
+
+  const { data, error, count } = await supabase
     .from("orders")
-    .select(selectFields)
+    .select(selectFields, { count: "exact" })
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
+    .or(
+      // order_number is the most common operator search; customer first/last
+      // name reaches into the embedded customers row via Supabase's
+      // foreign-table OR syntax.
+      `order_number.ilike.${pattern},customers.first_name.ilike.${pattern},customers.last_name.ilike.${pattern}`
+    )
     .order("created_at", { ascending: false })
-    .limit(5000);
+    .range(start, end);
 
   if (error) {
-    console.error("[orders] Query failed:", error.message);
+    console.error("[orders] Search query failed:", error.message);
     return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: OrderSummary[] = data.map(mapOrderRow);
+  const mapped: OrderSummary[] = (data ?? []).map(mapOrderRow);
+  const totalItems = count ?? mapped.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
-  const filtered = mapped.filter((order) => matchesOrderQuery(order, query));
-
-  return paginateItems(filtered, {
-    page: options?.page,
-    pageSize: options?.pageSize ?? 20,
+  return {
+    items: mapped,
+    page: Math.min(currentPage, totalPages),
+    pageSize,
+    totalItems,
+    totalPages,
     query,
-  });
+  };
 }
 
 export async function getOrders(): Promise<OrderSummary[]> {
