@@ -87,6 +87,7 @@ export async function createCheckoutOrder(
     productSlug: String(formData.get("product_slug") ?? ""),
     fulfillmentType: String(formData.get("fulfillment_type") ?? "delivery"),
     rentalEndDate: String(formData.get("rental_end_date") ?? ""),
+    idempotencyKey: String(formData.get("idempotency_key") ?? ""),
   });
 
   if (!parsed.success) {
@@ -135,7 +136,9 @@ export async function createCheckoutOrder(
     productSlug,
     fulfillmentType,
     rentalEndDate,
+    idempotencyKey: rawIdempotencyKey,
   } = parsed.data;
+  const idempotencyKey = rawIdempotencyKey && rawIdempotencyKey.length > 0 ? rawIdempotencyKey : null;
 
   try {
     const clientKey = await getActionClientKey();
@@ -198,6 +201,30 @@ export async function createCheckoutOrder(
   const demoCheck = await blockDemoWrites(orgId);
   if (demoCheck.blocked) {
     return { ok: false, message: demoCheck.message };
+  }
+
+  // Idempotency replay: if the client sent a key we've already seen
+  // for this org (browser retried a successful submission whose
+  // response was lost), return the original order's number instead of
+  // starting a new one. Skipped when no key — the rate limiter still
+  // covers older clients.
+  if (orgId && idempotencyKey) {
+    const { createSupabaseAdminClient: createAdmin, hasSupabaseServiceRoleEnv: hasSrk } = await import("@/lib/supabase/admin");
+    const replaySupabase = hasSrk() ? createAdmin() : await createSupabaseServerClient();
+    const { data: replay } = await replaySupabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", orgId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (replay?.order_number) {
+      return {
+        ok: true,
+        message: "Your booking is already in. Showing your existing order.",
+        orderNumber: replay.order_number,
+      };
+    }
   }
 
   if (!orgId) {
@@ -580,9 +607,32 @@ export async function createCheckoutOrder(
       source_channel: "website",
       terms_accepted_at: new Date().toISOString(),
       notes: serviceArea ? `Service area: ${serviceArea.label}` : null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
+
+  // Concurrent retry hit the unique (org, idempotency_key) index between
+  // our SELECT replay check above and the INSERT here. Return the
+  // already-created order's response instead of failing the user.
+  if (orderError?.code === "23505" && idempotencyKey) {
+    const { data: raced } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", orgId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (raced?.order_number) {
+      // Don't roll back the address / customer — the other request
+      // owns them and is currently mid-flight or just committed.
+      return {
+        ok: true,
+        message: "Your booking is already in. Showing your existing order.",
+        orderNumber: raced.order_number,
+      };
+    }
+  }
 
   if (orderError || !order) {
     if (deliveryAddressId) {
