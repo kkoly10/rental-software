@@ -116,6 +116,24 @@ export async function recordPayment(
     return { ok: false, message: "Order not found." };
   }
 
+  // Reject payment recordings against terminal-state orders. A
+  // refund on a cancelled order or any positive payment on a
+  // refunded / completed order doesn't make sense and would corrupt
+  // the financials view. Operators can reopen an order via status
+  // transition first if they need to.
+  if (order.order_status === "cancelled" || order.order_status === "refunded") {
+    return {
+      ok: false,
+      message: `Cannot record payments on a ${order.order_status} order.`,
+    };
+  }
+  if (order.order_status === "completed" && paymentType !== "refund") {
+    return {
+      ok: false,
+      message: "Cannot record additional payments on a completed order. Only refunds are allowed.",
+    };
+  }
+
   // Atomically validate + insert + update cached balance via DB function.
   // The function uses SELECT FOR UPDATE on the order row to prevent concurrent
   // payments from both passing the balance check before either is committed.

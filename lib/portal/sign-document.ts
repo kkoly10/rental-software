@@ -96,7 +96,7 @@ export async function signDocument(
   const tokenHash = hashPortalAccessToken(portalToken);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, portal_access_token_created_at")
+    .select("id, order_status, portal_access_token_created_at")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .maybeSingle();
@@ -109,6 +109,21 @@ export async function signDocument(
   }
   if (isPortalTokenExpired(order.portal_access_token_created_at)) {
     return { ok: false, message: "This portal link has expired. Contact us for a new one." };
+  }
+  // Reject signing on a terminal-state order. A signature collected
+  // post-cancellation would create a misleading audit trail
+  // ("customer signed a rental agreement on a booking that was
+  // already cancelled"). The same guard runs in the API route too;
+  // belt-and-braces because both paths can be hit independently.
+  if (
+    order.order_status === "cancelled" ||
+    order.order_status === "refunded" ||
+    order.order_status === "completed"
+  ) {
+    return {
+      ok: false,
+      message: "This order is no longer accepting document signatures. Contact us if you have questions.",
+    };
   }
 
   const { data: doc } = await supabase

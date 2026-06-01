@@ -175,12 +175,17 @@ export async function updateStopStatus(
       .eq("id", stopId);
   }
 
-  // If stop is en_route or in_progress, set route to in_progress
+  // If stop is en_route or in_progress, set route to in_progress —
+  // but ONLY if the route is currently planned. Without the
+  // route_status filter, a stop transition could silently revert a
+  // route that's already been marked completed (e.g. by a dispatcher
+  // wrapping up the day) back to in_progress.
   if (newStatus === "en_route" || newStatus === "in_progress") {
     await supabase
       .from("routes")
       .update({ route_status: "in_progress" })
-      .eq("id", stop.route_id);
+      .eq("id", stop.route_id)
+      .in("route_status", ["planned"]);
   }
 
   // Issue tracking token and send SMS when driver marks en_route.

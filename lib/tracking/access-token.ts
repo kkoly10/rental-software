@@ -22,11 +22,22 @@ export async function issueTrackingToken(options: {
   const tokenHash = hashTrackingToken(token);
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
 
-  const { error } = await supabase
+  // Only issue tokens for stops the driver is actively on the way to —
+  // tracking links on completed / skipped / pending stops are
+  // confusing for the customer (a "pending" link wakes the map view
+  // before the driver has actually left). Gate via the UPDATE's
+  // WHERE clause so a concurrent status change can't slip a token
+  // onto a stop that's no longer en_route.
+  const { data: updated, error } = await supabase
     .from("route_stops")
     .update({ tracking_token_hash: tokenHash, tracking_token_expires_at: expiresAt })
-    .eq("id", stopId);
+    .eq("id", stopId)
+    .eq("stop_status", "en_route")
+    .select("id");
 
   if (error) throw new Error(`Failed to issue tracking token: ${error.message}`);
+  if (!updated || updated.length === 0) {
+    throw new Error("Stop is not en_route; cannot issue tracking token.");
+  }
   return token;
 }

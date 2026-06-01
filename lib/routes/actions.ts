@@ -208,6 +208,26 @@ export async function removeStopFromRoute(
           .eq("id", s.id)
       )
     );
+  } else {
+    // Last stop removed — the route is now a zombie row that shows in
+    // the dashboard with "0 stops" forever unless the operator
+    // manually deletes it. Auto-delete only if the route is still in
+    // "planned" status (touching an in_progress / completed route
+    // would lose audit history that ops might want to investigate).
+    const { data: routeRow } = await supabase
+      .from("routes")
+      .select("route_status")
+      .eq("id", routeId)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    if (routeRow?.route_status === "planned") {
+      await supabase
+        .from("routes")
+        .delete()
+        .eq("id", routeId)
+        .eq("organization_id", ctx.organizationId)
+        .eq("route_status", "planned");
+    }
   }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
@@ -247,6 +267,26 @@ export async function updateRouteStatus(
   // #349 Don't allow terminal → non-terminal transitions; without this guard
   // an operator could flip a completed route back to planned and wipe out
   // historical state implicitly.
+
+  // Manual route-completion guard: refuse if any stops are still
+  // pending or en_route. Without this, a dispatcher can mark a route
+  // "completed" mid-day, which immediately suppresses it from the
+  // delivery board and the crew can no longer interact with their
+  // remaining stops. Skipped stops are fine; they're terminal.
+  if (status === "completed") {
+    const { count: unfinishedCount } = await supabase
+      .from("route_stops")
+      .select("id", { count: "exact", head: true })
+      .eq("route_id", routeId)
+      .in("stop_status", ["pending", "en_route"]);
+    if ((unfinishedCount ?? 0) > 0) {
+      return {
+        ok: false,
+        message: "Some stops are still pending or in progress. Mark them completed or skipped first.",
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("routes")
     .update({ route_status: status })
@@ -298,12 +338,38 @@ export async function updateStopStatus(
   // Verify the stop belongs to a route owned by this org before updating
   const { data: stop } = await supabase
     .from("route_stops")
-    .select("id, stop_type, order_id, routes!inner(organization_id)")
+    .select("id, stop_type, order_id, stop_status, routes!inner(organization_id)")
     .eq("id", stopId)
     .maybeSingle();
 
   if (!stop || (stop.routes as unknown as { organization_id: string }).organization_id !== ctx.organizationId) {
     return { ok: false, message: "Stop not found." };
+  }
+
+  // Stop state-machine guard, runs AFTER the org check so cross-org
+  // probes can't read the stop's status via the rejection message:
+  //   pending  → {en_route, completed, skipped}
+  //   en_route → {completed, skipped, pending}  (driver retreated)
+  //   completed / skipped — terminal
+  // Without this, a dispatcher could flip completed → pending,
+  // losing the completion timestamp and the downstream "order
+  // delivered" auto-sync that fires when the stop completes.
+  const currentStopStatus = (stop as unknown as { stop_status: string | null }).stop_status ?? null;
+  const ALLOWED: Record<string, string[]> = {
+    pending: ["en_route", "completed", "skipped"],
+    en_route: ["completed", "skipped", "pending"],
+    completed: [],
+    skipped: [],
+  };
+  if (
+    currentStopStatus &&
+    currentStopStatus !== status &&
+    !ALLOWED[currentStopStatus]?.includes(status)
+  ) {
+    return {
+      ok: false,
+      message: `Cannot move stop from "${currentStopStatus}" to "${status}".`,
+    };
   }
 
   const resolvedOrderId = orderId ?? (stop.order_id as string | null) ?? null;
