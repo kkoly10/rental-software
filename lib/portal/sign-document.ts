@@ -3,7 +3,6 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
@@ -87,11 +86,12 @@ export async function signDocument(
     return { ok: false, message: demoCheck.message };
   }
 
-  // Customer signs are anon — cookie-bound RLS can't see orders/documents.
-  // Org isolation via the explicit .eq("organization_id", orgId).
-  const supabase = hasSupabaseServiceRoleEnv()
-    ? createSupabaseAdminClient()
-    : await createSupabaseServerClient();
+  // Customer signs are anon. Service-role bypasses RLS; org isolation is
+  // enforced by the explicit .eq("organization_id", orgId) below.
+  if (!hasSupabaseServiceRoleEnv()) {
+    return { ok: false, message: "Service not available." };
+  }
+  const supabase = createSupabaseAdminClient();
 
   const tokenHash = hashPortalAccessToken(portalToken);
   const { data: order } = await supabase

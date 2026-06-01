@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { hashPortalAccessToken } from "@/lib/portal/access-token";
@@ -59,7 +59,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: demoCheck.message }, { status: 403 });
   }
 
-  const supabase = await createSupabaseServerClient();
+  if (!hasSupabaseServiceRoleEnv()) {
+    return NextResponse.json({ error: "Service not available." }, { status: 503 });
+  }
+  const supabase = createSupabaseAdminClient();
   const tokenHash = hashPortalAccessToken(portalToken);
 
   const { data: order } = await supabase
