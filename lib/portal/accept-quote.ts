@@ -55,7 +55,7 @@ export async function acceptQuote(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status, portal_access_token_created_at, order_number, product_id, event_date, event_start_time, event_end_time, rental_end_date, customer_id")
+    .select("id, order_status, portal_access_token_created_at, order_number, product_id, event_date, event_start_time, event_end_time, event_start_local, event_end_local, rental_end_date, customer_id")
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .is("deleted_at", null)
@@ -82,9 +82,15 @@ export async function acceptQuote(
   if (order.product_id && order.event_date) {
     try {
       const { reserveProductAvailabilityBlock } = await import("@/lib/availability/blocks");
-      // event_start_time/event_end_time are full timestamps; the window builder
-      // expects HH:MM, so derive that (in UTC, matching how they were stored).
-      const toHHMM = (ts: string | null) => {
+      // event_start_local / event_end_local are TIME columns holding
+      // the operator's wall-clock directly. Trim seconds off the
+      // 'HH:MM:SS' format Supabase returns for TIME to get the HH:MM
+      // the window builder wants. Falls back to legacy UTC-slice on
+      // event_start_time for rows that haven't been backfilled (the
+      // migration covers existing data, but a hand-edited row could
+      // arrive without event_start_local set).
+      const localToHHMM = (s: string | null) => (s ? s.slice(0, 5) : null);
+      const legacyToHHMM = (ts: string | null) => {
         if (!ts) return null;
         const d = new Date(ts);
         return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(11, 16);
@@ -94,8 +100,8 @@ export async function acceptQuote(
         productId: order.product_id,
         orderId: order.id,
         eventDate: order.event_date,
-        startTime: toHHMM(order.event_start_time),
-        endTime: toHHMM(order.event_end_time),
+        startTime: localToHHMM(order.event_start_local as string | null) ?? legacyToHHMM(order.event_start_time),
+        endTime: localToHHMM(order.event_end_local as string | null) ?? legacyToHHMM(order.event_end_time),
         rentalEndDate: order.rental_end_date,
         source: "dashboard", // permanent hold — no expiry
       });
