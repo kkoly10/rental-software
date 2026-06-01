@@ -9,20 +9,11 @@ import {
   postEventFollowUpEmail,
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates matching orders and sends emails; give it headroom over
 // the default serverless timeout.
 export const maxDuration = 60;
-
-// ─── Auth ──────────────────────────────────────────────────────────────────
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const secret = getOptionalEnv("CRON_SECRET");
-  if (!secret) return false; // no secret configured → block all
-
-  const authHeader = request.headers.get("authorization");
-  return authHeader === `Bearer ${secret}`;
-}
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
