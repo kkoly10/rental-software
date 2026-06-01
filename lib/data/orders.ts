@@ -155,31 +155,99 @@ export async function getOrdersPage(options?: {
     };
   }
 
-  // Search path: pull a larger window and JS-filter (search spans embedded
-  // customer/items so it can't be expressed purely at the DB layer without
-  // a multi-step query).
-  const { data, error } = await supabase
-    .from("orders")
-    .select(selectFields)
-    .eq("organization_id", ctx.organizationId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(5000);
+  // Search path: pushed down to Postgres in two phases instead of a
+  // 5000-row JS filter. Previously a search past the 5000-row window
+  // silently missed older orders.
+  //
+  // Phase 1: collect candidate order_ids from three index-friendly
+  //   ilike lookups (orders.order_number, customers by name/email,
+  //   order_items.item_name_snapshot). Each runs in parallel.
+  // Phase 2: fetch the paginated page from orders.in(union).
+  const like = `%${escapeIlike(query)}%`;
+  const orgFilter = ctx.organizationId;
 
-  if (error) {
-    console.error("[orders] Query failed:", error.message);
+  const [orderNumberRes, customerRes, itemRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id")
+      .eq("organization_id", orgFilter)
+      .is("deleted_at", null)
+      .ilike("order_number", like)
+      .limit(5000),
+    supabase
+      .from("customers")
+      .select("id")
+      .eq("organization_id", orgFilter)
+      .is("deleted_at", null)
+      .or(`first_name.ilike.${like},last_name.ilike.${like},email.ilike.${like}`)
+      .limit(2000),
+    supabase
+      .from("order_items")
+      .select("order_id, orders!inner(organization_id)")
+      .eq("orders.organization_id", orgFilter)
+      .ilike("item_name_snapshot", like)
+      .limit(5000),
+  ]);
+
+  const candidateOrderIds = new Set<string>();
+  for (const r of orderNumberRes.data ?? []) candidateOrderIds.add(r.id);
+  for (const r of itemRes.data ?? []) {
+    if (r.order_id) candidateOrderIds.add(r.order_id);
+  }
+
+  // Customer hits → order_ids via a single follow-up query.
+  const customerIds = (customerRes.data ?? []).map((r) => r.id);
+  if (customerIds.length > 0) {
+    const { data: customerOrders } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("organization_id", orgFilter)
+      .is("deleted_at", null)
+      .in("customer_id", customerIds)
+      .limit(5000);
+    for (const r of customerOrders ?? []) candidateOrderIds.add(r.id);
+  }
+
+  if (candidateOrderIds.size === 0) {
     return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: OrderSummary[] = data.map(mapOrderRow);
+  const currentPage = normalizePage(options?.page);
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize - 1;
 
-  const filtered = mapped.filter((order) => matchesOrderQuery(order, query));
+  const { data, error, count } = await supabase
+    .from("orders")
+    .select(selectFields, { count: "exact" })
+    .eq("organization_id", orgFilter)
+    .is("deleted_at", null)
+    .in("id", Array.from(candidateOrderIds))
+    .order("created_at", { ascending: false })
+    .range(start, end);
 
-  return paginateItems(filtered, {
-    page: options?.page,
-    pageSize: options?.pageSize ?? 20,
+  if (error) {
+    console.error("[orders] Search query failed:", error.message);
+    return paginateItems([], { page: options?.page, pageSize, query });
+  }
+
+  const mapped = (data ?? []).map(mapOrderRow);
+  const totalItems = count ?? mapped.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  return {
+    items: mapped,
+    page: Math.min(currentPage, totalPages),
+    pageSize,
+    totalItems,
+    totalPages,
     query,
-  });
+  };
+}
+
+// Postgres ILIKE wildcards are `%` and `_`; backslash is the escape.
+// A user typing "50%" should match "50%" literally, not "anything
+// starting with 50". Same for underscores in product slugs.
+function escapeIlike(value: string): string {
+  return value.replace(/([\\%_])/g, "\\$1");
 }
 
 export async function getOrders(): Promise<OrderSummary[]> {
