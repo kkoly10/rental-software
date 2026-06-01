@@ -41,7 +41,11 @@ export async function GET(request: NextRequest) {
     .select("id, source_order_id, organization_id, orders!inner(order_status)")
     .eq("block_type", "checkout_hold")
     .lt("expires_at", now)
-    .eq("orders.order_status", "awaiting_deposit");
+    .eq("orders.order_status", "awaiting_deposit")
+    // Bound the per-run batch — the cron is scheduled every 15 minutes, so
+    // any backlog beyond this is picked up by the next run instead of
+    // exhausting memory / the 60s budget in a single invocation.
+    .limit(5000);
 
   if (fetchError) {
     console.error("Failed to fetch expired holds:", fetchError.message);
