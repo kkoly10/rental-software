@@ -465,7 +465,33 @@ export async function createCheckoutOrder(
       .select("id")
       .single();
 
-    if (customerError || !customer) {
+    if (customerError?.code === "23505") {
+      // Race: another concurrent checkout for the same email won the
+      // unique (organization_id, email) insert milliseconds before us.
+      // Re-SELECT and continue rather than failing the customer with a
+      // generic "couldn't create your account" message.
+      const { data: existing } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("organization_id", orgId)
+        .ilike("email", email)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (!existing) {
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website",
+          message: "Customer insert hit unique constraint but re-SELECT found no row",
+          context: { reason: customerError.message },
+        });
+        return { ok: false, message: "We couldn't create your account. Please try again." };
+      }
+      customerId = existing.id;
+      // Don't set newCustomerId — the other request owns the row, we
+      // shouldn't rollback-delete it on later failure.
+    } else if (customerError || !customer) {
       await logAppError({
         organizationId: orgId,
         source: "checkout.website",
@@ -477,10 +503,10 @@ export async function createCheckoutOrder(
         ok: false,
         message: "We couldn't create your account. Please try again.",
       };
+    } else {
+      customerId = customer.id;
+      newCustomerId = customer.id;
     }
-
-    customerId = customer.id;
-    newCustomerId = customer.id;
   }
 
   let deliveryAddressId: string | null = null;

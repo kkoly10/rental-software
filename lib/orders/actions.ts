@@ -332,12 +332,29 @@ export async function createOrder(
         .select("id")
         .single();
 
-      if (custErr || !newCust) {
+      if (custErr?.code === "23505") {
+        // Race: a concurrent order-create for the same email won the
+        // unique (organization_id, email) insert milliseconds before
+        // us. Re-SELECT and continue rather than failing.
+        const { data: raced } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("organization_id", ctx.organizationId)
+          .eq("email", email)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (!raced) {
+          console.error("[orders] customer insert 23505 but re-select missing:", custErr.message);
+          return { ok: false, message: "Failed to create customer." };
+        }
+        customerId = raced.id;
+      } else if (custErr || !newCust) {
         if (custErr) console.error("[orders] create customer failed:", custErr.message);
         return { ok: false, message: "Failed to create customer." };
+      } else {
+        customerId = newCust.id;
       }
-
-      customerId = newCust.id;
     }
   } else {
     const { data: newCust, error: custErr } = await supabase
