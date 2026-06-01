@@ -2195,6 +2195,18 @@ export const es: Messages = {
     openHelpCenter: "Abrir centro de ayuda",
   },
 
+  sms: {
+    orderConfirmation: "{businessName}: ¡Pedido #{orderNumber} confirmado! Te contactaremos con los detalles de entrega. Responde STOP para darte de baja.",
+    depositReminder: "{businessName}: Hay un depósito de {amount} pendiente para el pedido #{orderNumber}. Páguelo para asegurar la fecha. Responde STOP para darte de baja.",
+    deliveryScheduled: "{businessName}: Entrega del pedido #{orderNumber} el {date}, {timeWindow}. Te avisaremos cuando salgamos. Responde STOP para darte de baja.",
+    deliveryEnRoute: "{businessName}: ¡El equipo está en camino para el pedido #{orderNumber}! ETA: {eta}. Responde STOP para darte de baja.",
+    deliveryEnRouteWithTracking: "{businessName}: ¡El equipo está en camino para el pedido #{orderNumber}! ETA: {eta}. Sigue: {trackingUrl} Responde STOP para darte de baja.",
+    deliveryCompleted: "{businessName}: Pedido #{orderNumber} entregado e instalado. ¡Disfruta tu evento! Responde STOP para darte de baja.",
+    weatherAlert: "{businessName}: Alerta meteorológica el {date} que podría afectar el pedido #{orderNumber}. Te contactaremos si hay cambios. Responde STOP para darte de baja.",
+    paymentReceived: "{businessName}: Pago de {amount} recibido para el pedido #{orderNumber}. ¡Gracias! Responde STOP para darte de baja.",
+    orderCancelled: "{businessName}: El pedido #{orderNumber} ha sido cancelado. Contáctanos si tienes preguntas. Responde STOP para darte de baja.",
+  },
+
   notifications: {
     title: "Notificaciones",
     ariaLabel: "Notificaciones",
