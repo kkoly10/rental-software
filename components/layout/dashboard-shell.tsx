@@ -197,8 +197,18 @@ export function DashboardShell({
     setCollapsedGroups(loadCollapsedGroups());
   }, []);
 
+  // Render guard: null = still loading (show skeleton).  Empty string
+  // = API responded but the org has no businessType set; treat that
+  // as a known state and resolve groupedNav, which handles the empty
+  // case by including all unverticalised items.  Without the explicit
+  // `!== null` check, `"" ? ... : null` is falsy and the sidebar
+  // stays stuck on the skeleton — the same #20 trap from before, just
+  // shifted one render-stage down.
   const groupedNav = useMemo(
-    () => (businessType ? getGroupedNavItemsForVertical(businessType) : null),
+    () =>
+      businessType !== null
+        ? getGroupedNavItemsForVertical(businessType)
+        : null,
     [businessType]
   );
 
