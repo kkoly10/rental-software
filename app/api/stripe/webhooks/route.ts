@@ -6,6 +6,7 @@ import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
+import { fromStripeMinorUnits } from "@/lib/money/currency";
 import type Stripe from "stripe";
 
 // #360 After each material order/payment state change, invalidate the pages
@@ -140,13 +141,9 @@ export async function POST(request: NextRequest) {
             const alreadyRecorded = (count ?? 0) > 0;
 
             if (!alreadyRecorded) {
-              // amount_total is in the currency's minor unit; zero-decimal
-              // currencies (e.g. JPY) must NOT be divided by 100.
-              const zeroDecimal = new Set(["bif","clp","djf","gnf","jpy","kmf","krw","mga","pyg","rwf","ugx","vnd","vuv","xaf","xof","xpf"]);
-              const currency = (session.currency ?? "usd").toLowerCase();
-              const amountPaid = zeroDecimal.has(currency)
-                ? (session.amount_total ?? 0)
-                : (session.amount_total ?? 0) / 100;
+              // amount_total is in the currency's minor unit; the helper
+              // applies zero-decimal handling for JPY/KRW/VND/etc.
+              const amountPaid = fromStripeMinorUnits(session.amount_total ?? 0, session.currency);
               const paymentType = session.metadata?.payment_type === "balance" ? "balance" : "deposit";
 
               // Insert with conflict guard — the unique index on
@@ -316,6 +313,7 @@ export async function POST(request: NextRequest) {
         // Webhook Charge payloads don't reliably expand the `refunds` sub-list
         // (it's paginated and often empty/truncated), so fetch authoritatively
         // from the API to avoid silently dropping refunds.
+        const refundCurrency = charge.currency; // ISO 4217, lowercase
         let refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
         if (refunds.length === 0 && charge.id) {
           try {
@@ -339,7 +337,10 @@ export async function POST(request: NextRequest) {
             order_id: originalPayment.order_id,
             payment_type: "refund",
             payment_status: "paid",
-            amount: refund.amount / 100,
+            // Apply zero-decimal handling based on the charge's currency.
+            // Previously divided by 100 unconditionally — JPY/KRW refunds
+            // were recorded at 1/100th of the correct amount.
+            amount: fromStripeMinorUnits(refund.amount, refundCurrency),
             provider: "stripe",
             provider_payment_id: refundKey,
             paid_at: new Date().toISOString(),
@@ -390,7 +391,10 @@ export async function POST(request: NextRequest) {
                 .is("deleted_at", null)
                 .maybeSingle();
               if (refundCustomer?.email) {
-                const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
+                const totalRefunded = fromStripeMinorUnits(
+                  refunds.reduce((sum, r) => sum + r.amount, 0),
+                  refundCurrency
+                );
                 const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
                 await triggerPaymentReceivedEmail({
                   organizationId: refundOrder.organization_id,
