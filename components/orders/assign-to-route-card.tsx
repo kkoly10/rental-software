@@ -25,7 +25,7 @@ export function AssignToRouteCard({
     return (
       <div className="assign-route-card assign-route-card--info">
         <div className="assign-route-card-headline">
-          {t.alreadyOnRoute.replace("{name}", state.routeName)}
+          {t.alreadyOnRoute.replace("{name}", state.routeName || messages.common.routeFallback)}
         </div>
         <div className="assign-route-card-body">{t.alreadyOnRouteBody}</div>
         <div style={{ marginTop: 10 }}>
@@ -77,6 +77,7 @@ export function AssignToRouteCard({
               stopCount={r.stopCount}
               eventDateRaw={eventDateRaw}
               t={t}
+              fallbackName={messages.common.routeFallback}
             />
           ))}
         </ul>
@@ -107,6 +108,7 @@ function AttachToRouteRow({
   stopCount,
   eventDateRaw,
   t,
+  fallbackName,
 }: {
   orderId: string;
   routeId: string;
@@ -115,6 +117,7 @@ function AttachToRouteRow({
   stopCount: number;
   eventDateRaw: string;
   t: AssignT;
+  fallbackName: string;
 }) {
   const router = useRouter();
   const [actionState, action, pending] = useActionState(addOrderToRoute, initial);
@@ -129,7 +132,7 @@ function AttachToRouteRow({
   return (
     <li className="assign-route-row">
       <div className="assign-route-row-main">
-        <div className="assign-route-row-title">{routeName}</div>
+        <div className="assign-route-row-title">{routeName || fallbackName}</div>
         <div className="assign-route-row-meta">
           {t.stopCount.replace("{n}", String(stopCount))}
           {" · "}

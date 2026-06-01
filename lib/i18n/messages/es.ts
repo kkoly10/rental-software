@@ -11,6 +11,9 @@ export const es: Messages = {
     next: "Siguiente",
     continue: "Continuar",
     close: "Cerrar",
+    customerFallback: "Cliente",
+    rentalFallback: "Alquiler",
+    routeFallback: "Ruta",
     delete: "Eliminar",
     edit: "Editar",
     confirm: "Confirmar",
@@ -606,6 +609,7 @@ export const es: Messages = {
       },
       quickLinks: {
         newOrder: "Crear nuevo pedido",
+        newOrderCta: "+ Nuevo pedido",
         newOrderDesc: "Reserva manual, presupuesto o reserva",
         addProduct: "Añadir producto",
         addProductDesc: "Nuevo producto para el catálogo público",

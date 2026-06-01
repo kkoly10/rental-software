@@ -1,4 +1,5 @@
 import { getTranslator } from "@/lib/i18n/server";
+import { DashboardGreetingHeadline } from "./dashboard-greeting-headline";
 
 /**
  * Personalised hello row above the stats grid.  Mirrors the
@@ -12,36 +13,28 @@ import { getTranslator } from "@/lib/i18n/server";
  * action on the most-visited page.
  */
 
-function pickGreetingKey(): "morning" | "afternoon" | "evening" {
-  const h = new Date().getHours();
-  if (h < 12) return "morning";
-  if (h < 18) return "afternoon";
-  return "evening";
-}
-
 export async function DashboardGreeting({
   businessName,
 }: {
-  businessName: string;
+  businessName?: string | null;
 }) {
-  const { messages: m, t } = await getTranslator();
-  const slot = pickGreetingKey();
-  const greetingTemplate = m.dashboard.overview.greeting[slot];
-  // Fall back to the business name if no value is set yet — the
-  // existing organization-settings fallback returns "" when the
-  // org is unclaimed, and a stray comma in the greeting reads
-  // weird ("Good morning, .").
+  const { messages: m } = await getTranslator();
+  // Fall back to the i18n placeholder when no value is set — a stray
+  // comma in the greeting ("Good morning, .") reads weird and we
+  // can't trust upstream callers to always pass a non-empty string.
   const name = businessName?.trim() ? businessName.trim() : m.dashboard.overview.greeting.fallbackName;
 
   return (
     <div className="dashboard-greeting">
       <div className="dashboard-greeting-text">
-        {/* h1 — this is the page's top-level heading on /dashboard
-            (the DashboardShell title is hidden via the hideHeader
-            prop), so screen readers and SEO expect h1, not h2. */}
-        <h1 className="dashboard-greeting-headline">
-          {t(greetingTemplate, { name })}
-        </h1>
+        <DashboardGreetingHeadline
+          name={name}
+          templates={{
+            morning: m.dashboard.overview.greeting.morning,
+            afternoon: m.dashboard.overview.greeting.afternoon,
+            evening: m.dashboard.overview.greeting.evening,
+          }}
+        />
         <p className="dashboard-greeting-tagline">
           {m.dashboard.overview.greeting.tagline}
         </p>
@@ -50,7 +43,7 @@ export async function DashboardGreeting({
         href="/dashboard/orders/new"
         className="primary-btn dashboard-greeting-cta"
       >
-        + {m.dashboard.overview.quickLinks.newOrder}
+        {m.dashboard.overview.quickLinks.newOrderCta}
       </a>
     </div>
   );

@@ -98,7 +98,7 @@ export async function getOrderRoutingState(
         kind: "already_assigned",
         eventDateRaw: eventDate,
         routeId: r.id,
-        routeName: r.name ?? "Route",
+        routeName: r.name ?? "",
       };
     }
   }
@@ -124,7 +124,7 @@ export async function getOrderRoutingState(
       | null;
     return {
       id: r.id as string,
-      name: (r.name as string) ?? "Route",
+      name: (r.name as string) ?? "",
       routeStatus: (r.status as string) ?? "planned",
       stopCount: stops?.length ?? 0,
     };

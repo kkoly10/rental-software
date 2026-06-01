@@ -26,6 +26,16 @@ export function NewOrderForm({
   const { messages } = useI18n();
   const m = messages.forms.newOrder;
 
+  // `min` on the event_date <input> stops operators from accidentally
+  // booking yesterday.  We compute it once (locale-naive).  If the
+  // form was deep-linked with an already-past initialEventDate, we
+  // skip the min so the prefilled value still counts as valid — back-
+  // filling historical orders is a legitimate use case.
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const minEventDate =
+    initialEventDate && initialEventDate < todayIso ? undefined : todayIso;
+
   const orderStatuses = [
     { value: "inquiry", label: m.statuses.inquiry },
     { value: "quote_sent", label: m.statuses.quoteSent },
@@ -85,6 +95,7 @@ export function NewOrderForm({
             name="event_date"
             type="date"
             defaultValue={initialEventDate}
+            min={minEventDate}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>

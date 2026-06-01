@@ -20,9 +20,20 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
+// Sunday = 0 ... Saturday = 6.  US/CA/JP start weeks on Sunday; most
+// other supported locales start on Monday.  Intl.Locale.weekInfo would
+// give us this dynamically but isn't yet widely supported, so a small
+// per-locale map keeps it predictable.
+function getWeekStartDay(locale: string): number {
+  const root = locale.toLowerCase().split("-")[0];
+  if (root === "en") return 0; // Sunday (US default)
+  return 1; // Monday (fr/es/pt and most others)
+}
+
 function getDayNames(locale: string): string[] {
-  // Sunday-first
-  const base = new Date(2024, 0, 7); // 2024-01-07 is a Sunday
+  const weekStart = getWeekStartDay(locale);
+  // 2024-01-07 is a Sunday; offset so day[0] is the locale's first day.
+  const base = new Date(2024, 0, 7 + weekStart);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(base);
     d.setDate(base.getDate() + i);
@@ -60,8 +71,12 @@ export function MonthGrid({ year, month, events }: Props) {
     router.push(`/dashboard/calendar?year=${y}&month=${m}`);
   }
 
+  const weekStart = getWeekStartDay(locale);
+  // Shift firstDay so cells line up with the locale's week start.
+  // (firstDay - weekStart + 7) % 7 maps Sun=0 → 0 (US) or → 6 (EU).
+  const leadingBlanks = (firstDay - weekStart + 7) % 7;
   const cells: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let i = 0; i < leadingBlanks; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
@@ -151,6 +166,7 @@ export function MonthGrid({ year, month, events }: Props) {
                   {dayEvents.slice(0, 3).map((ev) => (
                     <div
                       key={ev.id}
+                      title={ev.label}
                       style={{
                         fontSize: 11,
                         padding: "2px 5px",

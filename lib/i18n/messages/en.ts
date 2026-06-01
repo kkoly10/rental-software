@@ -12,6 +12,9 @@ const enValues = {
     next: "Next",
     continue: "Continue",
     close: "Close",
+    customerFallback: "Customer",
+    rentalFallback: "Rental",
+    routeFallback: "Route",
     delete: "Delete",
     edit: "Edit",
     confirm: "Confirm",
@@ -607,6 +610,7 @@ const enValues = {
       },
       quickLinks: {
         newOrder: "Create new order",
+        newOrderCta: "+ New order",
         newOrderDesc: "Manual booking, quote, or reservation",
         addProduct: "Add product",
         addProductDesc: "New product for the public catalog",
