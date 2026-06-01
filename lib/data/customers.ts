@@ -3,7 +3,10 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { paginateItems, type PaginatedResult, normalizeQuery } from "@/lib/listing/pagination";
+import { logTruncation } from "@/lib/observability/server";
 import type { CustomerSummary } from "@/lib/types";
+
+const CUSTOMERS_LIMIT = 500;
 
 const fallbackCustomers: CustomerSummary[] = mockOrders.map((order) => ({
   id: order.id,
@@ -62,12 +65,19 @@ export async function getCustomersPage(options?: {
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(CUSTOMERS_LIMIT);
 
   if (error) {
     console.error("[customers] Query failed:", error.message);
     return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
+
+  await logTruncation({
+    organizationId: ctx.organizationId,
+    source: "data.customers.list",
+    rowCount: data.length,
+    limit: CUSTOMERS_LIMIT,
+  });
 
   const mapped: CustomerSummary[] = data.map((customer) => {
     const orders = [
