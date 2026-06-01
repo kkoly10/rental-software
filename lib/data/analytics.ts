@@ -28,6 +28,12 @@ export type AnalyticsData = {
   ordersByStatus: { status: string; count: number }[];
   topProducts: { name: string; count: number; revenue: number }[];
   busiestDays: { day: string; count: number }[];
+
+  // Indicates the queries hit their per-table caps (5k orders, 10k
+  // payments, 5k order_items). The rollups above were computed from a
+  // partial dataset and underreport revenue / counts / top products.
+  // UI should surface a "showing recent X" notice when this is true.
+  dataTruncated: boolean;
 };
 
 const EMPTY: AnalyticsData = {
@@ -49,6 +55,7 @@ const EMPTY: AnalyticsData = {
   ordersByStatus: [],
   topProducts: [],
   busiestDays: [],
+  dataTruncated: false,
 };
 
 const ACTIVE_STATUSES = new Set([
@@ -147,6 +154,18 @@ export async function getAnalytics(): Promise<AnalyticsData> {
 
   const orders = ordersRes.data ?? [];
   const payments = paymentsRes.data ?? [];
+
+  // The orders / payments / order_items queries above cap at 5k/10k/5k
+  // rows so a degenerate org doesn't OOM the analytics page. Flag when
+  // the cap was hit so the UI can show "showing recent N — totals
+  // exclude older history" rather than silently underreporting.
+  const ORDERS_CAP = 5000;
+  const PAYMENTS_CAP = 10000;
+  const ITEMS_CAP = 5000;
+  const dataTruncated =
+    orders.length >= ORDERS_CAP ||
+    payments.length >= PAYMENTS_CAP ||
+    (itemsRes.data?.length ?? 0) >= ITEMS_CAP;
   const items = itemsRes.data ?? [];
 
   // --- Financial metrics ---
@@ -326,6 +345,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     ordersByStatus,
     topProducts,
     busiestDays,
+    dataTruncated,
   };
 }
 
