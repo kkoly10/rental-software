@@ -2,6 +2,8 @@ import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { formatDateInTimeZone } from "@/lib/datetime/event-time";
+import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 import {
   paginateItems,
   type PaginatedResult,
@@ -65,6 +67,7 @@ export async function getPaymentsPage(options?: {
     return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
+  const tz = await getOrgEventTimezone(ctx.organizationId);
   const supabase = await createSupabaseServerClient();
   const selectFields =
     "id, payment_type, payment_status, amount, paid_at, order_id, orders!inner(organization_id, order_number, customers(first_name, last_name, deleted_at))";
@@ -88,7 +91,7 @@ export async function getPaymentsPage(options?: {
       return paginateItems([], { page: options?.page, pageSize, query });
     }
 
-    const mappedPage = (data ?? []).map(mapPaymentRow);
+    const mappedPage = (data ?? []).map((p) => mapPaymentRow(p, tz));
     const totalItems = count ?? mappedPage.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return {
@@ -115,7 +118,7 @@ export async function getPaymentsPage(options?: {
     return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: PaymentSummary[] = data.map(mapPaymentRow);
+  const mapped: PaymentSummary[] = data.map((p) => mapPaymentRow(p, tz));
   const filtered = mapped.filter((payment) => matchesPaymentQuery(payment, query));
 
   return paginateItems(filtered, {
@@ -134,7 +137,7 @@ type PaymentRow = {
   order_id: string | null;
 };
 
-function mapPaymentRow(payment: PaymentRow): PaymentSummary {
+function mapPaymentRow(payment: PaymentRow, tz: string): PaymentSummary {
   const order = (payment as Record<string, unknown>).orders as
     | {
         order_number?: string | null;
@@ -159,7 +162,7 @@ function mapPaymentRow(payment: PaymentRow): PaymentSummary {
     label: `$${amount.toFixed(2)} ${type} ${status}`,
     item: order?.order_number ?? "N/A",
     date: payment.paid_at
-      ? new Date(payment.paid_at).toLocaleDateString("en-US", {
+      ? formatDateInTimeZone(payment.paid_at, tz, {
           month: "short",
           day: "numeric",
           year: "numeric",

@@ -136,10 +136,11 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         : "Unknown",
       item: items?.[0]?.item_name_snapshot ?? "Rental booking",
       date: o.event_date
-        ? new Date(`${o.event_date}T12:00:00`).toLocaleDateString("en-US", {
+        ? new Date(`${o.event_date}T12:00:00Z`).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "UTC",
           })
         : "No date",
       total: `$${Number(o.total_amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,

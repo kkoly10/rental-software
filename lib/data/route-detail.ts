@@ -3,6 +3,8 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { geocodeZipServer } from "@/lib/maps/geocode-server";
+import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
+import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 import type { RouteDetail, RouteDetailEnhanced, RouteStopEnhanced } from "@/lib/types";
 
 export type RouteStopData = {
@@ -46,6 +48,7 @@ export async function getRouteDetail(routeId: string): Promise<RouteDetail> {
   if (!ctx) {
     notFound();
   }
+  const tz = await getOrgEventTimezone(ctx.organizationId);
 
   const supabase = await createSupabaseServerClient();
   const { data: route, error: routeError } = await supabase
@@ -93,10 +96,7 @@ export async function getRouteDetail(routeId: string): Promise<RouteDetail> {
               ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
               : order?.order_number ?? "Stop";
             const time = stop.scheduled_window_start
-              ? new Date(stop.scheduled_window_start).toLocaleTimeString(
-                  "en-US",
-                  { hour: "numeric", minute: "2-digit" }
-                )
+              ? formatTimeInTimeZone(stop.scheduled_window_start, tz)
               : "TBD";
             const type = (stop.stop_type ?? "delivery").replace(
               /\b\w/g,
@@ -118,6 +118,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
 
   const ctx = await getOrgContext();
   if (!ctx) return [];
+  const tz = await getOrgEventTimezone(ctx.organizationId);
 
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
@@ -151,7 +152,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       sequence: stop.stop_sequence ?? index + 1,
       label: customer ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() : order?.order_number ?? "Stop",
       time: stop.scheduled_window_start
-        ? new Date(stop.scheduled_window_start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+        ? formatTimeInTimeZone(stop.scheduled_window_start, tz)
         : "TBD",
       type: (stop.stop_type ?? "delivery").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: stop.stop_status ?? "assigned",
@@ -238,6 +239,7 @@ export async function getRouteDetailEnhanced(
   if (!ctx) {
     notFound();
   }
+  const tz = await getOrgEventTimezone(ctx.organizationId);
 
   const supabase = await createSupabaseServerClient();
   const { data: route, error: routeError } = await supabase
@@ -315,10 +317,7 @@ export async function getRouteDetailEnhanced(
     ].filter(Boolean);
 
     const time = stop.scheduled_window_start
-      ? new Date(stop.scheduled_window_start).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        })
+      ? formatTimeInTimeZone(stop.scheduled_window_start, tz)
       : undefined;
 
     const lat = addr?.latitude ?? undefined;
@@ -371,10 +370,11 @@ export async function getRouteDetailEnhanced(
     id: route.id,
     name: route.name ?? "Route",
     routeDate: route.route_date
-      ? new Date(route.route_date + "T00:00:00").toLocaleDateString("en-US", {
+      ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           year: "numeric",
+          timeZone: "UTC",
         })
       : "TBD",
     routeDateRaw: route.route_date ?? new Date().toISOString().slice(0, 10),
