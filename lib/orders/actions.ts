@@ -363,6 +363,16 @@ export async function createOrder(
   }
 
   const total = Number((resolvedSubtotal + resolvedDeliveryFee).toFixed(2));
+  // Reject deposits that exceed the order total. Allowing them would
+  // produce a negative balance, which the accounting reports and refund
+  // flows assume can't happen — silently storing a negative balance
+  // corrupts every downstream calculation that reads it.
+  if (depositAmount > total + 0.005) {
+    return {
+      ok: false,
+      message: "Deposit amount cannot exceed the order total.",
+    };
+  }
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
 

@@ -19,6 +19,16 @@ export async function updateSmsSettings(
     formData.get("sms_payment_confirmation") === "on";
   const smsWeatherAlerts = formData.get("sms_weather_alerts") === "on";
   const smsSignature = String(formData.get("sms_signature") ?? "").trim();
+  // SMS bodies are 160 chars (GSM-7) or 70 chars (UCS-2) per segment, so
+  // a signature longer than 80 chars would push almost every outbound
+  // message into multi-segment territory. Cap aggressively rather than
+  // letting an unbounded string land in the database.
+  if (smsSignature.length > 80) {
+    return {
+      ok: false,
+      message: "SMS signature must be 80 characters or fewer.",
+    };
+  }
 
   if (!hasSupabaseEnv()) {
     return {
