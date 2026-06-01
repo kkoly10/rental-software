@@ -298,9 +298,14 @@ export async function getRouteDetailEnhanced(
     const customer = order?.customers;
     const addr = order?.customer_addresses;
 
-    const name = customer
+    // `customerName` consumers (the deliveries detail page) use
+    // `stop.customerName ?? fallback`, which only catches null/undefined,
+    // not empty strings.  Fall through to the order number or undefined
+    // so the i18n fallback fires when both names are blank.
+    const trimmedName = customer
       ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
-      : order?.order_number ?? "Stop";
+      : "";
+    const name = trimmedName || order?.order_number || undefined;
 
     const addressParts = [
       addr?.line1,
