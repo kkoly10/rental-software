@@ -162,6 +162,7 @@ export async function updateCustomer(
         .from("customer_addresses")
         .insert({
           customer_id: customerId,
+          organization_id: ctx.organizationId,
           is_default_delivery: true,
           ...addressPayload,
         });
