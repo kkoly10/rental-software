@@ -736,7 +736,18 @@ export async function createCheckoutOrder(
     } catch (err) {
       // #407 preserve the actual error so we can diagnose; the form
       // continues regardless (customer has already paid in the success path).
+      // Also route to logAppError so the failure lands in app_error_logs +
+      // Sentry, not just stdout.
       console.error("[checkout] confirmation email failed for", orderNumber, err instanceof Error ? err.message : err);
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout",
+        message: "order confirmation email failed (order already committed)",
+        route: "checkout",
+        context: { order_number: orderNumber, recipient: email },
+        error: err,
+      });
     }
   }
 
