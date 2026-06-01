@@ -18,10 +18,8 @@ export async function GET(
     return NextResponse.json({ error: "Not available in demo mode." }, { status: 503 });
   }
 
-  const clientIp =
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    "unknown";
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const clientIp = getTrustedClientIp(req.headers);
   try {
     const limit = await enforceRateLimit({
       scope: "tracking:lookup",

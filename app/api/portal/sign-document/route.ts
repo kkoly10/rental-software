@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
   }
 
   const hdrs = await headers();
-  const clientIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const clientIp = getTrustedClientIp(hdrs);
   let limit: { allowed: boolean };
   try {
     limit = await enforceRateLimit({

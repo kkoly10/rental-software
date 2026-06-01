@@ -297,7 +297,9 @@ export async function signUpWithPassword(
 
   // Record terms acceptance on the profile before terminating the Lambda via redirect
   const hdrs = await headers();
-  const clientIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? null;
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const trustedIp = getTrustedClientIp(hdrs);
+  const clientIp = trustedIp === "unknown" ? null : trustedIp;
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     try {
