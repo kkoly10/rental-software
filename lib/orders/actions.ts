@@ -516,6 +516,13 @@ export async function createOrder(
   // the new-order path so an operator who picks status="confirmed" in
   // the create form gets the same magic.  Same conservative guards
   // (single non-completed route, address + date, org setting on).
+  //
+  // Surface the outcome as a query param so the orders list page can
+  // render a one-shot toast.  updateOrderStatus appends to its return
+  // message because it's an inline action; createOrder redirects, so
+  // we ride the URL instead.
+  let attachedTo: { routeId: string; routeName: string } | null = null;
+  let attachFailed = false;
   if (orderStatus === "confirmed" || orderStatus === "scheduled") {
     try {
       const { autoAttachOrderToRouteIfEligible } = await import(
@@ -527,13 +534,30 @@ export async function createOrder(
         supabase,
       );
       if (result.attached) {
-        // Revalidate so the route detail picks up the new stop on next visit.
+        attachedTo = { routeId: result.routeId, routeName: result.routeName };
         const { revalidatePath } = await import("next/cache");
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
         revalidatePath("/dashboard/deliveries");
+      } else if (result.reason === "insert_failed") {
+        attachFailed = true;
+        // Mirror the updateOrderStatus path: log via logAppError so it
+        // shows up in the central observability stream, not just stdout.
+        try {
+          const { logAppError } = await import("@/lib/observability/server");
+          await logAppError({
+            organizationId: ctx.organizationId,
+            source: "orders.createOrder.autoAttach",
+            message: "Auto-attach to route failed during order creation",
+            context: {
+              orderId: createdOrder.id,
+              reason: result.reason,
+              detail: result.detail,
+            },
+          });
+        } catch { /* logger failures must not break the action */ }
       }
     } catch (err) {
-      // Never block order creation on an auto-attach hiccup.
+      attachFailed = true;
       console.error(
         "[orders] auto-attach during createOrder failed for",
         createdOrder.id,
@@ -542,7 +566,16 @@ export async function createOrder(
     }
   }
 
-  redirect(isFirstOrder ? "/dashboard/orders?first=true" : "/dashboard/orders");
+  const redirectParams = new URLSearchParams();
+  if (isFirstOrder) redirectParams.set("first", "true");
+  if (attachedTo) {
+    redirectParams.set("attached_to_route", attachedTo.routeId);
+    redirectParams.set("attached_to_route_name", attachedTo.routeName);
+  } else if (attachFailed) {
+    redirectParams.set("attach_failed", "1");
+  }
+  const qs = redirectParams.toString();
+  redirect(qs ? `/dashboard/orders?${qs}` : "/dashboard/orders");
 }
 
 export async function updateOrderStatus(

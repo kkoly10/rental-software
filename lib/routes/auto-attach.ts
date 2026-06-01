@@ -110,21 +110,15 @@ export async function autoAttachOrderToRouteIfEligible(
       return { attached: false, reason: "route_completed" };
     }
 
-    // 5) Compute next sequence (match the manual Add Stop path).
-    const { count: stopCount } = await supabase
-      .from("route_stops")
-      .select("*", { count: "exact", head: true })
-      .eq("route_id", route.id);
-    const nextSequence = (stopCount ?? 0) + 1;
-
-    // 6) Insert the stop.
-    const { error } = await supabase.from("route_stops").insert({
-      route_id: route.id,
-      order_id: orderId,
-      stop_type: "delivery",
-      stop_sequence: nextSequence,
-      stop_status: "assigned",
-      scheduled_window_start: null,
+    // 5) Insert the stop atomically.  The RPC locks the parent route row
+    //    so concurrent attaches serialise — no count-then-insert race
+    //    with the unique index on (route_id, stop_sequence).  See
+    //    supabase/migrations/20260531_010000_add_stop_to_route_function.sql
+    const { error } = await supabase.rpc("add_stop_to_route", {
+      p_route_id: route.id,
+      p_order_id: orderId,
+      p_stop_type: "delivery",
+      p_scheduled_window_start: null,
     });
     if (error) {
       return {

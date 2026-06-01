@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { updateOrderStatus } from "@/lib/orders/actions";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -27,6 +28,15 @@ export function ConfirmOrderButton({
     null
   );
   const { messages: m } = useI18n();
+  const router = useRouter();
+
+  // Re-fetch the server-rendered order detail page after a successful
+  // confirm so the status badge, AssignToRouteCard, and any auto-attach
+  // side effects all reflect the new state.  Without this the page
+  // shows "Inquiry" + a success badge until the operator hard-reloads.
+  useEffect(() => {
+    if (result?.ok) router.refresh();
+  }, [result?.ok, router]);
 
   // The display labels coming from the page are title-cased ("Inquiry",
   // "Quote Sent", "Awaiting Deposit") — normalise to the canonical

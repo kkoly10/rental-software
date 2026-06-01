@@ -127,30 +127,27 @@ export async function addOrderToRoute(
     return { ok: false, message: "This order is already assigned to another route." };
   }
 
-  // Derive the next sequence number from the current count of stops on this
-  // route.  Using COUNT rather than MAX(stop_sequence)+1 avoids a null-handling
-  // edge case when the route has no stops yet.  A true uniqueness guarantee
-  // requires a DB unique constraint on (route_id, stop_sequence); that
-  // migration is tracked separately.
-  const { count: stopCount } = await supabase
-    .from("route_stops")
-    .select("id", { count: "exact", head: true })
-    .eq("route_id", routeId);
-
-  const nextSequence = (stopCount ?? 0) + 1;
-
   let scheduledWindowStart: string | null = null;
   if (scheduledTime && routeDate) {
-    scheduledWindowStart = new Date(`${routeDate}T${scheduledTime}:00`).toISOString();
+    // Validate the composed ISO string parses to a real date — `new Date`
+    // returns "Invalid Date" silently for malformed input and toISOString
+    // throws.  Catching here lets us return a clearer error than the
+    // generic Postgres error from the RPC.
+    const parsed = new Date(`${routeDate}T${scheduledTime}:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return { ok: false, message: "Invalid scheduled time for the route date." };
+    }
+    scheduledWindowStart = parsed.toISOString();
   }
 
-  const { error } = await supabase.from("route_stops").insert({
-    route_id: routeId,
-    order_id: orderId,
-    stop_type: stopType,
-    stop_sequence: nextSequence,
-    stop_status: "assigned",
-    scheduled_window_start: scheduledWindowStart,
+  // Atomic insert via the add_stop_to_route RPC — locks the parent
+  // route row so concurrent attaches serialise.  See
+  // supabase/migrations/20260531_010000_add_stop_to_route_function.sql
+  const { error } = await supabase.rpc("add_stop_to_route", {
+    p_route_id: routeId,
+    p_order_id: orderId,
+    p_stop_type: stopType,
+    p_scheduled_window_start: scheduledWindowStart,
   });
 
   if (error) return { ok: false, message: error.message };
