@@ -141,7 +141,18 @@ export async function recordPayment(
 
   const newBalance = result.new_balance ?? 0;
   const netPaid = result.net_paid ?? 0;
-  const updatedFinancials = { remainingBalance: newBalance, depositFulfilled: netPaid >= Number(order.deposit_due_amount ?? 0) };
+  // Use net_paid from the RPC (the post-write computed value) against
+  // the deposit_due_amount we read pre-RPC. deposit_due_amount on the
+  // order row doesn't change during this transaction, so the pre-RPC
+  // value is still correct. The previous expression compared a fresh
+  // post-RPC net_paid against a stale pre-RPC deposit — which happened
+  // to work because deposit_due_amount is set at order creation and
+  // never re-derived. Restated explicitly to make the invariant clear.
+  const depositRequired = Number(order.deposit_due_amount ?? 0);
+  const updatedFinancials = {
+    remainingBalance: newBalance,
+    depositFulfilled: netPaid >= depositRequired,
+  };
 
   // Auto-confirm orders when deposit is fulfilled.
   // #342 TOCTOU — gate the UPDATE on the still-current order_status so a
