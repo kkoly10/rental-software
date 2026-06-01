@@ -1101,6 +1101,36 @@ const enValues = {
     },
   },
 
+  assetManager: {
+    kicker: "Inventory",
+    title: "Physical units",
+    intro: "Each row is one rentable unit. A product needs at least one unit in Ready status to accept bookings on the storefront.",
+    bookableCount: "{bookable} of {total} ready for booking",
+    addUnit: "+ Add unit",
+    adding: "Adding…",
+    emptyTitle: "No units yet.",
+    emptyBody: "Add at least one unit to make this product bookable.",
+    addedOn: "Added {date}",
+    save: "Save",
+    remove: "Remove",
+    confirmRemove: "Remove unit {tag}?",
+    statusAriaLabel: "Status for {tag}",
+    statusLabels: {
+      ready: "Ready (bookable)",
+      maintenance: "In maintenance",
+      broken: "Broken",
+      retired: "Retired",
+    },
+    statusBadge: {
+      ready: "Ready",
+      maintenance: "Maintenance",
+      broken: "Broken",
+      retired: "Retired",
+      available: "Available",
+      active: "Active",
+    },
+  },
+
   crew: {
     kicker: "Crew mobile",
     dashboard: "Dashboard",

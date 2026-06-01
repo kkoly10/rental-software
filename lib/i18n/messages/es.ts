@@ -1100,6 +1100,36 @@ export const es: Messages = {
     },
   },
 
+  assetManager: {
+    kicker: "Inventario",
+    title: "Unidades físicas",
+    intro: "Cada fila es una unidad alquilable. Un producto necesita al menos una unidad en estado Listo para aceptar reservas en la tienda.",
+    bookableCount: "{bookable} de {total} listos para reservar",
+    addUnit: "+ Añadir unidad",
+    adding: "Añadiendo…",
+    emptyTitle: "Aún no hay unidades.",
+    emptyBody: "Añade al menos una unidad para que este producto sea reservable.",
+    addedOn: "Añadido el {date}",
+    save: "Guardar",
+    remove: "Quitar",
+    confirmRemove: "¿Quitar la unidad {tag}?",
+    statusAriaLabel: "Estado para {tag}",
+    statusLabels: {
+      ready: "Listo (reservable)",
+      maintenance: "En mantenimiento",
+      broken: "Averiado",
+      retired: "Retirado",
+    },
+    statusBadge: {
+      ready: "Listo",
+      maintenance: "Mantenimiento",
+      broken: "Averiado",
+      retired: "Retirado",
+      available: "Disponible",
+      active: "Activo",
+    },
+  },
+
   crew: {
     kicker: "Equipo móvil",
     dashboard: "Panel",
