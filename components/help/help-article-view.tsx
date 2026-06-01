@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment, type ReactNode } from "react";
 import { getArticleBySlug } from "@/lib/help/articles";
 import { getMessages } from "@/lib/i18n/server";
 
@@ -18,7 +19,12 @@ export async function HelpArticleView({ slug }: { slug: string }) {
     );
   }
 
-  // Simple markdown-like rendering: paragraphs, bold, lists
+  // Markdown-like rendering: paragraphs, bold, lists. The previous
+  // implementation built HTML strings and shoved them into
+  // dangerouslySetInnerHTML — fine while help bodies stay in-source,
+  // but the moment articles become DB-backed (operator CMS, partner
+  // imports) every paragraph becomes an XSS sink. Rendered as React
+  // elements there's nothing for an attacker to inject into.
   const paragraphs = article.body.split("\n\n").map((block, i) => {
     const lines = block.split("\n");
     const isOrderedList = lines.every((l) => /^\d+\./.test(l.trim()));
@@ -28,7 +34,9 @@ export async function HelpArticleView({ slug }: { slug: string }) {
       return (
         <ol key={i} style={{ paddingLeft: 20, margin: "12px 0" }}>
           {lines.map((line, j) => (
-            <li key={j} style={{ marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: formatInline(line.replace(/^\d+\.\s*/, "")) }} />
+            <li key={j} style={{ marginBottom: 4 }}>
+              {renderInline(line.replace(/^\d+\.\s*/, ""))}
+            </li>
           ))}
         </ol>
       );
@@ -38,14 +46,24 @@ export async function HelpArticleView({ slug }: { slug: string }) {
       return (
         <ul key={i} style={{ paddingLeft: 20, margin: "12px 0" }}>
           {lines.map((line, j) => (
-            <li key={j} style={{ marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: formatInline(line.replace(/^-\s*/, "")) }} />
+            <li key={j} style={{ marginBottom: 4 }}>
+              {renderInline(line.replace(/^-\s*/, ""))}
+            </li>
           ))}
         </ul>
       );
     }
 
+    // Single paragraph: render each line with <br/> separators between.
     return (
-      <p key={i} style={{ margin: "12px 0", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: formatInline(block.replace(/\n/g, "<br/>")) }} />
+      <p key={i} style={{ margin: "12px 0", lineHeight: 1.6 }}>
+        {lines.map((line, j) => (
+          <Fragment key={j}>
+            {j > 0 && <br />}
+            {renderInline(line)}
+          </Fragment>
+        ))}
+      </p>
     );
   });
 
@@ -85,7 +103,26 @@ export async function HelpArticleView({ slug }: { slug: string }) {
   );
 }
 
-function formatInline(text: string): string {
-  // Bold: **text**
-  return text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+// Parse `**bold**` segments into React elements without ever building
+// an HTML string. Anything between the markers becomes a <strong>;
+// anything else passes through as plain text (so `<script>` written by
+// a future CMS author shows up as literal "<script>" not an executed
+// tag).
+function renderInline(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const re = /\*\*(.+?)\*\*/g;
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={`b${key++}`}>{match[1]}</strong>);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
 }
