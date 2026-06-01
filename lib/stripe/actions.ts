@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { logAppError } from "@/lib/observability/server";
 import { getStripe, hasStripeEnv, PLAN_TIERS, type PlanTier } from "./config";
 
 export type SubscriptionActionState = {
@@ -134,6 +135,13 @@ export async function createCheckoutSession(
         .is("deleted_at", null);
       if (customerSaveError) {
         console.error("[stripe] failed to persist stripe_customer_id:", customerSaveError.message);
+        await logAppError({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe.checkout",
+          message: `Failed to persist stripe_customer_id: ${customerSaveError.message}`,
+          context: { customerId },
+        });
       }
     }
 
@@ -166,6 +174,15 @@ export async function createCheckoutSession(
       throw error; // Let Next.js handle the redirect
     }
     console.error("Stripe checkout error:", error);
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "stripe.checkout",
+      message: error instanceof Error ? error.message : "Unknown checkout error",
+      stack: error instanceof Error ? error.stack : undefined,
+      context: { tier },
+      error,
+    });
     return { ok: false, message: "Failed to start checkout. Please try again." };
   }
 }
@@ -227,6 +244,14 @@ export async function createBillingPortalSession(): Promise<SubscriptionActionSt
       throw error;
     }
     console.error("Stripe portal error:", error);
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "stripe.billing_portal",
+      message: error instanceof Error ? error.message : "Unknown billing-portal error",
+      stack: error instanceof Error ? error.stack : undefined,
+      error,
+    });
     return { ok: false, message: "Failed to open billing portal." };
   }
 }
