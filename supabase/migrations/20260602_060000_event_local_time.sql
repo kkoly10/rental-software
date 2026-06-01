@@ -9,29 +9,35 @@
 -- wrong: a Pacific operator's "2pm" got stored as "14:00:00Z" instead
 -- of "21:00:00Z" (which is what 2pm PT actually is in UTC).
 --
--- This migration fixes the data model in three steps:
+-- This migration takes the first phase of the fix: capture the
+-- operator's wall-clock in dedicated TIME columns and install a
+-- trigger that derives the correct UTC instant going forward.
 --
--- 1. Add two TIME columns (event_start_local, event_end_local) that
---    hold the operator's intended wall-clock directly. TIME has no
---    TZ — that's the point.
--- 2. Backfill: the existing event_start_time stored the wall-clock
---    AS its time component (just labelled UTC). Cast its time portion
---    directly into event_start_local. No TZ projection needed.
--- 3. Recompute event_start_time: now that we know the wall-clock and
---    the org's IANA event_timezone, compose the true UTC instant via
---    `(event_date + event_start_local) AT TIME ZONE org.event_timezone`.
---    For orgs whose event_timezone is still 'UTC' (the default from
---    PR 8) this is a no-op. For orgs that set a real tz, it shifts
---    the timestamps to the correct UTC instant.
+-- IMPORTANT: this migration is intentionally SAFE TO APPLY before
+-- the app deploy. It does NOT recompute event_start_time on existing
+-- rows — that would shift values for any non-UTC org's existing
+-- orders and break the unchanged production read path (which still
+-- treats event_start_time as wall-clock-stored-as-UTC). The recompute
+-- of existing event_start_time is a phase-2 step that should run
+-- AFTER the new app code is deployed; do it via:
 --
--- After this migration, every downstream reader of event_start_time
--- via formatTimeInTimeZone(ts, org.event_timezone) renders the
--- correct wall-clock — including for the formerly-broken non-UTC
--- orgs.
+--   UPDATE public.orders o
+--      SET event_start_time =
+--           (o.event_date::timestamp + o.event_start_local)
+--           AT TIME ZONE COALESCE(org.event_timezone, 'UTC')
+--     FROM public.organizations org
+--    WHERE org.id = o.organization_id
+--      AND o.event_date IS NOT NULL
+--      AND o.event_start_local IS NOT NULL;
+--   -- (and the same for event_end_time)
 --
--- Going forward, a BEFORE INSERT/UPDATE trigger keeps event_start_time
--- in sync from event_start_local + the org's tz. App code now sets
--- event_start_local (TIME) and the trigger derives event_start_time.
+-- when you're confident the new readers are deployed.
+--
+-- The trigger below is scoped to fire only when event_date /
+-- event_start_local / event_end_local / organization_id are in the
+-- UPDATE OF clause — production INSERTs that don't mention those
+-- columns do NOT fire it, so existing app code keeps writing
+-- wall-clock-as-UTC undisturbed.
 
 alter table public.orders
   add column if not exists event_start_local time;
@@ -43,9 +49,9 @@ comment on column public.orders.event_start_local is
 comment on column public.orders.event_end_local is
   'Operator''s intended wall-clock event end time. See event_start_local.';
 
--- Step 1: backfill the wall-clock from the legacy "wall-clock-as-UTC" ts.
---         The time component of event_start_time IS the operator's input
---         because that's how it was stored.
+-- Backfill the wall-clock from the legacy "wall-clock-as-UTC" ts.
+-- The time component of event_start_time IS the operator's input
+-- because that's how it was stored.
 update public.orders
    set event_start_local = event_start_time::time
  where event_start_time is not null
@@ -56,31 +62,11 @@ update public.orders
  where event_end_time is not null
    and event_end_local is null;
 
--- Step 2: recompute event_start_time as the true UTC instant.
---         For orgs whose event_timezone is 'UTC' (the default), this is
---         a no-op. For real-TZ orgs, this fixes the value.
-update public.orders o
-   set event_start_time =
-         (o.event_date::timestamp without time zone + o.event_start_local)
-         at time zone coalesce(org.event_timezone, 'UTC')
-  from public.organizations org
- where org.id = o.organization_id
-   and o.event_date is not null
-   and o.event_start_local is not null;
-
-update public.orders o
-   set event_end_time =
-         (o.event_date::timestamp without time zone + o.event_end_local)
-         at time zone coalesce(org.event_timezone, 'UTC')
-  from public.organizations org
- where org.id = o.organization_id
-   and o.event_date is not null
-   and o.event_end_local is not null;
-
--- Step 3: trigger that keeps event_start_time in sync from
---         event_start_local + org.event_timezone on insert / update.
---         App code now sets event_start_local; the timestamptz columns
---         are computed.
+-- Trigger that keeps event_start_time in sync from
+-- event_start_local + org.event_timezone on insert / update.
+-- Fires ONLY when the app explicitly writes the local columns; the
+-- existing production app code (which sets event_start_time directly
+-- with the legacy wall-clock-as-UTC pattern) is unaffected.
 
 create or replace function public.orders_sync_event_times()
 returns trigger language plpgsql as $$
@@ -91,7 +77,6 @@ begin
     return new;
   end if;
 
-  -- Look up the org's tz exactly once for this row.
   select coalesce(event_timezone, 'UTC')
     into v_tz
     from public.organizations
@@ -122,4 +107,4 @@ create trigger orders_sync_event_times_trg
   execute function public.orders_sync_event_times();
 
 comment on function public.orders_sync_event_times() is
-  'Derives event_start_time/event_end_time (timestamptz) from event_date + event_start_local/event_end_local (wall-clock) and the org''s event_timezone. App writes should set event_*_local; the trigger maintains the timestamptz columns.';
+  'Derives event_start_time/event_end_time (timestamptz) from event_date + event_start_local/event_end_local (wall-clock) and the org''s event_timezone. App writes that set event_*_local fire this trigger; legacy writes that only set event_*_time directly do not.';
