@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { addOrderToRoute, type RouteActionState } from "@/lib/routes/actions";
 import type { OrderRoutingState } from "@/lib/data/order-routing";
@@ -17,10 +19,6 @@ export function AssignToRouteCard({
 }) {
   const { messages } = useI18n();
   const t = messages.forms.routing.assignToRoute;
-  const [actionState, action, pending] = useActionState(
-    addOrderToRoute,
-    initial
-  );
 
   // ─── Already on a route ────────────────────────────────────────────
   if (state.kind === "already_assigned") {
@@ -70,29 +68,16 @@ export function AssignToRouteCard({
       {!noRoutesYet && (
         <ul className="assign-route-list">
           {candidateRoutes.map((r) => (
-            <li key={r.id} className="assign-route-row">
-              <div className="assign-route-row-main">
-                <div className="assign-route-row-title">{r.name}</div>
-                <div className="assign-route-row-meta">
-                  {t.stopCount.replace("{n}", String(r.stopCount))}
-                  {" · "}
-                  {humanRouteStatus(r.routeStatus, t)}
-                </div>
-              </div>
-              <form action={action} style={{ flexShrink: 0 }}>
-                <input type="hidden" name="route_id" value={r.id} />
-                <input type="hidden" name="order_id" value={orderId} />
-                <input type="hidden" name="route_date" value={eventDateRaw} />
-                <input type="hidden" name="stop_type" value="delivery" />
-                <button
-                  type="submit"
-                  className="primary-btn assign-route-row-cta"
-                  disabled={pending}
-                >
-                  {pending ? t.attaching : t.attachCta}
-                </button>
-              </form>
-            </li>
+            <AttachToRouteRow
+              key={r.id}
+              orderId={orderId}
+              routeId={r.id}
+              routeName={r.name}
+              routeStatus={r.routeStatus}
+              stopCount={r.stopCount}
+              eventDateRaw={eventDateRaw}
+              t={t}
+            />
           ))}
         </ul>
       )}
@@ -105,18 +90,76 @@ export function AssignToRouteCard({
           {t.createRouteCta}
         </Link>
       </div>
-
-      {actionState.message && (
-        <div
-          role={actionState.ok ? "status" : "alert"}
-          aria-live={actionState.ok ? "polite" : "assertive"}
-          className={`badge ${actionState.ok ? "success" : "warning"}`}
-          style={{ marginTop: 10, padding: "6px 10px", fontSize: 13 }}
-        >
-          {actionState.message}
-        </div>
-      )}
     </div>
+  );
+}
+
+// One-row form so each row has its own action state — clicking row B
+// while row A is pending no longer overwrites A's result, and the
+// success badge appears beside the row it relates to.  router.refresh()
+// after success re-renders the page so the card flips to its
+// `already_assigned` state instead of staying on `eligible`.
+function AttachToRouteRow({
+  orderId,
+  routeId,
+  routeName,
+  routeStatus,
+  stopCount,
+  eventDateRaw,
+  t,
+}: {
+  orderId: string;
+  routeId: string;
+  routeName: string;
+  routeStatus: string;
+  stopCount: number;
+  eventDateRaw: string;
+  t: AssignT;
+}) {
+  const router = useRouter();
+  const [actionState, action, pending] = useActionState(addOrderToRoute, initial);
+
+  // On success: re-fetch server props so the parent card recomputes its
+  // OrderRoutingState ('eligible' → 'already_assigned').  Keep the
+  // success badge visible briefly via the rendered actionState.message.
+  useEffect(() => {
+    if (actionState.ok) router.refresh();
+  }, [actionState.ok, router]);
+
+  return (
+    <li className="assign-route-row">
+      <div className="assign-route-row-main">
+        <div className="assign-route-row-title">{routeName}</div>
+        <div className="assign-route-row-meta">
+          {t.stopCount.replace("{n}", String(stopCount))}
+          {" · "}
+          {humanRouteStatus(routeStatus, t)}
+        </div>
+        {actionState.message && (
+          <div
+            role={actionState.ok ? "status" : "alert"}
+            aria-live={actionState.ok ? "polite" : "assertive"}
+            className={`badge ${actionState.ok ? "success" : "warning"}`}
+            style={{ marginTop: 6, padding: "4px 8px", fontSize: 12, display: "inline-block" }}
+          >
+            {actionState.message}
+          </div>
+        )}
+      </div>
+      <form action={action} style={{ flexShrink: 0 }}>
+        <input type="hidden" name="route_id" value={routeId} />
+        <input type="hidden" name="order_id" value={orderId} />
+        <input type="hidden" name="route_date" value={eventDateRaw} />
+        <input type="hidden" name="stop_type" value="delivery" />
+        <button
+          type="submit"
+          className="primary-btn assign-route-row-cta"
+          disabled={pending}
+        >
+          {pending ? t.attaching : t.attachCta}
+        </button>
+      </form>
+    </li>
   );
 }
 

@@ -76,12 +76,15 @@ export async function getOrderRoutingState(
   }
 
   // Already on a route?  Stop here so the operator doesn't accidentally
-  // double-route the same order.
+  // double-route the same order.  Scope to non-deleted routes only —
+  // otherwise an order attached to a soft-deleted route would still
+  // flag as "already assigned" with a dead View route → link.
   const { data: existingStop } = await supabase
     .from("route_stops")
-    .select("route_id, routes!inner(id, name, organization_id, route_date)")
+    .select("route_id, routes!inner(id, name, organization_id, route_date, deleted_at)")
     .eq("order_id", orderId)
     .eq("routes.organization_id", ctx.organizationId)
+    .is("routes.deleted_at", null)
     .limit(1)
     .maybeSingle();
 
@@ -102,12 +105,17 @@ export async function getOrderRoutingState(
 
   // Eligible — list routes for that date.  We also report each route's
   // current stopCount so the card can hint at how loaded each one is.
+  // Filter out completed routes — they can't accept new stops, and the
+  // auto-attach helper (lib/routes/auto-attach.ts) already skips them,
+  // so showing them here as candidates would let the operator click
+  // "Attach" only to get a confusing server-side error.
   const { data: routes } = await supabase
     .from("routes")
     .select("id, name, status, route_stops(id)")
     .eq("organization_id", ctx.organizationId)
     .eq("route_date", eventDate)
     .is("deleted_at", null)
+    .neq("status", "completed")
     .order("created_at", { ascending: true });
 
   const candidateRoutes = (routes ?? []).map((r) => {

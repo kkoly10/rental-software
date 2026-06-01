@@ -74,6 +74,10 @@ export function DashboardShell({
   const [subStatus, setSubStatus] = useState(initialSubscriptionStatus ?? null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [publicSiteUrl, setPublicSiteUrl] = useState("/");
+  // `null` = still loading (renders skeleton).  Empty string is treated
+  // the same as a fully-known orgType — show every nav item.  Previously
+  // we kept the skeleton until businessType was truthy, which left brand-
+  // new orgs (no businessType set) stuck on the skeleton forever.
   const [businessType, setBusinessType] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -103,8 +107,18 @@ export function DashboardShell({
       .catch(() => {});
     fetch("/api/org-type")
       .then(async (r) => (r.ok ? (await r.json() as { businessType?: string }) : null))
-      .then((data) => { if (data?.businessType) setBusinessType(data.businessType); })
-      .catch(() => {});
+      .then((data) => {
+        // Always transition off the skeleton once the API responds —
+        // even if businessType is empty/missing.  `getNavItemsForVertical`
+        // handles unknown verticals by including all unverticalised items;
+        // empty string is a fine signal for "show every nav".
+        if (data) setBusinessType(data.businessType ?? "");
+      })
+      .catch(() => {
+        // Network/server error — fall back to the unfiltered nav rather
+        // than leaving the operator stuck on the skeleton forever.
+        setBusinessType("");
+      });
   }, []);
 
   useEffect(() => {

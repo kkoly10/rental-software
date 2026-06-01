@@ -36,9 +36,12 @@ export async function DashboardGreeting({
   return (
     <div className="dashboard-greeting">
       <div className="dashboard-greeting-text">
-        <h2 className="dashboard-greeting-headline">
+        {/* h1 — this is the page's top-level heading on /dashboard
+            (the DashboardShell title is hidden via the hideHeader
+            prop), so screen readers and SEO expect h1, not h2. */}
+        <h1 className="dashboard-greeting-headline">
           {t(greetingTemplate, { name })}
-        </h2>
+        </h1>
         <p className="dashboard-greeting-tagline">
           {m.dashboard.overview.greeting.tagline}
         </p>
