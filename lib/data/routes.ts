@@ -66,7 +66,7 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
       id: route.id,
       name: route.name ?? "Route",
       date: route.route_date
-        ? new Date(route.route_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
         : "TBD",
       status: route.route_status ?? "planned",
       stops: stops.length,

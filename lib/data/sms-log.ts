@@ -1,6 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { formatTimeInTimeZone, formatDateInTimeZone } from "@/lib/datetime/event-time";
+import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 
 export type SmsLogEntry = {
   id: string;
@@ -10,20 +12,22 @@ export type SmsLogEntry = {
   status: "sent" | "failed";
 };
 
-function formatTimestamp(iso: string): string {
+function formatTimestamp(iso: string, tz: string): string {
   const d = new Date(iso);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
   if (diffHours < 1) return "just now";
   if (diffHours < 24) {
-    return `Today, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+    return `Today, ${formatTimeInTimeZone(d, tz)}`;
   }
   if (diffHours < 48) {
-    return `Yesterday, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+    return `Yesterday, ${formatTimeInTimeZone(d, tz)}`;
   }
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-    `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  return (
+    formatDateInTimeZone(d, tz, { month: "short", day: "numeric" }) +
+    `, ${formatTimeInTimeZone(d, tz)}`
+  );
 }
 
 export async function getSmsLog(): Promise<SmsLogEntry[]> {
@@ -33,13 +37,16 @@ export async function getSmsLog(): Promise<SmsLogEntry[]> {
   if (!ctx) return [];
 
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("communication_log")
-    .select("id, recipient, body_preview, status, created_at")
-    .eq("organization_id", ctx.organizationId)
-    .eq("channel", "sms")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data }, tz] = await Promise.all([
+    supabase
+      .from("communication_log")
+      .select("id, recipient, body_preview, status, created_at")
+      .eq("organization_id", ctx.organizationId)
+      .eq("channel", "sms")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    getOrgEventTimezone(ctx.organizationId),
+  ]);
 
   if (!data || data.length === 0) return [];
 
@@ -47,7 +54,7 @@ export async function getSmsLog(): Promise<SmsLogEntry[]> {
     id: row.id,
     phone: row.recipient ?? "",
     preview: row.body_preview ?? "",
-    timestamp: formatTimestamp(row.created_at),
+    timestamp: formatTimestamp(row.created_at, tz),
     status: row.status === "failed" ? "failed" : "sent",
   }));
 }

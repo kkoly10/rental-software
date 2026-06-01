@@ -63,7 +63,7 @@ function mapOrderRow(order: OrderRow): OrderSummary {
         ? items.map((i) => i.item_name_snapshot).filter(Boolean).join(", ")
         : "Rental booking",
     date: order.event_date
-      ? new Date(order.event_date + "T00:00:00").toLocaleDateString("en-US", {
+      ? new Date(order.event_date + "T12:00:00Z").toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           year: "numeric",
