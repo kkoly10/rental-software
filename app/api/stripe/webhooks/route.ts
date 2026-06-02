@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
                 if (orderData?.customer_id) {
                   const { data: customer } = await admin
                     .from("customers")
-                    .select("first_name, email")
+                    .select("first_name, last_name, email")
                     .eq("id", orderData.customer_id)
                     .eq("organization_id", orgId)
                     .is("deleted_at", null)
@@ -256,6 +256,19 @@ export async function POST(request: NextRequest) {
                       paymentType,
                       paymentMethod: "stripe",
                       newBalance: financials?.remainingBalance ?? Number(orderData.balance_due_amount ?? 0),
+                    });
+
+                    // Operator-facing alert: customer just paid via Stripe.
+                    const { triggerOperatorActivityAlertEmail } = await import("@/lib/email/triggers");
+                    await triggerOperatorActivityAlertEmail({
+                      organizationId: orgId,
+                      orderId,
+                      orderNumber: orderData.order_number,
+                      customerName:
+                        `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() ||
+                        "Customer",
+                      event: "payment_received",
+                      detail: `$${amountPaid.toFixed(2)} via Stripe`,
                     });
                   }
                 }
