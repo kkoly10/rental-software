@@ -1100,6 +1100,36 @@ export const pt: Messages = {
     },
   },
 
+  assetManager: {
+    kicker: "Inventário",
+    title: "Unidades físicas",
+    intro: "Cada linha é uma unidade alugável. Um produto precisa de pelo menos uma unidade no estado Pronto para aceitar reservas na loja.",
+    bookableCount: "{bookable} de {total} prontas para reserva",
+    addUnit: "+ Adicionar unidade",
+    adding: "A adicionar…",
+    emptyTitle: "Ainda sem unidades.",
+    emptyBody: "Adicione pelo menos uma unidade para tornar este produto reservável.",
+    addedOn: "Adicionado em {date}",
+    save: "Guardar",
+    remove: "Remover",
+    confirmRemove: "Remover a unidade {tag}?",
+    statusAriaLabel: "Estado para {tag}",
+    statusLabels: {
+      ready: "Pronto (reservável)",
+      maintenance: "Em manutenção",
+      broken: "Avariado",
+      retired: "Retirado",
+    },
+    statusBadge: {
+      ready: "Pronto",
+      maintenance: "Manutenção",
+      broken: "Avariado",
+      retired: "Retirado",
+      available: "Disponível",
+      active: "Ativo",
+    },
+  },
+
   crew: {
     kicker: "Equipa móvel",
     dashboard: "Painel",

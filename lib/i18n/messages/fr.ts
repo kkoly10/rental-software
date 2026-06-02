@@ -1100,6 +1100,36 @@ export const fr: Messages = {
     },
   },
 
+  assetManager: {
+    kicker: "Inventaire",
+    title: "Unités physiques",
+    intro: "Chaque ligne correspond à une unité louable. Un produit doit avoir au moins une unité au statut Prêt pour être réservable sur la boutique.",
+    bookableCount: "{bookable} sur {total} prêts à la réservation",
+    addUnit: "+ Ajouter une unité",
+    adding: "Ajout…",
+    emptyTitle: "Aucune unité pour le moment.",
+    emptyBody: "Ajoutez au moins une unité pour rendre ce produit réservable.",
+    addedOn: "Ajouté le {date}",
+    save: "Enregistrer",
+    remove: "Retirer",
+    confirmRemove: "Retirer l’unité {tag} ?",
+    statusAriaLabel: "Statut pour {tag}",
+    statusLabels: {
+      ready: "Prêt (réservable)",
+      maintenance: "En maintenance",
+      broken: "Cassé",
+      retired: "Retiré",
+    },
+    statusBadge: {
+      ready: "Prêt",
+      maintenance: "Maintenance",
+      broken: "Cassé",
+      retired: "Retiré",
+      available: "Disponible",
+      active: "Actif",
+    },
+  },
+
   crew: {
     kicker: "Équipier mobile",
     dashboard: "Tableau de bord",
