@@ -3,6 +3,7 @@ import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { hasResendEnv } from "@/lib/email/client";
+import { logAppError } from "@/lib/observability/server";
 import {
   eventReminderEmail,
   dailyScheduleEmail,
@@ -130,10 +131,15 @@ async function getOrgBrandings(
 
 async function sendDayBeforeReminders(
   supabase: ReturnType<typeof createSupabaseAdminClient>
-): Promise<{ sent: number; errors: number }> {
+): Promise<{ sent: number; errors: number; smsErrors: number }> {
   const tomorrow = tomorrowDateStr();
   let sent = 0;
   let errors = 0;
+  // Soft failures: counted but don't block the run. Tracks email
+  // provider failures and SMS send errors so a sustained outage is
+  // visible in the cron response payload instead of vanishing into
+  // empty catch blocks.
+  let smsErrors = 0;
 
   const { data: orders } = await supabase
     .from("orders")
@@ -149,7 +155,7 @@ async function sendDayBeforeReminders(
     // claim-on-update pattern means a follow-up run picks up the rest.
     .limit(2000);
 
-  if (!orders || orders.length === 0) return { sent, errors };
+  if (!orders || orders.length === 0) return { sent, errors, smsErrors };
 
   const orgIds = [...new Set(orders.map((o) => o.organization_id))];
   const brandings = await getOrgBrandings(supabase, orgIds);
@@ -266,13 +272,25 @@ async function sendDayBeforeReminders(
             .update({ day_before_reminder_sent_at: null })
             .eq("id", order.id);
         }
+        // Log the provider failure so a sustained outage shows up in
+        // observability instead of looking like "no reminders today".
+        await logAppError({
+          organizationId: order.organization_id,
+          source: "cron-reminders",
+          message: "day-before reminder email failed at provider",
+          route: "/api/cron/reminders",
+          context: { order_id: order.id, order_number: order.order_number, recipient: customer.email, will_retry: hasResendEnv() },
+        });
+        smsErrors++; // counted as a soft failure in the response
         continue;
       }
 
       sent++;
 
       // SMS reminder — must be awaited; fire-and-forget is killed by Lambda
-      // before the import resolves. Failure is non-critical (email already sent).
+      // before the import resolves. Failure is non-critical (email already sent)
+      // but is now counted and logged so a provider outage is visible in the
+      // cron's response payload.
       if (customer.phone && customer.sms_opt_in) {
         try {
           const { sendSmsNotification } = await import("@/lib/sms/send-notification");
@@ -288,7 +306,17 @@ async function sendDayBeforeReminders(
             order.organization_id,
             { orderId: order.id, customerId: order.customer_id }
           );
-        } catch { /* non-critical — delivery email already sent */ }
+        } catch (smsErr) {
+          smsErrors++;
+          await logAppError({
+            organizationId: order.organization_id,
+            source: "cron-reminders",
+            message: "day-before SMS reminder failed (email already sent)",
+            route: "/api/cron/reminders",
+            context: { order_id: order.id, order_number: order.order_number },
+            error: smsErr,
+          });
+        }
       }
     } catch (err) {
       console.error(`[reminders] day-before failed for order ${order.id} (${order.order_number}):`, err instanceof Error ? err.message : err);
@@ -296,7 +324,7 @@ async function sendDayBeforeReminders(
     }
   }
 
-  return { sent, errors };
+  return { sent, errors, smsErrors };
 }
 
 // ─── Morning-Of Digest ────────────────────────────────────────────────────
@@ -526,7 +554,7 @@ export async function GET(request: NextRequest) {
         error: err,
       });
     } catch { /* logger failures must not break the cron */ }
-    return { sent: 0, errors: 1 };
+    return { sent: 0, errors: 1, smsErrors: 0 };
   };
 
   const [dayBefore, morningDigest, followUp, deposit] = await Promise.all([

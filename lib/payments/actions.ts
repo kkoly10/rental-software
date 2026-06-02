@@ -256,8 +256,18 @@ export async function recordPayment(
         await Promise.allSettled([emailTask, smsTask]);
       }
     }
-  } catch {
+  } catch (err) {
     console.error("[payments] Failed to send payment confirmation email for order", orderId);
+    const { logAppError } = await import("@/lib/observability/server");
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "payments",
+      message: "manual payment notification (email + SMS) failed (payment already recorded)",
+      route: "lib/payments/actions",
+      context: { order_id: orderId, payment_type: paymentType },
+      error: err,
+    });
   }
 
   return {
