@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createOrder } from "@/lib/orders/actions";
 import type {
   OrderFormProductOption,
@@ -26,6 +26,16 @@ export function NewOrderForm({
   const { messages } = useI18n();
   const m = messages.forms.newOrder;
 
+  // Idempotency key — generated once when the form mounts so a
+  // double-click / network retry doesn't create a duplicate order.
+  // See orders.idempotency_key migration + createOrder server action.
+  const [idempotencyKey] = useState(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `ord_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  });
+
   // `min` on the event_date <input> stops operators from accidentally
   // booking yesterday.  We compute it once (locale-naive).  If the
   // form was deep-linked with an already-past initialEventDate, we
@@ -46,6 +56,7 @@ export function NewOrderForm({
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
+      <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       <div className="grid grid-3">
         <label className="order-card">
           <strong>{m.firstNameLabel}</strong>

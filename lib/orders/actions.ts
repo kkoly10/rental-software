@@ -64,6 +64,7 @@ export async function createOrder(
     deliveryLine2: String(formData.get("delivery_line2") ?? ""),
     rentalEndDate: String(formData.get("rental_end_date") ?? ""),
     smsOptIn: formData.get("sms_opt_in") === "true",
+    idempotencyKey: String(formData.get("idempotency_key") ?? ""),
   });
 
   if (!parsed.success) {
@@ -147,7 +148,9 @@ export async function createOrder(
     deliveryLine2,
     rentalEndDate,
     smsOptIn,
+    idempotencyKey: rawIdempotencyKey,
   } = parsed.data;
+  const idempotencyKey = rawIdempotencyKey && rawIdempotencyKey.length > 0 ? rawIdempotencyKey : null;
 
   const requestHeaders = await headers();
   const clientIp =
@@ -156,6 +159,27 @@ export async function createOrder(
     null;
 
   const supabase = await createSupabaseServerClient();
+
+  // Idempotency replay: a dashboard double-click or network hiccup that
+  // makes the browser retry would otherwise duplicate the order. If we
+  // already have a row with the same (org, idempotency_key), the user
+  // has succeeded — return the existing order's number rather than
+  // creating a parallel record.
+  if (idempotencyKey) {
+    const { data: replay } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", ctx.organizationId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (replay?.order_number) {
+      return {
+        ok: true,
+        message: `Order ${replay.order_number} already exists.`,
+      };
+    }
+  }
 
   const { data: createMembership } = await supabase
     .from("organization_memberships")
@@ -439,9 +463,30 @@ export async function createOrder(
       delivery_contact_name: deliveryContactName ?? null,
       delivery_contact_phone: deliveryContactPhone ?? null,
       delivery_setup_notes: deliverySetupNotes ?? null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
+
+  // Concurrent retry won the unique index race between the SELECT
+  // above and this INSERT. Re-fetch the existing order's number and
+  // return success — don't roll back the address/customer because the
+  // other request owns them.
+  if (orderError?.code === "23505" && idempotencyKey) {
+    const { data: raced } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", ctx.organizationId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (raced?.order_number) {
+      return {
+        ok: true,
+        message: `Order ${raced.order_number} already exists.`,
+      };
+    }
+  }
 
   if (orderError || !createdOrder) {
     if (orderError) console.error("[orders] create order failed:", orderError.message);
