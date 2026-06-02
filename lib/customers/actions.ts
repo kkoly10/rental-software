@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { logAppEvent, logAppError } from "@/lib/observability/server";
 import { updateCustomerSchema } from "@/lib/validation/customers";
 
 export type CustomerActionState = {
@@ -190,4 +192,150 @@ export async function updateCustomer(
   revalidatePath("/dashboard/customers");
 
   return { ok: true, message: "Customer updated successfully." };
+}
+
+/**
+ * GDPR-style erasure: anonymizes the customer's PII (name, email, phone,
+ * notes) and soft-deletes the row plus their stored addresses. Orders and
+ * payments stay intact because the operator still needs the financial
+ * record — the customer is now stored as "Deleted Customer" with no
+ * direct identifiers.
+ *
+ * Owner / admin only; rate-limited; org-scoped; audit-logged.
+ */
+export async function anonymizeAndDeleteCustomer(
+  _prevState: CustomerActionState,
+  formData: FormData
+): Promise<CustomerActionState> {
+  const customerId = String(formData.get("customer_id") ?? "").trim();
+  if (!customerId) {
+    return { ok: false, message: "Customer is required." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: Customer would be anonymized and deleted." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  try {
+    const clientKey = await getActionClientKey();
+    const [userLimit, clientLimit] = await Promise.all([
+      enforceRateLimit({
+        scope: "customers:delete:user",
+        actor: ctx.userId,
+        // Erasure is destructive; keep the cap tight.
+        limit: 5,
+        windowSeconds: 300,
+      }),
+      enforceRateLimit({
+        scope: "customers:delete:client",
+        actor: clientKey,
+        limit: 10,
+        windowSeconds: 300,
+      }),
+    ]);
+    if (!userLimit.allowed || !clientLimit.allowed) {
+      return {
+        ok: false,
+        message: "Too many delete attempts. Please wait and try again.",
+      };
+    }
+  } catch {
+    return {
+      ok: false,
+      message: "Unable to process the request right now.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(membership?.role ?? "")) {
+    return {
+      ok: false,
+      message: "Only owners and admins can delete customer records.",
+    };
+  }
+
+  // Confirm the customer belongs to this org before we touch anything.
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("id", customerId)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!customer) {
+    return { ok: false, message: "Customer not found." };
+  }
+
+  const now = new Date().toISOString();
+
+  // Anonymise the row in the same UPDATE that flips deleted_at so a
+  // partial failure can't leave PII behind on a still-active record.
+  const { error: anonError } = await supabase
+    .from("customers")
+    .update({
+      first_name: "Deleted",
+      last_name: "Customer",
+      email: null,
+      phone: null,
+      notes: null,
+      sms_opt_in: false,
+      deleted_at: now,
+    })
+    .eq("id", customerId)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null);
+
+  if (anonError) {
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "customers.anonymize",
+      message: `customers anonymize update failed: ${anonError.message}`,
+      context: { customerId },
+    });
+    return { ok: false, message: "Couldn't delete the customer. Please try again." };
+  }
+
+  // Soft-delete every address row attached to this customer. Org scoping is
+  // enforced via the customer_id chain + RLS; we still verified ownership
+  // above so the FK reach is safe.
+  const { error: addrError } = await supabase
+    .from("customer_addresses")
+    .update({ deleted_at: now })
+    .eq("customer_id", customerId)
+    .is("deleted_at", null);
+
+  if (addrError) {
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "customers.anonymize",
+      message: `addresses soft-delete failed: ${addrError.message}`,
+      context: { customerId },
+    });
+    // Customer is already anonymised; surface a warning but don't revert.
+  }
+
+  await logAppEvent({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    source: "customers.anonymize",
+    action: "anonymize_and_delete",
+    status: "success",
+    metadata: { customerId },
+  });
+
+  revalidatePath("/dashboard/customers");
+  redirect("/dashboard/customers");
 }

@@ -8,7 +8,10 @@ import {
   normalizeQuery,
   normalizePage,
 } from "@/lib/listing/pagination";
+import { logTruncation } from "@/lib/observability/server";
 import type { OrderSummary } from "@/lib/types";
+
+const ORDERS_SEARCH_LIMIT = 5000;
 
 function formatStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -164,12 +167,20 @@ export async function getOrdersPage(options?: {
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .limit(5000);
+    .limit(ORDERS_SEARCH_LIMIT);
 
   if (error) {
     console.error("[orders] Query failed:", error.message);
     return paginateItems([], { page: options?.page, pageSize, query });
   }
+
+  await logTruncation({
+    organizationId: ctx.organizationId,
+    source: "data.orders.search",
+    rowCount: data.length,
+    limit: ORDERS_SEARCH_LIMIT,
+    metadata: { hasQuery: query.length > 0 },
+  });
 
   const mapped: OrderSummary[] = data.map(mapOrderRow);
 

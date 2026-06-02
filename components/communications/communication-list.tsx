@@ -1,6 +1,7 @@
 import type { CommunicationEntry } from "@/lib/data/communication-history";
-import { getMessages } from "@/lib/i18n/server";
+import { getMessages, getLocale } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
+import { formatTimestamp } from "@/lib/i18n/format-helpers";
 
 const CHANNEL_COLORS: Record<string, string> = {
   email: "var(--primary)",
@@ -9,17 +10,6 @@ const CHANNEL_COLORS: Record<string, string> = {
   system: "#6b7280",
 };
 
-function formatTimestamp(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export async function CommunicationList({
   entries,
   showOrderNumber,
@@ -27,7 +17,7 @@ export async function CommunicationList({
   entries: CommunicationEntry[];
   showOrderNumber?: boolean;
 }) {
-  const m = await getMessages();
+  const [m, locale] = await Promise.all([getMessages(), getLocale()]);
   const CHANNEL_LABELS: Record<string, string> = {
     email: m.communications.channels.email,
     sms: m.communications.channels.sms,
@@ -80,7 +70,7 @@ export async function CommunicationList({
               )}
             </div>
             <span style={{ fontSize: 12, color: "var(--text-soft)", whiteSpace: "nowrap" }}>
-              {formatTimestamp(entry.createdAt)}
+              {formatTimestamp(entry.createdAt, locale)}
             </span>
           </div>
 

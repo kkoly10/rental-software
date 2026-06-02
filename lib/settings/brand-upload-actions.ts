@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import type { SettingsActionState } from "./actions";
 import { isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
 import { sniffImageType } from "@/lib/utils/image-signature";
+import { stripImageMetadata } from "@/lib/utils/strip-image-metadata";
 import { mergeOrgSettings } from "./merge-settings";
 
 function sanitizeFilename(name: string) {
@@ -81,15 +82,30 @@ async function uploadBrandAsset(
   const auth = await requireBrandManager(supabase, ctx.organizationId, ctx.userId);
   if (!auth.ok) return auth;
 
+  // Strip EXIF/IPTC/XMP before the file lands in a public bucket. Cameras
+  // and phones embed GPS coordinates, device IDs, and timestamps that should
+  // not be exposed via the storefront's image URLs.
+  let stripped;
+  try {
+    stripped = await stripImageMetadata(file, sniffed);
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error
+        ? `Couldn't process the image: ${err.message}`
+        : "Couldn't process the image.",
+    };
+  }
+
   const bucket = getBucketName();
   const filePath = `${ctx.organizationId}/brand/${kind}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
 
   const { error: storageError } = await supabase.storage
     .from(bucket)
-    .upload(filePath, file, {
+    .upload(filePath, stripped.buffer, {
       cacheControl: "3600",
       upsert: false,
-      contentType: file.type || undefined,
+      contentType: stripped.mimeType,
     });
 
   if (storageError) {
