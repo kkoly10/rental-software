@@ -143,6 +143,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "UTC",
           })
         : "No date",
       total: formatMoney(Number(o.total_amount ?? 0), currency, locale),

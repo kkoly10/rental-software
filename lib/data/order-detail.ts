@@ -3,6 +3,8 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
+import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
+import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 import type { OrderDetail } from "@/lib/types";
 
 const fallbackOrderDetail: OrderDetail = {
@@ -93,6 +95,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const financials = await getOrderFinancials(data.id, ctx.organizationId);
   const totalPaid = financials?.totalPaid ?? 0;
   const remainingBalance = financials?.remainingBalance ?? Number(data.total_amount ?? 0);
+  const tz = await getOrgEventTimezone(ctx.organizationId);
 
   return {
     id: data.id,
@@ -104,7 +107,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     customerEmail: customer?.email ?? "",
     customerPhone: customer?.phone ?? "",
     eventDate: data.event_date
-      ? new Date(data.event_date + "T00:00:00").toLocaleDateString("en-US", {
+      ? new Date(data.event_date + "T12:00:00Z").toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           year: "numeric",
@@ -112,16 +115,10 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
         })
       : "TBD",
     eventStartTime: data.event_start_time
-      ? new Date(data.event_start_time).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        })
+      ? formatTimeInTimeZone(data.event_start_time, tz)
       : undefined,
     eventEndTime: data.event_end_time
-      ? new Date(data.event_end_time).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        })
+      ? formatTimeInTimeZone(data.event_end_time, tz)
       : undefined,
     items:
       items.length > 0
