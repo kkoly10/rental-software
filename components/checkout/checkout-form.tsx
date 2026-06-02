@@ -48,6 +48,17 @@ export function CheckoutForm({
 
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
 
+  // Idempotency key — generated once when the form mounts and persisted
+  // across re-renders / retries. If the browser resubmits because of a
+  // network hiccup, the server sees the same key, recognises the second
+  // POST as a replay, and returns the already-created order's number.
+  const [idempotencyKey] = useState(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `cko_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  });
+
   // Only redirect after customer explicitly confirms on the review screen
   useEffect(() => {
     if (reviewConfirmed && state.stripeUrl?.startsWith("https://checkout.stripe.com/")) {
@@ -165,6 +176,7 @@ export function CheckoutForm({
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
+      <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       {productSlug ? (
         <input type="hidden" name="product_slug" value={productSlug} />
       ) : null}

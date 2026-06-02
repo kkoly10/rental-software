@@ -42,6 +42,16 @@ export const checkoutOrderSchema = z.object({
   productSlug: optionalSlugSchema,
   fulfillmentType: z.enum(["delivery", "pickup"]).optional().default("delivery"),
   rentalEndDate: optionalDateSchema,
+  // Client-generated nonce; used to deduplicate browser/network retries
+  // of the same submission. UUID v4 from the browser; missing for older
+  // clients (server falls back to non-idempotent behavior).
+  idempotencyKey: z
+    .string()
+    .trim()
+    .max(64)
+    .regex(/^[A-Za-z0-9_\-]+$/, { message: "Invalid idempotency key." })
+    .optional()
+    .default(""),
 });
 
 export type CheckoutOrderInput = z.infer<typeof checkoutOrderSchema>;
