@@ -78,7 +78,9 @@ export async function cancelOrderFromPortal(
   const tokenHash = hashPortalAccessToken(portalToken);
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status, portal_access_token_created_at")
+    .select(
+      "id, order_status, portal_access_token_created_at, order_number, customers(first_name, last_name)"
+    )
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .is("deleted_at", null)
@@ -136,11 +138,23 @@ export async function cancelOrderFromPortal(
   // refunded/cancelled into EMAIL_WORTHY_STATUSES) — the cron flow already
   // proved this template works end-to-end.
   try {
-    const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
+    const { triggerOrderStatusEmail, triggerOperatorActivityAlertEmail } =
+      await import("@/lib/email/triggers");
     await triggerOrderStatusEmail({
       organizationId: orgId,
       orderId: order.id,
       newStatus: "cancelled",
+    });
+    const cust = (order as unknown as {
+      customers?: { first_name?: string | null; last_name?: string | null } | null;
+    }).customers;
+    await triggerOperatorActivityAlertEmail({
+      organizationId: orgId,
+      orderId: order.id,
+      orderNumber: (order as { order_number?: string | null }).order_number ?? order.id,
+      customerName:
+        `${cust?.first_name ?? ""} ${cust?.last_name ?? ""}`.trim() || "Customer",
+      event: "order_cancelled",
     });
   } catch (err) {
     console.error("[portal.cancel] status email failed:", err instanceof Error ? err.message : err);

@@ -392,6 +392,7 @@ export async function createOrder(
       .from("customer_addresses")
       .insert({
         customer_id: customerId,
+        organization_id: ctx.organizationId,
         line1: deliveryLine1,
         line2: deliveryLine2 ?? null,
         city: deliveryCity,

@@ -81,6 +81,26 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
         />
       </label>
 
+      <label className="order-card">
+        <strong>Preferred language</strong>
+        <span
+          className="muted"
+          style={{ display: "block", fontSize: 12, marginTop: 2 }}
+        >
+          Used for SMS and email templates sent to this customer.
+        </span>
+        <select
+          name="preferred_locale"
+          defaultValue={customer.preferredLocale || "en"}
+          style={{ marginTop: 10, width: "100%" }}
+        >
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+          <option value="es">Español</option>
+          <option value="pt">Português</option>
+        </select>
+      </label>
+
       <div className="order-card" style={{ paddingBottom: 4 }}>
         <strong style={{ display: "block", marginBottom: 14 }}>{m.savedAddressLabel}</strong>
         <div style={{ display: "grid", gap: 10 }}>
