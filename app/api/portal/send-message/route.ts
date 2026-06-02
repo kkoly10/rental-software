@@ -198,7 +198,9 @@ export async function POST(request: NextRequest) {
       to: supportEmail,
       from: `${safeName} <${fromEmail}>`,
       replyTo: senderEmail,
-      subject: `[Customer Message] ${subject} — Order ${order.order_number}`,
+      subject: (await import("@/lib/security/header-safe")).sanitizeHeaderValue(
+        `[Customer Message] ${subject} — Order ${order.order_number}`
+      ),
       html: `
         <h2>Customer Message</h2>
         <p><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>

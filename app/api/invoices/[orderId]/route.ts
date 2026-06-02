@@ -5,6 +5,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { safeFilenameToken } from "@/lib/security/header-safe";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 
 export async function GET(
@@ -159,7 +160,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="invoice-${order.order_number}.pdf"`,
+      "Content-Disposition": `inline; filename="invoice-${safeFilenameToken(order.order_number)}.pdf"`,
       "Cache-Control": "no-store",
     },
   });
