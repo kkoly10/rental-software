@@ -98,9 +98,13 @@ export function DashboardShell({
   }, []);
 
   useEffect(() => {
+    // `cancelled` flag prevents stale responses from server actions overwriting
+    // state if the user navigates away mid-request.
+    let cancelled = false;
     fetchUnreadMessageCount()
-      .then(setBadgeCount)
+      .then((n) => { if (!cancelled) setBadgeCount(n); })
       .catch((err) => {
+        if (cancelled) return;
         console.warn("[dashboard-shell] fetchUnreadMessageCount failed:", err);
         reportClientError({
           source: "dashboard-shell",
@@ -110,18 +114,21 @@ export function DashboardShell({
     // Fetch subscription status on every page to ensure the banner shows everywhere,
     // even on dashboard pages that don't pass the prop from the server.
     getSubscriptionStatus()
-      .then((s) => { if (s) setSubStatus(s); })
+      .then((s) => { if (!cancelled && s) setSubStatus(s); })
       .catch((err) => {
+        if (cancelled) return;
         console.warn("[dashboard-shell] getSubscriptionStatus failed:", err);
         reportClientError({
           source: "dashboard-shell",
           message: `getSubscriptionStatus failed: ${err instanceof Error ? err.message : String(err)}`,
         });
       });
+    return () => { cancelled = true; };
   }, [pathname]);
 
   useEffect(() => {
-    fetch("/api/storefront-url")
+    const controller = new AbortController();
+    fetch("/api/storefront-url", { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) return null;
         const payload = (await response.json()) as { url?: string };
@@ -131,7 +138,7 @@ export function DashboardShell({
         if (url) setPublicSiteUrl(url);
       })
       .catch(() => {});
-    fetch("/api/org-type")
+    fetch("/api/org-type", { signal: controller.signal })
       .then(async (r) => (r.ok ? (await r.json() as { businessType?: string; organizationId?: string }) : null))
       .then((data) => {
         // Always transition off the skeleton once the API responds —
@@ -143,11 +150,15 @@ export function DashboardShell({
           if (data.organizationId) setOrgId(data.organizationId);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        // AbortError is fired by controller.abort() during unmount — ignore it
+        // so we don't reset state on a component that's no longer mounted.
+        if (err instanceof DOMException && err.name === "AbortError") return;
         // Network/server error — fall back to the unfiltered nav rather
         // than leaving the operator stuck on the skeleton forever.
         setBusinessType("");
       });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {

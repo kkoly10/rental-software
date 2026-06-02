@@ -79,6 +79,16 @@ export const createOrderSchema = z
     deliveryLine2: optionalText("Apt / Suite / Unit", 100),
     rentalEndDate: optionalDateSchema,
     smsOptIn: z.boolean().optional().default(false),
+    // Client-generated nonce; deduplicates browser/network retries of
+    // the operator order-create form. UUID v4 from the browser; older
+    // clients still work (server falls back to non-idempotent behavior).
+    idempotencyKey: z
+      .string()
+      .trim()
+      .max(64)
+      .regex(/^[A-Za-z0-9_\-]+$/, { message: "Invalid idempotency key." })
+      .optional()
+      .default(""),
   })
   .superRefine(({ subtotal, deliveryFee, depositAmount }, ctx) => {
     const total = subtotal + deliveryFee;

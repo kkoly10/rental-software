@@ -4,6 +4,7 @@ import { getCustomerDetail } from "@/lib/data/customer-detail";
 import { CommunicationList } from "@/components/communications/communication-list";
 import { getCustomerCommunications } from "@/lib/data/communication-history";
 import { EditCustomerForm } from "@/components/customers/edit-customer-form";
+import { AnonymizeCustomerButton } from "@/components/customers/anonymize-customer-button";
 import { getMessages } from "@/lib/i18n/server";
 
 export default async function CustomerDetailPage({
@@ -56,6 +57,10 @@ export default async function CustomerDetailPage({
 
           <div style={{ marginTop: 16 }}>
             <EditCustomerForm customer={customer} />
+          </div>
+
+          <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+            <AnonymizeCustomerButton customerId={customer.id} customerName={customer.name} />
           </div>
         </section>
 

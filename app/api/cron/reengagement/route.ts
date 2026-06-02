@@ -4,20 +4,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { logCommunication } from "@/lib/communications/log";
 import { logAppError } from "@/lib/observability/server";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates all orgs and sends emails; give it headroom over the
 // default serverless timeout.
 export const maxDuration = 60;
-
-// ─── Auth ──────────────────────────────────────────────────────────────────
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const secret = getOptionalEnv("CRON_SECRET");
-  if (!secret) return false;
-
-  const authHeader = request.headers.get("authorization");
-  return authHeader === `Bearer ${secret}`;
-}
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
@@ -164,7 +155,11 @@ export async function GET(request: NextRequest) {
   const { data: orgs } = await supabase
     .from("organizations")
     .select("id, name, settings, support_email")
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    // Bound the per-run scan. Orgs not processed in this run are picked
+    // up by tomorrow's cron — reengagement nudges fire once per day so
+    // missing a single batch isn't user-visible.
+    .limit(5000);
 
   if (!orgs || orgs.length === 0) {
     return NextResponse.json({
