@@ -42,12 +42,22 @@ export function getAvailabilityWindowForDate(
     }
   }
 
-  // When both start and end times are provided, use the exact time window
+  // When both start and end times are provided, use the exact time window.
+  // Equal times (e.g. startTime=14:00, endTime=14:00) used to silently
+  // fall through to the full-day window — operators expecting a zero-
+  // length slot got a 24-hour block instead. Explicitly reject the
+  // degenerate case so the caller can surface a validation error
+  // rather than over-reserving inventory.
   if (startTime && endTime && /^\d{2}:\d{2}$/.test(startTime) && /^\d{2}:\d{2}$/.test(endTime)) {
     const start = new Date(`${eventDate}T${startTime}:00.000Z`);
     const end = new Date(`${eventDate}T${endTime}:00.000Z`);
 
-    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start) {
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      if (end <= start) {
+        // Reject end <= start: zero/negative windows are user error,
+        // not "fall back to a full-day block."
+        return null;
+      }
       return {
         startsAt: start.toISOString(),
         endsAt: end.toISOString(),

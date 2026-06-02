@@ -1,6 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney, formatEventDate } from "@/lib/i18n/format-helpers";
 import type { OrderSummary } from "@/lib/types";
 import { mockOrders } from "@/lib/mock-data";
 
@@ -47,6 +49,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
 
   const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
+  const { currency, locale } = await getOrgFormatting();
 
   // Compute a date 7 days from now for upcoming deliveries
   const nextWeek = new Date();
@@ -136,14 +139,14 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         : "Unknown",
       item: items?.[0]?.item_name_snapshot ?? "Rental booking",
       date: o.event_date
-        ? new Date(`${o.event_date}T12:00:00Z`).toLocaleDateString("en-US", {
+        ? formatEventDate(o.event_date, locale, {
             month: "short",
             day: "numeric",
             year: "numeric",
             timeZone: "UTC",
           })
         : "No date",
-      total: `$${Number(o.total_amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      total: formatMoney(Number(o.total_amount ?? 0), currency, locale),
       status: formatStatus(status),
       tone: statusTone(status),
     };

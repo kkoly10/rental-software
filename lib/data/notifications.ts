@@ -5,6 +5,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 export type NotificationType =
   | "new_order"
   | "payment_received"
+  | "payment_failed"
+  | "payment_dispute"
   | "order_confirmed"
   | "delivery_scheduled"
   | "new_customer"
