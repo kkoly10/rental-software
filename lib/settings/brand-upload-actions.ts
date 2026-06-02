@@ -56,7 +56,10 @@ async function uploadBrandAsset(
   kind: "logo" | "hero",
   maxSize: number,
   allowedTypes: string[]
-): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; url: string; bucket: string; filePath: string }
+  | { ok: false; message: string }
+> {
   if (file.size > maxSize) {
     const mb = Math.round(maxSize / 1024 / 1024);
     return { ok: false, message: `File must be under ${mb}MB.` };
@@ -119,7 +122,27 @@ async function uploadBrandAsset(
     .from(bucket)
     .getPublicUrl(filePath);
 
-  return { ok: true, url: publicUrlData.publicUrl };
+  return { ok: true, url: publicUrlData.publicUrl, bucket, filePath };
+}
+
+// Best-effort delete of an orphaned brand asset when saveSetting fails
+// after upload. Logs but does not surface cleanup failures — the user's
+// original failure message is more actionable.
+async function cleanupOrphanedBrandAsset(bucket: string, filePath: string) {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.storage.from(bucket).remove([filePath]);
+    if (error) {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        source: "settings.brand-upload",
+        message: "Orphaned brand asset cleanup failed",
+        context: { bucket, filePath, cleanupError: error.message },
+      });
+    }
+  } catch (err) {
+    console.error("[settings.brand-upload] cleanup threw:", err);
+  }
 }
 
 async function saveSetting(
@@ -159,6 +182,12 @@ export async function uploadLogoImage(
   if (!result.ok) return { ok: false, message: result.message };
 
   const saved = await saveSetting("brand_logo_url", result.url);
+  if (!saved.ok) {
+    // saveSetting failed — the just-uploaded file is now an orphan
+    // (no settings row references it). Clean up immediately.
+    await cleanupOrphanedBrandAsset(result.bucket, result.filePath);
+    return saved;
+  }
   return { ...saved, url: result.url };
 }
 
@@ -190,6 +219,10 @@ export async function uploadHeroImage(
   if (!result.ok) return { ok: false, message: result.message };
 
   const saved = await saveSetting("hero_image_url", result.url);
+  if (!saved.ok) {
+    await cleanupOrphanedBrandAsset(result.bucket, result.filePath);
+    return saved;
+  }
   return { ...saved, url: result.url };
 }
 

@@ -153,6 +153,21 @@ export async function uploadProductImage(
 
   if (insertError) {
     console.error("[products.image] insert failed:", insertError.message);
+    // Storage upload succeeded but the DB row failed — left alone, the
+    // file orphans in the bucket forever and counts against storage
+    // quota. Best-effort remove it; if cleanup itself fails, log so a
+    // future sweep can pick it up but don't override the original error.
+    const { error: cleanupError } = await supabase.storage.from(bucket).remove([filePath]);
+    if (cleanupError) {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        userId: ctx.userId,
+        source: "products.image",
+        message: "Orphaned image cleanup failed after insert error",
+        context: { bucket, filePath, insertError: insertError.message, cleanupError: cleanupError.message },
+      });
+    }
     return { ok: false, message: "Couldn't save the image. Please try again." };
   }
 
