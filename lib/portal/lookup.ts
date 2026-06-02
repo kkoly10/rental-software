@@ -61,13 +61,28 @@ function formatMoney(val: number): string {
   return `$${val.toFixed(2)}`;
 }
 
-async function buildPortalOrder(order: OrderBase, customer: { first_name: string | null; last_name: string | null }) {
+async function buildPortalOrder(
+  order: OrderBase,
+  customer: { first_name: string | null; last_name: string | null },
+  orgId: string,
+) {
+  const { formatDateInTimeZone, formatTimeInTimeZone } = await import("@/lib/datetime/event-time");
   // Same anon-RLS issue: order_items, documents, payments have no anon SELECT,
   // so the cookie-bound client returns nothing and the portal renders an
   // empty order summary.
   const supabase = hasSupabaseServiceRoleEnv()
     ? createSupabaseAdminClient()
     : await createSupabaseServerClient();
+
+  // Render times in the org's IANA timezone so customers see times
+  // that match the operator's clock, not the server's.
+  const { data: orgTzRow } = await supabase
+    .from("organizations")
+    .select("event_timezone")
+    .eq("id", orgId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const eventTimezone = orgTzRow?.event_timezone ?? "UTC";
 
   const [{ data: items }, { data: docs }, { data: paymentRows }] = await Promise.all([
     supabase.from("order_items").select("item_name_snapshot").eq("order_id", order.id),
@@ -84,7 +99,7 @@ async function buildPortalOrder(order: OrderBase, customer: { first_name: string
   ]);
 
   const eventDate = order.event_date
-    ? new Date(`${order.event_date}T12:00:00`).toLocaleDateString("en-US", {
+    ? formatDateInTimeZone(`${order.event_date}T12:00:00Z`, eventTimezone, {
         weekday: "long",
         month: "long",
         day: "numeric",
@@ -127,7 +142,7 @@ async function buildPortalOrder(order: OrderBase, customer: { first_name: string
     })),
     payments: (paymentRows ?? []).map((p) => ({
       date: p.paid_at
-        ? new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        ? formatDateInTimeZone(p.paid_at, eventTimezone, { month: "short", day: "numeric", year: "numeric" })
         : "—",
       amount: formatMoney(Number(p.amount ?? 0)),
       type: (p.payment_type ?? "payment").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
@@ -136,8 +151,7 @@ async function buildPortalOrder(order: OrderBase, customer: { first_name: string
     deliveryTimeWindow: (() => {
       if (!["scheduled", "out_for_delivery", "delivered"].includes(order.order_status)) return undefined;
       if (order.event_start_time && order.event_end_time) {
-        const fmt = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-        return `${fmt(order.event_start_time)} – ${fmt(order.event_end_time)}`;
+        return `${formatTimeInTimeZone(order.event_start_time, eventTimezone)} – ${formatTimeInTimeZone(order.event_end_time, eventTimezone)}`;
       }
       return "See confirmation email for details";
     })(),
@@ -219,7 +233,7 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
     ok: true,
     message: "",
     portalToken: normalized,
-    order: await buildPortalOrder(order, customer ?? { first_name: null, last_name: null }),
+    order: await buildPortalOrder(order, customer ?? { first_name: null, last_name: null }, orgId),
   };
 }
 
@@ -326,6 +340,6 @@ export async function lookupOrder(
     ok: true,
     message: "",
     portalToken: newPortalToken,
-    order: await buildPortalOrder(order, customer),
+    order: await buildPortalOrder(order, customer, orgId),
   };
 }

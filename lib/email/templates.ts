@@ -16,12 +16,16 @@ function esc(s: string | null | undefined): string {
   ));
 }
 
-function layout(businessName: string, body: string, footer?: string): string {
+function layout(businessName: string, body: string, footer?: string, preheader?: string): string {
   const safeName = esc(businessName);
+  const preheaderSpan = preheader
+    ? `<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${esc(preheader)}</span>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#10233f;line-height:1.6;">
+  ${preheaderSpan}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:32px 16px;">
     <tr><td align="center">
       <table role="presentation" width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:1px solid #dbe6f4;box-shadow:0 4px 12px rgba(16,35,63,0.06);overflow:hidden;">
@@ -153,6 +157,71 @@ export function newOrderAlertEmail(data: NewOrderAlertData): string {
     ])}
 
     ${button("View Order", data.dashboardUrl)}
+    `
+  );
+}
+
+// ─── OPERATOR ACTIVITY ALERT (customer-initiated events) ──────────────────
+
+export type OperatorActivityEvent =
+  | "payment_received"
+  | "document_signed"
+  | "quote_accepted"
+  | "order_cancelled"
+  | "portal_message";
+
+export type OperatorActivityAlertData = {
+  businessName: string;
+  event: OperatorActivityEvent;
+  orderNumber: string;
+  customerName: string;
+  /** Free-text detail rendered after the headline. e.g. "$250 deposit
+   *  via Stripe", "Signed waiver", "Quote accepted; awaiting deposit",
+   *  "I need to reschedule…" */
+  detail?: string;
+  dashboardUrl: string;
+};
+
+const EVENT_COPY: Record<OperatorActivityEvent, { headline: string; lead: string }> = {
+  payment_received: {
+    headline: "Customer paid",
+    lead: "A payment came in through the customer portal.",
+  },
+  document_signed: {
+    headline: "Document signed",
+    lead: "The customer signed a document on the portal.",
+  },
+  quote_accepted: {
+    headline: "Quote accepted",
+    lead: "The customer accepted the quote and is being routed to deposit.",
+  },
+  order_cancelled: {
+    headline: "Order cancelled by customer",
+    lead: "The customer cancelled this booking from the portal.",
+  },
+  portal_message: {
+    headline: "New customer message",
+    lead: "The customer sent a message through the order portal.",
+  },
+};
+
+export function operatorActivityAlertEmail(data: OperatorActivityAlertData): string {
+  const copy = EVENT_COPY[data.event];
+  const rows: [string, string][] = [
+    ["Order", `#${data.orderNumber}`],
+    ["Customer", data.customerName],
+  ];
+  if (data.detail) rows.push(["Detail", data.detail]);
+
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">${copy.headline}</h1>
+    <p style="color:#55708f;margin:0 0 20px;">${copy.lead}</p>
+
+    ${detailTable(rows)}
+
+    ${button("Open order", data.dashboardUrl)}
     `
   );
 }
@@ -565,5 +634,48 @@ export function quoteSentEmail(data: {
       Questions? Contact us at ${esc(data.supportEmail)}.` : ""}
     </p>
     `
+  );
+}
+
+// ─── DEPOSIT REMINDER (customer-facing) ────────────────────────────────────
+
+export type DepositReminderData = {
+  businessName: string;
+  customerFirstName: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  depositDue: string;
+  portalUrl: string;
+  supportEmail: string | null;
+};
+
+export function depositReminderEmail(data: DepositReminderData): string {
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">Deposit reminder</h1>
+    <p style="color:#55708f;margin:0 0 20px;">
+      Hi ${esc(data.customerFirstName)}, your booking is held but not yet
+      confirmed. Submit your deposit to secure your event date.
+    </p>
+
+    ${detailTable([
+      ["Order", `#${data.orderNumber}`],
+      ["Item", data.productName],
+      ["Event date", data.eventDate],
+      ["Deposit due", data.depositDue],
+    ])}
+
+    ${button("Pay Deposit", data.portalUrl)}
+
+    ${data.supportEmail
+      ? `<p style="font-size:14px;color:#55708f;">
+          Questions? Contact us at ${esc(data.supportEmail)}.
+        </p>`
+      : ""}
+    `,
+    undefined,
+    `Pay your ${data.depositDue} deposit to confirm order #${data.orderNumber}.`
   );
 }

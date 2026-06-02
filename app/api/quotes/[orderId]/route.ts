@@ -6,6 +6,7 @@ import { generateQuotePdf } from "@/lib/quotes/generate-pdf";
 import { getSiteUrl } from "@/lib/site-url";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { safeFilenameToken } from "@/lib/security/header-safe";
+import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 
 export async function GET(
   _request: NextRequest,
@@ -59,7 +60,7 @@ export async function GET(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, support_email, phone")
+    .select("name, support_email, phone, event_timezone")
     .eq("id", ctx.organizationId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -91,7 +92,7 @@ export async function GET(
     : "";
 
   const eventDate = order.event_date
-    ? new Date(order.event_date + "T00:00:00").toLocaleDateString("en-US", {
+    ? formatDateInTimeZone(`${order.event_date}T12:00:00Z`, org?.event_timezone ?? "UTC", {
         month: "long",
         day: "numeric",
         year: "numeric",
@@ -109,7 +110,7 @@ export async function GET(
     supportEmail: org?.support_email ?? "",
     phone: org?.phone ?? "",
     orderNumber: order.order_number,
-    quoteDate: new Date().toLocaleDateString("en-US", {
+    quoteDate: formatDateInTimeZone(new Date(), org?.event_timezone ?? "UTC", {
       month: "short",
       day: "numeric",
       year: "numeric",

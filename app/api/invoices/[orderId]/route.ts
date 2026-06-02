@@ -6,6 +6,7 @@ import { getOrderFinancials } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { safeFilenameToken } from "@/lib/security/header-safe";
+import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 
 export async function GET(
   _request: NextRequest,
@@ -69,7 +70,7 @@ export async function GET(
       .eq("order_id", orderId),
     supabase
       .from("organizations")
-      .select("name, support_email, phone")
+      .select("name, support_email, phone, event_timezone")
       .eq("id", ctx.organizationId)
       .is("deleted_at", null)
       .maybeSingle(),
@@ -120,13 +121,13 @@ export async function GET(
     supportEmail: org?.support_email ?? profile?.email ?? "",
     phone: org?.phone ?? profile?.phone ?? "",
     orderNumber: order.order_number,
-    invoiceDate: new Date().toLocaleDateString("en-US", {
+    invoiceDate: formatDateInTimeZone(new Date(), org?.event_timezone ?? "UTC", {
       month: "long",
       day: "numeric",
       year: "numeric",
     }),
     eventDate: order.event_date
-      ? new Date(`${order.event_date}T12:00:00`).toLocaleDateString("en-US", {
+      ? formatDateInTimeZone(`${order.event_date}T12:00:00Z`, org?.event_timezone ?? "UTC", {
           weekday: "long",
           month: "long",
           day: "numeric",

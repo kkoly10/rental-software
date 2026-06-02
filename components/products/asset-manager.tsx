@@ -8,15 +8,10 @@ import {
   type AssetActionState,
 } from "@/lib/products/asset-actions";
 import type { ProductAsset } from "@/lib/data/product-assets";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatTimestamp } from "@/lib/i18n/format-helpers";
 
 const initialState: AssetActionState = { ok: false, message: "" };
-
-const STATUS_OPTIONS: Array<{ value: string; label: string; bookable: boolean }> = [
-  { value: "ready", label: "Ready (bookable)", bookable: true },
-  { value: "maintenance", label: "In maintenance", bookable: false },
-  { value: "broken", label: "Broken", bookable: false },
-  { value: "retired", label: "Retired", bookable: false },
-];
 
 function statusBadgeClass(s: string): string {
   if (["ready", "available", "active"].includes(s)) return "badge success";
@@ -32,29 +27,30 @@ export function AssetManager({
   assets: ProductAsset[];
 }) {
   const [addState, addAction, addPending] = useActionState(addProductAsset, initialState);
+  const { messages, t } = useI18n();
+  const am = messages.assetManager;
   const bookableCount = assets.filter((a) => a.isAvailable).length;
 
   return (
     <section className="panel" style={{ marginTop: 18 }}>
       <div className="section-header">
         <div>
-          <div className="kicker">Inventory</div>
-          <h2 style={{ margin: "6px 0 0" }}>Physical units</h2>
+          <div className="kicker">{am.kicker}</div>
+          <h2 style={{ margin: "6px 0 0" }}>{am.title}</h2>
           <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-            Each row is one rentable unit. A product needs at least one unit in
-            <strong> Ready</strong> status to accept bookings on the storefront.
+            {am.intro}
           </div>
         </div>
       </div>
 
       <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span className={bookableCount > 0 ? "badge success" : "badge warning"}>
-          {bookableCount} of {assets.length} ready for booking
+          {t(am.bookableCount, { bookable: bookableCount, total: assets.length })}
         </span>
         <form action={addAction}>
           <input type="hidden" name="product_id" value={productId} />
           <button type="submit" className="secondary-btn" disabled={addPending} style={{ fontSize: 13, padding: "8px 14px" }}>
-            {addPending ? "Adding…" : "+ Add unit"}
+            {addPending ? am.adding : am.addUnit}
           </button>
         </form>
       </div>
@@ -72,9 +68,9 @@ export function AssetManager({
 
       {assets.length === 0 ? (
         <div className="order-card" style={{ marginTop: 12 }}>
-          <strong>No units yet.</strong>
+          <strong>{am.emptyTitle}</strong>
           <div className="muted" style={{ marginTop: 4 }}>
-            Add at least one unit to make this product bookable.
+            {am.emptyBody}
           </div>
         </div>
       ) : (
@@ -91,6 +87,24 @@ export function AssetManager({
 function AssetRow({ productId, asset }: { productId: string; asset: ProductAsset }) {
   const [statusState, statusAction, statusPending] = useActionState(updateProductAssetStatus, initialState);
   const [removeState, removeAction, removePending] = useActionState(removeProductAsset, initialState);
+  const { messages, locale, t } = useI18n();
+  const am = messages.assetManager;
+  const statusOptions: Array<{ value: string; label: string }> = [
+    { value: "ready", label: am.statusLabels.ready },
+    { value: "maintenance", label: am.statusLabels.maintenance },
+    { value: "broken", label: am.statusLabels.broken },
+    { value: "retired", label: am.statusLabels.retired },
+  ];
+  const statusBadgeLabel =
+    am.statusBadge[asset.operationalStatus as keyof typeof am.statusBadge] ??
+    asset.operationalStatus;
+  const addedDate = asset.updatedAt
+    ? formatTimestamp(asset.updatedAt, locale, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
 
   return (
     <div
@@ -100,12 +114,12 @@ function AssetRow({ productId, asset }: { productId: string; asset: ProductAsset
       <div style={{ minWidth: 0 }}>
         <strong style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{asset.assetTag}</strong>
         <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-          Added {asset.updatedAt ? new Date(asset.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+          {t(am.addedOn, { date: addedDate })}
         </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span className={statusBadgeClass(asset.operationalStatus)}>{asset.operationalStatus}</span>
+        <span className={statusBadgeClass(asset.operationalStatus)}>{statusBadgeLabel}</span>
 
         <form action={statusAction} style={{ display: "inline-flex", gap: 6 }}>
           <input type="hidden" name="asset_id" value={asset.id} />
@@ -113,28 +127,28 @@ function AssetRow({ productId, asset }: { productId: string; asset: ProductAsset
           <select
             name="operational_status"
             defaultValue={asset.operationalStatus}
-            aria-label={`Status for ${asset.assetTag}`}
+            aria-label={t(am.statusAriaLabel, { tag: asset.assetTag })}
             style={{ minHeight: 36, fontSize: 13, borderRadius: 8 }}
           >
-            {STATUS_OPTIONS.map((o) => (
+            {statusOptions.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
           <button type="submit" className="ghost-btn" disabled={statusPending} style={{ fontSize: 12, padding: "4px 10px" }}>
-            {statusPending ? "…" : "Save"}
+            {statusPending ? "…" : am.save}
           </button>
         </form>
 
         <form
           action={removeAction}
           onSubmit={(e) => {
-            if (!confirm(`Remove unit ${asset.assetTag}?`)) e.preventDefault();
+            if (!confirm(t(am.confirmRemove, { tag: asset.assetTag }))) e.preventDefault();
           }}
         >
           <input type="hidden" name="asset_id" value={asset.id} />
           <input type="hidden" name="product_id" value={productId} />
           <button type="submit" className="ghost-btn" disabled={removePending} style={{ fontSize: 12, padding: "4px 10px", color: "var(--danger, #b91c1c)" }}>
-            {removePending ? "…" : "Remove"}
+            {removePending ? "…" : am.remove}
           </button>
         </form>
       </div>

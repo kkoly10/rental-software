@@ -316,6 +316,8 @@ export async function updateMemberRole(
     return { ok: false, message: "Cannot change the owner's role." };
   }
 
+  const previousRole = target.role;
+
   const { error } = await supabase
     .from("organization_memberships")
     .update({ role: newRole })
@@ -324,6 +326,26 @@ export async function updateMemberRole(
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  // Role change is a high-trust operation — a rogue admin can promote
+  // themselves to admin or strip permissions from owners (well, except
+  // owner — that's guarded above). Audit-log every successful change.
+  {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "team.role_change",
+      action: "updated",
+      status: "success",
+      route: "lib/team/actions",
+      metadata: {
+        member_id: memberId,
+        previous_role: previousRole,
+        new_role: newRole,
+      },
+    });
   }
 
   revalidatePath("/dashboard/settings/team");

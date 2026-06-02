@@ -1,6 +1,14 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { logTruncation } from "@/lib/observability/server";
+
+// Per-query limits. Anything that grows linearly with order/customer
+// volume can saturate these and silently truncate analytics totals;
+// `logTruncation` below surfaces that to operators via app_event_logs.
+const ANALYTICS_ORDERS_LIMIT = 5000;
+const ANALYTICS_PAYMENTS_LIMIT = 10000;
+const ANALYTICS_ITEMS_LIMIT = 5000;
 
 export type AnalyticsData = {
   // Financial
@@ -81,7 +89,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .select("id, order_status, total_amount, deposit_due_amount, event_date, created_at")
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
-        .limit(5000),
+        .limit(ANALYTICS_ORDERS_LIMIT),
 
       // Customer count
       supabase
@@ -96,7 +104,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .select("amount, paid_at, payment_type, order_id, orders!inner(organization_id)")
         .eq("orders.organization_id", ctx.organizationId)
         .eq("payment_status", "paid")
-        .limit(10000),
+        .limit(ANALYTICS_PAYMENTS_LIMIT),
 
       // Order items (exclude cancelled orders for accurate product stats)
       supabase
@@ -106,7 +114,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         )
         .eq("orders.organization_id", ctx.organizationId)
         .not("orders.order_status", "eq", "cancelled")
-        .limit(5000),
+        .limit(ANALYTICS_ITEMS_LIMIT),
 
       // Outstanding balance: sum of balance_due_amount for non-cancelled orders
       // This uses the cached column which is kept in sync by recordPayment().
@@ -118,7 +126,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
         .not("order_status", "in", "(cancelled,completed,refunded)")
-        .limit(5000),
+        .limit(ANALYTICS_ORDERS_LIMIT),
 
       // Repeat customers: fetch customer_id from all orders to count in JS
       supabase
@@ -127,7 +135,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
         .not("order_status", "eq", "cancelled")
-        .limit(5000),
+        .limit(ANALYTICS_ORDERS_LIMIT),
 
       // New customers this month
       supabase
@@ -147,6 +155,41 @@ export async function getAnalytics(): Promise<AnalyticsData> {
 
   const orders = ordersRes.data ?? [];
   const payments = paymentsRes.data ?? [];
+
+  // Surface truncation so operators know when analytics totals
+  // are based on a clipped window rather than the full history.
+  await Promise.all([
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.orders",
+      rowCount: orders.length,
+      limit: ANALYTICS_ORDERS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.payments",
+      rowCount: payments.length,
+      limit: ANALYTICS_PAYMENTS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.items",
+      rowCount: (itemsRes.data ?? []).length,
+      limit: ANALYTICS_ITEMS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.balance",
+      rowCount: (balanceRes.data ?? []).length,
+      limit: ANALYTICS_ORDERS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.repeat_customers",
+      rowCount: (repeatRes.data ?? []).length,
+      limit: ANALYTICS_ORDERS_LIMIT,
+    }),
+  ]);
   const items = itemsRes.data ?? [];
 
   // --- Financial metrics ---

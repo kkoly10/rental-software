@@ -57,6 +57,8 @@ function NotificationIcon({ type }: { type: NotificationType }) {
         </svg>
       );
     case "low_inventory":
+    case "payment_failed":
+    case "payment_dispute":
       return (
         <svg className="notif-icon notif-icon-inventory" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -113,14 +115,20 @@ export function NotificationCenter({
         type="button"
         className="notif-bell-btn"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label={m.notifications.ariaLabel}
+        aria-label={
+          unreadCount > 0
+            ? `${m.notifications.ariaLabel} (${unreadCount} unread)`
+            : m.notifications.ariaLabel
+        }
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
         {unreadCount > 0 && (
-          <span className="notif-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>
+          <span className="notif-badge" aria-hidden="true">{unreadCount > 9 ? "9+" : unreadCount}</span>
         )}
       </button>
 

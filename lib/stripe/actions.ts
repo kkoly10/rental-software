@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { logAppError } from "@/lib/observability/server";
 import { getStripe, hasStripeEnv, PLAN_TIERS, type PlanTier } from "./config";
 
 export type SubscriptionActionState = {
@@ -134,6 +135,13 @@ export async function createCheckoutSession(
         .is("deleted_at", null);
       if (customerSaveError) {
         console.error("[stripe] failed to persist stripe_customer_id:", customerSaveError.message);
+        await logAppError({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe.checkout",
+          message: `Failed to persist stripe_customer_id: ${customerSaveError.message}`,
+          context: { customerId },
+        });
       }
     }
 
@@ -157,6 +165,24 @@ export async function createCheckoutSession(
     });
 
     if (session.url) {
+      // Audit-log the subscription checkout attempt BEFORE redirecting
+      // — `redirect()` throws NEXT_REDIRECT and won't return. We log
+      // creation (not success) here because the actual subscription
+      // doesn't exist until the customer completes Stripe checkout
+      // and our webhook fires; the webhook is the right place for the
+      // "subscription created" event. This row records the attempt.
+      {
+        const { logAppEvent } = await import("@/lib/observability/server");
+        await logAppEvent({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe.subscription_checkout",
+          action: "session_created",
+          status: "info",
+          route: "lib/stripe/actions",
+          metadata: { plan_tier: tier, interval, stripe_session_id: session.id },
+        });
+      }
       redirect(session.url);
     }
 
@@ -166,6 +192,15 @@ export async function createCheckoutSession(
       throw error; // Let Next.js handle the redirect
     }
     console.error("Stripe checkout error:", error);
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "stripe.checkout",
+      message: error instanceof Error ? error.message : "Unknown checkout error",
+      stack: error instanceof Error ? error.stack : undefined,
+      context: { tier },
+      error,
+    });
     return { ok: false, message: "Failed to start checkout. Please try again." };
   }
 }
@@ -218,6 +253,23 @@ export async function createBillingPortalSession(): Promise<SubscriptionActionSt
     });
 
     if (session.url) {
+      // Audit-log billing-portal access — the operator may proceed to
+      // cancel / downgrade / change payment method inside Stripe's
+      // hosted UI, which our webhook handlers reflect back as
+      // subscription state changes. Logging the portal entry gives
+      // us a "who initiated this" pointer for those webhook events.
+      {
+        const { logAppEvent } = await import("@/lib/observability/server");
+        await logAppEvent({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe.billing_portal",
+          action: "session_created",
+          status: "info",
+          route: "lib/stripe/actions",
+          metadata: { stripe_session_id: session.id },
+        });
+      }
       redirect(session.url);
     }
 
@@ -227,6 +279,14 @@ export async function createBillingPortalSession(): Promise<SubscriptionActionSt
       throw error;
     }
     console.error("Stripe portal error:", error);
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "stripe.billing_portal",
+      message: error instanceof Error ? error.message : "Unknown billing-portal error",
+      stack: error instanceof Error ? error.stack : undefined,
+      error,
+    });
     return { ok: false, message: "Failed to open billing portal." };
   }
 }

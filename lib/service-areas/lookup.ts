@@ -54,7 +54,7 @@ export async function resolveServiceAreaForAddress(options: {
     return mapServiceArea(exactPostalMatch);
   }
 
-  const cityStateMatch = data.find((area) => {
+  const cityStateMatches = data.filter((area) => {
     const areaCity = normalizeCity(area.city);
     const areaState = normalizeState(area.state);
 
@@ -66,8 +66,28 @@ export async function resolveServiceAreaForAddress(options: {
     );
   });
 
-  if (cityStateMatch) {
-    return mapServiceArea(cityStateMatch);
+  if (cityStateMatches.length === 1) {
+    return mapServiceArea(cityStateMatches[0]);
+  }
+
+  if (cityStateMatches.length > 1) {
+    // Multiple service areas match this city+state (e.g. operator
+    // configured "New York, NY" twice with different ZIPs). The
+    // current behavior of returning the first match is arbitrary;
+    // log a warning so the operator can clean up the config.
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      source: "service-areas.lookup",
+      action: "ambiguous_city_state",
+      status: "warning",
+      route: "lib/service-areas/lookup",
+      metadata: {
+        city: normalizedCity,
+        state: normalizedState,
+        match_ids: cityStateMatches.map((m) => m.id),
+      },
+    });
+    return mapServiceArea(cityStateMatches[0]);
   }
 
   return null;
