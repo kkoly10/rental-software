@@ -5,9 +5,14 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { hashPortalAccessToken } from "@/lib/portal/access-token";
+import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
+import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
 
 export async function POST(request: NextRequest) {
+  if (!isAllowedRequestOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
+
   let body: { documentId: string; portalToken: string; signerName: string };
 
   try {
@@ -69,7 +74,7 @@ export async function POST(request: NextRequest) {
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, customers(first_name, last_name)"
+      "id, order_number, portal_access_token_created_at, customers(first_name, last_name)"
     )
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
@@ -80,11 +85,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid portal link." }, { status: 403 });
   }
 
+  if (isPortalTokenExpired(order.portal_access_token_created_at)) {
+    return NextResponse.json(
+      { error: "This portal link has expired. Please request a new one." },
+      { status: 403 }
+    );
+  }
+
+  // Scope by both order_id AND organization_id so a valid token for order A
+  // cannot be used to sign a document attached to order B in the same org.
   const { data: doc } = await supabase
     .from("documents")
     .select("id, document_status")
     .eq("id", documentId)
     .eq("order_id", order.id)
+    .eq("organization_id", orgId)
     .maybeSingle();
 
   if (!doc) {

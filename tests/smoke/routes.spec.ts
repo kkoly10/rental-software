@@ -279,18 +279,21 @@ test.describe("POST /api/portal/send-message", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("POST /api/portal/sign-document", () => {
-  test("returns 400 for empty body", async ({ request }) => {
+  // The endpoint rejects requests from outside the configured origin
+  // (CSRF guard) — accept either 400 (empty body) or 403 (no Origin
+  // header on the test request).
+  test("rejects empty body", async ({ request }) => {
     const res = await request.post("/api/portal/sign-document", { data: {} });
-    expect(res.status()).toBe(400);
+    expect([400, 403]).toContain(res.status());
     const body = await res.json();
     expect(body).toHaveProperty("error");
   });
 
-  test("returns 400 when required fields are missing", async ({ request }) => {
+  test("rejects when required fields are missing", async ({ request }) => {
     const res = await request.post("/api/portal/sign-document", {
       data: { documentId: "doc_1" /* missing portalToken + signerName */ },
     });
-    expect(res.status()).toBe(400);
+    expect([400, 403]).toContain(res.status());
   });
 });
 
