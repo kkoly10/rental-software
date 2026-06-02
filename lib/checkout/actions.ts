@@ -782,17 +782,29 @@ export async function createCheckoutOrder(
       const { getRequestOrigin } = await import("@/lib/seo/metadata");
       const siteUrl = await getRequestOrigin();
 
+      // Resolve org currency so non-USD operators charge in their currency.
+      // Falls back to "usd" if the column is null/missing. The helper
+      // applies zero-decimal handling for currencies like JPY.
+      const { data: orgCurrencyRow } = await supabase
+        .from("organizations")
+        .select("default_currency")
+        .eq("id", orgId)
+        .is("deleted_at", null)
+        .maybeSingle();
+      const { normalizeCurrency, toStripeMinorUnits } = await import("@/lib/money/currency");
+      const orgCurrency = normalizeCurrency(orgCurrencyRow?.default_currency);
+
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [
           {
             price_data: {
-              currency: "usd",
+              currency: orgCurrency,
               product_data: {
                 name: `Deposit — ${productName}`,
                 description: `Order ${orderNumber} deposit`,
               },
-              unit_amount: Math.round(deposit * 100),
+              unit_amount: toStripeMinorUnits(deposit, orgCurrency),
             },
             quantity: 1,
           },
