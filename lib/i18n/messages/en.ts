@@ -1101,6 +1101,36 @@ const enValues = {
     },
   },
 
+  assetManager: {
+    kicker: "Inventory",
+    title: "Physical units",
+    intro: "Each row is one rentable unit. A product needs at least one unit in Ready status to accept bookings on the storefront.",
+    bookableCount: "{bookable} of {total} ready for booking",
+    addUnit: "+ Add unit",
+    adding: "Adding…",
+    emptyTitle: "No units yet.",
+    emptyBody: "Add at least one unit to make this product bookable.",
+    addedOn: "Added {date}",
+    save: "Save",
+    remove: "Remove",
+    confirmRemove: "Remove unit {tag}?",
+    statusAriaLabel: "Status for {tag}",
+    statusLabels: {
+      ready: "Ready (bookable)",
+      maintenance: "In maintenance",
+      broken: "Broken",
+      retired: "Retired",
+    },
+    statusBadge: {
+      ready: "Ready",
+      maintenance: "Maintenance",
+      broken: "Broken",
+      retired: "Retired",
+      available: "Available",
+      active: "Active",
+    },
+  },
+
   crew: {
     kicker: "Crew mobile",
     dashboard: "Dashboard",
@@ -2191,6 +2221,21 @@ const enValues = {
     addProduct: "Add Product",
     viewDeliveries: "View Deliveries",
     openHelpCenter: "Open Help Center",
+  },
+
+  sms: {
+    // Each line is one outbound SMS body. They MUST stay under ~140 characters
+    // so the appended sms_signature still fits in one GSM-7 segment. Tokens
+    // like {orderNumber}, {amount}, {date} are filled in by the caller.
+    orderConfirmation: "{businessName}: Order #{orderNumber} confirmed! We'll be in touch with delivery details. Reply STOP to unsubscribe.",
+    depositReminder: "{businessName}: A {amount} deposit is due for order #{orderNumber}. Pay to secure your date. Reply STOP to opt out.",
+    deliveryScheduled: "{businessName}: Order #{orderNumber} delivery on {date}, {timeWindow}. We'll notify you en route. Reply STOP to opt out.",
+    deliveryEnRoute: "{businessName}: Crew is on the way for order #{orderNumber}! ETA: {eta}. Reply STOP to opt out.",
+    deliveryEnRouteWithTracking: "{businessName}: Crew is on the way for order #{orderNumber}! ETA: {eta}. Track: {trackingUrl} Reply STOP to opt out.",
+    deliveryCompleted: "{businessName}: Order #{orderNumber} delivered and set up. Enjoy your event! Reply STOP to opt out.",
+    weatherAlert: "{businessName}: Weather alert for {date} may affect order #{orderNumber}. We'll contact you if changes are needed. Reply STOP to opt out.",
+    paymentReceived: "{businessName}: Payment of {amount} received for order #{orderNumber}. Thank you! Reply STOP to opt out.",
+    orderCancelled: "{businessName}: Order #{orderNumber} has been cancelled. Contact us with any questions. Reply STOP to opt out.",
   },
 
   notifications: {

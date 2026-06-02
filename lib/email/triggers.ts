@@ -1,4 +1,4 @@
-import { sendEmail } from "./send";
+import { sendEmail, listUnsubscribeMailtoHeader } from "./send";
 import {
   orderConfirmationEmail,
   newOrderAlertEmail,
@@ -7,28 +7,41 @@ import {
   orderStatusUpdateEmail,
   documentsReadyEmail,
   quoteSentEmail,
+  depositReminderEmail,
+  operatorActivityAlertEmail,
+  type OperatorActivityEvent,
 } from "./templates";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
+import {
+  formatMoney as formatMoneyIntl,
+  formatEventDate as formatEventDateIntl,
+} from "@/lib/i18n/format-helpers";
+
+/**
+ * Build standard headers we want on every customer-facing transactional
+ * email: List-Unsubscribe pointing at the operator's support address
+ * (Gmail/Yahoo bulk-sender baseline) plus a Reply-To override so
+ * customers can actually reply to a real human.
+ */
+function customerHeaders(supportEmail: string | null): Record<string, string> {
+  if (!supportEmail) return {};
+  return listUnsubscribeMailtoHeader(supportEmail);
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatMoney(amount: number): string {
-  return `$${amount.toFixed(2)}`;
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(`${dateStr}T12:00:00`);
-    return d.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
+function makeFormatters(currency: string, locale: string) {
+  return {
+    money: (amount: number) => formatMoneyIntl(amount, currency, locale),
+    date: (dateStr: string) =>
+      formatEventDateIntl(dateStr, locale, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+  };
 }
 
 type OrgBranding = {
@@ -40,6 +53,8 @@ type OrgBranding = {
   operatorAlertEmail: string | null;
   siteUrl: string;
   fromAddress: string;
+  currency: string;
+  locale: string;
 };
 
 function buildFromAddress(businessName: string): string {
@@ -59,13 +74,14 @@ async function getOrgBranding(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, support_email")
+    .select("name, support_email, default_currency")
     .eq("id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
 
   const businessName = org?.name ?? "Rental Company";
   const supportEmail = org?.support_email ?? null;
+  const currency = (org as { default_currency?: string | null } | null)?.default_currency ?? "USD";
 
   let operatorAlertEmail = supportEmail;
   if (!operatorAlertEmail) {
@@ -88,6 +104,10 @@ async function getOrgBranding(
     operatorAlertEmail,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
     fromAddress: buildFromAddress(businessName),
+    currency,
+    // No per-org locale today — default to English. When orgs gain a locale
+    // setting, surface it here so emails honor it.
+    locale: "en",
   };
 }
 
@@ -106,6 +126,7 @@ export async function triggerOrderConfirmationEmail(params: {
   depositDue: number;
 }) {
   const branding = await getOrgBranding(params.organizationId);
+  const fmt = makeFormatters(branding.currency, branding.locale);
 
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const supabase = await createSupabaseServerClient();
@@ -134,16 +155,17 @@ export async function triggerOrderConfirmationEmail(params: {
       customerFirstName: params.customerFirstName,
       orderNumber: params.orderNumber,
       productName: params.productName,
-      eventDate: formatDate(params.eventDate),
-      subtotal: formatMoney(params.subtotal),
-      deliveryFee: formatMoney(params.deliveryFee),
-      total: formatMoney(params.total),
-      depositDue: formatMoney(params.depositDue),
+      eventDate: fmt.date(params.eventDate),
+      subtotal: fmt.money(params.subtotal),
+      deliveryFee: fmt.money(params.deliveryFee),
+      total: fmt.money(params.total),
+      depositDue: fmt.money(params.depositDue),
       supportEmail: branding.supportEmail,
       siteUrl: branding.siteUrl,
       portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
     orderId: order?.id ?? null,
   });
@@ -160,8 +182,8 @@ export async function triggerOrderConfirmationEmail(params: {
         customerEmail: params.customerEmail,
         orderNumber: params.orderNumber,
         productName: params.productName,
-        eventDate: formatDate(params.eventDate),
-        total: formatMoney(params.total),
+        eventDate: fmt.date(params.eventDate),
+        total: fmt.money(params.total),
         source: "website",
         dashboardUrl: `${branding.siteUrl}/dashboard/orders`,
       }),
@@ -193,6 +215,7 @@ export async function triggerDashboardOrderEmail(params: {
   if (!params.customerEmail) return;
 
   const branding = await getOrgBranding(params.organizationId);
+  const fmt = makeFormatters(branding.currency, branding.locale);
 
   if (branding.operatorAlertEmail) {
     await sendEmail({
@@ -205,8 +228,8 @@ export async function triggerDashboardOrderEmail(params: {
         customerEmail: params.customerEmail,
         orderNumber: params.orderNumber,
         productName: params.productName,
-        eventDate: formatDate(params.eventDate),
-        total: formatMoney(params.total),
+        eventDate: fmt.date(params.eventDate),
+        total: fmt.money(params.total),
         source: "dashboard",
         dashboardUrl: `${branding.siteUrl}/dashboard/orders`,
       }),
@@ -239,6 +262,7 @@ export async function triggerPaymentReceivedEmail(params: {
   if (!params.customerEmail) return;
 
   const branding = await getOrgBranding(params.organizationId);
+  const fmt = makeFormatters(branding.currency, branding.locale);
 
   if (params.paymentType === "refund") {
     await sendEmail({
@@ -249,10 +273,11 @@ export async function triggerPaymentReceivedEmail(params: {
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
         orderNumber: params.orderNumber,
-        amount: formatMoney(params.amount),
+        amount: fmt.money(params.amount),
         supportEmail: branding.supportEmail,
       }),
       replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
       organizationId: params.organizationId,
     });
   } else {
@@ -264,13 +289,14 @@ export async function triggerPaymentReceivedEmail(params: {
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
         orderNumber: params.orderNumber,
-        amount: formatMoney(params.amount),
+        amount: fmt.money(params.amount),
         paymentType: params.paymentType,
         paymentMethod: params.paymentMethod.replace(/_/g, " "),
-        newBalance: formatMoney(params.newBalance),
+        newBalance: fmt.money(params.newBalance),
         supportEmail: branding.supportEmail,
       }),
       replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
       organizationId: params.organizationId,
     });
   }
@@ -280,7 +306,7 @@ export async function triggerPaymentReceivedEmail(params: {
     params.organizationId,
     "payment_received",
     params.paymentType === "refund" ? "Refund processed" : "Payment received",
-    `${formatMoney(params.amount)} for order #${params.orderNumber}`,
+    `${fmt.money(params.amount)} for order #${params.orderNumber}`,
     "/dashboard/payments"
   );
 }
@@ -332,6 +358,7 @@ export async function triggerOrderStatusEmail(params: {
   if (!customer?.email) return;
 
   const branding = await getOrgBranding(params.organizationId);
+  const fmt = makeFormatters(branding.currency, branding.locale);
 
   // Fetch delivery details for scheduled / out_for_delivery statuses
   let deliveryTimeWindow: string | undefined;
@@ -350,13 +377,13 @@ export async function triggerOrderStatusEmail(params: {
 
       if (stop) {
         const windowStart = stop.scheduled_window_start
-          ? new Date(stop.scheduled_window_start).toLocaleTimeString("en-US", {
+          ? new Date(stop.scheduled_window_start).toLocaleTimeString(branding.locale, {
               hour: "numeric",
               minute: "2-digit",
             })
           : null;
         const windowEnd = stop.scheduled_window_end
-          ? new Date(stop.scheduled_window_end).toLocaleTimeString("en-US", {
+          ? new Date(stop.scheduled_window_end).toLocaleTimeString(branding.locale, {
               hour: "numeric",
               minute: "2-digit",
             })
@@ -400,13 +427,14 @@ export async function triggerOrderStatusEmail(params: {
       customerFirstName: customer.first_name ?? "there",
       orderNumber: order.order_number,
       newStatus: params.newStatus,
-      eventDate: order.event_date ? formatDate(order.event_date) : "TBD",
+      eventDate: order.event_date ? fmt.date(order.event_date) : "TBD",
       supportEmail: branding.supportEmail,
       deliveryTimeWindow,
       crewName,
       portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
     orderId: params.orderId,
     customerId: order.customer_id,
@@ -468,6 +496,7 @@ export async function triggerDocumentsReadyEmail(params: {
       portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
     orderId: params.orderId,
     customerId: params.customerId,
@@ -505,6 +534,7 @@ export async function triggerQuoteSentEmail(params: {
   if (!customer?.email || !order) return;
 
   const branding = await getOrgBranding(params.organizationId);
+  const fmt = makeFormatters(branding.currency, branding.locale);
 
   const portalToken = await import("@/lib/portal/access-token").then(({ issuePortalAccessToken }) =>
     issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(() => null)
@@ -513,14 +543,7 @@ export async function triggerQuoteSentEmail(params: {
     ? `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
     : `${branding.siteUrl}/order-status`;
 
-  const eventDate = order.event_date
-    ? new Date(`${order.event_date}T12:00:00`).toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "TBD";
+  const eventDate = order.event_date ? fmt.date(order.event_date) : "TBD";
 
   await sendEmail({
     to: customer.email,
@@ -531,12 +554,13 @@ export async function triggerQuoteSentEmail(params: {
       customerFirstName: customer.first_name ?? "there",
       orderNumber: params.orderNumber,
       eventDate,
-      total: formatMoney(Number(order.total_amount ?? 0)),
-      depositRequired: formatMoney(Number(order.deposit_due_amount ?? 0)),
+      total: fmt.money(Number(order.total_amount ?? 0)),
+      depositRequired: fmt.money(Number(order.deposit_due_amount ?? 0)),
       portalUrl,
       supportEmail: branding.supportEmail,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
   });
 
@@ -547,4 +571,208 @@ export async function triggerQuoteSentEmail(params: {
     `#${params.orderNumber} — quote emailed to customer`,
     `/dashboard/orders/${params.orderId}`
   );
+}
+
+// ─── Deposit reminder (customer-facing) ───────────────────────────────────
+
+/**
+ * Email a customer reminding them their booking is held but the deposit
+ * is not yet paid. Wired into the morning reminders cron — runs once per
+ * order, keyed on `orders.deposit_reminder_sent_at` (writeable by the
+ * cron via the admin client).
+ */
+export async function triggerDepositReminderEmail(params: {
+  organizationId: string;
+  customerFirstName: string;
+  customerEmail: string;
+  orderId: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  depositDue: number;
+}): Promise<boolean> {
+  if (!params.customerEmail) return false;
+
+  const branding = await getOrgBranding(params.organizationId);
+  const fmt = makeFormatters(branding.currency, branding.locale);
+
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  const portalToken = await issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(
+    () => null
+  );
+  const portalUrl = portalToken
+    ? `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
+    : `${branding.siteUrl}/order-status`;
+
+  return sendEmail({
+    to: params.customerEmail,
+    from: branding.fromAddress,
+    subject: `Deposit reminder — order #${params.orderNumber} — ${branding.businessName}`,
+    html: depositReminderEmail({
+      businessName: branding.businessName,
+      customerFirstName: params.customerFirstName,
+      orderNumber: params.orderNumber,
+      productName: params.productName,
+      eventDate: fmt.date(params.eventDate),
+      depositDue: fmt.money(params.depositDue),
+      portalUrl,
+      supportEmail: branding.supportEmail,
+    }),
+    replyTo: branding.supportEmail ?? undefined,
+    headers: customerHeaders(branding.supportEmail),
+    preheader: `Pay your deposit to confirm order #${params.orderNumber} for ${fmt.date(params.eventDate)}.`,
+    idempotencyKey: `deposit_reminder:${params.orderId}`,
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+  });
+}
+
+// ─── Refund operator alert ────────────────────────────────────────────────
+
+/**
+ * Notify the operator that a refund just landed. Complements the
+ * customer-facing `refundProcessedEmail` already sent by
+ * `triggerPaymentReceivedEmail` when `paymentType === "refund"`.
+ *
+ * Refund webhooks fire on Stripe retries, so this trigger is idempotent
+ * via the (orderId, providerPaymentId) key.
+ */
+export async function triggerRefundOperatorAlertEmail(params: {
+  organizationId: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  amount: number;
+  providerPaymentId?: string;
+}) {
+  const branding = await getOrgBranding(params.organizationId);
+  if (!branding.operatorAlertEmail) return;
+  const fmt = makeFormatters(branding.currency, branding.locale);
+
+  const detail = `Refund of ${fmt.money(params.amount)} processed`;
+  const idempotencyKey = `refund_alert:${params.orderId}:${params.providerPaymentId ?? "manual"}`;
+
+  await sendEmail({
+    to: branding.operatorAlertEmail,
+    from: branding.fromAddress,
+    subject: `Refund processed on order #${params.orderNumber} — ${branding.businessName}`,
+    html: newOrderAlertEmail({
+      businessName: branding.businessName,
+      customerName: params.customerName,
+      customerEmail: "",
+      orderNumber: params.orderNumber,
+      productName: detail,
+      eventDate: "",
+      total: fmt.money(params.amount),
+      source: "dashboard",
+      dashboardUrl: `${branding.siteUrl}/dashboard/orders/${params.orderId}`,
+    }),
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+    idempotencyKey,
+  });
+
+  await createNotification(
+    params.organizationId,
+    "payment_received",
+    "Refund processed",
+    `#${params.orderNumber} — ${fmt.money(params.amount)}`,
+    `/dashboard/orders/${params.orderId}`
+  );
+}
+
+// ─── Operator activity alert (customer-initiated events) ───────────────────
+
+/**
+ * Email the operator when a customer takes a self-service action on
+ * the portal: paid, signed a doc, accepted a quote, cancelled, or
+ * sent a message. Sends only to `branding.operatorAlertEmail` (the org
+ * support email, falling back to the owner profile). Also writes an
+ * in-app `notifications` row so the bell in the dashboard lights up.
+ *
+ * Silent no-op when the org has no operator address configured —
+ * shouldn't happen post-onboarding but keeps the path safe in dev.
+ */
+export async function triggerOperatorActivityAlertEmail(params: {
+  organizationId: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  event: OperatorActivityEvent;
+  detail?: string;
+}): Promise<void> {
+  const branding = await getOrgBranding(params.organizationId);
+  if (!branding.operatorAlertEmail) return;
+
+  const dashboardUrl = `${branding.siteUrl}/dashboard/orders/${params.orderId}`;
+
+  await sendEmail({
+    to: branding.operatorAlertEmail,
+    from: branding.fromAddress,
+    subject: subjectForEvent(params.event, params.orderNumber, branding.businessName),
+    html: operatorActivityAlertEmail({
+      businessName: branding.businessName,
+      event: params.event,
+      orderNumber: params.orderNumber,
+      customerName: params.customerName,
+      detail: params.detail,
+      dashboardUrl,
+    }),
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+  });
+
+  await createNotification(
+    params.organizationId,
+    notificationTypeForEvent(params.event),
+    headlineForEvent(params.event),
+    `#${params.orderNumber} — ${params.customerName}${params.detail ? ` — ${params.detail}` : ""}`,
+    `/dashboard/orders/${params.orderId}`
+  );
+}
+
+function subjectForEvent(event: OperatorActivityEvent, orderNumber: string, businessName: string): string {
+  switch (event) {
+    case "payment_received":
+      return `Payment received on order #${orderNumber} — ${businessName}`;
+    case "document_signed":
+      return `Document signed on order #${orderNumber} — ${businessName}`;
+    case "quote_accepted":
+      return `Quote accepted on order #${orderNumber} — ${businessName}`;
+    case "order_cancelled":
+      return `Order #${orderNumber} cancelled by customer — ${businessName}`;
+    case "portal_message":
+      return `New customer message on order #${orderNumber} — ${businessName}`;
+  }
+}
+
+function headlineForEvent(event: OperatorActivityEvent): string {
+  switch (event) {
+    case "payment_received":
+      return "Customer paid";
+    case "document_signed":
+      return "Document signed";
+    case "quote_accepted":
+      return "Quote accepted";
+    case "order_cancelled":
+      return "Order cancelled";
+    case "portal_message":
+      return "New customer message";
+  }
+}
+
+function notificationTypeForEvent(event: OperatorActivityEvent) {
+  switch (event) {
+    case "payment_received":
+      return "payment_received" as const;
+    case "document_signed":
+      return "new_order" as const; // closest available notification type today
+    case "quote_accepted":
+      return "order_confirmed" as const;
+    case "order_cancelled":
+      return "new_order" as const;
+    case "portal_message":
+      return "new_message" as const;
+  }
 }

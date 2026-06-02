@@ -4,6 +4,7 @@ import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 export const maxDuration = 60;
 
@@ -19,10 +20,7 @@ export const maxDuration = 60;
 export async function GET(request: NextRequest) {
   // Verify cron secret — fail closed: if CRON_SECRET is not configured the
   // route must not be publicly callable.
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -41,7 +39,11 @@ export async function GET(request: NextRequest) {
     .select("id, source_order_id, organization_id, orders!inner(order_status)")
     .eq("block_type", "checkout_hold")
     .lt("expires_at", now)
-    .eq("orders.order_status", "awaiting_deposit");
+    .eq("orders.order_status", "awaiting_deposit")
+    // Bound the per-run batch — the cron is scheduled every 15 minutes, so
+    // any backlog beyond this is picked up by the next run instead of
+    // exhausting memory / the 60s budget in a single invocation.
+    .limit(5000);
 
   if (fetchError) {
     console.error("Failed to fetch expired holds:", fetchError.message);

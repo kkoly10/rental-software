@@ -16,20 +16,11 @@ import {
   formatTimeInTimeZone,
   formatDateInTimeZone,
 } from "@/lib/datetime/event-time";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates matching orders and sends emails; give it headroom over
 // the default serverless timeout.
 export const maxDuration = 60;
-
-// ─── Auth ──────────────────────────────────────────────────────────────────
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const secret = getOptionalEnv("CRON_SECRET");
-  if (!secret) return false; // no secret configured → block all
-
-  const authHeader = request.headers.get("authorization");
-  return authHeader === `Bearer ${secret}`;
-}
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
@@ -156,7 +147,11 @@ async function sendDayBeforeReminders(
     .eq("event_date", tomorrow)
     .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled"])
-    .is("day_before_reminder_sent_at", null);
+    .is("day_before_reminder_sent_at", null)
+    // Bound the per-run batch. If more than this many orders need reminding
+    // tomorrow, the cron's 60s budget probably won't cover them anyway; the
+    // claim-on-update pattern means a follow-up run picks up the rest.
+    .limit(2000);
 
   if (!orders || orders.length === 0) return { sent, errors };
 
@@ -532,10 +527,11 @@ export async function GET(request: NextRequest) {
     return { sent: 0, errors: 1 };
   };
 
-  const [dayBefore, morningDigest, followUp] = await Promise.all([
+  const [dayBefore, morningDigest, followUp, deposit] = await Promise.all([
     sendDayBeforeReminders(supabase).catch(cronCatch("dayBefore")),
     sendMorningDigests(supabase).catch(cronCatch("morningDigest")),
     sendPostEventFollowUps(supabase).catch(cronCatch("followUp")),
+    sendDepositReminders(supabase).catch(cronCatch("depositReminder")),
   ]);
 
   return NextResponse.json({
@@ -544,5 +540,91 @@ export async function GET(request: NextRequest) {
     dayBefore,
     morningDigest,
     followUp,
+    deposit,
   });
+}
+
+// ─── Deposit reminder (customer-facing) ───────────────────────────────────
+
+/**
+ * For each `awaiting_deposit` order that's at least one day old and
+ * hasn't had a deposit reminder yet, send one. Capped at 100 orders per
+ * cron run so a backlog doesn't blow up the email quota in a single
+ * invocation.
+ */
+async function sendDepositReminders(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<{ sent: number; errors: number }> {
+  let sent = 0;
+  let errors = 0;
+
+  const oneDayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: orders } = await supabase
+    .from("orders")
+    .select(
+      "id, organization_id, order_number, event_date, deposit_due_amount, customer_id, customers(first_name, email), order_items(item_name_snapshot)"
+    )
+    .eq("order_status", "awaiting_deposit")
+    .is("deleted_at", null)
+    .is("deposit_reminder_sent_at", null)
+    .lt("created_at", oneDayAgoIso)
+    .limit(100);
+
+  if (!orders || orders.length === 0) return { sent, errors };
+
+  const { triggerDepositReminderEmail } = await import("@/lib/email/triggers");
+
+  for (const order of orders) {
+    const customer = order.customers as unknown as {
+      first_name: string | null;
+      email: string | null;
+    } | null;
+    if (!customer?.email) continue;
+
+    const items = order.order_items as unknown as { item_name_snapshot: string }[] | null;
+    const productName = items?.[0]?.item_name_snapshot ?? "Rental booking";
+
+    try {
+      const { data: claimed } = await supabase
+        .from("orders")
+        .update({ deposit_reminder_sent_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("deposit_reminder_sent_at", null)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
+      const ok = await triggerDepositReminderEmail({
+        organizationId: order.organization_id,
+        customerFirstName: customer.first_name ?? "there",
+        customerEmail: customer.email,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        productName,
+        eventDate: order.event_date ?? "",
+        depositDue: Number(order.deposit_due_amount ?? 0),
+      });
+
+      if (!ok) {
+        // Release the claim so a future run retries — only when Resend
+        // is configured. A missing provider is permanent; releasing
+        // would just loop.
+        if (hasResendEnv()) {
+          await supabase
+            .from("orders")
+            .update({ deposit_reminder_sent_at: null })
+            .eq("id", order.id);
+        }
+        errors++;
+        continue;
+      }
+
+      sent++;
+    } catch (err) {
+      errors++;
+      console.error("[cron.depositReminder]", order.order_number, err instanceof Error ? err.message : err);
+    }
+  }
+
+  return { sent, errors };
 }

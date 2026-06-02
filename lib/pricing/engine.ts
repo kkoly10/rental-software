@@ -23,7 +23,12 @@ export function calculatePrice(
   }
   const activeRules = rules
     .filter((r) => r.isActive)
-    .sort((a, b) => b.priority - a.priority);
+    // Primary sort: priority desc. Secondary tiebreaker on the rule
+    // name to give two rules with identical priority a deterministic
+    // order across all JS engines (V8/Spidermonkey both implement
+    // stable sort now, but that didn't help across engines that
+    // returned rules in different DB orders).
+    .sort((a, b) => b.priority - a.priority || a.name.localeCompare(b.name));
 
   // Anchor both dates to UTC midnight so the day-difference math doesn't
   // depend on the server's local TZ. The previous version used
@@ -47,21 +52,42 @@ export function calculatePrice(
 
   const adjustments: PricingCalculation["adjustments"] = [];
 
+  // Accumulate rule adjustments in cents-integers, round only at the
+  // output boundary. The previous loop rounded each rule independently
+  // via Math.round(basePrice * pct * 100)/100 then summed; that could
+  // accumulate up to ~0.5¢ per rule on a multi-rule order. Keeping
+  // the running total in integer cents eliminates the drift.
+  const basePriceCents = Math.round(basePrice * 100);
+  let totalAdjustmentCents = 0;
+
   for (const rule of activeRules) {
     if (!matchesRule(rule, eventDateObj, daysUntilEvent, context)) continue;
 
-    const amount = Math.round(basePrice * (rule.adjustment / 100) * 100) / 100;
+    const ruleAdjustmentCents = Math.round(basePriceCents * (rule.adjustment / 100));
+    totalAdjustmentCents += ruleAdjustmentCents;
     adjustments.push({
       ruleName: rule.name,
-      amount,
+      amount: ruleAdjustmentCents / 100,
       percentage: rule.adjustment,
     });
   }
 
-  const totalAdjustment = adjustments.reduce((sum, a) => sum + a.amount, 0);
-  const finalPrice = Math.max(0, Math.round((basePrice + totalAdjustment) * 100) / 100);
+  const totalAdjustment = totalAdjustmentCents / 100;
+  const finalCents = Math.max(0, basePriceCents + totalAdjustmentCents);
+  const finalPrice = finalCents / 100;
 
   return { basePrice, adjustments, finalPrice };
+}
+
+// Cheap date-format guard so a malformed rule like
+// `{ start: "2026-13-01", end: "..." }` doesn't silently accept events.
+// Validating at the rule edit form would be cleaner; this is the
+// engine-side safety net.
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function isValidIsoDate(s: string | null | undefined): s is string {
+  if (!s || !ISO_DATE_RE.test(s)) return false;
+  const d = new Date(s + "T00:00:00Z");
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }
 
 function matchesRule(
@@ -83,8 +109,17 @@ function matchesRule(
     case "peak_season": {
       if (!conditions.dateRanges || conditions.dateRanges.length === 0) return false;
       const eventStr = formatDateLocal(eventDate);
+      // Reject malformed date ranges (e.g. "2026-13-01" from a
+      // misedit) instead of treating them as matchable strings.
+      // String compare against a garbage value would silently
+      // produce arbitrary truth values.
       return conditions.dateRanges.some(
-        (range) => eventStr >= range.start && eventStr <= range.end
+        (range) =>
+          isValidIsoDate(range.start) &&
+          isValidIsoDate(range.end) &&
+          range.start <= range.end &&
+          eventStr >= range.start &&
+          eventStr <= range.end
       );
     }
 
