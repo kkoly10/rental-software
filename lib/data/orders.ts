@@ -156,28 +156,49 @@ export async function getOrdersPage(options?: {
     };
   }
 
-  // Search path. Push to Postgres: ILIKE against order_number and the
-  // top-level scalar columns we already index by, plus a customer-name
-  // fallback via the embedded join. Embedded `items` snapshots are not
-  // searched at the DB level — operators searching by item name are
-  // rare and that surface still has the truncation telemetry from #177.
+  // Search path. Push to Postgres in two steps so the OR can span the
+  // related customers table:
+  //   1. Resolve customer-name matches to a list of customer_id values
+  //      (capped, since we have to inline them into the orders OR clause
+  //       and PostgREST URLs have a ceiling).
+  //   2. Filter orders by order_number ILIKE OR customer_id IN (...).
+  // Embedded `items` snapshots are not searched at the DB level —
+  // operators searching by item name are rare and that surface still has
+  // the truncation telemetry from #177.
   const currentPage = normalizePage(options?.page);
   const start = (currentPage - 1) * pageSize;
   const end = start + pageSize - 1;
   const safe = escapeIlike(query);
   const pattern = `%${safe}%`;
 
+  // Step 1: customer-name → ids. Capped so the IN list stays short.
+  const NAME_MATCH_CAP = 200;
+  const { data: nameMatches, error: nameError } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
+    .or(`first_name.ilike.${pattern},last_name.ilike.${pattern}`)
+    .limit(NAME_MATCH_CAP);
+
+  if (nameError) {
+    console.error("[orders] Customer-name lookup failed:", nameError.message);
+    // Fall through with no customer ids; order-number search still works.
+  }
+  const matchedIds = (nameMatches ?? []).map((c) => c.id);
+
+  // Step 2: orders by order_number OR customer_id IN (...).
+  let orFilter = `order_number.ilike.${pattern}`;
+  if (matchedIds.length > 0) {
+    orFilter += `,customer_id.in.(${matchedIds.join(",")})`;
+  }
+
   const { data, error, count } = await supabase
     .from("orders")
     .select(selectFields, { count: "exact" })
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
-    .or(
-      // order_number is the most common operator search; customer first/last
-      // name reaches into the embedded customers row via Supabase's
-      // foreign-table OR syntax.
-      `order_number.ilike.${pattern},customers.first_name.ilike.${pattern},customers.last_name.ilike.${pattern}`
-    )
+    .or(orFilter)
     .order("created_at", { ascending: false })
     .range(start, end);
 
