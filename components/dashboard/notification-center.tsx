@@ -99,8 +99,7 @@ export function NotificationCenter({
       console.warn("[notifications] markAllRead failed (UI already updated):", err);
       reportClientError({
         source: "notification-center",
-        message: "markAllNotificationsRead failed",
-        context: { error: err instanceof Error ? err.message : String(err) },
+        message: `markAllNotificationsRead failed: ${err instanceof Error ? err.message : String(err)}`,
       });
     });
   }
@@ -115,8 +114,7 @@ export function NotificationCenter({
         console.warn("[notifications] markRead failed (UI already updated):", err);
         reportClientError({
           source: "notification-center",
-          message: "markNotificationRead failed",
-          context: { notification_id: id, error: err instanceof Error ? err.message : String(err) },
+          message: `markNotificationRead failed (id=${id}): ${err instanceof Error ? err.message : String(err)}`,
         });
       });
     }

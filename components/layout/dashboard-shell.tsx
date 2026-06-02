@@ -104,8 +104,7 @@ export function DashboardShell({
         console.warn("[dashboard-shell] fetchUnreadMessageCount failed:", err);
         reportClientError({
           source: "dashboard-shell",
-          message: "fetchUnreadMessageCount failed",
-          context: { error: err instanceof Error ? err.message : String(err) },
+          message: `fetchUnreadMessageCount failed: ${err instanceof Error ? err.message : String(err)}`,
         });
       });
     // Fetch subscription status on every page to ensure the banner shows everywhere,
@@ -116,8 +115,7 @@ export function DashboardShell({
         console.warn("[dashboard-shell] getSubscriptionStatus failed:", err);
         reportClientError({
           source: "dashboard-shell",
-          message: "getSubscriptionStatus failed",
-          context: { error: err instanceof Error ? err.message : String(err) },
+          message: `getSubscriptionStatus failed: ${err instanceof Error ? err.message : String(err)}`,
         });
       });
   }, [pathname]);
