@@ -53,6 +53,9 @@ type OrgBranding = {
   operatorAlertEmail: string | null;
   siteUrl: string;
   fromAddress: string;
+  // IANA tz used to render customer-facing time windows. Defaults to
+  // "UTC" if the org hasn't configured one (was: server-local).
+  eventTimezone: string;
   currency: string;
   locale: string;
 };
@@ -74,13 +77,14 @@ async function getOrgBranding(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, support_email, default_currency")
+    .select("name, support_email, event_timezone, default_currency")
     .eq("id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
 
   const businessName = org?.name ?? "Rental Company";
   const supportEmail = org?.support_email ?? null;
+  const eventTimezone = org?.event_timezone ?? "UTC";
   const currency = (org as { default_currency?: string | null } | null)?.default_currency ?? "USD";
 
   let operatorAlertEmail = supportEmail;
@@ -102,6 +106,7 @@ async function getOrgBranding(
     businessName,
     supportEmail,
     operatorAlertEmail,
+    eventTimezone,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
     fromAddress: buildFromAddress(businessName),
     currency,
@@ -376,17 +381,12 @@ export async function triggerOrderStatusEmail(params: {
         .maybeSingle();
 
       if (stop) {
+        const { formatTimeInTimeZone } = await import("@/lib/datetime/event-time");
         const windowStart = stop.scheduled_window_start
-          ? new Date(stop.scheduled_window_start).toLocaleTimeString(branding.locale, {
-              hour: "numeric",
-              minute: "2-digit",
-            })
+          ? formatTimeInTimeZone(stop.scheduled_window_start, branding.eventTimezone)
           : null;
         const windowEnd = stop.scheduled_window_end
-          ? new Date(stop.scheduled_window_end).toLocaleTimeString(branding.locale, {
-              hour: "numeric",
-              minute: "2-digit",
-            })
+          ? formatTimeInTimeZone(stop.scheduled_window_end, branding.eventTimezone)
           : null;
 
         if (windowStart && windowEnd) {
