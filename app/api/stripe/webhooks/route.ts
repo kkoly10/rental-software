@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
                 if (orderData?.customer_id) {
                   const { data: customer } = await admin
                     .from("customers")
-                    .select("first_name, email")
+                    .select("first_name, last_name, email")
                     .eq("id", orderData.customer_id)
                     .eq("organization_id", orgId)
                     .is("deleted_at", null)
@@ -256,6 +256,19 @@ export async function POST(request: NextRequest) {
                       paymentType,
                       paymentMethod: "stripe",
                       newBalance: financials?.remainingBalance ?? Number(orderData.balance_due_amount ?? 0),
+                    });
+
+                    // Operator-facing alert: customer just paid via Stripe.
+                    const { triggerOperatorActivityAlertEmail } = await import("@/lib/email/triggers");
+                    await triggerOperatorActivityAlertEmail({
+                      organizationId: orgId,
+                      orderId,
+                      orderNumber: orderData.order_number,
+                      customerName:
+                        `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() ||
+                        "Customer",
+                      event: "payment_received",
+                      detail: `$${amountPaid.toFixed(2)} via Stripe`,
                     });
                   }
                 }
@@ -377,20 +390,20 @@ export async function POST(request: NextRequest) {
           try {
             const { data: refundOrder } = await admin
               .from("orders")
-              .select("order_number, organization_id, customer_id")
+              .select("id, order_number, organization_id, customer_id")
               .eq("id", originalPayment.order_id)
               .is("deleted_at", null)
               .maybeSingle();
             if (refundOrder?.customer_id && refundOrder.organization_id) {
               const { data: refundCustomer } = await admin
                 .from("customers")
-                .select("first_name, email")
+                .select("first_name, last_name, email")
                 .eq("id", refundOrder.customer_id)
                 .eq("organization_id", refundOrgId)
                 .is("deleted_at", null)
                 .maybeSingle();
+              const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
               if (refundCustomer?.email) {
-                const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
                 const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
                 await triggerPaymentReceivedEmail({
                   organizationId: refundOrder.organization_id,
@@ -403,6 +416,17 @@ export async function POST(request: NextRequest) {
                   newBalance: refundFinancials.remainingBalance,
                 });
               }
+              const { triggerRefundOperatorAlertEmail } = await import("@/lib/email/triggers");
+              await triggerRefundOperatorAlertEmail({
+                organizationId: refundOrder.organization_id,
+                orderId: refundOrder.id,
+                orderNumber: refundOrder.order_number,
+                customerName:
+                  `${refundCustomer?.first_name ?? ""} ${refundCustomer?.last_name ?? ""}`.trim() ||
+                  "Customer",
+                amount: totalRefunded,
+                providerPaymentId: event.id,
+              });
             }
           } catch (refundEmailErr) {
             console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);

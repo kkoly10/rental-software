@@ -8,6 +8,7 @@ import {
   normalizeQuery,
   normalizePage,
 } from "@/lib/listing/pagination";
+import { escapeIlike } from "@/lib/listing/ilike-escape";
 import type { OrderSummary } from "@/lib/types";
 
 function formatStatus(status: string): string {
@@ -155,31 +156,69 @@ export async function getOrdersPage(options?: {
     };
   }
 
-  // Search path: pull a larger window and JS-filter (search spans embedded
-  // customer/items so it can't be expressed purely at the DB layer without
-  // a multi-step query).
-  const { data, error } = await supabase
-    .from("orders")
-    .select(selectFields)
+  // Search path. Push to Postgres in two steps so the OR can span the
+  // related customers table:
+  //   1. Resolve customer-name matches to a list of customer_id values
+  //      (capped, since we have to inline them into the orders OR clause
+  //       and PostgREST URLs have a ceiling).
+  //   2. Filter orders by order_number ILIKE OR customer_id IN (...).
+  // Embedded `items` snapshots are not searched at the DB level —
+  // operators searching by item name are rare and that surface still has
+  // the truncation telemetry from #177.
+  const currentPage = normalizePage(options?.page);
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize - 1;
+  const safe = escapeIlike(query);
+  const pattern = `%${safe}%`;
+
+  // Step 1: customer-name → ids. Capped so the IN list stays short.
+  const NAME_MATCH_CAP = 200;
+  const { data: nameMatches, error: nameError } = await supabase
+    .from("customers")
+    .select("id")
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
+    .or(`first_name.ilike.${pattern},last_name.ilike.${pattern}`)
+    .limit(NAME_MATCH_CAP);
+
+  if (nameError) {
+    console.error("[orders] Customer-name lookup failed:", nameError.message);
+    // Fall through with no customer ids; order-number search still works.
+  }
+  const matchedIds = (nameMatches ?? []).map((c) => c.id);
+
+  // Step 2: orders by order_number OR customer_id IN (...).
+  let orFilter = `order_number.ilike.${pattern}`;
+  if (matchedIds.length > 0) {
+    orFilter += `,customer_id.in.(${matchedIds.join(",")})`;
+  }
+
+  const { data, error, count } = await supabase
+    .from("orders")
+    .select(selectFields, { count: "exact" })
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
+    .or(orFilter)
     .order("created_at", { ascending: false })
-    .limit(5000);
+    .range(start, end);
 
   if (error) {
-    console.error("[orders] Query failed:", error.message);
+    console.error("[orders] Search query failed:", error.message);
     return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: OrderSummary[] = data.map(mapOrderRow);
+  const mapped: OrderSummary[] = (data ?? []).map(mapOrderRow);
+  const totalItems = count ?? mapped.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
-  const filtered = mapped.filter((order) => matchesOrderQuery(order, query));
-
-  return paginateItems(filtered, {
-    page: options?.page,
-    pageSize: options?.pageSize ?? 20,
+  return {
+    items: mapped,
+    page: Math.min(currentPage, totalPages),
+    pageSize,
+    totalItems,
+    totalPages,
     query,
-  });
+  };
 }
 
 export async function getOrders(): Promise<OrderSummary[]> {

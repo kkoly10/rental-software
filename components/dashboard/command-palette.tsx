@@ -90,7 +90,8 @@ export function CommandPalette() {
   // Resolve the org's vertical so the navigation section filters the
   // same way the sidebar does.  We only need this once per mount.
   useEffect(() => {
-    fetch("/api/org-type")
+    const controller = new AbortController();
+    fetch("/api/org-type", { signal: controller.signal })
       .then(async (r) =>
         r.ok ? ((await r.json()) as { businessType?: string }) : null
       )
@@ -98,6 +99,7 @@ export function CommandPalette() {
         if (data?.businessType) setBusinessType(data.businessType);
       })
       .catch(() => {});
+    return () => controller.abort();
   }, []);
 
   // Global keyboard shortcut

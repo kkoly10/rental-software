@@ -154,6 +154,31 @@ export async function recordPayment(
     depositFulfilled: netPaid >= depositRequired,
   };
 
+  // Audit log: manual payment / refund recording is one of the most
+  // financially sensitive operations and was previously silent in
+  // app_event_logs. An admin / dispatcher can credit or refund money;
+  // we want a trail with the actor, amount, method, and reference note
+  // (sanitized) for compliance + incident response.
+  {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "payments.record_manual",
+      action: paymentType === "refund" ? "manual_refund" : "manual_payment",
+      status: "success",
+      route: "lib/payments/actions",
+      metadata: {
+        order_id: orderId,
+        amount,
+        payment_type: paymentType,
+        payment_method: paymentMethod,
+        net_paid: netPaid,
+        new_balance: newBalance,
+      },
+    });
+  }
+
   // Auto-confirm orders when deposit is fulfilled.
   // #342 TOCTOU — gate the UPDATE on the still-current order_status so a
   // concurrent operator cancellation between the SELECT above and this
