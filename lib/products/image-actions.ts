@@ -5,6 +5,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { sniffImageType } from "@/lib/utils/image-signature";
+import { stripImageMetadata } from "@/lib/utils/strip-image-metadata";
 
 export type ProductImageActionState = {
   ok: boolean;
@@ -104,12 +105,30 @@ export async function uploadProductImage(
   const bucket = getBucketName();
   const filePath = `${ctx.organizationId}/${productId}/${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
 
+  // Strip EXIF/IPTC/XMP from raster formats that carry them. GIF doesn't,
+  // so it passes through unchanged.
+  let uploadBody: File | Buffer = file;
+  let uploadContentType = file.type || undefined;
+  if (sniffedType !== "image/gif") {
+    try {
+      const stripped = await stripImageMetadata(file, sniffedType);
+      uploadBody = stripped.buffer;
+      uploadContentType = stripped.mimeType;
+    } catch (err) {
+      console.error("[products.image] strip failed:", err instanceof Error ? err.message : err);
+      return {
+        ok: false,
+        message: "Couldn't process the image. Please try a different file.",
+      };
+    }
+  }
+
   const { error: storageError } = await supabase.storage
     .from(bucket)
-    .upload(filePath, file, {
+    .upload(filePath, uploadBody, {
       cacheControl: "3600",
       upsert: false,
-      contentType: file.type || undefined,
+      contentType: uploadContentType,
     });
 
   if (storageError) {
