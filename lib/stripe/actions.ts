@@ -134,6 +134,17 @@ export async function createCheckoutSession(
         .is("deleted_at", null);
       if (customerSaveError) {
         console.error("[stripe] failed to persist stripe_customer_id:", customerSaveError.message);
+        // Surface this to observability — next subscription attempt will
+        // create a duplicate Stripe customer if this isn't repaired.
+        const { logAppError } = await import("@/lib/observability/server");
+        await logAppError({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe-billing",
+          message: "failed to persist stripe_customer_id — risk of duplicate Stripe customer on next checkout",
+          route: "lib/stripe/actions",
+          context: { stripe_customer_id: customerId, db_error: customerSaveError.message },
+        });
       }
     }
 

@@ -7,6 +7,7 @@ import {
   markNotificationRead,
 } from "@/lib/messages/actions";
 import { useI18n } from "@/lib/i18n/provider";
+import { reportClientError } from "@/lib/observability/client";
 
 function NotificationIcon({ type }: { type: NotificationType }) {
   switch (type) {
@@ -94,7 +95,13 @@ export function NotificationCenter({
 
   function handleMarkAllRead() {
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    markAllNotificationsRead().catch(() => {});
+    markAllNotificationsRead().catch((err) => {
+      console.warn("[notifications] markAllRead failed (UI already updated):", err);
+      reportClientError({
+        source: "notification-center",
+        message: `markAllNotificationsRead failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    });
   }
 
   function handleMarkRead(id: string) {
@@ -103,7 +110,13 @@ export function NotificationCenter({
     );
     // Only persist for real DB notifications (not demo ones)
     if (!id.startsWith("demo-")) {
-      markNotificationRead(id).catch(() => {});
+      markNotificationRead(id).catch((err) => {
+        console.warn("[notifications] markRead failed (UI already updated):", err);
+        reportClientError({
+          source: "notification-center",
+          message: `markNotificationRead failed (id=${id}): ${err instanceof Error ? err.message : String(err)}`,
+        });
+      });
     }
   }
 

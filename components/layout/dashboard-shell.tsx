@@ -18,6 +18,7 @@ import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 import { SubscriptionBanner } from "@/components/settings/subscription-banner";
 import { useI18n } from "@/lib/i18n/provider";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { reportClientError } from "@/lib/observability/client";
 
 function isNavItemActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -97,10 +98,26 @@ export function DashboardShell({
   }, []);
 
   useEffect(() => {
-    fetchUnreadMessageCount().then(setBadgeCount).catch(() => {});
+    fetchUnreadMessageCount()
+      .then(setBadgeCount)
+      .catch((err) => {
+        console.warn("[dashboard-shell] fetchUnreadMessageCount failed:", err);
+        reportClientError({
+          source: "dashboard-shell",
+          message: `fetchUnreadMessageCount failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      });
     // Fetch subscription status on every page to ensure the banner shows everywhere,
     // even on dashboard pages that don't pass the prop from the server.
-    getSubscriptionStatus().then((s) => { if (s) setSubStatus(s); }).catch(() => {});
+    getSubscriptionStatus()
+      .then((s) => { if (s) setSubStatus(s); })
+      .catch((err) => {
+        console.warn("[dashboard-shell] getSubscriptionStatus failed:", err);
+        reportClientError({
+          source: "dashboard-shell",
+          message: `getSubscriptionStatus failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      });
   }, [pathname]);
 
   useEffect(() => {
