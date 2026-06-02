@@ -4,6 +4,7 @@ import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 export const maxDuration = 60;
 
@@ -19,10 +20,7 @@ export const maxDuration = 60;
 export async function GET(request: NextRequest) {
   // Verify cron secret — fail closed: if CRON_SECRET is not configured the
   // route must not be publicly callable.
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

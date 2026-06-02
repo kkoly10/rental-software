@@ -29,6 +29,14 @@ export type EmailPayload = {
   organizationId?: string;
   orderId?: string | null;
   customerId?: string | null;
+  /** Optional plain-text alternative (PR #189). */
+  text?: string;
+  /** Preheader text for inbox preview (PR #189). */
+  preheader?: string;
+  /** Caller-supplied idempotency key (PR #189). */
+  idempotencyKey?: string;
+  /** Extra MIME headers, e.g. List-Unsubscribe (PR #189). */
+  headers?: Record<string, string>;
 };
 
 const DEFAULT_FROM_ADDRESS = getOptionalEnv("EMAIL_FROM_ADDRESS") ?? "noreply@korent.app";
@@ -58,14 +66,21 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     ? injectViewInBrowserLink(payload.html, viewToken)
     : payload.html;
 
+  // PR #189: preheader hidden span at the very top.
+  const htmlWithPreheader = payload.preheader
+    ? `<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${payload.preheader}</span>${htmlWithViewLink}`
+    : htmlWithViewLink;
+
   try {
     const resend = getResend();
     const { error } = await resend.emails.send({
       from: fromAddress,
       to: payload.to,
       subject: payload.subject,
-      html: htmlWithViewLink,
+      html: htmlWithPreheader,
+      text: payload.text,
       replyTo: payload.replyTo,
+      headers: payload.headers,
     });
 
     if (error) {
@@ -177,4 +192,17 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
     return false;
   }
+}
+
+/**
+ * Build a `List-Unsubscribe` header value pointing at a mailto recipient.
+ * For high-volume senders an https one-click URL is required by Gmail/Yahoo;
+ * this mailto form is the minimum standards-compliant baseline.
+ */
+export function listUnsubscribeMailtoHeader(emailAddress: string): Record<string, string> {
+  const cleaned = emailAddress.trim();
+  if (!cleaned) return {};
+  return {
+    "List-Unsubscribe": `<mailto:${cleaned}>`,
+  };
 }

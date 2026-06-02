@@ -363,6 +363,16 @@ export async function createOrder(
   }
 
   const total = Number((resolvedSubtotal + resolvedDeliveryFee).toFixed(2));
+  // Reject deposits that exceed the order total. Allowing them would
+  // produce a negative balance, which the accounting reports and refund
+  // flows assume can't happen — silently storing a negative balance
+  // corrupts every downstream calculation that reads it.
+  if (depositAmount > total + 0.005) {
+    return {
+      ok: false,
+      message: "Deposit amount cannot exceed the order total.",
+    };
+  }
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
 
@@ -382,6 +392,7 @@ export async function createOrder(
       .from("customer_addresses")
       .insert({
         customer_id: customerId,
+        organization_id: ctx.organizationId,
         line1: deliveryLine1,
         line2: deliveryLine2 ?? null,
         city: deliveryCity,
@@ -877,5 +888,89 @@ export async function updateOrderStatus(
   return {
     ok: true,
     message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}`,
+  };
+}
+
+/**
+ * Revokes the portal token on a specific order, immediately invalidating any
+ * outstanding /order-status?token=... links the customer may have in email
+ * archives, screenshots, or breached inboxes. Used when an operator suspects
+ * a portal token has leaked or a customer requests their access be reset.
+ *
+ * Owner / admin / dispatcher; rate-limited; org-scoped.
+ */
+export async function revokeOrderPortalToken(
+  _prev: OrderActionState,
+  formData: FormData
+): Promise<OrderActionState> {
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  if (!orderId) return { ok: false, message: "Order is required." };
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: portal token would be revoked." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  try {
+    const limit = await enforceRateLimit({
+      scope: "orders:revoke_portal_token:user",
+      actor: ctx.userId,
+      limit: 30,
+      windowSeconds: 300,
+    });
+    if (!limit.allowed) {
+      return { ok: false, message: "Too many revoke attempts. Please wait and try again." };
+    }
+  } catch {
+    return { ok: false, message: "Unable to process the request right now." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to revoke portal access." };
+  }
+
+  const { revokePortalAccessTokenRow } = await import("@/lib/portal/access-token");
+  const result = await revokePortalAccessTokenRow({
+    supabase,
+    orderId,
+    organizationId: ctx.organizationId,
+  });
+  if (!result.ok) {
+    const { logAppError } = await import("@/lib/observability/server");
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "orders.revokePortalToken",
+      message: `Revoke failed: ${result.message ?? "unknown"}`,
+      context: { orderId },
+    });
+    return { ok: false, message: "Couldn't revoke the portal token. Please try again." };
+  }
+
+  const { logAppEvent } = await import("@/lib/observability/server");
+  await logAppEvent({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    source: "orders.revokePortalToken",
+    action: "revoke",
+    status: "success",
+    metadata: { orderId },
+  });
+
+  revalidatePath(`/dashboard/orders/${orderId}`);
+  return {
+    ok: true,
+    message: "Portal access revoked. The customer can re-request access at /order-status.",
   };
 }

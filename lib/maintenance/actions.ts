@@ -21,7 +21,15 @@ export async function logMaintenance(
   const productId = String(formData.get("product_id") ?? "").trim();
   const maintenanceType = String(formData.get("maintenance_type") ?? "service").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const costRaw = parseFloat(String(formData.get("cost_amount") ?? "0")) || 0;
+  // Parse the cost explicitly: `parseFloat("abc") || 0` silently zeroes
+  // out typos, and a blank field should remain 0 only if the user truly
+  // submitted nothing. Reject non-numeric or non-finite (NaN, Infinity)
+  // input with a clear message.
+  const costInput = String(formData.get("cost_amount") ?? "").trim();
+  const costRaw = costInput === "" ? 0 : parseFloat(costInput);
+  if (!Number.isFinite(costRaw)) {
+    return { ok: false, message: "Cost must be a valid number." };
+  }
 
   if (!productId) return { ok: false, message: "Select a product." };
 

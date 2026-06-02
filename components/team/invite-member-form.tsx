@@ -42,6 +42,8 @@ export function InviteMemberForm() {
 
       {state.message && (
         <div
+          role={state.ok ? "status" : "alert"}
+          aria-live={state.ok ? "polite" : "assertive"}
           className={`badge ${state.ok ? "success" : "warning"}`}
           style={{ marginTop: 10 }}
         >

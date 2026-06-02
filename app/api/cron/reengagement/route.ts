@@ -3,20 +3,11 @@ import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { logCommunication } from "@/lib/communications/log";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates all orgs and sends emails; give it headroom over the
 // default serverless timeout.
 export const maxDuration = 60;
-
-// ─── Auth ──────────────────────────────────────────────────────────────────
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const secret = getOptionalEnv("CRON_SECRET");
-  if (!secret) return false;
-
-  const authHeader = request.headers.get("authorization");
-  return authHeader === `Bearer ${secret}`;
-}
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
