@@ -489,6 +489,7 @@ export async function createCheckoutOrder(
       .from("customer_addresses")
       .insert({
         customer_id: customerId,
+        organization_id: orgId,
         label: "Delivery",
         line1,
         line2: line2 || null,
