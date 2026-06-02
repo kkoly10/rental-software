@@ -36,6 +36,10 @@ export type AnalyticsData = {
   ordersByStatus: { status: string; count: number }[];
   topProducts: { name: string; count: number; revenue: number }[];
   busiestDays: { day: string; count: number }[];
+
+  // True when any underlying query hit its row cap; the page shows a
+  // "showing recent N" banner so totals aren't silently underreported.
+  dataTruncated: boolean;
 };
 
 const EMPTY: AnalyticsData = {
@@ -57,6 +61,7 @@ const EMPTY: AnalyticsData = {
   ordersByStatus: [],
   topProducts: [],
   busiestDays: [],
+  dataTruncated: false,
 };
 
 const ACTIVE_STATUSES = new Set([
@@ -191,6 +196,11 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     }),
   ]);
   const items = itemsRes.data ?? [];
+
+  const dataTruncated =
+    orders.length >= ANALYTICS_ORDERS_LIMIT ||
+    payments.length >= ANALYTICS_PAYMENTS_LIMIT ||
+    items.length >= ANALYTICS_ITEMS_LIMIT;
 
   // --- Financial metrics ---
 
@@ -369,6 +379,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     ordersByStatus,
     topProducts,
     busiestDays,
+    dataTruncated,
   };
 }
 
