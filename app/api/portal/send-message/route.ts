@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid subject." }, { status: 400 });
   }
 
-  const clientIp = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const clientIp = getTrustedClientIp(request.headers);
   let ipLimit: { allowed: boolean }, tokenLimit: { allowed: boolean };
   try {
     [ipLimit, tokenLimit] = await Promise.all([
