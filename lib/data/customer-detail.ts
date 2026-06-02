@@ -11,6 +11,7 @@ const fallbackCustomerDetail: CustomerDetail = {
   lastName: "Johnson",
   email: "ashley@example.com",
   phone: "(540) 555-0102",
+  preferredLocale: "en",
   notes: "Repeat customer. Prefers early setup window and text reminders.",
   addressLabel: "123 Oak Lane · Stafford, VA 22554",
   addressLine1: "123 Oak Lane",
@@ -41,7 +42,7 @@ export async function getCustomerDetail(
   const { data, error } = await supabase
     .from("customers")
     .select(`
-      id, first_name, last_name, email, phone, notes,
+      id, first_name, last_name, email, phone, notes, preferred_locale,
       customer_addresses(line1, line2, city, state, postal_code, is_default_delivery),
       orders(id, order_number, order_status, total_amount, event_date, deleted_at)
     `)
@@ -89,6 +90,7 @@ export async function getCustomerDetail(
     lastName: data.last_name ?? "",
     email: data.email ?? "",
     phone: data.phone ?? "",
+    preferredLocale: (data as { preferred_locale?: string | null }).preferred_locale ?? "en",
     notes: data.notes ?? "",
     addressLabel: defaultAddr
       ? [

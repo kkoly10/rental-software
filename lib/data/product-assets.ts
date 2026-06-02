@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
 
 export type ProductAsset = {
   id: string;
@@ -16,7 +17,7 @@ export type ProductAsset = {
   isAvailable: boolean;
 };
 
-const AVAILABLE_STATUSES = new Set(["ready", "available", "active"]);
+const AVAILABLE_STATUSES = new Set<string>(BOOKABLE_ASSET_STATUSES);
 
 /**
  * Fetch all (non-deleted) assets for a product, scoped to the caller's org.

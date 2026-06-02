@@ -6,10 +6,8 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // Rate limiting: 60 per minute per IP
-  const clientIp =
-    request.headers.get("x-real-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    "unknown";
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const clientIp = getTrustedClientIp(request.headers);
   let allowed: boolean;
   try {
     ({ allowed } = await enforceRateLimit({

@@ -12,6 +12,12 @@ export type CommunicationLogEntry = {
   bodyPreview?: string | null;
   status?: "sent" | "delivered" | "failed" | "bounced";
   metadata?: Record<string, unknown>;
+  /**
+   * Caller-supplied row id. Useful when a downstream token (e.g.
+   * /email-view/[token]) needs to be embedded in the email body
+   * before the row physically exists.
+   */
+  id?: string;
 };
 
 /**
@@ -23,7 +29,7 @@ export async function logCommunication(entry: CommunicationLogEntry): Promise<vo
 
   try {
     const supabase = await createSupabaseServerClient();
-    await supabase.from("communication_log").insert({
+    const row: Record<string, unknown> = {
       organization_id: entry.organizationId,
       order_id: entry.orderId ?? null,
       customer_id: entry.customerId ?? null,
@@ -34,7 +40,9 @@ export async function logCommunication(entry: CommunicationLogEntry): Promise<vo
       body_preview: entry.bodyPreview ? entry.bodyPreview.slice(0, 200) : null,
       status: entry.status ?? "sent",
       metadata: entry.metadata ?? {},
-    });
+    };
+    if (entry.id) row.id = entry.id;
+    await supabase.from("communication_log").insert(row);
   } catch (err) {
     console.error("[communication_log] Failed to log:", err instanceof Error ? err.message : String(err));
   }

@@ -105,7 +105,7 @@ export async function acceptQuote(
     }
   }
 
-  // Notify operator
+  // Notify operator — in-app bell + email.
   try {
     const { createNotification } = await import("@/lib/data/notifications");
     await createNotification(
@@ -116,6 +116,29 @@ export async function acceptQuote(
       `/dashboard/orders/${order.id}`
     );
   } catch { /* non-critical */ }
+  try {
+    const { triggerOperatorActivityAlertEmail } = await import("@/lib/email/triggers");
+    const { data: cust } = order.customer_id
+      ? await supabase
+          .from("customers")
+          .select("first_name, last_name")
+          .eq("id", order.customer_id)
+          .eq("organization_id", orgId)
+          .is("deleted_at", null)
+          .maybeSingle()
+      : { data: null };
+    await triggerOperatorActivityAlertEmail({
+      organizationId: orgId,
+      orderId: order.id,
+      orderNumber: order.order_number ?? order.id,
+      customerName:
+        `${cust?.first_name ?? ""} ${cust?.last_name ?? ""}`.trim() || "Customer",
+      event: "quote_accepted",
+      detail: "Customer accepted the quote; awaiting deposit.",
+    });
+  } catch (err) {
+    console.error("[portal.accept-quote] operator alert failed:", err instanceof Error ? err.message : err);
+  }
 
   // Send customer confirmation email with portal link to pay deposit
   try {

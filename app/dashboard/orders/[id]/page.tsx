@@ -9,6 +9,7 @@ import { CommunicationList } from "@/components/communications/communication-lis
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
+import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
@@ -250,6 +251,7 @@ export default async function OrderDetailPage({
               Delivery board
             </Link>
             <CancelOrderButton orderId={id} currentStatus={order.status} />
+            <RevokePortalTokenButton orderId={id} orderNumber={order.orderNumber} />
           </div>
         </aside>
       </div>

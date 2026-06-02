@@ -4,6 +4,7 @@ import {
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
 import { getAvailabilityWindowForDate } from "@/lib/availability/window";
+import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
 
 export type AvailabilityCheckResult = {
   available: boolean;
@@ -57,7 +58,7 @@ export async function checkProductAvailability(options: {
       .eq("organization_id", options.organizationId)
       .eq("product_id", options.productId)
       .is("deleted_at", null)
-      .in("operational_status", ["ready", "available", "active"]),
+      .in("operational_status", BOOKABLE_ASSET_STATUSES as unknown as string[]),
     // Count overlapping blocks, excluding any that have already expired
     supabase
       .from("availability_blocks")

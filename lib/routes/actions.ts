@@ -129,11 +129,14 @@ export async function addOrderToRoute(
 
   let scheduledWindowStart: string | null = null;
   if (scheduledTime && routeDate) {
-    // Validate the composed ISO string parses to a real date — `new Date`
-    // returns "Invalid Date" silently for malformed input and toISOString
-    // throws.  Catching here lets us return a clearer error than the
-    // generic Postgres error from the RPC.
-    const parsed = new Date(`${routeDate}T${scheduledTime}:00`);
+    // Compose `${routeDate}T${scheduledTime}:00Z` (with the Z suffix).
+    // Without the Z the JS Date parses in the server's local TZ — on a
+    // Vercel UTC machine that happens to round-trip, but a server in
+    // any other zone would shift the stored timestamp. Anchoring to
+    // UTC matches the rest of the route/stop time storage and is
+    // unambiguous regardless of server locale. The org's
+    // event_timezone (PR 8) determines how this is rendered.
+    const parsed = new Date(`${routeDate}T${scheduledTime}:00Z`);
     if (Number.isNaN(parsed.getTime())) {
       return { ok: false, message: "Invalid scheduled time for the route date." };
     }

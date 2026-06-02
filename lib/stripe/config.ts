@@ -124,6 +124,14 @@ export function getPlanByPriceId(priceId: string): PlanTier | null {
   return null;
 }
 
+/**
+ * Format a cents-denominated price for display.
+ * Suppresses trailing ".00" for round-dollar prices so the SaaS plan
+ * cards still read "$39" instead of "$39.00", but a $19.99 price
+ * renders correctly instead of being floored to "$19".
+ */
 export function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(0)}`;
+  const dollars = cents / 100;
+  const isWhole = Math.round(dollars * 100) % 100 === 0;
+  return `$${dollars.toFixed(isWhole ? 0 : 2)}`;
 }
