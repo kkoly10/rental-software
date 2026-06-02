@@ -143,7 +143,11 @@ async function sendDayBeforeReminders(
     .eq("event_date", tomorrow)
     .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled"])
-    .is("day_before_reminder_sent_at", null);
+    .is("day_before_reminder_sent_at", null)
+    // Bound the per-run batch. If more than this many orders need reminding
+    // tomorrow, the cron's 60s budget probably won't cover them anyway; the
+    // claim-on-update pattern means a follow-up run picks up the rest.
+    .limit(2000);
 
   if (!orders || orders.length === 0) return { sent, errors };
 
