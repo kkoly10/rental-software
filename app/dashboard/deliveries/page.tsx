@@ -66,6 +66,12 @@ export default async function DeliveriesPage() {
                         >
                           {m.dashboard.deliveries.openRoute}
                         </Link>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}/pull-sheet`}
+                          className="ghost-btn"
+                        >
+                          {m.dashboard.deliveries.pullSheet}
+                        </Link>
                       </div>
                     </div>
                   ))
@@ -91,6 +97,12 @@ export default async function DeliveriesPage() {
                         >
                           {m.dashboard.deliveries.openRoute}
                         </Link>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}/pull-sheet`}
+                          className="ghost-btn"
+                        >
+                          {m.dashboard.deliveries.pullSheet}
+                        </Link>
                       </div>
                     </div>
                   ))
@@ -115,6 +127,12 @@ export default async function DeliveriesPage() {
                           className="ghost-btn"
                         >
                           {m.dashboard.deliveries.openRoute}
+                        </Link>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}/pull-sheet`}
+                          className="ghost-btn"
+                        >
+                          {m.dashboard.deliveries.pullSheet}
                         </Link>
                       </div>
                     </div>

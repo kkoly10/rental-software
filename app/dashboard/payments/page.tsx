@@ -11,6 +11,7 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportPayments } from "@/lib/export/csv";
+import { exportQuickBooksInvoicesCsv } from "@/lib/integrations/quickbooks/csv-export";
 import { getTranslator } from "@/lib/i18n/server";
 
 export default async function PaymentsPage({
@@ -48,7 +49,13 @@ export default async function PaymentsPage({
                 {t(paymentsPage.totalItems === 1 ? m.dashboard.payments.matchingFound : m.dashboard.payments.matchingFoundPlural, { count: paymentsPage.totalItems })}
               </div>
             </div>
-            <ExportCsvButton exportAction={exportPayments} label={m.common.exportCsv} />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <ExportCsvButton exportAction={exportPayments} label={m.common.exportCsv} />
+              <ExportCsvButton
+                exportAction={exportQuickBooksInvoicesCsv}
+                label={m.common.exportQuickBooks}
+              />
+            </div>
           </div>
 
           <ListSearchForm

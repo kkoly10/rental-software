@@ -49,22 +49,26 @@ Goal: close the gaps that make a credible head-to-head comparison page against G
 The smallest credible-gap close. Trivial from existing route + order data. Also includes a 1-day QBO CSV export quick-win to remove the immediate "do you sync with QuickBooks?" sales objection before the full integration ships in Sprint 2.
 
 **Pull sheets:**
-- [ ] Audit existing `routes` and `route_stops` tables for required fields
-- [ ] Build `lib/logistics/pull-sheet.ts` — given a route, return ordered list of items to load
-- [ ] Add `app/dashboard/deliveries/[routeId]/pull-sheet` page (printable view)
-- [ ] PDF export via existing jsPDF infra (`lib/invoices/generate-pdf.ts` pattern)
-- [ ] Add "Print pull sheet" button on the delivery board kanban card
-- [ ] Playwright test: route → print pull sheet → PDF contains all items
-- [ ] Update Help Center article on delivery workflow
+- [x] Audit existing `routes` and `route_stops` tables for required fields
+- [x] Build `lib/logistics/pull-sheet.ts` — given a route, return ordered list of items to load
+- [x] Add `app/dashboard/deliveries/[routeId]/pull-sheet` page (printable view)
+- [x] PDF export via existing jsPDF infra (`lib/invoices/generate-pdf.ts` pattern) — `lib/logistics/generate-pull-sheet-pdf.ts` + `app/api/deliveries/[id]/pull-sheet/route.ts`
+- [x] Add "Print pull sheet" button on the delivery board kanban card AND route detail page
+- [x] Playwright smoke test: `tests/smoke/pull-sheet.spec.ts`
+- [x] Help Center article: `pull-sheets` slug in `lib/help/articles.ts`
 
 **QBO CSV export (quick-win):**
-- [ ] Build `lib/integrations/quickbooks/csv-export.ts` — format invoices for QBO import (`Customer, Invoice #, Date, Amount, Tax, Item, Description`)
-- [ ] Add "Export for QuickBooks" button on `app/dashboard/payments/page.tsx` with date range selector
-- [ ] Match Intuit's expected import schema for Invoices + Sales Receipts
-- [ ] README in `docs/integrations/quickbooks-csv.md` explaining the workflow to accountants
-- [ ] Playwright test: paid invoices → CSV download → schema matches QBO template
+- [x] Build `lib/integrations/quickbooks/csv-export.ts` — format invoices for QBO import
+- [x] Add "Export for QuickBooks" button on `app/dashboard/payments/page.tsx`
+- [x] Match Intuit's expected import schema (InvoiceNo, Customer, InvoiceDate, DueDate, Item, ItemQuantity, ItemRate, ItemAmount, Memo)
+- [x] Documentation in `docs/integrations/quickbooks-csv.md` explaining the workflow to accountants
+- [x] Unit test for CSV escape logic: `tests/quickbooks-csv-format.test.ts` (7 tests, all passing)
+- [x] New `quickbooks_export` feature gate (Pro+) — `lib/stripe/gate.ts`
+- [ ] **Gate**: pull sheet + QBO CSV export both work end-to-end on staging (pending Vercel preview verification)
 
-- [ ] **Gate**: pull sheet + QBO CSV export both work end-to-end on staging
+**Deferred to Sprint 1.5** (small enhancements):
+- [ ] Date-range picker on QBO export for quarterly bookkeeping workflows
+- [ ] Pull sheet PDF: support for pickup-stop section (currently delivery-only)
 
 ### Sprint 2 — QuickBooks Online integration (weeks 3-4)
 

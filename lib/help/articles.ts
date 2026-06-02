@@ -272,6 +272,30 @@ Use the action buttons next to each document to mark it as "Sent" or "Signed."
 
   // Deliveries & Crew
   {
+    slug: "pull-sheets",
+    title: "Printing a pull sheet for a route",
+    section: "Deliveries & Crew",
+    summary: "Generate a printable load list for your delivery crew.",
+    body: `A pull sheet is a printable load list that tells the crew exactly what to load on the truck before leaving the warehouse — and what to drop at each stop once they arrive.
+
+**Two sections in every pull sheet:**
+
+- **Load totals** — aggregated counts across the whole route ("12 round tables, 88 chairs, 1 bounce house"). The crew uses this list to load the truck once.
+- **Stop-by-stop** — each delivery stop shows the customer, address, time window, and the specific items destined for that stop. Used at the venue to confirm what to drop.
+
+Pickup stops are intentionally excluded from the pull sheet since they're picked up at the end of the day, not loaded at the start.
+
+**How to print a pull sheet:**
+
+1. Go to **Deliveries** in the sidebar
+2. On any route card, click **Pull sheet** — or open the route detail page and click **Pull sheet** in the actions area
+3. Review the on-screen view
+4. Click **Download PDF** to save or print
+
+**Tip:** Print one copy per truck. The PDF includes checkboxes next to each item so the crew can tick items off as they load.`,
+    related: ["delivery-routes", "crew-mobile"],
+  },
+  {
     slug: "delivery-routes",
     title: "Planning delivery routes",
     section: "Deliveries & Crew",

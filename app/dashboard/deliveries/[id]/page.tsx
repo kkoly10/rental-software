@@ -153,9 +153,12 @@ export default async function DeliveryDetailPage({
             );
           })()}
 
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link href="/crew/today" className="ghost-btn">
               Open crew mobile view
+            </Link>
+            <Link href={`/dashboard/deliveries/${id}/pull-sheet`} className="ghost-btn">
+              {m.dashboard.deliveries.pullSheet}
             </Link>
           </div>
         </aside>
