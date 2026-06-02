@@ -277,34 +277,6 @@ export async function uploadProofPhoto(
 
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: stop }, { data: photoMembership }] = await Promise.all([
-    supabase
-      .from("route_stops")
-      .select("route_id, routes!inner(organization_id, assigned_driver_profile_id)")
-      .eq("id", stopId)
-      .maybeSingle(),
-    supabase
-      .from("organization_memberships")
-      .select("role")
-      .eq("organization_id", ctx.organizationId)
-      .eq("profile_id", ctx.userId)
-      .eq("status", "active")
-      .maybeSingle(),
-  ]);
-
-  const photoRouteData = stop?.routes as unknown as { organization_id: string; assigned_driver_profile_id: string | null } | undefined;
-  if (!stop || photoRouteData?.organization_id !== ctx.organizationId) {
-    return { ok: false, message: "Stop not found." };
-  }
-
-  const photoRole = photoMembership?.role ?? "";
-  if (!["owner", "admin", "dispatcher", "crew"].includes(photoRole)) {
-    return { ok: false, message: "You don't have permission to upload proof photos." };
-  }
-  if (photoRole === "crew" && photoRouteData.assigned_driver_profile_id !== ctx.userId) {
-    return { ok: false, message: "You are not assigned to this route." };
-  }
-
   const MIME_TO_EXT: Record<string, string> = {
     "image/jpeg": "jpg",
     "image/png": "png",
@@ -326,15 +298,37 @@ export async function uploadProofPhoto(
 
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
 
-  const { error: dbError } = await supabase
-    .from("route_stops")
-    .update({ proof_photo_url: urlData.publicUrl })
-    .eq("id", stopId);
+  // Atomic via crew_attach_proof_photo RPC. The role check, the
+  // assignment check, and the route_stops UPDATE all run inside one
+  // Postgres transaction with a row lock on the parent route — so a
+  // dispatcher reassignment between auth check and UPDATE can't let
+  // an unassigned crew member's photo land on the wrong route.
+  const { data: rpcRows, error: rpcError } = await supabase.rpc("crew_attach_proof_photo", {
+    p_stop_id: stopId,
+    p_org_id: ctx.organizationId,
+    p_user_id: ctx.userId,
+    p_photo_url: urlData.publicUrl,
+  });
 
-  if (dbError) {
-    // Storage file is now orphaned but that is recoverable manually; surface the
-    // error so the crew member doesn't assume the photo was saved.
+  if (rpcError) {
+    await supabase.storage.from(bucket).remove([filePath]);
     return { ok: false, message: "Photo uploaded but could not be linked to stop. Please try again." };
+  }
+
+  const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+    | { ok: boolean; reason: string | null }
+    | null;
+
+  if (!result?.ok) {
+    // Authorization failed — clean up the orphaned upload.
+    await supabase.storage.from(bucket).remove([filePath]);
+    if (result?.reason === "not_assigned") {
+      return { ok: false, message: "You are not assigned to this route." };
+    }
+    if (result?.reason === "not_authorized") {
+      return { ok: false, message: "You don't have permission to upload proof photos." };
+    }
+    return { ok: false, message: "Stop not found." };
   }
 
   revalidatePath("/crew/today");
@@ -360,40 +354,33 @@ export async function saveSignature(
 
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: stop }, { data: sigMembership }] = await Promise.all([
-    supabase
-      .from("route_stops")
-      .select("route_id, routes!inner(organization_id, assigned_driver_profile_id)")
-      .eq("id", stopId)
-      .maybeSingle(),
-    supabase
-      .from("organization_memberships")
-      .select("role")
-      .eq("organization_id", ctx.organizationId)
-      .eq("profile_id", ctx.userId)
-      .eq("status", "active")
-      .maybeSingle(),
-  ]);
+  // Atomic via crew_attach_signature RPC. Same TOCTOU-closing pattern
+  // as updateStopStatus + uploadProofPhoto — role check, assignment
+  // check, and UPDATE all in one transaction with a row lock on the
+  // parent route.
+  const signerLabel = `${signerName} — ${new Date().toISOString()}`;
+  const { data: rpcRows, error: rpcError } = await supabase.rpc("crew_attach_signature", {
+    p_stop_id: stopId,
+    p_org_id: ctx.organizationId,
+    p_user_id: ctx.userId,
+    p_signer_name: signerLabel,
+  });
 
-  const sigRouteData = stop?.routes as unknown as { organization_id: string; assigned_driver_profile_id: string | null } | undefined;
-  if (!stop || sigRouteData?.organization_id !== ctx.organizationId) {
+  if (rpcError) return { ok: false, message: "Failed to save signature." };
+
+  const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+    | { ok: boolean; reason: string | null }
+    | null;
+
+  if (!result?.ok) {
+    if (result?.reason === "not_assigned") {
+      return { ok: false, message: "You are not assigned to this route." };
+    }
+    if (result?.reason === "not_authorized") {
+      return { ok: false, message: "You don't have permission to save signatures." };
+    }
     return { ok: false, message: "Stop not found." };
   }
-
-  const sigRole = sigMembership?.role ?? "";
-  if (!["owner", "admin", "dispatcher", "crew"].includes(sigRole)) {
-    return { ok: false, message: "You don't have permission to save signatures." };
-  }
-  if (sigRole === "crew" && sigRouteData.assigned_driver_profile_id !== ctx.userId) {
-    return { ok: false, message: "You are not assigned to this route." };
-  }
-
-  const { error: sigError } = await supabase
-    .from("route_stops")
-    .update({ signature_name: `${signerName} — ${new Date().toISOString()}` })
-    .eq("id", stopId);
-
-  if (sigError) return { ok: false, message: "Failed to save signature." };
 
   revalidatePath("/crew/today");
   return { ok: true, message: `Signature saved for ${signerName}.` };
