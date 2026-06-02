@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_number, portal_access_token_created_at, customers(first_name, last_name)"
+      "id, order_number, order_status, portal_access_token_created_at, customers(first_name, last_name)"
     )
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
@@ -83,6 +83,16 @@ export async function POST(request: NextRequest) {
 
   if (!order) {
     return NextResponse.json({ error: "Invalid portal link." }, { status: 403 });
+  }
+  if (
+    order.order_status === "cancelled" ||
+    order.order_status === "refunded" ||
+    order.order_status === "completed"
+  ) {
+    return NextResponse.json(
+      { error: "This order is no longer accepting document signatures." },
+      { status: 409 }
+    );
   }
 
   if (isPortalTokenExpired(order.portal_access_token_created_at)) {
