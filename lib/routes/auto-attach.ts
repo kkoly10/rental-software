@@ -92,7 +92,7 @@ export async function autoAttachOrderToRouteIfEligible(
     // 4) Find the unique candidate route.
     const { data: routes } = await supabase
       .from("routes")
-      .select("id, name, status")
+      .select("id, name, route_status")
       .eq("organization_id", organizationId)
       .eq("route_date", eventDate)
       .is("deleted_at", null);
@@ -107,7 +107,7 @@ export async function autoAttachOrderToRouteIfEligible(
       return { attached: false, reason: "ambiguous" };
     }
     const route = routes[0];
-    if (route.status === "completed") {
+    if (route.route_status === "completed") {
       return { attached: false, reason: "route_completed" };
     }
 
