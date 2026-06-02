@@ -7,6 +7,8 @@ import {
   orderStatusUpdateEmail,
   documentsReadyEmail,
   quoteSentEmail,
+  operatorActivityAlertEmail,
+  type OperatorActivityEvent,
 } from "./templates";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
@@ -551,4 +553,99 @@ export async function triggerQuoteSentEmail(params: {
     `#${params.orderNumber} — quote emailed to customer`,
     `/dashboard/orders/${params.orderId}`
   );
+}
+
+// ─── Operator activity alert (customer-initiated events) ───────────────────
+
+/**
+ * Email the operator when a customer takes a self-service action on
+ * the portal: paid, signed a doc, accepted a quote, cancelled, or
+ * sent a message. Sends only to `branding.operatorAlertEmail` (the org
+ * support email, falling back to the owner profile). Also writes an
+ * in-app `notifications` row so the bell in the dashboard lights up.
+ *
+ * Silent no-op when the org has no operator address configured —
+ * shouldn't happen post-onboarding but keeps the path safe in dev.
+ */
+export async function triggerOperatorActivityAlertEmail(params: {
+  organizationId: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  event: OperatorActivityEvent;
+  detail?: string;
+}): Promise<void> {
+  const branding = await getOrgBranding(params.organizationId);
+  if (!branding.operatorAlertEmail) return;
+
+  const dashboardUrl = `${branding.siteUrl}/dashboard/orders/${params.orderId}`;
+
+  await sendEmail({
+    to: branding.operatorAlertEmail,
+    from: branding.fromAddress,
+    subject: subjectForEvent(params.event, params.orderNumber, branding.businessName),
+    html: operatorActivityAlertEmail({
+      businessName: branding.businessName,
+      event: params.event,
+      orderNumber: params.orderNumber,
+      customerName: params.customerName,
+      detail: params.detail,
+      dashboardUrl,
+    }),
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+  });
+
+  await createNotification(
+    params.organizationId,
+    notificationTypeForEvent(params.event),
+    headlineForEvent(params.event),
+    `#${params.orderNumber} — ${params.customerName}${params.detail ? ` — ${params.detail}` : ""}`,
+    `/dashboard/orders/${params.orderId}`
+  );
+}
+
+function subjectForEvent(event: OperatorActivityEvent, orderNumber: string, businessName: string): string {
+  switch (event) {
+    case "payment_received":
+      return `Payment received on order #${orderNumber} — ${businessName}`;
+    case "document_signed":
+      return `Document signed on order #${orderNumber} — ${businessName}`;
+    case "quote_accepted":
+      return `Quote accepted on order #${orderNumber} — ${businessName}`;
+    case "order_cancelled":
+      return `Order #${orderNumber} cancelled by customer — ${businessName}`;
+    case "portal_message":
+      return `New customer message on order #${orderNumber} — ${businessName}`;
+  }
+}
+
+function headlineForEvent(event: OperatorActivityEvent): string {
+  switch (event) {
+    case "payment_received":
+      return "Customer paid";
+    case "document_signed":
+      return "Document signed";
+    case "quote_accepted":
+      return "Quote accepted";
+    case "order_cancelled":
+      return "Order cancelled";
+    case "portal_message":
+      return "New customer message";
+  }
+}
+
+function notificationTypeForEvent(event: OperatorActivityEvent) {
+  switch (event) {
+    case "payment_received":
+      return "payment_received" as const;
+    case "document_signed":
+      return "new_order" as const; // closest available notification type today
+    case "quote_accepted":
+      return "order_confirmed" as const;
+    case "order_cancelled":
+      return "new_order" as const;
+    case "portal_message":
+      return "new_message" as const;
+  }
 }

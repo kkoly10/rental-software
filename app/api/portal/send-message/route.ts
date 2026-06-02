@@ -143,6 +143,32 @@ export async function POST(request: NextRequest) {
     console.error("[portal] Failed to create notification for order", order.order_number);
   }
 
+  // Also email the operator so they don't have to be in the dashboard
+  // to see the message.
+  try {
+    const { data: cust } = order.customer_id
+      ? await supabase
+          .from("customers")
+          .select("first_name, last_name")
+          .eq("id", order.customer_id)
+          .eq("organization_id", orgId)
+          .is("deleted_at", null)
+          .maybeSingle()
+      : { data: null };
+    const { triggerOperatorActivityAlertEmail } = await import("@/lib/email/triggers");
+    await triggerOperatorActivityAlertEmail({
+      organizationId: orgId,
+      orderId: order.id,
+      orderNumber: order.order_number ?? order.id,
+      customerName:
+        `${cust?.first_name ?? ""} ${cust?.last_name ?? ""}`.trim() || "Customer",
+      event: "portal_message",
+      detail: subject,
+    });
+  } catch (err) {
+    console.error("[portal] operator-alert email failed:", err instanceof Error ? err.message : err);
+  }
+
   await supabase.from("messages").insert({
     organization_id: orgId,
     order_id: order.id,
