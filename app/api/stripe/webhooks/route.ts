@@ -377,20 +377,20 @@ export async function POST(request: NextRequest) {
           try {
             const { data: refundOrder } = await admin
               .from("orders")
-              .select("order_number, organization_id, customer_id")
+              .select("id, order_number, organization_id, customer_id")
               .eq("id", originalPayment.order_id)
               .is("deleted_at", null)
               .maybeSingle();
             if (refundOrder?.customer_id && refundOrder.organization_id) {
               const { data: refundCustomer } = await admin
                 .from("customers")
-                .select("first_name, email")
+                .select("first_name, last_name, email")
                 .eq("id", refundOrder.customer_id)
                 .eq("organization_id", refundOrgId)
                 .is("deleted_at", null)
                 .maybeSingle();
+              const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
               if (refundCustomer?.email) {
-                const totalRefunded = refunds.reduce((sum, r) => sum + r.amount, 0) / 100;
                 const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
                 await triggerPaymentReceivedEmail({
                   organizationId: refundOrder.organization_id,
@@ -403,6 +403,17 @@ export async function POST(request: NextRequest) {
                   newBalance: refundFinancials.remainingBalance,
                 });
               }
+              const { triggerRefundOperatorAlertEmail } = await import("@/lib/email/triggers");
+              await triggerRefundOperatorAlertEmail({
+                organizationId: refundOrder.organization_id,
+                orderId: refundOrder.id,
+                orderNumber: refundOrder.order_number,
+                customerName:
+                  `${refundCustomer?.first_name ?? ""} ${refundCustomer?.last_name ?? ""}`.trim() ||
+                  "Customer",
+                amount: totalRefunded,
+                providerPaymentId: event.id,
+              });
             }
           } catch (refundEmailErr) {
             console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);

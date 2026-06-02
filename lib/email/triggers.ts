@@ -1,4 +1,4 @@
-import { sendEmail } from "./send";
+import { sendEmail, listUnsubscribeMailtoHeader } from "./send";
 import {
   orderConfirmationEmail,
   newOrderAlertEmail,
@@ -7,9 +7,21 @@ import {
   orderStatusUpdateEmail,
   documentsReadyEmail,
   quoteSentEmail,
+  depositReminderEmail,
 } from "./templates";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
+
+/**
+ * Build standard headers we want on every customer-facing transactional
+ * email: List-Unsubscribe pointing at the operator's support address
+ * (Gmail/Yahoo bulk-sender baseline) plus a Reply-To override so
+ * customers can actually reply to a real human.
+ */
+function customerHeaders(supportEmail: string | null): Record<string, string> {
+  if (!supportEmail) return {};
+  return listUnsubscribeMailtoHeader(supportEmail);
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -144,6 +156,7 @@ export async function triggerOrderConfirmationEmail(params: {
       portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
     orderId: order?.id ?? null,
   });
@@ -253,6 +266,7 @@ export async function triggerPaymentReceivedEmail(params: {
         supportEmail: branding.supportEmail,
       }),
       replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
       organizationId: params.organizationId,
     });
   } else {
@@ -271,6 +285,7 @@ export async function triggerPaymentReceivedEmail(params: {
         supportEmail: branding.supportEmail,
       }),
       replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
       organizationId: params.organizationId,
     });
   }
@@ -407,6 +422,7 @@ export async function triggerOrderStatusEmail(params: {
       portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
     orderId: params.orderId,
     customerId: order.customer_id,
@@ -468,6 +484,7 @@ export async function triggerDocumentsReadyEmail(params: {
       portalUrl,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
     orderId: params.orderId,
     customerId: params.customerId,
@@ -537,6 +554,7 @@ export async function triggerQuoteSentEmail(params: {
       supportEmail: branding.supportEmail,
     }),
     replyTo: branding.supportEmail ?? undefined,
+      headers: customerHeaders(branding.supportEmail),
     organizationId: params.organizationId,
   });
 
@@ -545,6 +563,113 @@ export async function triggerQuoteSentEmail(params: {
     "new_order",
     "Quote sent",
     `#${params.orderNumber} — quote emailed to customer`,
+    `/dashboard/orders/${params.orderId}`
+  );
+}
+
+// ─── Deposit reminder (customer-facing) ───────────────────────────────────
+
+/**
+ * Email a customer reminding them their booking is held but the deposit
+ * is not yet paid. Wired into the morning reminders cron — runs once per
+ * order, keyed on `orders.deposit_reminder_sent_at` (writeable by the
+ * cron via the admin client).
+ */
+export async function triggerDepositReminderEmail(params: {
+  organizationId: string;
+  customerFirstName: string;
+  customerEmail: string;
+  orderId: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  depositDue: number;
+}): Promise<boolean> {
+  if (!params.customerEmail) return false;
+
+  const branding = await getOrgBranding(params.organizationId);
+
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  const portalToken = await issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(
+    () => null
+  );
+  const portalUrl = portalToken
+    ? `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
+    : `${branding.siteUrl}/order-status`;
+
+  return sendEmail({
+    to: params.customerEmail,
+    from: branding.fromAddress,
+    subject: `Deposit reminder — order #${params.orderNumber} — ${branding.businessName}`,
+    html: depositReminderEmail({
+      businessName: branding.businessName,
+      customerFirstName: params.customerFirstName,
+      orderNumber: params.orderNumber,
+      productName: params.productName,
+      eventDate: formatDate(params.eventDate),
+      depositDue: formatMoney(params.depositDue),
+      portalUrl,
+      supportEmail: branding.supportEmail,
+    }),
+    replyTo: branding.supportEmail ?? undefined,
+    headers: customerHeaders(branding.supportEmail),
+    preheader: `Pay your deposit to confirm order #${params.orderNumber} for ${formatDate(params.eventDate)}.`,
+    idempotencyKey: `deposit_reminder:${params.orderId}`,
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+  });
+}
+
+// ─── Refund operator alert ────────────────────────────────────────────────
+
+/**
+ * Notify the operator that a refund just landed. Complements the
+ * customer-facing `refundProcessedEmail` already sent by
+ * `triggerPaymentReceivedEmail` when `paymentType === "refund"`.
+ *
+ * Refund webhooks fire on Stripe retries, so this trigger is idempotent
+ * via the (orderId, providerPaymentId) key.
+ */
+export async function triggerRefundOperatorAlertEmail(params: {
+  organizationId: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  amount: number;
+  providerPaymentId?: string;
+}) {
+  const branding = await getOrgBranding(params.organizationId);
+  if (!branding.operatorAlertEmail) return;
+
+  const detail = `Refund of ${formatMoney(params.amount)} processed`;
+  const idempotencyKey = `refund_alert:${params.orderId}:${params.providerPaymentId ?? "manual"}`;
+
+  await sendEmail({
+    to: branding.operatorAlertEmail,
+    from: branding.fromAddress,
+    subject: `Refund processed on order #${params.orderNumber} — ${branding.businessName}`,
+    html: newOrderAlertEmail({
+      businessName: branding.businessName,
+      customerName: params.customerName,
+      customerEmail: "",
+      orderNumber: params.orderNumber,
+      productName: detail,
+      eventDate: "",
+      total: formatMoney(params.amount),
+      source: "dashboard",
+      dashboardUrl: `${branding.siteUrl}/dashboard/orders/${params.orderId}`,
+    }),
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+    idempotencyKey,
+  });
+
+  await createNotification(
+    params.organizationId,
+    "payment_received",
+    "Refund processed",
+    `#${params.orderNumber} — ${formatMoney(params.amount)}`,
     `/dashboard/orders/${params.orderId}`
   );
 }

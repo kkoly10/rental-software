@@ -8,12 +8,16 @@ function esc(s: string | null | undefined): string {
   return s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[ch] ?? ch));
 }
 
-function layout(businessName: string, body: string, footer?: string): string {
+function layout(businessName: string, body: string, footer?: string, preheader?: string): string {
   const safeName = esc(businessName);
+  const preheaderSpan = preheader
+    ? `<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${esc(preheader)}</span>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#10233f;line-height:1.6;">
+  ${preheaderSpan}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:32px 16px;">
     <tr><td align="center">
       <table role="presentation" width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:1px solid #dbe6f4;box-shadow:0 4px 12px rgba(16,35,63,0.06);overflow:hidden;">
@@ -557,5 +561,48 @@ export function quoteSentEmail(data: {
       Questions? Contact us at ${esc(data.supportEmail)}.` : ""}
     </p>
     `
+  );
+}
+
+// ─── DEPOSIT REMINDER (customer-facing) ────────────────────────────────────
+
+export type DepositReminderData = {
+  businessName: string;
+  customerFirstName: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  depositDue: string;
+  portalUrl: string;
+  supportEmail: string | null;
+};
+
+export function depositReminderEmail(data: DepositReminderData): string {
+  return layout(
+    data.businessName,
+    `
+    <h1 style="margin:0 0 8px;font-size:24px;">Deposit reminder</h1>
+    <p style="color:#55708f;margin:0 0 20px;">
+      Hi ${esc(data.customerFirstName)}, your booking is held but not yet
+      confirmed. Submit your deposit to secure your event date.
+    </p>
+
+    ${detailTable([
+      ["Order", `#${data.orderNumber}`],
+      ["Item", data.productName],
+      ["Event date", data.eventDate],
+      ["Deposit due", data.depositDue],
+    ])}
+
+    ${button("Pay Deposit", data.portalUrl)}
+
+    ${data.supportEmail
+      ? `<p style="font-size:14px;color:#55708f;">
+          Questions? Contact us at ${esc(data.supportEmail)}.
+        </p>`
+      : ""}
+    `,
+    undefined,
+    `Pay your ${data.depositDue} deposit to confirm order #${data.orderNumber}.`
   );
 }
