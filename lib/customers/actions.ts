@@ -26,6 +26,7 @@ export async function updateCustomer(
     email: String(formData.get("email") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     notes: String(formData.get("notes") ?? ""),
+    preferredLocale: String(formData.get("preferred_locale") ?? "en"),
     addressLine1: String(formData.get("address_line1") ?? ""),
     addressLine2: String(formData.get("address_line2") ?? ""),
     addressCity: String(formData.get("address_city") ?? ""),
@@ -85,6 +86,7 @@ export async function updateCustomer(
     email,
     phone,
     notes,
+    preferredLocale,
     addressLine1,
     addressLine2,
     addressCity,
@@ -113,6 +115,7 @@ export async function updateCustomer(
       email: email ?? null,
       phone: phone ?? null,
       notes: notes ?? null,
+      preferred_locale: preferredLocale,
     })
     .eq("id", customerId)
     .eq("organization_id", ctx.organizationId)
