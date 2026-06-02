@@ -10,6 +10,13 @@ import {
   postEventFollowUpEmail,
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
+import {
+  todayUtc,
+  tomorrowUtc,
+  daysAgoUtc,
+  formatTimeInTimeZone,
+  formatDateInTimeZone,
+} from "@/lib/datetime/event-time";
 import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates matching orders and sends emails; give it headroom over
@@ -18,21 +25,14 @@ export const maxDuration = 60;
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
-function todayDateStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function tomorrowDateStr(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function daysAgoDateStr(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
+// Date helpers use UTC arithmetic so DST transitions don't skip or
+// duplicate a day. The legacy versions called `d.setDate(d.getDate() ± 1)`
+// which is local-time arithmetic; on the spring-forward day this can
+// produce a date one day earlier than intended on a server in a TZ that
+// observes DST.
+const todayDateStr = todayUtc;
+const tomorrowDateStr = tomorrowUtc;
+const daysAgoDateStr = daysAgoUtc;
 
 function formatDate(dateStr: string): string {
   try {
@@ -66,6 +66,9 @@ type OrgBranding = {
   fromAddress: string;
   googleReviewUrl?: string;
   slug?: string;
+  // IANA tz used when rendering event times in customer-facing emails.
+  // Defaults to "UTC" if the org hasn't set one (was: server-local-time).
+  eventTimezone: string;
 };
 
 function buildFromAddress(businessName: string): string {
@@ -83,7 +86,7 @@ async function getOrgBrandings(
 
   const { data: orgs } = await supabase
     .from("organizations")
-    .select("id, name, support_email, slug, settings")
+    .select("id, name, support_email, slug, settings, event_timezone")
     .in("id", orgIds)
     .is("deleted_at", null);
 
@@ -121,6 +124,7 @@ async function getOrgBrandings(
       fromAddress: buildFromAddress(businessName),
       googleReviewUrl: (settings.social_google_business as string) || undefined,
       slug: org.slug ?? undefined,
+      eventTimezone: org.event_timezone ?? "UTC",
     });
   }
 
@@ -217,15 +221,12 @@ async function sendDayBeforeReminders(
     const stop = stopMap.get(order.id);
     let deliveryTime: string | undefined;
     if (stop?.start) {
-      const startTime = new Date(stop.start).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      });
+      // Render times in the org's IANA timezone so customers don't see
+      // "Tomorrow at 5 PM" for what the operator wrote as "Tomorrow at
+      // 9 AM PT" (5pm = the UTC stored value, 9am PT = what was meant).
+      const startTime = formatTimeInTimeZone(stop.start, branding.eventTimezone);
       if (stop.end) {
-        const endTime = new Date(stop.end).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        });
+        const endTime = formatTimeInTimeZone(stop.end, branding.eventTimezone);
         deliveryTime = `${startTime} – ${endTime}`;
       } else {
         deliveryTime = `Around ${startTime}`;
@@ -368,16 +369,12 @@ async function sendMorningDigests(
     .select("order_id, scheduled_window_start")
     .in("order_id", allOrderIds);
 
+  // Store the raw ISO timestamp; format per-order below so the org's
+  // IANA timezone is applied. The legacy version formatted at map-build
+  // time using server-local TZ — wrong for any org outside the server's
+  // region.
   const stopTimeMap = new Map(
-    (stops ?? []).map((s) => [
-      s.order_id,
-      s.scheduled_window_start
-        ? new Date(s.scheduled_window_start).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-          })
-        : undefined,
-    ])
+    (stops ?? []).map((s) => [s.order_id, s.scheduled_window_start ?? null])
   );
 
   for (const [orgId, orgOrderList] of orgOrders) {
@@ -391,13 +388,14 @@ async function sendMorningDigests(
       } | null;
       const items = order.order_items as unknown as { item_name_snapshot: string }[] | null;
 
+      const rawTime = stopTimeMap.get(order.id);
       return {
         orderNumber: order.order_number,
         customerName: customer
           ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown"
           : "Unknown",
         productName: items?.[0]?.item_name_snapshot ?? "Rental",
-        time: stopTimeMap.get(order.id),
+        time: rawTime ? formatTimeInTimeZone(rawTime, branding.eventTimezone) : undefined,
         status: order.order_status,
       };
     });
