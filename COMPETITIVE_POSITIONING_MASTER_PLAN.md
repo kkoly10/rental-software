@@ -40,7 +40,7 @@ Decisions that frame everything else. **Done** before any sprint starts.
 
 ---
 
-## Phase 1 — Gap closure: P0 features (weeks 1-6)
+## Phase 1 — Gap closure: P0 features (weeks 1-8)
 
 Goal: close the gaps that make a credible head-to-head comparison page against Goodshuffle Pro impossible to publish today.
 
@@ -66,11 +66,110 @@ The smallest credible-gap close. Trivial from existing route + order data. Also 
 - [x] New `quickbooks_export` feature gate (Pro+) — `lib/stripe/gate.ts`
 - [ ] **Gate**: pull sheet + QBO CSV export both work end-to-end on staging (pending Vercel preview verification)
 
-**Deferred to Sprint 1.5** (small enhancements):
+**Deferred follow-ups** (small enhancements, not blocking):
 - [ ] Date-range picker on QBO export for quarterly bookkeeping workflows
 - [ ] Pull sheet PDF: support for pickup-stop section (currently delivery-only)
+- [ ] In-app Help Center article for the QBO CSV export workflow (currently dev-facing docs only)
 
-### Sprint 2 — QuickBooks Online integration (weeks 3-4)
+### Sprint 1.5 — Smart Delivery Mode (weeks 3-4)
+
+**Goal**: collapse the 3-click "create route → add stop → start delivery" ritual into a 1-click "Send delivery" per order for the ~80-90% of operators who are noobs or time-poor SMB owners. Preserve manual route control for the minority of power users via a Settings → Advanced toggle.
+
+**Background**: a recon of the existing delivery flow surfaced that a brand-new operator with 1 confirmed order today must (a) create a route, (b) navigate into that route, (c) add the order as a stop, (d) click Start Route — and the route abstraction is jargon they've never met before. The existing auto-attach (`lib/routes/auto-attach.ts`) silently fails when no route exists yet, which is the most common starting state.
+
+Market evidence: 80-90% of US/Mexico party rental operators are not on any rental SaaS today (see [`docs/strategy/01-market-analysis.md`](docs/strategy/01-market-analysis.md) and [`02-competitive-analysis.md`](docs/strategy/02-competitive-analysis.md)). The median Korent buyer has never used the word "route" professionally. The "route" abstraction is load-bearing for multi-stop dispatch but dead weight for single-order days. The strategic decision to ship Option C (route invisible by default + Settings toggle for power users) is recorded in [`docs/strategy/README.md`](docs/strategy/README.md).
+
+#### Data model
+
+- [ ] Add `organizations.routing_mode text not null default 'auto'` with check constraint `in ('auto', 'manual')`
+- [ ] Migration default for existing orgs: pre-flip to `'manual'` if the org has any existing routes (preserves their workflow); otherwise leave at `'auto'`
+- [ ] No schema change to `routes` or `route_stops` — the logic change is purely in actions + cleanup
+- [ ] One-time zombie cleanup migration: `delete from routes where route_status = 'planned' and route_date < current_date and not exists (select 1 from route_stops where route_id = routes.id)`
+
+#### Auto-create + auto-bundle (the core change)
+
+- [ ] Extend `lib/routes/auto-attach.ts` to handle the "no route exists" branch. Currently bails with `reason: "no_route"`. In auto mode, create the route (name `"Deliveries for {YYYY-MM-DD}"`, driver/vehicle null) and add the order as the first stop.
+- [ ] When a 2nd, 3rd, Nth order is confirmed for the same date in auto mode: add to the existing auto-created route (auto-bundle into one route per date)
+- [ ] Auto-sequence stops by `scheduled_window_start` (or `event_time` fallback) on every insert — re-sort the sequence numbers so the latest insert lands in the right place
+- [ ] In manual mode: existing behavior preserved (auto-attach still bails when no route exists; operator creates routes manually)
+- [ ] Server-side guard: `routing_mode === 'auto'` is verified inside the action before any auto-create happens
+
+#### Per-order "Send delivery" button
+
+- [ ] Add "Send delivery" button on the order detail page when `order_status` is `confirmed` or `scheduled`
+- [ ] New server action `dispatchOrderDelivery(orderId)` that, atomically:
+  - Sets the stop status to `en_route`
+  - Sets the route status to `in_progress` if not already
+  - Sets the order status to `out_for_delivery`
+- [ ] Wrap the three updates in a Supabase RPC for atomicity, mirroring the pattern in `supabase/migrations/20260602_030000_crew_stop_action_rpcs.sql`
+- [ ] In manual mode: hide the per-order button; operators dispatch via the existing route detail page
+- [ ] Order detail page also shows context: "Auto-scheduled on Deliveries for {date} (stop #N of M)"
+
+#### Cleanup rules (kill the zombies)
+
+- [ ] When a stop is removed in auto mode AND it was the last stop on a `planned` route: delete the route in the same transaction
+- [ ] When an order is cancelled or refunded: auto-remove its route stop (cascades into the rule above if it was the last stop). **Applies in both auto AND manual mode** — keeping a stop for a non-event is bookkeeping garbage either way, and the count-vs-list mismatch it creates is a real bug
+- [ ] Implementation: extend the existing logic in `lib/routes/actions.ts:217-233` (the acknowledged TODO comment) — currently auto-deletes only if route never had stops; broaden to "last stop removed in auto mode"
+- [ ] Database-level: add `on_order_cancelled_remove_stop` trigger OR add the cleanup to the order-status-change action handler, whichever is more atomic
+
+#### Empty-state UX
+
+- [ ] `/dashboard/deliveries` in auto mode: replace the prominent "Create a Route" form with a summary:
+  - "{N} deliveries scheduled for today / {N} for tomorrow"
+  - Each date's route surfaces as a single card
+  - "Need manual route control? Settings → Advanced" footer link
+- [ ] `/dashboard/deliveries` in manual mode: existing UI preserved
+- [ ] Settings → Advanced: new "Manual route management" toggle with copy: "By default, Korent auto-creates delivery routes when orders are confirmed and bundles same-day deliveries together. Turn this on to create routes manually instead."
+
+#### Terminology change for single-stop routes
+
+- [ ] On the deliveries dashboard, render single-stop routes as "Delivery for {customer name}" instead of "Route — 1 stop"
+- [ ] Multi-stop routes: "Deliveries for {date} ({N} stops)" — keep the "route" word only when there's actually a sequence to manage
+- [ ] Pull sheet PDF/HTML respects the same rule: single-stop pull sheet header reads "Delivery for {customer}" instead of "PULL SHEET — {route name}"
+
+#### Crew mobile
+
+- [ ] Verify `/crew/today` correctly displays single-stop auto-routes (should work without changes since the underlying data model is unchanged, but add a smoke test)
+- [ ] Update copy in the "No routes for today" empty state to reflect the auto-scheduled mental model
+
+#### Tests
+
+- [ ] Unit test: `auto-attach.ts` auto-creates a route when none exists in auto mode
+- [ ] Unit test: 2nd same-date order auto-bundles into the existing auto-route
+- [ ] Unit test: auto-sequencing by event_time produces correct stop ordering
+- [ ] Unit test: cancellation chain (order cancelled → stop removed → route deleted if last stop, auto mode)
+- [ ] Unit test: cancellation in manual mode removes the stop but preserves the route
+- [ ] Unit test: zombie cleanup migration removes past-dated empty planned routes (SQL test)
+- [ ] Smoke test: `/dashboard/deliveries` in auto mode with 0 routes shows the new summary view
+- [ ] Playwright walkthrough: signup → create order → confirm → click "Send delivery" → order is `out_for_delivery` and visible to crew
+- [ ] Regression test: manual mode preserves all existing behavior
+
+#### Documentation
+
+- [ ] New Help Center article: "How auto-scheduling works" (slug `smart-delivery-mode` in `lib/help/articles.ts`)
+- [ ] Update existing `delivery-routes` and `crew-mobile` articles to describe manual mode as the opt-in
+- [ ] New `docs/architecture/smart-delivery-mode.md` explaining the auto-attach + cleanup rules for future maintainers
+- [ ] Update `lib/help/articles.ts` `pull-sheets` article to reflect single-stop-route terminology
+
+#### Migration & rollout
+
+- [ ] Single forward-only migration in `supabase/migrations/2026MMDD_smart_delivery_mode.sql` containing:
+  - The `routing_mode` column addition with default
+  - The conditional flip to `'manual'` for orgs with existing routes
+  - The one-time zombie cleanup
+- [ ] **No feature flag.** Auto mode is the default for all new orgs; existing orgs with routes pre-flip to manual (preserves their workflow); they can opt into auto via Settings → Advanced
+- [ ] i18n strings for the new copy added to `en` / `es` / `fr` / `pt`
+
+#### Gate
+
+- [ ] Auto mode tested end-to-end with 0, 1, 2, and 5-order days
+- [ ] Manual mode preserves all current behavior (no regression)
+- [ ] Cancellation chain verified in both modes
+- [ ] Zombie cleanup verified (existing zombies gone, new ones can't form)
+- [ ] Crew mobile renders auto-routes correctly
+- [ ] **Estimated effort: 8-12 dev-days for one engineer**
+
+### Sprint 2 — QuickBooks Online integration (weeks 5-6)
 
 The single biggest deal-blocker vs Goodshuffle. Even one-way sync (Korent → QBO invoices and payments) closes the practical use case.
 
@@ -87,7 +186,7 @@ The single biggest deal-blocker vs Goodshuffle. Even one-way sync (Korent → QB
 - [ ] Apply for Intuit certification (production scope)
 - [ ] **Gate**: 1 internal test org has 10+ successfully synced invoices
 
-### Sprint 3 — Recurring bookings UI (weeks 5-6)
+### Sprint 3 — Recurring bookings UI (weeks 7-8)
 
 Schema is already there. Build the UI to unlock tent/equipment monthly rentals (a Booqable explicit weakness).
 
@@ -111,11 +210,11 @@ Schema is already there. Build the UI to unlock tent/equipment monthly rentals (
 
 ---
 
-## Phase 2 — Differentiation: P1 features (weeks 7-12)
+## Phase 2 — Differentiation: P1 features (weeks 9-14)
 
 Goal: ship the wedge features nobody else has, so the positioning isn't just "cheaper" but "actually better for specific workflows."
 
-### Sprint 3.5 — Xero integration (week 7, 3-4 days)
+### Sprint 3.5 — Xero integration (week 9, 3-4 days)
 
 Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqable does (in beta). Instantly leapfrogs Goodshuffle on a feature their customers explicitly request — particularly newer/younger operators who chose Xero over QuickBooks.
 
@@ -128,7 +227,7 @@ Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqa
 - [ ] Playwright test: order paid → Xero invoice in sandbox
 - [ ] **Gate**: 1 internal test org has 5+ successfully synced Xero invoices
 
-### Sprint 4 — WhatsApp Business API (weeks 7-9)
+### Sprint 4 — WhatsApp Business API (weeks 9-11)
 
 **The single highest-leverage net-new feature.** None of the three competitors ship WhatsApp natively. Reuses existing Twilio abstraction.
 
@@ -142,7 +241,7 @@ Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqa
 - [ ] Playwright tests + sandbox messages
 - [ ] **Gate**: 1 internal test customer receives a WhatsApp deposit reminder
 
-### Sprint 5 — Route auto-optimization (weeks 10-12)
+### Sprint 5 — Route auto-optimization (weeks 12-14)
 
 Closes the last functional gap vs Goodshuffle and InflatableOffice (both have one-click solvers).
 
@@ -346,8 +445,8 @@ When evidence arrives, move these into a decision in [`docs/strategy/README.md`]
 
 | Phase | Gate | Metric |
 |---|---|---|
-| Phase 1 | Week 6 | 3 P0 features in production |
-| Phase 2 | Week 12 | WhatsApp + route optimization in production |
+| Phase 1 | Week 8 | 4 P0 features in production (pull sheets, QBO CSV, Smart Delivery Mode, QBO full sync, recurring bookings) |
+| Phase 2 | Week 14 | WhatsApp + route optimization in production |
 | Phase 3 | Day 90 | 15 US paying customers, ~$735 MRR |
 | Phase 4 | Day 180 | 8+ Mexican paying customers OR pivot to US-only doubled budget |
 | Phase 5 | Month 6 | 2 InflatableOffice churn customers (conditional) |
