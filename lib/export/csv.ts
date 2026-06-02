@@ -4,7 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { checkFeatureAccess } from "@/lib/stripe/gate";
-import { getOrderFinancials } from "@/lib/payments/financials";
+import { getOrderFinancialsBatch } from "@/lib/payments/financials";
 
 function escapeCsvField(value: string): string {
   // Prefix formula-trigger characters to prevent CSV injection in spreadsheet apps.
@@ -62,21 +62,14 @@ export async function exportOrders(): Promise<ExportResult> {
     return { ok: false, message: "Failed to fetch orders." };
   }
 
-  // Compute real balance from payments for each order (source of truth)
-  const financialsMap = new Map<string, number>();
-  const batchSize = 50;
-  for (let i = 0; i < data.length; i += batchSize) {
-    const batch = data.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map(async (o) => {
-        const f = await getOrderFinancials(o.id);
-        return [o.id, f?.remainingBalance ?? Number(o.total_amount ?? 0)] as const;
-      })
-    );
-    for (const [id, balance] of results) {
-      financialsMap.set(id, balance);
-    }
-  }
+  // Compute the real balance from payments for each order (the source of
+  // truth). One bulk call instead of N per-order calls — previously this
+  // ran 2*N round-trips in batches of 50, so 2000 orders = 80 RPC
+  // round-trips taking 10+ seconds. Now it's 2 round-trips total.
+  const financialsByOrder = await getOrderFinancialsBatch(
+    data.map((o) => o.id),
+    ctx.organizationId
+  );
 
   const headers = [
     "Order Number", "Status", "Event Date", "Customer Name", "Customer Email",
@@ -92,7 +85,8 @@ export async function exportOrders(): Promise<ExportResult> {
       | { item_name_snapshot?: string | null; quantity?: number | null }[]
       | null) ?? [];
 
-    const computedBalance = financialsMap.get(o.id) ?? Number(o.total_amount ?? 0);
+    const computedBalance =
+      financialsByOrder.get(o.id)?.remainingBalance ?? Number(o.total_amount ?? 0);
 
     return [
       o.order_number ?? "",
