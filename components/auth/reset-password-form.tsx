@@ -37,7 +37,15 @@ export function ResetPasswordForm() {
         />
       </label>
 
-      {state.message ? <div className="muted">{state.message}</div> : null}
+      {state.message ? (
+        <div
+          role={state.ok ? "status" : "alert"}
+          aria-live={state.ok ? "polite" : "assertive"}
+          className="muted"
+        >
+          {state.message}
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", gap: 12 }}>
         <button className="primary-btn" type="submit" disabled={pending}>
