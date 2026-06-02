@@ -165,6 +165,24 @@ export async function createCheckoutSession(
     });
 
     if (session.url) {
+      // Audit-log the subscription checkout attempt BEFORE redirecting
+      // — `redirect()` throws NEXT_REDIRECT and won't return. We log
+      // creation (not success) here because the actual subscription
+      // doesn't exist until the customer completes Stripe checkout
+      // and our webhook fires; the webhook is the right place for the
+      // "subscription created" event. This row records the attempt.
+      {
+        const { logAppEvent } = await import("@/lib/observability/server");
+        await logAppEvent({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe.subscription_checkout",
+          action: "session_created",
+          status: "info",
+          route: "lib/stripe/actions",
+          metadata: { plan_tier: tier, interval, stripe_session_id: session.id },
+        });
+      }
       redirect(session.url);
     }
 
@@ -235,6 +253,23 @@ export async function createBillingPortalSession(): Promise<SubscriptionActionSt
     });
 
     if (session.url) {
+      // Audit-log billing-portal access — the operator may proceed to
+      // cancel / downgrade / change payment method inside Stripe's
+      // hosted UI, which our webhook handlers reflect back as
+      // subscription state changes. Logging the portal entry gives
+      // us a "who initiated this" pointer for those webhook events.
+      {
+        const { logAppEvent } = await import("@/lib/observability/server");
+        await logAppEvent({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "stripe.billing_portal",
+          action: "session_created",
+          status: "info",
+          route: "lib/stripe/actions",
+          metadata: { stripe_session_id: session.id },
+        });
+      }
       redirect(session.url);
     }
 

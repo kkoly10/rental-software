@@ -141,6 +141,31 @@ export async function recordPayment(
 
   const newBalance = result.new_balance ?? 0;
   const netPaid = result.net_paid ?? 0;
+
+  // Audit log: manual payment / refund recording is one of the most
+  // financially sensitive operations and was previously silent in
+  // app_event_logs. An admin / dispatcher can credit or refund money;
+  // we want a trail with the actor, amount, method, and reference note
+  // (sanitized) for compliance + incident response.
+  {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "payments.record_manual",
+      action: paymentType === "refund" ? "manual_refund" : "manual_payment",
+      status: "success",
+      route: "lib/payments/actions",
+      metadata: {
+        order_id: orderId,
+        amount,
+        payment_type: paymentType,
+        payment_method: paymentMethod,
+        net_paid: netPaid,
+        new_balance: newBalance,
+      },
+    });
+  }
   const updatedFinancials = { remainingBalance: newBalance, depositFulfilled: netPaid >= Number(order.deposit_due_amount ?? 0) };
 
   // Auto-confirm orders when deposit is fulfilled.
