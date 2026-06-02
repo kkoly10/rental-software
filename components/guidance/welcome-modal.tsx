@@ -28,13 +28,36 @@ export function WelcomeModal({
     });
   }
 
-  // Focus the dialog on mount and close on Escape so keyboard/AT users can
-  // perceive the dialog opening and dismiss it.
+  // Focus the dialog on mount, close on Escape, and trap Tab inside the modal
+  // so keyboard users can't reach background controls while it's open.
   useEffect(() => {
     if (!open) return;
-    modalRef.current?.focus();
+    const modal = modalRef.current;
+    modal?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (e.key !== "Tab" || !modal) return;
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first || document.activeElement === modal) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);

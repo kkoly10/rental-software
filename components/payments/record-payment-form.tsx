@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { recordPayment } from "@/lib/payments/actions";
 import { useI18n } from "@/lib/i18n/provider";
+import { toLocalISODate } from "@/lib/i18n/format-helpers";
 
 const initialState = { ok: false, message: "" };
 
@@ -47,7 +48,7 @@ export function RecordPaymentForm({ orderId }: { orderId: string }) {
       <div className="grid grid-3">
         <label className="order-card">
           <strong>{m.datePaidLabel}</strong>
-          <input name="paid_at" type="date" defaultValue={new Date().toLocaleDateString("en-CA")} style={{ marginTop: 8, width: "100%" }} />
+          <input name="paid_at" type="date" defaultValue={toLocalISODate()} style={{ marginTop: 8, width: "100%" }} />
         </label>
 
         <label className="order-card" style={{ gridColumn: "span 2" }}>

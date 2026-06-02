@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSlugAvailable, isValidSlugFormat } from "@/lib/auth/resolve-org";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { getTrustedClientIp } from "@/lib/security/request-client";
 
 export async function GET(request: NextRequest) {
   // Rate limiting: 20 per 15 min per IP
-  const clientIp =
-    request.headers.get("x-real-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    "unknown";
+  const clientIp = getTrustedClientIp(request.headers);
   let allowed: boolean;
   try {
     ({ allowed } = await enforceRateLimit({

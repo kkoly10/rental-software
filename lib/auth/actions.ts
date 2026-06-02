@@ -297,7 +297,9 @@ export async function signUpWithPassword(
 
   // Record terms acceptance on the profile before terminating the Lambda via redirect
   const hdrs = await headers();
-  const clientIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? null;
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const trustedIp = getTrustedClientIp(hdrs);
+  const clientIp = trustedIp === "unknown" ? null : trustedIp;
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     try {
@@ -458,7 +460,13 @@ export async function resetPassword(
     status: "success",
   });
 
-  await supabase.auth.signOut();
+  // Explicitly invalidate ALL of this user's sessions, not just the
+  // one held by the current request. After a password reset we want
+  // any concurrent attacker session (e.g. from a phishing-stolen
+  // token that prompted the reset in the first place) to lose access
+  // immediately. `scope: 'global'` triggers Supabase to revoke every
+  // active refresh token for this user.
+  await supabase.auth.signOut({ scope: "global" });
   redirect("/login?reset=success");
 }
 

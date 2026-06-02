@@ -2,13 +2,27 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatCard } from "@/components/ui/stat-card";
 import { getAnalytics } from "@/lib/data/analytics";
 import { getMessages } from "@/lib/i18n/server";
-
-function formatMoney(amount: number): string {
-  return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney as formatMoneyIntl, formatEventDate } from "@/lib/i18n/format-helpers";
 
 export default async function AnalyticsPage() {
-  const [data, m] = await Promise.all([getAnalytics(), getMessages()]);
+  const [data, m, { currency, locale }] = await Promise.all([
+    getAnalytics(),
+    getMessages(),
+    getOrgFormatting(),
+  ]);
+  const formatMoney = (amount: number) => {
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch {
+      return formatMoneyIntl(amount, currency, locale);
+    }
+  };
   const isEmpty = data.totalOrders === 0 && data.totalCustomers === 0;
 
   return (
@@ -118,10 +132,8 @@ export default async function AnalyticsPage() {
                 </div>
               ) : (
                 <div className="list">
-                  {data.revenueByMonth.map((m) => {
-                    const label = new Date(
-                      m.month + "-01T00:00:00"
-                    ).toLocaleDateString("en-US", {
+                  {data.revenueByMonth.map((row) => {
+                    const label = formatEventDate(`${row.month}-01`, locale, {
                       month: "long",
                       year: "numeric",
                     });
@@ -129,13 +141,13 @@ export default async function AnalyticsPage() {
                       ...data.revenueByMonth.map((r) => r.amount),
                       1
                     );
-                    const pct = Math.round((m.amount / maxAmount) * 100);
+                    const pct = Math.round((row.amount / maxAmount) * 100);
 
                     return (
-                      <div key={m.month} className="order-card">
+                      <div key={row.month} className="order-card">
                         <div className="order-row">
                           <strong>{label}</strong>
-                          <strong>${m.amount.toLocaleString()}</strong>
+                          <strong>{formatMoney(row.amount)}</strong>
                         </div>
                         <div
                           style={{
@@ -241,7 +253,7 @@ export default async function AnalyticsPage() {
                           <strong>{p.name}</strong>
                           <div className="muted">{p.count} bookings</div>
                         </div>
-                        <strong>${p.revenue.toLocaleString()}</strong>
+                        <strong>{formatMoney(p.revenue)}</strong>
                       </div>
                     </div>
                   ))}

@@ -1,6 +1,14 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { logTruncation } from "@/lib/observability/server";
+
+// Per-query limits. Anything that grows linearly with order/customer
+// volume can saturate these and silently truncate analytics totals;
+// `logTruncation` below surfaces that to operators via app_event_logs.
+const ANALYTICS_ORDERS_LIMIT = 5000;
+const ANALYTICS_PAYMENTS_LIMIT = 10000;
+const ANALYTICS_ITEMS_LIMIT = 5000;
 
 export type AnalyticsData = {
   // Financial
@@ -28,12 +36,6 @@ export type AnalyticsData = {
   ordersByStatus: { status: string; count: number }[];
   topProducts: { name: string; count: number; revenue: number }[];
   busiestDays: { day: string; count: number }[];
-
-  // Indicates the queries hit their per-table caps (5k orders, 10k
-  // payments, 5k order_items). The rollups above were computed from a
-  // partial dataset and underreport revenue / counts / top products.
-  // UI should surface a "showing recent X" notice when this is true.
-  dataTruncated: boolean;
 };
 
 const EMPTY: AnalyticsData = {
@@ -55,7 +57,6 @@ const EMPTY: AnalyticsData = {
   ordersByStatus: [],
   topProducts: [],
   busiestDays: [],
-  dataTruncated: false,
 };
 
 const ACTIVE_STATUSES = new Set([
@@ -88,7 +89,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .select("id, order_status, total_amount, deposit_due_amount, event_date, created_at")
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
-        .limit(5000),
+        .limit(ANALYTICS_ORDERS_LIMIT),
 
       // Customer count
       supabase
@@ -103,7 +104,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .select("amount, paid_at, payment_type, order_id, orders!inner(organization_id)")
         .eq("orders.organization_id", ctx.organizationId)
         .eq("payment_status", "paid")
-        .limit(10000),
+        .limit(ANALYTICS_PAYMENTS_LIMIT),
 
       // Order items (exclude cancelled orders for accurate product stats)
       supabase
@@ -113,7 +114,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         )
         .eq("orders.organization_id", ctx.organizationId)
         .not("orders.order_status", "eq", "cancelled")
-        .limit(5000),
+        .limit(ANALYTICS_ITEMS_LIMIT),
 
       // Outstanding balance: sum of balance_due_amount for non-cancelled orders
       // This uses the cached column which is kept in sync by recordPayment().
@@ -125,7 +126,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
         .not("order_status", "in", "(cancelled,completed,refunded)")
-        .limit(5000),
+        .limit(ANALYTICS_ORDERS_LIMIT),
 
       // Repeat customers: fetch customer_id from all orders to count in JS
       supabase
@@ -134,7 +135,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
         .not("order_status", "eq", "cancelled")
-        .limit(5000),
+        .limit(ANALYTICS_ORDERS_LIMIT),
 
       // New customers this month
       supabase
@@ -155,17 +156,40 @@ export async function getAnalytics(): Promise<AnalyticsData> {
   const orders = ordersRes.data ?? [];
   const payments = paymentsRes.data ?? [];
 
-  // The orders / payments / order_items queries above cap at 5k/10k/5k
-  // rows so a degenerate org doesn't OOM the analytics page. Flag when
-  // the cap was hit so the UI can show "showing recent N — totals
-  // exclude older history" rather than silently underreporting.
-  const ORDERS_CAP = 5000;
-  const PAYMENTS_CAP = 10000;
-  const ITEMS_CAP = 5000;
-  const dataTruncated =
-    orders.length >= ORDERS_CAP ||
-    payments.length >= PAYMENTS_CAP ||
-    (itemsRes.data?.length ?? 0) >= ITEMS_CAP;
+  // Surface truncation so operators know when analytics totals
+  // are based on a clipped window rather than the full history.
+  await Promise.all([
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.orders",
+      rowCount: orders.length,
+      limit: ANALYTICS_ORDERS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.payments",
+      rowCount: payments.length,
+      limit: ANALYTICS_PAYMENTS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.items",
+      rowCount: (itemsRes.data ?? []).length,
+      limit: ANALYTICS_ITEMS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.balance",
+      rowCount: (balanceRes.data ?? []).length,
+      limit: ANALYTICS_ORDERS_LIMIT,
+    }),
+    logTruncation({
+      organizationId: ctx.organizationId,
+      source: "data.analytics.repeat_customers",
+      rowCount: (repeatRes.data ?? []).length,
+      limit: ANALYTICS_ORDERS_LIMIT,
+    }),
+  ]);
   const items = itemsRes.data ?? [];
 
   // --- Financial metrics ---
@@ -345,7 +369,6 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     ordersByStatus,
     topProducts,
     busiestDays,
-    dataTruncated,
   };
 }
 

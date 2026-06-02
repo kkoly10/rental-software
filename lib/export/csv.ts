@@ -212,3 +212,91 @@ export async function exportPayments(): Promise<ExportResult> {
   const date = new Date().toISOString().slice(0, 10);
   return { ok: true, message: `Exported ${rows.length} payments.`, csv, filename: `payments-${date}.csv` };
 }
+
+/**
+ * Export `app_event_logs` for the operator's org as CSV, scoped to a
+ * date range. Owner / admin only — the log includes role changes,
+ * payment recordings, billing-portal entries and tracking-link
+ * accesses, all of which are operator-internal.
+ *
+ * The metadata column is JSON; we emit it stringified so spreadsheets
+ * can still load the file without crashing on nested objects.
+ */
+export async function exportAuditLog(options?: {
+  fromIso?: string | null;
+  toIso?: string | null;
+}): Promise<ExportResult> {
+  const gate = await checkFeatureAccess("csv_export");
+  if (!gate.allowed) {
+    return { ok: false, message: gate.reason ?? "CSV export requires Growth plan." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: false, message: "Database not configured." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) {
+    return { ok: false, message: "Not authenticated." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  // Authorization: only owner / admin can pull the audit log. Other
+  // roles seeing this CSV would expose role-change activity, billing
+  // portal entries, and tracking lookups they aren't entitled to.
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membership?.role !== "owner" && membership?.role !== "admin") {
+    return { ok: false, message: "Only owners and admins can export the audit log." };
+  }
+
+  let query = supabase
+    .from("app_event_logs")
+    .select("created_at, source, action, status, route, user_id, metadata")
+    .eq("organization_id", ctx.organizationId)
+    .order("created_at", { ascending: false })
+    .limit(10000);
+
+  if (options?.fromIso) query = query.gte("created_at", options.fromIso);
+  if (options?.toIso) query = query.lte("created_at", options.toIso);
+
+  const { data, error } = await query;
+  if (error || !data) {
+    return { ok: false, message: "Failed to fetch audit log." };
+  }
+
+  const headers = [
+    "Timestamp",
+    "Source",
+    "Action",
+    "Status",
+    "Route",
+    "User ID",
+    "Metadata (JSON)",
+  ];
+
+  const rows = data.map((r) => [
+    r.created_at ?? "",
+    r.source ?? "",
+    r.action ?? "",
+    r.status ?? "",
+    r.route ?? "",
+    r.user_id ?? "",
+    r.metadata != null ? JSON.stringify(r.metadata) : "",
+  ]);
+
+  const csv = toCsv(headers, rows);
+  const date = new Date().toISOString().slice(0, 10);
+  return {
+    ok: true,
+    message: `Exported ${rows.length} audit-log entries.`,
+    csv,
+    filename: `audit-log-${date}.csv`,
+  };
+}
