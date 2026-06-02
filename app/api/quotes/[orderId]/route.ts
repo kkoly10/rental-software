@@ -5,6 +5,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { generateQuotePdf } from "@/lib/quotes/generate-pdf";
 import { getSiteUrl } from "@/lib/site-url";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { safeFilenameToken } from "@/lib/security/header-safe";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 
 export async function GET(
@@ -135,7 +136,7 @@ export async function GET(
   return new NextResponse(Buffer.from(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="Quote-${order.order_number}.pdf"`,
+      "Content-Disposition": `attachment; filename="Quote-${safeFilenameToken(order.order_number)}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

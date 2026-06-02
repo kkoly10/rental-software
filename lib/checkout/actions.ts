@@ -635,17 +635,19 @@ export async function createCheckoutOrder(
 
   const orderNumber = createOrderNumber();
 
-  // Convert event date + time strings to timestamptz for storage.
-  // Times are stored even when availability detection is still date-based,
-  // so they flow through to delivery scheduling and the operator dashboard.
-  const eventStartTime =
-    eventDate && startTime
-      ? new Date(`${eventDate}T${startTime}:00.000Z`).toISOString()
-      : null;
-  const eventEndTime =
-    eventDate && endTime
-      ? new Date(`${eventDate}T${endTime}:00.000Z`).toISOString()
-      : null;
+  // Operator's wall-clock event times are stored directly as TIME
+  // (event_start_local / event_end_local). The DB trigger
+  // orders_sync_event_times_trg composes event_start_time
+  // (timestamptz) by combining (event_date + local time) at the org's
+  // event_timezone, so downstream readers get the correct UTC instant
+  // without the app needing a tz library here.
+  //
+  // The legacy `${eventDate}T${startTime}:00.000Z` pattern stored the
+  // wall-clock AS a UTC timestamp, which was wrong for any non-UTC
+  // org. We no longer set event_start_time directly; the trigger
+  // computes it.
+  const eventStartLocal = eventDate && startTime ? `${startTime}:00` : null;
+  const eventEndLocal = eventDate && endTime ? `${endTime}:00` : null;
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -655,8 +657,8 @@ export async function createCheckoutOrder(
       order_number: orderNumber,
       order_status: policies.requireDepositToConfirm ? "awaiting_deposit" : "confirmed",
       event_date: eventDate ?? null,
-      event_start_time: eventStartTime,
-      event_end_time: eventEndTime,
+      event_start_local: eventStartLocal,
+      event_end_local: eventEndLocal,
       rental_end_date: rentalEndDate ?? null,
       delivery_address_id: deliveryAddressId,
       fulfillment_type: fulfillmentType,
@@ -847,7 +849,18 @@ export async function createCheckoutOrder(
     } catch (err) {
       // #407 preserve the actual error so we can diagnose; the form
       // continues regardless (customer has already paid in the success path).
+      // Also route to logAppError so the failure lands in app_error_logs +
+      // Sentry, not just stdout.
       console.error("[checkout] confirmation email failed for", orderNumber, err instanceof Error ? err.message : err);
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: orgId,
+        source: "checkout",
+        message: "order confirmation email failed (order already committed)",
+        route: "checkout",
+        context: { order_number: orderNumber, recipient: email },
+        error: err,
+      });
     }
   }
 
@@ -893,17 +906,29 @@ export async function createCheckoutOrder(
       const { getRequestOrigin } = await import("@/lib/seo/metadata");
       const siteUrl = await getRequestOrigin();
 
+      // Resolve org currency so non-USD operators charge in their currency.
+      // Falls back to "usd" if the column is null/missing. The helper
+      // applies zero-decimal handling for currencies like JPY.
+      const { data: orgCurrencyRow } = await supabase
+        .from("organizations")
+        .select("default_currency")
+        .eq("id", orgId)
+        .is("deleted_at", null)
+        .maybeSingle();
+      const { normalizeCurrency, toStripeMinorUnits } = await import("@/lib/money/currency");
+      const orgCurrency = normalizeCurrency(orgCurrencyRow?.default_currency);
+
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [
           {
             price_data: {
-              currency: "usd",
+              currency: orgCurrency,
               product_data: {
                 name: `Deposit — ${productName}`,
                 description: `Order ${orderNumber} deposit`,
               },
-              unit_amount: Math.round(deposit * 100),
+              unit_amount: toStripeMinorUnits(deposit, orgCurrency),
             },
             quantity: 1,
           },

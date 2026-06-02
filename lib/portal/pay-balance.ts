@@ -87,6 +87,17 @@ export async function createBalancePaymentSession(
   const siteUrl = await getSiteUrl();
   const stripe = getStripe();
 
+  // Resolve org currency so non-USD operators charge balances in their
+  // own currency. Helper applies zero-decimal handling for JPY/KRW/etc.
+  const { data: orgCurrencyRow } = await supabase
+    .from("organizations")
+    .select("default_currency")
+    .eq("id", orgId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const { normalizeCurrency, toStripeMinorUnits } = await import("@/lib/money/currency");
+  const orgCurrency = normalizeCurrency(orgCurrencyRow?.default_currency);
+
   // #391 If Stripe is misconfigured or unreachable the create() call throws,
   // which would become a Next 16 500 page for the customer mid-checkout.
   // Catch and return a stable ok:false instead.
@@ -97,12 +108,12 @@ export async function createBalancePaymentSession(
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: orgCurrency,
             product_data: {
               name: `Balance — Order ${order.order_number}`,
               description: "Remaining rental balance",
             },
-            unit_amount: Math.round(balance * 100),
+            unit_amount: toStripeMinorUnits(balance, orgCurrency),
           },
           quantity: 1,
         },

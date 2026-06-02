@@ -1,6 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { formatDateInTimeZone } from "@/lib/datetime/event-time";
+import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 
 const fallbackMaintenance = [
   {
@@ -35,6 +37,7 @@ export async function getMaintenanceRecords() {
   }
 
   const ctx = await getOrgContext();
+  const tz = ctx ? await getOrgEventTimezone(ctx.organizationId) : "UTC";
   if (!ctx) {
     return [];
   }
@@ -79,7 +82,7 @@ export async function getMaintenanceRecords() {
       status,
       note: record.notes ?? `${type}${record.vendor_name ? ` · ${record.vendor_name}` : ""}`,
       openedAt: record.opened_at
-        ? new Date(record.opened_at).toLocaleDateString("en-US", {
+        ? formatDateInTimeZone(record.opened_at, tz, {
             month: "short",
             day: "numeric",
             year: "numeric",

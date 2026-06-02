@@ -3,9 +3,17 @@
  * Inlines all styles for maximum email client compatibility.
  */
 
+// Escapes the OWASP-recommended HTML5-context character set PLUS
+// backtick (some legacy IE parsers treated it as a quote) and
+// forward-slash (CDATA-context safety). Total cost: 7 substitutions.
+// Output is safe for HTML body text and double-quoted attribute
+// values; do NOT use inside unquoted attributes or inside <script>
+// / <style> blocks.
 function esc(s: string | null | undefined): string {
   if (!s) return "";
-  return s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[ch] ?? ch));
+  return s.replace(/[&<>"'`/]/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;", "`": "&#x60;", "/": "&#x2F;" }[ch] ?? ch
+  ));
 }
 
 function layout(businessName: string, body: string, footer?: string, preheader?: string): string {

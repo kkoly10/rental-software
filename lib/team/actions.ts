@@ -184,7 +184,9 @@ export async function inviteTeamMember(
   const sent = await sendEmail({
     to: email,
     from: `${safeFromName} <${fromDomain}>`,
-    subject: `You're invited to join ${businessName}`,
+    subject: (await import("@/lib/security/header-safe")).sanitizeHeaderValue(
+      `You're invited to join ${businessName}`
+    ),
     html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">

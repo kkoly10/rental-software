@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { sendEmail } from "@/lib/email/send";
+import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
 
 const VALID_SUBJECTS = [
   "Question about my order",
@@ -23,6 +24,10 @@ function escapeHtml(str: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isAllowedRequestOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
+
   let body: { portalToken: string; subject: string; message: string };
 
   try {
@@ -193,7 +198,9 @@ export async function POST(request: NextRequest) {
       to: supportEmail,
       from: `${safeName} <${fromEmail}>`,
       replyTo: senderEmail,
-      subject: `[Customer Message] ${subject} — Order ${order.order_number}`,
+      subject: (await import("@/lib/security/header-safe")).sanitizeHeaderValue(
+        `[Customer Message] ${subject} — Order ${order.order_number}`
+      ),
       html: `
         <h2>Customer Message</h2>
         <p><strong>Order:</strong> ${escapeHtml(order.order_number)}</p>

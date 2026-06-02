@@ -3,12 +3,20 @@ import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { hasResendEnv } from "@/lib/email/client";
+import { logAppError } from "@/lib/observability/server";
 import {
   eventReminderEmail,
   dailyScheduleEmail,
   postEventFollowUpEmail,
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
+import {
+  todayUtc,
+  tomorrowUtc,
+  daysAgoUtc,
+  formatTimeInTimeZone,
+  formatDateInTimeZone,
+} from "@/lib/datetime/event-time";
 import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates matching orders and sends emails; give it headroom over
@@ -17,21 +25,14 @@ export const maxDuration = 60;
 
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
-function todayDateStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function tomorrowDateStr(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function daysAgoDateStr(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
+// Date helpers use UTC arithmetic so DST transitions don't skip or
+// duplicate a day. The legacy versions called `d.setDate(d.getDate() ± 1)`
+// which is local-time arithmetic; on the spring-forward day this can
+// produce a date one day earlier than intended on a server in a TZ that
+// observes DST.
+const todayDateStr = todayUtc;
+const tomorrowDateStr = tomorrowUtc;
+const daysAgoDateStr = daysAgoUtc;
 
 function formatDate(dateStr: string): string {
   try {
@@ -65,6 +66,9 @@ type OrgBranding = {
   fromAddress: string;
   googleReviewUrl?: string;
   slug?: string;
+  // IANA tz used when rendering event times in customer-facing emails.
+  // Defaults to "UTC" if the org hasn't set one (was: server-local-time).
+  eventTimezone: string;
 };
 
 function buildFromAddress(businessName: string): string {
@@ -82,7 +86,7 @@ async function getOrgBrandings(
 
   const { data: orgs } = await supabase
     .from("organizations")
-    .select("id, name, support_email, slug, settings")
+    .select("id, name, support_email, slug, settings, event_timezone")
     .in("id", orgIds)
     .is("deleted_at", null);
 
@@ -120,6 +124,7 @@ async function getOrgBrandings(
       fromAddress: buildFromAddress(businessName),
       googleReviewUrl: (settings.social_google_business as string) || undefined,
       slug: org.slug ?? undefined,
+      eventTimezone: org.event_timezone ?? "UTC",
     });
   }
 
@@ -130,10 +135,15 @@ async function getOrgBrandings(
 
 async function sendDayBeforeReminders(
   supabase: ReturnType<typeof createSupabaseAdminClient>
-): Promise<{ sent: number; errors: number }> {
+): Promise<{ sent: number; errors: number; smsErrors: number }> {
   const tomorrow = tomorrowDateStr();
   let sent = 0;
   let errors = 0;
+  // Soft failures: counted but don't block the run. Tracks email
+  // provider failures and SMS send errors so a sustained outage is
+  // visible in the cron response payload instead of vanishing into
+  // empty catch blocks.
+  let smsErrors = 0;
 
   const { data: orders } = await supabase
     .from("orders")
@@ -149,7 +159,7 @@ async function sendDayBeforeReminders(
     // claim-on-update pattern means a follow-up run picks up the rest.
     .limit(2000);
 
-  if (!orders || orders.length === 0) return { sent, errors };
+  if (!orders || orders.length === 0) return { sent, errors, smsErrors };
 
   const orgIds = [...new Set(orders.map((o) => o.organization_id))];
   const brandings = await getOrgBrandings(supabase, orgIds);
@@ -211,15 +221,12 @@ async function sendDayBeforeReminders(
     const stop = stopMap.get(order.id);
     let deliveryTime: string | undefined;
     if (stop?.start) {
-      const startTime = new Date(stop.start).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      });
+      // Render times in the org's IANA timezone so customers don't see
+      // "Tomorrow at 5 PM" for what the operator wrote as "Tomorrow at
+      // 9 AM PT" (5pm = the UTC stored value, 9am PT = what was meant).
+      const startTime = formatTimeInTimeZone(stop.start, branding.eventTimezone);
       if (stop.end) {
-        const endTime = new Date(stop.end).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        });
+        const endTime = formatTimeInTimeZone(stop.end, branding.eventTimezone);
         deliveryTime = `${startTime} – ${endTime}`;
       } else {
         deliveryTime = `Around ${startTime}`;
@@ -266,13 +273,25 @@ async function sendDayBeforeReminders(
             .update({ day_before_reminder_sent_at: null })
             .eq("id", order.id);
         }
+        // Log the provider failure so a sustained outage shows up in
+        // observability instead of looking like "no reminders today".
+        await logAppError({
+          organizationId: order.organization_id,
+          source: "cron-reminders",
+          message: "day-before reminder email failed at provider",
+          route: "/api/cron/reminders",
+          context: { order_id: order.id, order_number: order.order_number, recipient: customer.email, will_retry: hasResendEnv() },
+        });
+        smsErrors++; // counted as a soft failure in the response
         continue;
       }
 
       sent++;
 
       // SMS reminder — must be awaited; fire-and-forget is killed by Lambda
-      // before the import resolves. Failure is non-critical (email already sent).
+      // before the import resolves. Failure is non-critical (email already sent)
+      // but is now counted and logged so a provider outage is visible in the
+      // cron's response payload.
       if (customer.phone && customer.sms_opt_in) {
         try {
           const { sendSmsNotification } = await import("@/lib/sms/send-notification");
@@ -288,7 +307,17 @@ async function sendDayBeforeReminders(
             order.organization_id,
             { orderId: order.id, customerId: order.customer_id }
           );
-        } catch { /* non-critical — delivery email already sent */ }
+        } catch (smsErr) {
+          smsErrors++;
+          await logAppError({
+            organizationId: order.organization_id,
+            source: "cron-reminders",
+            message: "day-before SMS reminder failed (email already sent)",
+            route: "/api/cron/reminders",
+            context: { order_id: order.id, order_number: order.order_number },
+            error: smsErr,
+          });
+        }
       }
     } catch (err) {
       console.error(`[reminders] day-before failed for order ${order.id} (${order.order_number}):`, err instanceof Error ? err.message : err);
@@ -296,7 +325,7 @@ async function sendDayBeforeReminders(
     }
   }
 
-  return { sent, errors };
+  return { sent, errors, smsErrors };
 }
 
 // ─── Morning-Of Digest ────────────────────────────────────────────────────
@@ -340,16 +369,12 @@ async function sendMorningDigests(
     .select("order_id, scheduled_window_start")
     .in("order_id", allOrderIds);
 
+  // Store the raw ISO timestamp; format per-order below so the org's
+  // IANA timezone is applied. The legacy version formatted at map-build
+  // time using server-local TZ — wrong for any org outside the server's
+  // region.
   const stopTimeMap = new Map(
-    (stops ?? []).map((s) => [
-      s.order_id,
-      s.scheduled_window_start
-        ? new Date(s.scheduled_window_start).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-          })
-        : undefined,
-    ])
+    (stops ?? []).map((s) => [s.order_id, s.scheduled_window_start ?? null])
   );
 
   for (const [orgId, orgOrderList] of orgOrders) {
@@ -363,13 +388,14 @@ async function sendMorningDigests(
       } | null;
       const items = order.order_items as unknown as { item_name_snapshot: string }[] | null;
 
+      const rawTime = stopTimeMap.get(order.id);
       return {
         orderNumber: order.order_number,
         customerName: customer
           ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Unknown"
           : "Unknown",
         productName: items?.[0]?.item_name_snapshot ?? "Rental",
-        time: stopTimeMap.get(order.id),
+        time: rawTime ? formatTimeInTimeZone(rawTime, branding.eventTimezone) : undefined,
         status: order.order_status,
       };
     });
@@ -526,7 +552,7 @@ export async function GET(request: NextRequest) {
         error: err,
       });
     } catch { /* logger failures must not break the cron */ }
-    return { sent: 0, errors: 1 };
+    return { sent: 0, errors: 1, smsErrors: 0 };
   };
 
   const [dayBefore, morningDigest, followUp, deposit] = await Promise.all([

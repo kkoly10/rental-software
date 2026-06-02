@@ -46,6 +46,24 @@ export default async function AnalyticsPage() {
         </section>
       ) : (
         <>
+          {data.dataTruncated && (
+            <div
+              className="panel"
+              role="status"
+              style={{
+                background: "var(--warning-bg, #fff7ed)",
+                border: "1px solid var(--warning-border, #fed7aa)",
+                color: "var(--warning-fg, #9a3412)",
+                padding: "12px 16px",
+                marginBottom: 16,
+                fontSize: 14,
+              }}
+            >
+              Showing recent activity only — your account has grown past the
+              analytics window. Totals below exclude older history. Contact
+              support to enable extended analytics.
+            </div>
+          )}
           {/* Financial metrics */}
           <div className="stats-row">
             <StatCard

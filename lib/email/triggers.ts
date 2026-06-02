@@ -13,6 +13,7 @@ import {
 } from "./templates";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
+import { sanitizeHeaderValue, strictParseEmail } from "@/lib/security/header-safe";
 import {
   formatMoney as formatMoneyIntl,
   formatEventDate as formatEventDateIntl,
@@ -53,16 +54,24 @@ type OrgBranding = {
   operatorAlertEmail: string | null;
   siteUrl: string;
   fromAddress: string;
+  // IANA tz used to render customer-facing time windows. Defaults to
+  // "UTC" if the org hasn't configured one (was: server-local).
+  eventTimezone: string;
   currency: string;
   locale: string;
 };
 
 function buildFromAddress(businessName: string): string {
   const rawAddress = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
-  // Strip any existing display name to get just the email address
+  // Strip any existing display name to get just the email address.
   const emailOnly = rawAddress.replace(/^.*<(.+)>$/, "$1").trim();
+  // Validate strictly — a malformed EMAIL_FROM_ADDRESS env (extra
+  // angle brackets, embedded CRLF, semicolons) would otherwise be
+  // passed straight to Resend / SMTP and either rejected or, worse,
+  // parsed in surprising ways. Fall back to a sane default.
+  const validatedEmail = strictParseEmail(emailOnly) ?? "noreply@korent.app";
   const safeName = businessName.replace(/[\r\n\t]/g, "").replace(/[^\w\s'-]/g, "").trim() || "Rental Company";
-  return `${safeName} <${emailOnly}>`;
+  return `${safeName} <${validatedEmail}>`;
 }
 
 async function getOrgBranding(
@@ -74,13 +83,14 @@ async function getOrgBranding(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, support_email, default_currency")
+    .select("name, support_email, event_timezone, default_currency")
     .eq("id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
 
   const businessName = org?.name ?? "Rental Company";
   const supportEmail = org?.support_email ?? null;
+  const eventTimezone = org?.event_timezone ?? "UTC";
   const currency = (org as { default_currency?: string | null } | null)?.default_currency ?? "USD";
 
   let operatorAlertEmail = supportEmail;
@@ -102,6 +112,7 @@ async function getOrgBranding(
     businessName,
     supportEmail,
     operatorAlertEmail,
+    eventTimezone,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
     fromAddress: buildFromAddress(businessName),
     currency,
@@ -149,7 +160,7 @@ export async function triggerOrderConfirmationEmail(params: {
   await sendEmail({
     to: params.customerEmail,
     from: branding.fromAddress,
-    subject: `Booking #${params.orderNumber} received — ${branding.businessName}`,
+    subject: sanitizeHeaderValue(`Booking #${params.orderNumber} received — ${branding.businessName}`),
     html: orderConfirmationEmail({
       businessName: branding.businessName,
       customerFirstName: params.customerFirstName,
@@ -175,7 +186,7 @@ export async function triggerOrderConfirmationEmail(params: {
     await sendEmail({
       to: branding.operatorAlertEmail,
       from: branding.fromAddress,
-      subject: `New order #${params.orderNumber} from website`,
+      subject: sanitizeHeaderValue(`New order #${params.orderNumber} from website`),
       html: newOrderAlertEmail({
         businessName: branding.businessName,
         customerName: params.customerFirstName,
@@ -221,7 +232,7 @@ export async function triggerDashboardOrderEmail(params: {
     await sendEmail({
       to: branding.operatorAlertEmail,
       from: branding.fromAddress,
-      subject: `New order #${params.orderNumber} created from dashboard`,
+      subject: sanitizeHeaderValue(`New order #${params.orderNumber} created from dashboard`),
       html: newOrderAlertEmail({
         businessName: branding.businessName,
         customerName: params.customerName,
@@ -268,7 +279,7 @@ export async function triggerPaymentReceivedEmail(params: {
     await sendEmail({
       to: params.customerEmail,
       from: branding.fromAddress,
-      subject: `Refund processed for order #${params.orderNumber} — ${branding.businessName}`,
+      subject: sanitizeHeaderValue(`Refund processed for order #${params.orderNumber} — ${branding.businessName}`),
       html: refundProcessedEmail({
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
@@ -284,7 +295,7 @@ export async function triggerPaymentReceivedEmail(params: {
     await sendEmail({
       to: params.customerEmail,
       from: branding.fromAddress,
-      subject: `Payment received for order #${params.orderNumber} — ${branding.businessName}`,
+      subject: sanitizeHeaderValue(`Payment received for order #${params.orderNumber} — ${branding.businessName}`),
       html: paymentReceivedEmail({
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
@@ -376,17 +387,12 @@ export async function triggerOrderStatusEmail(params: {
         .maybeSingle();
 
       if (stop) {
+        const { formatTimeInTimeZone } = await import("@/lib/datetime/event-time");
         const windowStart = stop.scheduled_window_start
-          ? new Date(stop.scheduled_window_start).toLocaleTimeString(branding.locale, {
-              hour: "numeric",
-              minute: "2-digit",
-            })
+          ? formatTimeInTimeZone(stop.scheduled_window_start, branding.eventTimezone)
           : null;
         const windowEnd = stop.scheduled_window_end
-          ? new Date(stop.scheduled_window_end).toLocaleTimeString(branding.locale, {
-              hour: "numeric",
-              minute: "2-digit",
-            })
+          ? formatTimeInTimeZone(stop.scheduled_window_end, branding.eventTimezone)
           : null;
 
         if (windowStart && windowEnd) {
@@ -421,7 +427,7 @@ export async function triggerOrderStatusEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: `Order #${order.order_number} — ${params.newStatus.replace(/_/g, " ")} — ${branding.businessName}`,
+    subject: sanitizeHeaderValue(`Order #${order.order_number} — ${params.newStatus.replace(/_/g, " ")} — ${branding.businessName}`),
     html: orderStatusUpdateEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -486,7 +492,7 @@ export async function triggerDocumentsReadyEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: `Documents ready for order #${order.order_number} — ${branding.businessName}`,
+    subject: sanitizeHeaderValue(`Documents ready for order #${order.order_number} — ${branding.businessName}`),
     html: documentsReadyEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -548,7 +554,7 @@ export async function triggerQuoteSentEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: `Your quote for order #${params.orderNumber} — ${branding.businessName}`,
+    subject: sanitizeHeaderValue(`Your quote for order #${params.orderNumber} — ${branding.businessName}`),
     html: quoteSentEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",

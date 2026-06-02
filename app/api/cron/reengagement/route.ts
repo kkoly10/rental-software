@@ -3,6 +3,7 @@ import { hasSupabaseEnv, getOptionalEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import { logCommunication } from "@/lib/communications/log";
+import { logAppError } from "@/lib/observability/server";
 import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // This job iterates all orgs and sends emails; give it headroom over the
@@ -12,9 +13,10 @@ export const maxDuration = 60;
 // ─── Date helpers ──────────────────────────────────────────────────────────
 
 function daysAgoISO(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString();
+  // UTC arithmetic — `d.setDate(d.getDate() - days)` is local-time
+  // arithmetic, which on the DST spring-forward day can be off by an hour
+  // or roll into a different calendar day after .toISOString().
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 // ─── Email templates ──────────────────────────────────────────────────────
@@ -144,6 +146,10 @@ export async function GET(request: NextRequest) {
   let day3Sent = 0;
   let day7Sent = 0;
   let errors = 0;
+  // Separate counter for provider-level send failures. The outer try/catch
+  // catches thrown exceptions, but sendEmail returns false on Resend errors
+  // without throwing — those previously went silent.
+  let sendFailures = 0;
 
   // Find organizations that completed onboarding but haven't added products.
   // Exclude soft-deleted organizations (deleted_at IS NOT NULL).
@@ -288,6 +294,15 @@ export async function GET(request: NextRequest) {
             metadata: { type: "reengagement", nudge: "day3" },
           });
         } catch { /* non-critical */ }
+      } else {
+        sendFailures++;
+        await logAppError({
+          organizationId: org.id,
+          source: "cron-reengagement",
+          message: "day3 nudge email failed at provider — will retry next run",
+          route: "/api/cron/reengagement",
+          context: { nudge: "day3", recipient: email },
+        });
       }
     } catch (err) {
       console.error(`[reengagement] day3 nudge failed for org ${org.id}:`, err instanceof Error ? err.message : err);
@@ -350,6 +365,15 @@ export async function GET(request: NextRequest) {
             metadata: { type: "reengagement", nudge: "day7" },
           });
         } catch { /* non-critical */ }
+      } else {
+        sendFailures++;
+        await logAppError({
+          organizationId: org.id,
+          source: "cron-reengagement",
+          message: "day7 nudge email failed at provider — will retry next run",
+          route: "/api/cron/reengagement",
+          context: { nudge: "day7", recipient: email },
+        });
       }
     } catch (err) {
       console.error(`[reengagement] day7 nudge failed for org ${org.id}:`, err instanceof Error ? err.message : err);
@@ -372,6 +396,7 @@ export async function GET(request: NextRequest) {
       day3Sent,
       day7Sent,
       errors,
+      sendFailures,
     },
   });
 }

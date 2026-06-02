@@ -6,9 +6,14 @@ import { updateSlugSchema } from "@/lib/validation/domains";
 import { isSlugAvailable } from "@/lib/auth/resolve-org";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestClientKey } from "@/lib/security/request-client";
+import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
 import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest) {
+  if (!isAllowedRequestOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
+
   if (!hasSupabaseEnv()) {
     return NextResponse.json({ error: "Not configured." }, { status: 503 });
   }

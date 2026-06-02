@@ -416,14 +416,11 @@ export async function createOrder(
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
 
-  const eventStartTime =
-    eventDate && startTime
-      ? new Date(`${eventDate}T${startTime}:00.000Z`).toISOString()
-      : null;
-  const eventEndTime =
-    eventDate && endTime
-      ? new Date(`${eventDate}T${endTime}:00.000Z`).toISOString()
-      : null;
+  // Wall-clock event times stored as TIME; orders_sync_event_times_trg
+  // composes event_start_time (timestamptz) from these + the org's
+  // event_timezone. See migration 20260602_060000_event_local_time.
+  const eventStartLocal = eventDate && startTime ? `${startTime}:00` : null;
+  const eventEndLocal = eventDate && endTime ? `${endTime}:00` : null;
 
   // Create delivery address record if street + city provided
   let deliveryAddressId: string | null = null;
@@ -465,8 +462,8 @@ export async function createOrder(
       order_status: orderStatus,
       event_date: eventDate ?? null,
       rental_end_date: rentalEndDate ?? null,
-      event_start_time: eventStartTime,
-      event_end_time: eventEndTime,
+      event_start_local: eventStartLocal,
+      event_end_local: eventEndLocal,
       subtotal_amount: resolvedSubtotal,
       delivery_fee_amount: resolvedDeliveryFee,
       total_amount: total,
