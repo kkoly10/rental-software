@@ -392,14 +392,10 @@ export async function POST(request: NextRequest) {
         }
         for (const refund of refunds) {
           const refundKey = `refund_${refund.id}`;
-          const { count: existing } = await admin
-            .from("payments")
-            .select("id", { count: "exact", head: true })
-            .eq("order_id", originalPayment.order_id)
-            .eq("provider_payment_id", refundKey);
-
-          if ((existing ?? 0) > 0) continue;
-
+          // Atomic dedup: rely on the unique index (order_id, provider_payment_id)
+          // to gate duplicates. Two concurrent webhooks for the same refund.id
+          // both pass any SELECT-based check; only one INSERT wins. Catch
+          // 23505 (unique violation) below and treat as "already recorded".
           const { error: refundErr } = await admin.from("payments").insert({
             order_id: originalPayment.order_id,
             payment_type: "refund",
@@ -410,7 +406,11 @@ export async function POST(request: NextRequest) {
             paid_at: new Date().toISOString(),
           });
 
-          if (refundErr && refundErr.code !== "23505") {
+          if (refundErr?.code === "23505") {
+            // Already recorded by a concurrent / retried webhook — skip.
+            continue;
+          }
+          if (refundErr) {
             console.error("[webhook] charge.refunded: insert failed", refundErr.message);
           }
         }
@@ -562,6 +562,120 @@ export async function POST(request: NextRequest) {
           const subscription = await stripe.subscriptions.retrieve(subId);
           await syncSubscription(admin, subscription);
           revalidateBilling();
+        }
+        break;
+      }
+
+      case "charge.dispute.created":
+      case "charge.dispute.updated":
+      case "charge.dispute.closed": {
+        // Disputes / chargebacks are a critical operator concern: a customer
+        // has contested a payment with their card issuer. Surface as an
+        // operator notification + structured log; we don't auto-refund or
+        // change order state — that's an explicit operator decision.
+        const dispute = event.data.object as Stripe.Dispute;
+        const chargeRef = dispute.charge;
+        const chargeId = typeof chargeRef === "string" ? chargeRef : chargeRef?.id ?? null;
+        const piRef = dispute.payment_intent;
+        const paymentIntentId = typeof piRef === "string" ? piRef : piRef?.id ?? null;
+
+        // Find the original order via the original Stripe payment row.
+        let orderId: string | null = null;
+        let orgId: string | null = null;
+        if (paymentIntentId) {
+          const { data: orig } = await admin
+            .from("payments")
+            .select("order_id, orders!inner(organization_id)")
+            .eq("provider_payment_id", paymentIntentId)
+            .eq("provider", "stripe")
+            .maybeSingle();
+          if (orig) {
+            orderId = orig.order_id;
+            const orders = Array.isArray(orig.orders) ? orig.orders[0] : orig.orders;
+            const orgRow = orders as { organization_id?: string } | null;
+            orgId = orgRow?.organization_id ?? null;
+          }
+        }
+
+        if (orgId) {
+          try {
+            const { createNotification } = await import("@/lib/data/notifications");
+            const stage = event.type.split(".").at(-1) ?? event.type;
+            const status = (dispute as { status?: string }).status ?? "unknown";
+            await createNotification(
+              orgId,
+              "payment_dispute",
+              `Card dispute ${stage}`,
+              `Stripe dispute on charge ${chargeId ?? paymentIntentId ?? "?"}: status=${status}, reason=${dispute.reason ?? "unknown"}`,
+              orderId ? `/dashboard/orders/${orderId}` : "/dashboard/payments"
+            );
+          } catch (notifErr) {
+            console.error("[webhook] dispute notification failed:", notifErr);
+          }
+        }
+
+        // Always log the dispute event so it's queryable even if we couldn't
+        // map it to an org / order.
+        await admin.from("app_event_logs").insert({
+          organization_id: orgId,
+          source: "stripe-webhook",
+          action: event.type,
+          status: "warning",
+          route: "/api/stripe/webhooks",
+          metadata: {
+            event_id: event.id,
+            dispute_id: dispute.id,
+            charge_id: chargeId,
+            payment_intent: paymentIntentId,
+            reason: dispute.reason,
+            status: (dispute as { status?: string }).status,
+            amount: dispute.amount,
+            currency: dispute.currency,
+          },
+        });
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        // Card declined / authentication failed. Record so the operator can
+        // see why a charge didn't go through (especially relevant for
+        // on-file card retries against an existing order).
+        const intent = event.data.object as Stripe.PaymentIntent;
+        const orderIdMeta = intent.metadata?.order_id ?? null;
+        const orgIdMeta = intent.metadata?.organization_id ?? null;
+        const lastError = intent.last_payment_error;
+
+        await admin.from("app_event_logs").insert({
+          organization_id: orgIdMeta,
+          source: "stripe-webhook",
+          action: "payment_intent.payment_failed",
+          status: "warning",
+          route: "/api/stripe/webhooks",
+          metadata: {
+            event_id: event.id,
+            payment_intent: intent.id,
+            order_id: orderIdMeta,
+            amount: intent.amount,
+            currency: intent.currency,
+            error_code: lastError?.code,
+            error_message: lastError?.message,
+            decline_code: (lastError as { decline_code?: string } | null)?.decline_code,
+          },
+        });
+
+        if (orgIdMeta) {
+          try {
+            const { createNotification } = await import("@/lib/data/notifications");
+            await createNotification(
+              orgIdMeta,
+              "payment_failed",
+              "Payment failed",
+              `Stripe declined a payment: ${lastError?.message ?? "no error message"}`,
+              orderIdMeta ? `/dashboard/orders/${orderIdMeta}` : "/dashboard/payments"
+            );
+          } catch (notifErr) {
+            console.error("[webhook] payment_failed notification failed:", notifErr);
+          }
         }
         break;
       }
