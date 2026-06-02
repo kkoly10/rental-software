@@ -832,8 +832,15 @@ export async function updateOrderStatus(
   // #346 / #369 — customer portal, delivery board, calendar, and counts
   // tile all read from `orders.order_status`; revalidate so they reflect
   // the new status immediately.
+  //
+  // Note: the previous version also called revalidatePath("/dashboard")
+  // unconditionally, which clears the entire dashboard cache on every
+  // order status update. At ~1k orders/min that's a cache stampede
+  // hitting unrelated pages (analytics, settings, billing, team, etc).
+  // The dashboard root pulls from /dashboard/orders, /dashboard/deliveries
+  // and /dashboard/calendar via the data layer, so revalidating those
+  // three propagates correctly without flushing the whole shell.
   revalidatePath("/order-status");
-  revalidatePath("/dashboard");
   revalidatePath("/dashboard/deliveries");
   revalidatePath("/dashboard/calendar");
 
