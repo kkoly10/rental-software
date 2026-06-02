@@ -680,6 +680,8 @@ export const fr: Messages = {
         sendingQuote: "Envoi…",
         confirmOrderCta: "Marquer comme confirmée",
         confirmingOrder: "Confirmation…",
+        sendDeliveryCta: "Lancer la livraison",
+        dispatchingDelivery: "Envoi en cours…",
         createDocuments: "Créer les documents",
         downloadPdf: "Télécharger le PDF",
         downloadQuote: "Télécharger le devis (PDF)",
@@ -833,6 +835,16 @@ export const fr: Messages = {
       openRoute: "Ouvrir la tournée",
       empty: "Aucune livraison prévue.",
       noRoutesYet: "Aucune tournée planifiée",
+      autoMode: {
+        kicker: "Mode de livraison intelligent",
+        titleEmpty: "Tout est prêt — Korent va planifier automatiquement",
+        titleWithRoutes: "Les livraisons du jour sont planifiées automatiquement",
+        bodyEmpty:
+          "Quand vous confirmez une commande avec adresse de livraison, Korent crée automatiquement une tournée pour cette date et regroupe les commandes du même jour. Utilisez le bouton « Lancer la livraison » sur la page de la commande quand votre équipe est prête.",
+        bodyWithRoutes:
+          "Les tournées ci-dessous ont été créées automatiquement à la confirmation des commandes. Les nouvelles commandes pour la même date rejoignent la tournée existante dans l'ordre des heures de livraison. Utilisez « Lancer la livraison » sur chaque commande pour expédier.",
+        manualLink: "Vous préférez gérer les tournées à la main ? Changez dans Paramètres → Mode de livraison intelligent.",
+      },
       noRoutesYetDescription: "Créez votre première tournée pour répartir vos équipes avec arrêts, adresses et horaires.",
       detail: {
         kicker: "Aperçu de tournée",
@@ -999,6 +1011,19 @@ export const fr: Messages = {
       bookingPoliciesTitle: "Politiques de réservation",
       smsNotificationsTitle: "Notifications SMS",
       recentSmsMessages: "Messages SMS récents",
+      routingMode: {
+        kicker: "Avancé",
+        title: "Mode de livraison intelligent",
+        currentlyAuto: "La planification automatique est activée",
+        currentlyManual: "La gestion manuelle des tournées est activée",
+        autoDescription:
+          "Korent crée automatiquement les tournées de livraison à la confirmation des commandes et regroupe celles du même jour. Appuyez simplement sur « Lancer la livraison » sur la page de la commande quand l'équipe est prête.",
+        manualDescription:
+          "Vous créez les tournées de livraison à la main depuis la page Livraisons. Utile si vous préférez planifier les tournées vous-même avant l'expédition.",
+        switchToManual: "Passer en manuel",
+        switchToAuto: "Passer en automatique",
+        switching: "Enregistrement…",
+      },
       regionalDefaultsCardTitle: "Paramètres régionaux",
       bookingPoliciesCardTitle: "Politiques de réservation",
       timezoneLabel: "Fuseau horaire : {value}",

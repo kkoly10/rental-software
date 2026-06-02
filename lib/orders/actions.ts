@@ -590,7 +590,7 @@ export async function createOrder(
   // render a one-shot toast.  updateOrderStatus appends to its return
   // message because it's an inline action; createOrder redirects, so
   // we ride the URL instead.
-  let attachedTo: { routeId: string; routeName: string } | null = null;
+  let attachedTo: { routeId: string; routeName: string; created: boolean } | null = null;
   let attachFailed = false;
   if (orderStatus === "confirmed" || orderStatus === "scheduled") {
     try {
@@ -603,7 +603,11 @@ export async function createOrder(
         supabase,
       );
       if (result.attached) {
-        attachedTo = { routeId: result.routeId, routeName: result.routeName };
+        attachedTo = {
+          routeId: result.routeId,
+          routeName: result.routeName,
+          created: result.created,
+        };
         const { revalidatePath } = await import("next/cache");
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
         revalidatePath("/dashboard/deliveries");
@@ -640,6 +644,11 @@ export async function createOrder(
   if (attachedTo) {
     redirectParams.set("attached_to_route", attachedTo.routeId);
     redirectParams.set("attached_to_route_name", attachedTo.routeName);
+    if (attachedTo.created) {
+      // Smart Delivery Mode signal — the page can render
+      // "Auto-scheduled on …" instead of "Added to route …".
+      redirectParams.set("route_was_created", "1");
+    }
   } else if (attachFailed) {
     redirectParams.set("attach_failed", "1");
   }
@@ -797,6 +806,58 @@ export async function updateOrderStatus(
     }
   }
 
+  // Smart Delivery Mode cancellation chain (Sprint 1.5): when an order
+  // is cancelled, auto-remove its route stop. Applies in both auto AND
+  // manual modes — keeping a stop for a non-event is bookkeeping
+  // garbage either way, and it creates a real count/list mismatch bug
+  // on the route detail page. If that was the last stop on a planned
+  // route, the route itself is also cleaned up.
+  //
+  // "refunded" is intentionally NOT included here because refunds
+  // happen on already-delivered orders (e.g., damage refunds), and
+  // tearing down the stop on a route that's mid-delivery would
+  // confuse the crew. Refund handling for newer flows (Stripe webhook)
+  // can revisit this if/when refund-then-undeliver becomes a real case.
+  if (parsed.data.newStatus === "cancelled") {
+    try {
+      const { removeOrderStopOnCancel } = await import(
+        "@/lib/routes/remove-stop-on-cancel"
+      );
+      const result = await removeOrderStopOnCancel(
+        ctx.organizationId,
+        parsed.data.orderId,
+        supabase,
+      );
+      if (result.ok && (result.removed || result.routeDeleted)) {
+        revalidatePath("/dashboard/deliveries");
+      }
+      if (!result.ok) {
+        const { logAppError } = await import("@/lib/observability/server");
+        await logAppError({
+          organizationId: ctx.organizationId,
+          source: "orders.updateOrderStatus",
+          message: "Failed to remove route stop on cancellation",
+          context: {
+            orderId: parsed.data.orderId,
+            reason: result.reason,
+            detail: result.detail,
+          },
+        });
+      }
+    } catch (err) {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "orders.updateOrderStatus",
+        message: "Cancellation chain threw unexpectedly",
+        context: {
+          orderId: parsed.data.orderId,
+          reason: err instanceof Error ? err.message : String(err),
+        },
+      });
+    }
+  }
+
   try {
     const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
     await triggerOrderStatusEmail({
@@ -931,7 +992,13 @@ export async function updateOrderStatus(
         // Unnamed routes are common in newly-created orgs; fall back so
         // the operator doesn't see literal `Added to route "".`.
         const displayName = result.routeName?.trim() || "today's route";
-        autoAttachSuffix = ` Added to route "${displayName}".`;
+        // Smart Delivery Mode (Sprint 1.5): distinguish "we created
+        // the route for you" from "we added you to an existing one"
+        // so the auto-magic isn't invisible to noob operators on
+        // their very first confirm.
+        autoAttachSuffix = result.created
+          ? ` Auto-scheduled on "${displayName}".`
+          : ` Added to route "${displayName}".`;
         // Make sure the deliveries surfaces re-render with the new stop.
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
       } else if (result.reason === "insert_failed") {

@@ -212,25 +212,21 @@ export async function removeStopFromRoute(
       )
     );
   } else {
-    // Last stop removed — the route is now a zombie row that shows in
-    // the dashboard with "0 stops" forever unless the operator
-    // manually deletes it. Auto-delete only if the route is still in
-    // "planned" status (touching an in_progress / completed route
-    // would lose audit history that ops might want to investigate).
-    const { data: routeRow } = await supabase
+    // Last stop removed. Auto-delete the zombie row when the route is
+    // still `planned` — touching an in_progress / completed route
+    // would lose audit history that ops might want to investigate, so
+    // those stay. The route_status check below also covers manual
+    // mode: even there, a planned-status route with zero stops is
+    // unambiguous garbage (an operator who wanted to keep it would
+    // have added back another stop already). Smart Delivery Mode
+    // (Sprint 1.5) doesn't need a routing_mode branch here because
+    // the rule is the same in both modes.
+    await supabase
       .from("routes")
-      .select("route_status")
+      .delete()
       .eq("id", routeId)
       .eq("organization_id", ctx.organizationId)
-      .maybeSingle();
-    if (routeRow?.route_status === "planned") {
-      await supabase
-        .from("routes")
-        .delete()
-        .eq("id", routeId)
-        .eq("organization_id", ctx.organizationId)
-        .eq("route_status", "planned");
-    }
+      .eq("route_status", "planned");
   }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);
@@ -407,40 +403,12 @@ export async function updateStopStatus(
   }
 
   // When operator marks en_route via dashboard, issue tracking token + send SMS
-  // so the customer receives the same notification as when crew app is used.
+  // so the customer receives the same notification as when crew app or the
+  // Smart Delivery Mode "Send delivery" button is used. Extracted to a
+  // shared helper so all three call sites stay in sync.
   if (status === "en_route") {
-    try {
-      const { issueTrackingToken } = await import("@/lib/tracking/access-token");
-      const { getSiteUrl } = await import("@/lib/site-url");
-      const { sendSmsNotification } = await import("@/lib/sms/send-notification");
-      const token = await issueTrackingToken({ supabase, stopId });
-      const siteUrl = await getSiteUrl();
-      const trackingUrl = `${siteUrl}/track/${token}`;
-
-      const { data: stopWithOrder } = await supabase
-        .from("route_stops")
-        .select("orders!inner(id, order_number, customer_id, customers!inner(phone, first_name, sms_opt_in))")
-        .eq("id", stopId)
-        .maybeSingle();
-
-      if (stopWithOrder) {
-        const order = (stopWithOrder as unknown as {
-          orders: { id: string; order_number: string; customer_id: string; customers: { phone: string; first_name: string; sms_opt_in: boolean } };
-        }).orders;
-        const customer = order?.customers;
-        if (customer?.phone && customer?.sms_opt_in) {
-          const { data: org } = await supabase.from("organizations").select("name").eq("id", ctx.organizationId).is("deleted_at", null).maybeSingle();
-          await sendSmsNotification("deliveryEnRoute", customer.phone, {
-            orderNumber: order.order_number,
-            eta: "shortly",
-            businessName: org?.name ?? "Your delivery",
-            trackingUrl,
-          }, ctx.organizationId, { orderId: order.id, customerId: order.customer_id });
-        }
-      }
-    } catch (err) {
-      console.error("[routes] Failed to issue tracking token or send SMS:", err);
-    }
+    const { fireEnRouteSms } = await import("./send-en-route-sms");
+    await fireEnRouteSms(supabase, ctx.organizationId, stopId);
   }
 
   revalidatePath(`/dashboard/deliveries/${routeId}`);

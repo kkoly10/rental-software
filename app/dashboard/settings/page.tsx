@@ -13,16 +13,19 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
+import { RoutingModeForm } from "@/components/settings/routing-mode-form";
+import { getRoutingMode } from "@/lib/data/routing-mode";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 
 export default async function SettingsPage() {
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, m] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, m] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
     getBookingPolicies(),
     getSmsLog(),
+    getRoutingMode(),
     getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
@@ -156,6 +159,18 @@ export default async function SettingsPage() {
           <SmsLog entries={smsLog} />
         </aside>
       </div>
+      <div style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">{m.dashboard.settings.routingMode.kicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.routingMode.title}</h2>
+            </div>
+          </div>
+          <RoutingModeForm currentMode={routingMode} />
+        </section>
+      </div>
+
       <div style={{ marginTop: 48 }}>
         <DeleteAccountCard />
       </div>

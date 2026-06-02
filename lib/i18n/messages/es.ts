@@ -680,6 +680,8 @@ export const es: Messages = {
         sendingQuote: "Enviando…",
         confirmOrderCta: "Marcar como confirmado",
         confirmingOrder: "Confirmando…",
+        sendDeliveryCta: "Enviar entrega",
+        dispatchingDelivery: "Despachando…",
         createDocuments: "Crear documentos",
         downloadPdf: "Descargar PDF",
         downloadQuote: "Descargar presupuesto (PDF)",
@@ -833,6 +835,16 @@ export const es: Messages = {
       openRoute: "Abrir ruta",
       empty: "Sin entregas programadas.",
       noRoutesYet: "Aún no hay rutas programadas",
+      autoMode: {
+        kicker: "Modo de entrega inteligente",
+        titleEmpty: "Todo listo — Korent programará automáticamente",
+        titleWithRoutes: "Las entregas de hoy se programaron automáticamente",
+        bodyEmpty:
+          "Cuando confirmas un pedido con dirección de entrega, Korent crea automáticamente una ruta para esa fecha y agrupa los pedidos del mismo día. Usa el botón \"Enviar entrega\" en la página del pedido cuando el equipo esté listo.",
+        bodyWithRoutes:
+          "Las rutas de abajo se crearon automáticamente al confirmar los pedidos. Los nuevos pedidos para la misma fecha se unen a la ruta existente en orden de hora de entrega. Usa \"Enviar entrega\" en cada pedido para despachar.",
+        manualLink: "¿Prefieres gestionar las rutas manualmente? Cámbialo en Ajustes → Modo de entrega inteligente.",
+      },
       noRoutesYetDescription: "Crea tu primera ruta para despachar a tu equipo con paradas, direcciones y horarios.",
       detail: {
         kicker: "Resumen de la ruta",
@@ -999,6 +1011,19 @@ export const es: Messages = {
       bookingPoliciesTitle: "Políticas de reserva",
       smsNotificationsTitle: "Notificaciones SMS",
       recentSmsMessages: "Mensajes SMS recientes",
+      routingMode: {
+        kicker: "Avanzado",
+        title: "Modo de entrega inteligente",
+        currentlyAuto: "La programación automática está activada",
+        currentlyManual: "La gestión manual de rutas está activada",
+        autoDescription:
+          "Korent crea rutas de entrega automáticamente cuando se confirman los pedidos y agrupa los del mismo día. Solo pulsa \"Enviar entrega\" en la página del pedido cuando el equipo esté listo.",
+        manualDescription:
+          "Tú creas las rutas de entrega manualmente desde la página de Entregas. Útil si prefieres planificar las rutas a mano antes de despachar.",
+        switchToManual: "Cambiar a manual",
+        switchToAuto: "Cambiar a automático",
+        switching: "Guardando…",
+      },
       regionalDefaultsCardTitle: "Preferencias regionales",
       bookingPoliciesCardTitle: "Políticas de reserva",
       timezoneLabel: "Zona horaria: {value}",

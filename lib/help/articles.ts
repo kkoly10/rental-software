@@ -272,6 +272,37 @@ Use the action buttons next to each document to mark it as "Sent" or "Signed."
 
   // Deliveries & Crew
   {
+    slug: "smart-delivery-mode",
+    title: "How auto-scheduling (Smart Delivery Mode) works",
+    section: "Deliveries & Crew",
+    summary: "Why you don't need to create a route by hand for every delivery.",
+    body: `Korent's default behavior is **Smart Delivery Mode** — the system auto-creates delivery routes and bundles same-day orders together so you can dispatch with a single click. No more "create route, then add stop, then start route" three-step ritual.
+
+**How it works:**
+
+1. **You confirm an order with a delivery address.** Korent checks if a route already exists for that delivery date.
+2. **If no route exists:** Korent creates one named "Deliveries for {date}" with no driver/vehicle assigned (you can fill those in later if you want).
+3. **If a route already exists:** Korent adds the new order to it. Stops are auto-sequenced by event time, so the loading order matches your day.
+4. **When the crew is ready to roll**, open the order and click **Send delivery**. The stop is marked en-route, the route is marked in-progress, and the customer gets an SMS (if you have SMS turned on).
+
+**What if I have 3 orders for the same Saturday?**
+
+All three land on the same auto-created "Deliveries for Saturday" route, in event-time order. One trip, multiple stops.
+
+**What if I want to drive the route myself?**
+
+Open the route from the Deliveries page. You can drag-reorder stops, assign a driver/vehicle, or even add a manual stop. Nothing is taken away — Smart Delivery Mode just removes the **mandatory** parts.
+
+**What happens if I cancel an order?**
+
+Korent automatically removes that order's stop from its route. If it was the only stop on a planned route, the empty route is cleaned up too.
+
+**Turning it off (manual mode):**
+
+If you prefer to plan routes manually before dispatching, go to **Settings → Smart Delivery Mode** and switch to manual. The classic flow is preserved exactly as it was.`,
+    related: ["delivery-routes", "crew-mobile", "pull-sheets"],
+  },
+  {
     slug: "pull-sheets",
     title: "Printing a pull sheet for a route",
     section: "Deliveries & Crew",

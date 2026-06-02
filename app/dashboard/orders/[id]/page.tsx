@@ -11,6 +11,7 @@ import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
+import { SendDeliveryButton } from "@/components/orders/send-delivery-button";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
@@ -225,6 +226,7 @@ export default async function OrderDetailPage({
               <SendQuoteButton orderId={id} />
             )}
             <ConfirmOrderButton orderId={id} currentStatus={order.status} />
+            <SendDeliveryButton orderId={id} currentStatus={order.status} />
             {(order.status === "Quote Sent" || order.status === "Inquiry") && (
               <a
                 href={`/api/quotes/${id}`}
