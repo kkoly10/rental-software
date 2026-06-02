@@ -18,10 +18,8 @@ export async function GET(
     return NextResponse.json({ error: "Not available in demo mode." }, { status: 503 });
   }
 
-  const clientIp =
-    req.headers.get("x-real-ip") ??
-    req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    "unknown";
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const clientIp = getTrustedClientIp(req.headers);
   try {
     const limit = await enforceRateLimit({
       scope: "tracking:lookup",
@@ -57,6 +55,18 @@ export async function GET(
     .maybeSingle();
 
   if (!stop) {
+    // Track failed lookups (expired / revoked / brute-forced tokens)
+    // so we can spot scanning attempts and tighten rate-limits.
+    {
+      const { logAppEvent } = await import("@/lib/observability/server");
+      await logAppEvent({
+        source: "tracking.access",
+        action: "lookup_miss",
+        status: "warning",
+        route: "/api/tracking/[token]",
+        metadata: { token_hash_prefix: tokenHash.slice(0, 8) },
+      });
+    }
     return NextResponse.json({ error: "Tracking link not found." }, { status: 404 });
   }
 
@@ -71,6 +81,25 @@ export async function GET(
     order_number: string;
     customers: { first_name: string };
   };
+
+  // Audit-log successful tracking access. Anon callers don't carry a
+  // user_id; we record the route + stop so an operator can later see
+  // who was looked up when investigating a leaked link.
+  {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      source: "tracking.access",
+      action: "lookup_hit",
+      status: "info",
+      route: "/api/tracking/[token]",
+      metadata: {
+        stop_id: stop.id,
+        route_id: stop.route_id,
+        order_number: order.order_number,
+        stop_status: stop.stop_status,
+      },
+    });
+  }
 
   return NextResponse.json({
     routeId: stop.route_id,

@@ -5,6 +5,7 @@ import { createRoute, type RouteActionState } from "@/lib/routes/actions";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useI18n } from "@/lib/i18n/provider";
+import { toLocalISODate } from "@/lib/i18n/format-helpers";
 
 const initial: RouteActionState = { ok: false, message: "" };
 
@@ -19,7 +20,7 @@ export function CreateRouteForm({
   const router = useRouter();
   // Compute today in the browser's local timezone to avoid UTC-date mismatch
   // that occurs when the server generates toISOString().slice(0, 10) at midnight.
-  const [localToday] = useState(() => new Date().toLocaleDateString("en-CA"));
+  const [localToday] = useState(() => toLocalISODate());
 
   useEffect(() => {
     if (state.ok && state.routeId) {
