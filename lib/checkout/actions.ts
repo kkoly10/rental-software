@@ -635,17 +635,19 @@ export async function createCheckoutOrder(
 
   const orderNumber = createOrderNumber();
 
-  // Convert event date + time strings to timestamptz for storage.
-  // Times are stored even when availability detection is still date-based,
-  // so they flow through to delivery scheduling and the operator dashboard.
-  const eventStartTime =
-    eventDate && startTime
-      ? new Date(`${eventDate}T${startTime}:00.000Z`).toISOString()
-      : null;
-  const eventEndTime =
-    eventDate && endTime
-      ? new Date(`${eventDate}T${endTime}:00.000Z`).toISOString()
-      : null;
+  // Operator's wall-clock event times are stored directly as TIME
+  // (event_start_local / event_end_local). The DB trigger
+  // orders_sync_event_times_trg composes event_start_time
+  // (timestamptz) by combining (event_date + local time) at the org's
+  // event_timezone, so downstream readers get the correct UTC instant
+  // without the app needing a tz library here.
+  //
+  // The legacy `${eventDate}T${startTime}:00.000Z` pattern stored the
+  // wall-clock AS a UTC timestamp, which was wrong for any non-UTC
+  // org. We no longer set event_start_time directly; the trigger
+  // computes it.
+  const eventStartLocal = eventDate && startTime ? `${startTime}:00` : null;
+  const eventEndLocal = eventDate && endTime ? `${endTime}:00` : null;
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -655,8 +657,8 @@ export async function createCheckoutOrder(
       order_number: orderNumber,
       order_status: policies.requireDepositToConfirm ? "awaiting_deposit" : "confirmed",
       event_date: eventDate ?? null,
-      event_start_time: eventStartTime,
-      event_end_time: eventEndTime,
+      event_start_local: eventStartLocal,
+      event_end_local: eventEndLocal,
       rental_end_date: rentalEndDate ?? null,
       delivery_address_id: deliveryAddressId,
       fulfillment_type: fulfillmentType,
