@@ -12,6 +12,7 @@ import {
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { checkPlanLimit } from "@/lib/stripe/gate";
+import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
 
 export type ProductActionState = {
   ok: boolean;
@@ -321,7 +322,7 @@ export async function updateProduct(
         .select("id", { count: "exact", head: true })
         .eq("organization_id", ctx.organizationId)
         .eq("product_id", parsed.data.productId)
-        .in("operational_status", ["ready", "available", "active"])
+        .in("operational_status", BOOKABLE_ASSET_STATUSES as unknown as string[])
         .is("deleted_at", null);
 
       if ((assetCount ?? 0) === 0) {

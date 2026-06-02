@@ -64,6 +64,7 @@ export async function createOrder(
     deliveryLine2: String(formData.get("delivery_line2") ?? ""),
     rentalEndDate: String(formData.get("rental_end_date") ?? ""),
     smsOptIn: formData.get("sms_opt_in") === "true",
+    idempotencyKey: String(formData.get("idempotency_key") ?? ""),
   });
 
   if (!parsed.success) {
@@ -147,15 +148,37 @@ export async function createOrder(
     deliveryLine2,
     rentalEndDate,
     smsOptIn,
+    idempotencyKey: rawIdempotencyKey,
   } = parsed.data;
+  const idempotencyKey = rawIdempotencyKey && rawIdempotencyKey.length > 0 ? rawIdempotencyKey : null;
 
   const requestHeaders = await headers();
-  const clientIp =
-    requestHeaders.get("x-real-ip") ??
-    requestHeaders.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    null;
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const trustedIp = getTrustedClientIp(requestHeaders);
+  const clientIp = trustedIp === "unknown" ? null : trustedIp;
 
   const supabase = await createSupabaseServerClient();
+
+  // Idempotency replay: a dashboard double-click or network hiccup that
+  // makes the browser retry would otherwise duplicate the order. If we
+  // already have a row with the same (org, idempotency_key), the user
+  // has succeeded — return the existing order's number rather than
+  // creating a parallel record.
+  if (idempotencyKey) {
+    const { data: replay } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", ctx.organizationId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (replay?.order_number) {
+      return {
+        ok: true,
+        message: `Order ${replay.order_number} already exists.`,
+      };
+    }
+  }
 
   const { data: createMembership } = await supabase
     .from("organization_memberships")
@@ -332,12 +355,29 @@ export async function createOrder(
         .select("id")
         .single();
 
-      if (custErr || !newCust) {
+      if (custErr?.code === "23505") {
+        // Race: a concurrent order-create for the same email won the
+        // unique (organization_id, email) insert milliseconds before
+        // us. Re-SELECT and continue rather than failing.
+        const { data: raced } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("organization_id", ctx.organizationId)
+          .eq("email", email)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (!raced) {
+          console.error("[orders] customer insert 23505 but re-select missing:", custErr.message);
+          return { ok: false, message: "Failed to create customer." };
+        }
+        customerId = raced.id;
+      } else if (custErr || !newCust) {
         if (custErr) console.error("[orders] create customer failed:", custErr.message);
         return { ok: false, message: "Failed to create customer." };
+      } else {
+        customerId = newCust.id;
       }
-
-      customerId = newCust.id;
     }
   } else {
     const { data: newCust, error: custErr } = await supabase
@@ -363,6 +403,16 @@ export async function createOrder(
   }
 
   const total = Number((resolvedSubtotal + resolvedDeliveryFee).toFixed(2));
+  // Reject deposits that exceed the order total. Allowing them would
+  // produce a negative balance, which the accounting reports and refund
+  // flows assume can't happen — silently storing a negative balance
+  // corrupts every downstream calculation that reads it.
+  if (depositAmount > total + 0.005) {
+    return {
+      ok: false,
+      message: "Deposit amount cannot exceed the order total.",
+    };
+  }
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
 
@@ -382,6 +432,7 @@ export async function createOrder(
       .from("customer_addresses")
       .insert({
         customer_id: customerId,
+        organization_id: ctx.organizationId,
         line1: deliveryLine1,
         line2: deliveryLine2 ?? null,
         city: deliveryCity,
@@ -429,9 +480,30 @@ export async function createOrder(
       delivery_contact_name: deliveryContactName ?? null,
       delivery_contact_phone: deliveryContactPhone ?? null,
       delivery_setup_notes: deliverySetupNotes ?? null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
+
+  // Concurrent retry won the unique index race between the SELECT
+  // above and this INSERT. Re-fetch the existing order's number and
+  // return success — don't roll back the address/customer because the
+  // other request owns them.
+  if (orderError?.code === "23505" && idempotencyKey) {
+    const { data: raced } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", ctx.organizationId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (raced?.order_number) {
+      return {
+        ok: true,
+        message: `Order ${raced.order_number} already exists.`,
+      };
+    }
+  }
 
   if (orderError || !createdOrder) {
     if (orderError) console.error("[orders] create order failed:", orderError.message);
@@ -646,15 +718,22 @@ export async function updateOrderStatus(
   // (lib/routes/actions.ts) both write `delivered` from `confirmed`.
   // #345 `delivered → cancelled` lets operators cancel misdeliveries from
   // the dashboard instead of requiring a manual SQL fix.
+  // `refunded` is reachable from every non-terminal state: the Stripe
+  // webhook flips an order to `refunded` when the net paid drops to zero,
+  // and the operator dashboard now needs the same option so it can
+  // reconcile manual refunds that weren't processed through Stripe.
+  // Previously only the webhook could write the value; the operator UI
+  // returned "Cannot move an order from X to refunded" for every
+  // attempt.
   const VALID_TRANSITIONS: Record<string, string[]> = {
-    inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled"],
-    quote_sent:       ["awaiting_deposit", "confirmed", "cancelled"],
-    awaiting_deposit: ["confirmed", "cancelled"],
-    confirmed:        ["scheduled", "out_for_delivery", "delivered", "cancelled"],
-    scheduled:        ["out_for_delivery", "delivered", "cancelled"],
-    out_for_delivery: ["delivered", "cancelled"],
-    delivered:        ["completed", "cancelled"],
-    completed:        [],
+    inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled", "refunded"],
+    quote_sent:       ["awaiting_deposit", "confirmed", "cancelled", "refunded"],
+    awaiting_deposit: ["confirmed", "cancelled", "refunded"],
+    confirmed:        ["scheduled", "out_for_delivery", "delivered", "cancelled", "refunded"],
+    scheduled:        ["out_for_delivery", "delivered", "cancelled", "refunded"],
+    out_for_delivery: ["delivered", "cancelled", "refunded"],
+    delivered:        ["completed", "cancelled", "refunded"],
+    completed:        ["refunded"],
     cancelled:        [],
     refunded:         [],
   };
@@ -822,8 +901,15 @@ export async function updateOrderStatus(
   // #346 / #369 — customer portal, delivery board, calendar, and counts
   // tile all read from `orders.order_status`; revalidate so they reflect
   // the new status immediately.
+  //
+  // Note: the previous version also called revalidatePath("/dashboard")
+  // unconditionally, which clears the entire dashboard cache on every
+  // order status update. At ~1k orders/min that's a cache stampede
+  // hitting unrelated pages (analytics, settings, billing, team, etc).
+  // The dashboard root pulls from /dashboard/orders, /dashboard/deliveries
+  // and /dashboard/calendar via the data layer, so revalidating those
+  // three propagates correctly without flushing the whole shell.
   revalidatePath("/order-status");
-  revalidatePath("/dashboard");
   revalidatePath("/dashboard/deliveries");
   revalidatePath("/dashboard/calendar");
 
@@ -877,5 +963,89 @@ export async function updateOrderStatus(
   return {
     ok: true,
     message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}`,
+  };
+}
+
+/**
+ * Revokes the portal token on a specific order, immediately invalidating any
+ * outstanding /order-status?token=... links the customer may have in email
+ * archives, screenshots, or breached inboxes. Used when an operator suspects
+ * a portal token has leaked or a customer requests their access be reset.
+ *
+ * Owner / admin / dispatcher; rate-limited; org-scoped.
+ */
+export async function revokeOrderPortalToken(
+  _prev: OrderActionState,
+  formData: FormData
+): Promise<OrderActionState> {
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  if (!orderId) return { ok: false, message: "Order is required." };
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: portal token would be revoked." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  try {
+    const limit = await enforceRateLimit({
+      scope: "orders:revoke_portal_token:user",
+      actor: ctx.userId,
+      limit: 30,
+      windowSeconds: 300,
+    });
+    if (!limit.allowed) {
+      return { ok: false, message: "Too many revoke attempts. Please wait and try again." };
+    }
+  } catch {
+    return { ok: false, message: "Unable to process the request right now." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "You don't have permission to revoke portal access." };
+  }
+
+  const { revokePortalAccessTokenRow } = await import("@/lib/portal/access-token");
+  const result = await revokePortalAccessTokenRow({
+    supabase,
+    orderId,
+    organizationId: ctx.organizationId,
+  });
+  if (!result.ok) {
+    const { logAppError } = await import("@/lib/observability/server");
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "orders.revokePortalToken",
+      message: `Revoke failed: ${result.message ?? "unknown"}`,
+      context: { orderId },
+    });
+    return { ok: false, message: "Couldn't revoke the portal token. Please try again." };
+  }
+
+  const { logAppEvent } = await import("@/lib/observability/server");
+  await logAppEvent({
+    organizationId: ctx.organizationId,
+    userId: ctx.userId,
+    source: "orders.revokePortalToken",
+    action: "revoke",
+    status: "success",
+    metadata: { orderId },
+  });
+
+  revalidatePath(`/dashboard/orders/${orderId}`);
+  return {
+    ok: true,
+    message: "Portal access revoked. The customer can re-request access at /order-status.",
   };
 }

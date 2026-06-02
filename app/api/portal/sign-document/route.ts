@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
   }
 
   const hdrs = await headers();
-  const clientIp = hdrs.get("x-real-ip") ?? hdrs.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const clientIp = getTrustedClientIp(hdrs);
   let limit: { allowed: boolean };
   try {
     limit = await enforceRateLimit({
@@ -67,7 +68,9 @@ export async function POST(request: NextRequest) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id")
+    .select(
+      "id, order_number, customers(first_name, last_name)"
+    )
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
     .is("deleted_at", null)
@@ -121,6 +124,27 @@ export async function POST(request: NextRequest) {
   revalidatePath("/dashboard/documents");
   revalidatePath("/dashboard/orders");
   revalidatePath("/order-status");
+
+  // Operator alert (email + in-app bell). Fire-and-forget — the signing
+  // itself already succeeded.
+  try {
+    const cust = (order as unknown as {
+      customers?: { first_name?: string | null; last_name?: string | null } | null;
+    }).customers;
+    const orderNumber = (order as { order_number?: string | null }).order_number ?? order.id;
+    const { triggerOperatorActivityAlertEmail } = await import("@/lib/email/triggers");
+    await triggerOperatorActivityAlertEmail({
+      organizationId: orgId,
+      orderId: order.id,
+      orderNumber,
+      customerName:
+        `${cust?.first_name ?? ""} ${cust?.last_name ?? ""}`.trim() || "Customer",
+      event: "document_signed",
+      detail: `Signed by ${signerName}`,
+    });
+  } catch (err) {
+    console.error("[portal.sign-document] operator alert failed:", err instanceof Error ? err.message : err);
+  }
 
   return NextResponse.json({ ok: true, message: "Document signed successfully." });
 }

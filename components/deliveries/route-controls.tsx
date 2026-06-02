@@ -77,7 +77,7 @@ export function RouteStatusControls({
         </div>
       )}
       {state.message && !state.ok && (
-        <span className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
+        <span role="alert" aria-live="assertive" className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
           {state.message}
         </span>
       )}
@@ -122,7 +122,7 @@ export function StopStatusButton({
         {pending ? "…" : label}
       </button>
       {state.message && !state.ok && (
-        <span className="muted" style={{ marginLeft: 6, fontSize: 12 }}>
+        <span role="alert" aria-live="assertive" className="muted" style={{ marginLeft: 6, fontSize: 12 }}>
           {state.message}
         </span>
       )}
@@ -161,7 +161,7 @@ export function RemoveStopButton({
         {pending ? "…" : t.remove}
       </button>
       {state.message && !state.ok && (
-        <span style={{ marginLeft: 6, fontSize: 12, color: "var(--danger, #e53e3e)" }}>
+        <span role="alert" aria-live="assertive" style={{ marginLeft: 6, fontSize: 12, color: "var(--danger, #e53e3e)" }}>
           {state.message}
         </span>
       )}

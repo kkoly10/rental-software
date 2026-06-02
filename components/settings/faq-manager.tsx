@@ -4,53 +4,59 @@ import { useActionState, useState } from "react";
 import { updateFaqContent } from "@/lib/settings/content-actions";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatMessage } from "@/lib/i18n/format";
+import { newStableId } from "@/lib/utils/stable-id";
 
 type FaqItem = { question: string; answer: string };
+type FaqEntry = FaqItem & { _id: string };
 
 const initialState = { ok: false, message: "" };
 
 export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
-  const [items, setItems] = useState<FaqItem[]>(
-    defaults.length > 0 ? defaults : []
+  const [items, setItems] = useState<FaqEntry[]>(() =>
+    defaults.map((d) => ({ ...d, _id: newStableId() }))
   );
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState(updateFaqContent, initialState);
   const { messages } = useI18n();
   const m = messages.forms.faq;
 
+  const serialized = JSON.stringify(items.map(({ _id: _, ...rest }) => rest));
+
   function addItem() {
-    setItems([...items, { question: "", answer: "" }]);
-    setExpandedIndex(items.length);
+    const newItem: FaqEntry = { question: "", answer: "", _id: newStableId() };
+    setItems([...items, newItem]);
+    setExpandedId(newItem._id);
   }
 
-  function removeItem(index: number) {
-    setItems(items.filter((_, i) => i !== index));
-    setExpandedIndex(null);
+  function removeItem(id: string) {
+    setItems(items.filter((it) => it._id !== id));
+    setExpandedId((cur) => (cur === id ? null : cur));
   }
 
-  function updateItem(index: number, field: keyof FaqItem, value: string) {
-    setItems(items.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+  function updateItem(id: string, field: keyof FaqItem, value: string) {
+    setItems(items.map((it) => (it._id === id ? { ...it, [field]: value } : it)));
   }
 
-  function moveItem(index: number, direction: "up" | "down") {
+  function moveItem(id: string, direction: "up" | "down") {
+    const index = items.findIndex((it) => it._id === id);
+    if (index === -1) return;
     const target = direction === "up" ? index - 1 : index + 1;
     if (target < 0 || target >= items.length) return;
     const next = [...items];
     [next[index], next[target]] = [next[target], next[index]];
     setItems(next);
-    setExpandedIndex(target);
   }
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
-      <input type="hidden" name="faq_json" value={JSON.stringify(items)} />
+      <input type="hidden" name="faq_json" value={serialized} />
 
       <div className="content-editor-list">
         {items.map((item, index) => (
-          <div key={index} className="content-editor-item">
+          <div key={item._id} className="content-editor-item">
             <div
               className="content-editor-item-header"
-              onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
+              onClick={() => setExpandedId(expandedId === item._id ? null : item._id)}
               style={{ cursor: "pointer" }}
             >
               <strong>
@@ -60,7 +66,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                 <button
                   type="button"
                   className="ghost-btn"
-                  onClick={(e) => { e.stopPropagation(); moveItem(index, "up"); }}
+                  onClick={(e) => { e.stopPropagation(); moveItem(item._id, "up"); }}
                   disabled={index === 0}
                   aria-label={m.moveUpTitle} title={m.moveUpTitle}
                 >
@@ -69,7 +75,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                 <button
                   type="button"
                   className="ghost-btn"
-                  onClick={(e) => { e.stopPropagation(); moveItem(index, "down"); }}
+                  onClick={(e) => { e.stopPropagation(); moveItem(item._id, "down"); }}
                   disabled={index === items.length - 1}
                   aria-label={m.moveDownTitle} title={m.moveDownTitle}
                 >
@@ -78,7 +84,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                 <button
                   type="button"
                   className="ghost-btn"
-                  onClick={(e) => { e.stopPropagation(); removeItem(index); }}
+                  onClick={(e) => { e.stopPropagation(); removeItem(item._id); }}
                   style={{ color: "var(--danger)" }}
                   aria-label={m.deleteTitle} title={m.deleteTitle}
                 >
@@ -87,14 +93,14 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
               </div>
             </div>
 
-            {expandedIndex === index && (
+            {expandedId === item._id && (
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 <label>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>{m.questionLabel}</span>
                   <input
                     type="text"
                     value={item.question}
-                    onChange={(e) => updateItem(index, "question", e.target.value)}
+                    onChange={(e) => updateItem(item._id, "question", e.target.value)}
                     placeholder={m.questionPlaceholder}
                     style={{ marginTop: 4, width: "100%" }}
                   />
@@ -103,7 +109,7 @@ export function FaqManager({ defaults }: { defaults: FaqItem[] }) {
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-soft)" }}>{m.answerLabel}</span>
                   <textarea
                     value={item.answer}
-                    onChange={(e) => updateItem(index, "answer", e.target.value)}
+                    onChange={(e) => updateItem(item._id, "answer", e.target.value)}
                     placeholder={m.answerPlaceholder}
                     rows={3}
                     style={{

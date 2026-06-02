@@ -13,8 +13,16 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/storage-sweep",
+      "path": "/api/cron/pii-purge",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/email-retry",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/storage-sweep",
+      "schedule": "0 5 * * *"
     }
   ]
 }
