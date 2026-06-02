@@ -1100,6 +1100,36 @@ export const pt: Messages = {
     },
   },
 
+  assetManager: {
+    kicker: "Inventário",
+    title: "Unidades físicas",
+    intro: "Cada linha é uma unidade alugável. Um produto precisa de pelo menos uma unidade no estado Pronto para aceitar reservas na loja.",
+    bookableCount: "{bookable} de {total} prontas para reserva",
+    addUnit: "+ Adicionar unidade",
+    adding: "A adicionar…",
+    emptyTitle: "Ainda sem unidades.",
+    emptyBody: "Adicione pelo menos uma unidade para tornar este produto reservável.",
+    addedOn: "Adicionado em {date}",
+    save: "Guardar",
+    remove: "Remover",
+    confirmRemove: "Remover a unidade {tag}?",
+    statusAriaLabel: "Estado para {tag}",
+    statusLabels: {
+      ready: "Pronto (reservável)",
+      maintenance: "Em manutenção",
+      broken: "Avariado",
+      retired: "Retirado",
+    },
+    statusBadge: {
+      ready: "Pronto",
+      maintenance: "Manutenção",
+      broken: "Avariado",
+      retired: "Retirado",
+      available: "Disponível",
+      active: "Ativo",
+    },
+  },
+
   crew: {
     kicker: "Equipa móvel",
     dashboard: "Painel",
@@ -2193,6 +2223,18 @@ export const pt: Messages = {
     addProduct: "Adicionar produto",
     viewDeliveries: "Ver entregas",
     openHelpCenter: "Abrir centro de ajuda",
+  },
+
+  sms: {
+    orderConfirmation: "{businessName}: Pedido #{orderNumber} confirmado! Entraremos em contacto com os detalhes da entrega. STOP para cancelar.",
+    depositReminder: "{businessName}: Um sinal de {amount} está em dívida para o pedido #{orderNumber}. Pague para reservar a data. STOP para cancelar.",
+    deliveryScheduled: "{businessName}: Entrega do pedido #{orderNumber} a {date}, {timeWindow}. Avisaremos quando estivermos a caminho. STOP para cancelar.",
+    deliveryEnRoute: "{businessName}: A equipa está a caminho do pedido #{orderNumber}! ETA: {eta}. STOP para cancelar.",
+    deliveryEnRouteWithTracking: "{businessName}: A equipa está a caminho do pedido #{orderNumber}! ETA: {eta}. Acompanhar: {trackingUrl} STOP para cancelar.",
+    deliveryCompleted: "{businessName}: Pedido #{orderNumber} entregue e montado. Aproveite o seu evento! STOP para cancelar.",
+    weatherAlert: "{businessName}: Alerta meteorológico para {date} pode afetar o pedido #{orderNumber}. Entraremos em contacto se houver alterações. STOP para cancelar.",
+    paymentReceived: "{businessName}: Pagamento de {amount} recebido para o pedido #{orderNumber}. Obrigado! STOP para cancelar.",
+    orderCancelled: "{businessName}: O pedido #{orderNumber} foi cancelado. Contacte-nos com qualquer dúvida. STOP para cancelar.",
   },
 
   notifications: {

@@ -38,6 +38,37 @@ export async function logAppEvent(input: {
   }
 }
 
+/**
+ * Surface when a list query returned exactly its configured `.limit(n)`.
+ * That is the operator's signal that more rows exist but were silently
+ * truncated — important for analytics totals and search results, where
+ * a missing tail of orders/customers/payments produces wrong numbers
+ * without any error to investigate.
+ *
+ * No-op when the row count is below the limit so we don't spam logs for
+ * healthy queries.
+ */
+export async function logTruncation(input: {
+  organizationId?: string | null;
+  source: string;
+  rowCount: number;
+  limit: number;
+  metadata?: Record<string, unknown>;
+}) {
+  if (input.rowCount < input.limit) return;
+  await logAppEvent({
+    organizationId: input.organizationId ?? null,
+    source: input.source,
+    action: "truncation_warning",
+    status: "warning",
+    metadata: {
+      rowCount: input.rowCount,
+      limit: input.limit,
+      ...(input.metadata ?? {}),
+    },
+  });
+}
+
 export async function logAppError(input: {
   organizationId?: string | null;
   userId?: string | null;
