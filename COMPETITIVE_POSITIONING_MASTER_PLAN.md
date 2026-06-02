@@ -44,10 +44,11 @@ Decisions that frame everything else. **Done** before any sprint starts.
 
 Goal: close the gaps that make a credible head-to-head comparison page against Goodshuffle Pro impossible to publish today.
 
-### Sprint 1 — Pull sheets / loading lists (week 1-2)
+### Sprint 1 — Pull sheets / loading lists + QBO CSV export (week 1-2)
 
-The smallest credible-gap close. Trivial from existing route + order data.
+The smallest credible-gap close. Trivial from existing route + order data. Also includes a 1-day QBO CSV export quick-win to remove the immediate "do you sync with QuickBooks?" sales objection before the full integration ships in Sprint 2.
 
+**Pull sheets:**
 - [ ] Audit existing `routes` and `route_stops` tables for required fields
 - [ ] Build `lib/logistics/pull-sheet.ts` — given a route, return ordered list of items to load
 - [ ] Add `app/dashboard/deliveries/[routeId]/pull-sheet` page (printable view)
@@ -55,7 +56,15 @@ The smallest credible-gap close. Trivial from existing route + order data.
 - [ ] Add "Print pull sheet" button on the delivery board kanban card
 - [ ] Playwright test: route → print pull sheet → PDF contains all items
 - [ ] Update Help Center article on delivery workflow
-- [ ] **Gate**: pull sheet feature works end-to-end on staging
+
+**QBO CSV export (quick-win):**
+- [ ] Build `lib/integrations/quickbooks/csv-export.ts` — format invoices for QBO import (`Customer, Invoice #, Date, Amount, Tax, Item, Description`)
+- [ ] Add "Export for QuickBooks" button on `app/dashboard/payments/page.tsx` with date range selector
+- [ ] Match Intuit's expected import schema for Invoices + Sales Receipts
+- [ ] README in `docs/integrations/quickbooks-csv.md` explaining the workflow to accountants
+- [ ] Playwright test: paid invoices → CSV download → schema matches QBO template
+
+- [ ] **Gate**: pull sheet + QBO CSV export both work end-to-end on staging
 
 ### Sprint 2 — QuickBooks Online integration (weeks 3-4)
 
@@ -101,6 +110,19 @@ Schema is already there. Build the UI to unlock tent/equipment monthly rentals (
 ## Phase 2 — Differentiation: P1 features (weeks 7-12)
 
 Goal: ship the wedge features nobody else has, so the positioning isn't just "cheaper" but "actually better for specific workflows."
+
+### Sprint 3.5 — Xero integration (week 7, 3-4 days)
+
+Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqable does (in beta). Instantly leapfrogs Goodshuffle on a feature their customers explicitly request — particularly newer/younger operators who chose Xero over QuickBooks.
+
+- [ ] Register Xero developer account + OAuth app
+- [ ] Build `lib/integrations/xero/client.ts` — OAuth flow + token refresh
+- [ ] Database: add `organizations.xero_tenant_id`, `xero_access_token`, `xero_refresh_token` (encrypted)
+- [ ] One-way sync: paid invoices → Xero Invoice + Payment objects
+- [ ] Customer + product mapping (mirror QBO module pattern)
+- [ ] Connect / disconnect UI extends the QBO integrations page
+- [ ] Playwright test: order paid → Xero invoice in sandbox
+- [ ] **Gate**: 1 internal test org has 5+ successfully synced Xero invoices
 
 ### Sprint 4 — WhatsApp Business API (weeks 7-9)
 
