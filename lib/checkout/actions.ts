@@ -66,10 +66,9 @@ export async function createCheckoutOrder(
 
   const smsOptIn = formData.get("sms_opt_in") === "true";
   const requestHeaders = await headers();
-  const clientIp =
-    requestHeaders.get("x-real-ip") ??
-    requestHeaders.get("x-forwarded-for")?.split(",").at(-1)?.trim() ??
-    null;
+  const { getTrustedClientIp } = await import("@/lib/security/request-client");
+  const trustedIp = getTrustedClientIp(requestHeaders);
+  const clientIp = trustedIp === "unknown" ? null : trustedIp;
 
   const parsed = checkoutOrderSchema.safeParse({
     firstName: String(formData.get("first_name") ?? ""),
@@ -87,6 +86,7 @@ export async function createCheckoutOrder(
     productSlug: String(formData.get("product_slug") ?? ""),
     fulfillmentType: String(formData.get("fulfillment_type") ?? "delivery"),
     rentalEndDate: String(formData.get("rental_end_date") ?? ""),
+    idempotencyKey: String(formData.get("idempotency_key") ?? ""),
   });
 
   if (!parsed.success) {
@@ -135,7 +135,9 @@ export async function createCheckoutOrder(
     productSlug,
     fulfillmentType,
     rentalEndDate,
+    idempotencyKey: rawIdempotencyKey,
   } = parsed.data;
+  const idempotencyKey = rawIdempotencyKey && rawIdempotencyKey.length > 0 ? rawIdempotencyKey : null;
 
   try {
     const clientKey = await getActionClientKey();
@@ -198,6 +200,30 @@ export async function createCheckoutOrder(
   const demoCheck = await blockDemoWrites(orgId);
   if (demoCheck.blocked) {
     return { ok: false, message: demoCheck.message };
+  }
+
+  // Idempotency replay: if the client sent a key we've already seen
+  // for this org (browser retried a successful submission whose
+  // response was lost), return the original order's number instead of
+  // starting a new one. Skipped when no key — the rate limiter still
+  // covers older clients.
+  if (orgId && idempotencyKey) {
+    const { createSupabaseAdminClient: createAdmin, hasSupabaseServiceRoleEnv: hasSrk } = await import("@/lib/supabase/admin");
+    const replaySupabase = hasSrk() ? createAdmin() : await createSupabaseServerClient();
+    const { data: replay } = await replaySupabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", orgId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (replay?.order_number) {
+      return {
+        ok: true,
+        message: "Your booking is already in. Showing your existing order.",
+        orderNumber: replay.order_number,
+      };
+    }
   }
 
   if (!orgId) {
@@ -283,8 +309,15 @@ export async function createCheckoutOrder(
       if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate >= eventDate) {
         const startMs = new Date(eventDate + "T00:00:00Z").getTime();
         const endMs = new Date(rentalEndDate + "T00:00:00Z").getTime();
-        // Add 1 so both start and end dates are counted (Mon→Fri = 5 days, not 4).
-        const days = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1);
+        // Both timestamps are UTC midnight of YYYY-MM-DD, so the
+        // diff is guaranteed to be a whole multiple of one day.
+        // Math.round previously masked any ms-level skew but could
+        // round 0 to 0 for same-day with millisecond drift; with
+        // both anchored at midnight Z, the diff is exact. +1 makes
+        // both start AND end dates count (Mon→Fri = 5 days, not 4).
+        const dayMs = 1000 * 60 * 60 * 24;
+        const dayDiff = Math.round((endMs - startMs) / dayMs);
+        const days = Math.max(1, dayDiff + 1);
 
         const { data: orgData } = await supabase
           .from("organizations")
@@ -465,7 +498,33 @@ export async function createCheckoutOrder(
       .select("id")
       .single();
 
-    if (customerError || !customer) {
+    if (customerError?.code === "23505") {
+      // Race: another concurrent checkout for the same email won the
+      // unique (organization_id, email) insert milliseconds before us.
+      // Re-SELECT and continue rather than failing the customer with a
+      // generic "couldn't create your account" message.
+      const { data: existing } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("organization_id", orgId)
+        .ilike("email", email)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (!existing) {
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website",
+          message: "Customer insert hit unique constraint but re-SELECT found no row",
+          context: { reason: customerError.message },
+        });
+        return { ok: false, message: "We couldn't create your account. Please try again." };
+      }
+      customerId = existing.id;
+      // Don't set newCustomerId — the other request owns the row, we
+      // shouldn't rollback-delete it on later failure.
+    } else if (customerError || !customer) {
       await logAppError({
         organizationId: orgId,
         source: "checkout.website",
@@ -477,10 +536,10 @@ export async function createCheckoutOrder(
         ok: false,
         message: "We couldn't create your account. Please try again.",
       };
+    } else {
+      customerId = customer.id;
+      newCustomerId = customer.id;
     }
-
-    customerId = customer.id;
-    newCustomerId = customer.id;
   }
 
   let deliveryAddressId: string | null = null;
@@ -489,6 +548,7 @@ export async function createCheckoutOrder(
       .from("customer_addresses")
       .insert({
         customer_id: customerId,
+        organization_id: orgId,
         label: "Delivery",
         line1,
         line2: line2 || null,
@@ -522,15 +582,43 @@ export async function createCheckoutOrder(
   }
 
   const deliveryFee = serviceArea?.deliveryFee ?? 0;
-  const total = Number((subtotal + deliveryFee).toFixed(2));
 
-  // Compute deposit from the org's configurable booking policies
+  // Compute deposit + balance in cents-integers to avoid the accumulated
+  // toFixed(2) rounding drift that the previous chain — subtotal+fee
+  // rounded, then *percentage rounded — could produce on multi-line
+  // totals. Example: subtotal 99.99 + fee 100.00 + 30% deposit
+  // previously yielded deposit 59.99 + balance 140.00 = 199.99 (≠ 200).
+  // Working in cents until the final boundary keeps deposit+balance
+  // equal to total to the penny.
+  const totalCents = Math.round((subtotal + deliveryFee) * 100);
+  const total = totalCents / 100;
+
   const policies = await getBookingPolicies();
-  let deposit = Number((total * (policies.depositPercentage / 100)).toFixed(2));
-  if (policies.depositMinimum !== null && deposit < policies.depositMinimum) {
-    deposit = Math.min(policies.depositMinimum, total);
+  let depositCents = Math.round(totalCents * (policies.depositPercentage / 100));
+  if (policies.depositMinimum !== null) {
+    const minimumCents = Math.round(policies.depositMinimum * 100);
+    if (depositCents < minimumCents) depositCents = minimumCents;
   }
-  const balance = Number((total - deposit).toFixed(2));
+  // Clamp to total — the operator may have a depositMinimum exceeding
+  // a small order; charging more than the total is invalid. Previously
+  // this clamp was silent; we now also surface a structured warning so
+  // operators can spot the misconfiguration.
+  if (depositCents > totalCents) {
+    depositCents = totalCents;
+    await logAppEvent({
+      organizationId: orgId,
+      source: "checkout.website",
+      action: "deposit_minimum_clamped",
+      status: "warning",
+      metadata: {
+        total_cents: totalCents,
+        configured_minimum: policies.depositMinimum,
+        configured_percentage: policies.depositPercentage,
+      },
+    });
+  }
+  const deposit = depositCents / 100;
+  const balance = (totalCents - depositCents) / 100;
 
   // Check Stripe plan gate before creating any records — fail early if org can't accept
   // online payments but a deposit is required.
@@ -580,9 +668,32 @@ export async function createCheckoutOrder(
       source_channel: "website",
       terms_accepted_at: new Date().toISOString(),
       notes: serviceArea ? `Service area: ${serviceArea.label}` : null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
+
+  // Concurrent retry hit the unique (org, idempotency_key) index between
+  // our SELECT replay check above and the INSERT here. Return the
+  // already-created order's response instead of failing the user.
+  if (orderError?.code === "23505" && idempotencyKey) {
+    const { data: raced } = await supabase
+      .from("orders")
+      .select("order_number")
+      .eq("organization_id", orgId)
+      .eq("idempotency_key", idempotencyKey)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (raced?.order_number) {
+      // Don't roll back the address / customer — the other request
+      // owns them and is currently mid-flight or just committed.
+      return {
+        ok: true,
+        message: "Your booking is already in. Showing your existing order.",
+        orderNumber: raced.order_number,
+      };
+    }
+  }
 
   if (orderError || !order) {
     if (deliveryAddressId) {

@@ -110,6 +110,7 @@ export type CustomerDetail = {
   lastName: string;
   email: string;
   phone: string;
+  preferredLocale: string;
   addressLabel: string;
   addressLine1: string;
   addressLine2: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useCallback, useEffect } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { completeOnboarding } from "@/lib/onboarding/actions";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -35,25 +35,40 @@ export function OnboardingForm() {
     }
   }, [businessName, slugEdited]);
 
-  const checkSlug = useCallback(async (value: string) => {
-    if (!value || value.length < 3) { setSlugStatus("idle"); return; }
-    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(value)) { setSlugStatus("invalid"); return; }
-    setSlugStatus("checking");
-    try {
-      const res = await fetch(`/api/domains/check-slug?slug=${encodeURIComponent(value)}`);
-      const data = await res.json();
-      setSlugStatus(data.available ? "available" : "taken");
-    } catch {
-      setSlugStatus("idle");
-    }
-  }, []);
-
   useEffect(() => {
-    if (slug.length >= 3) {
-      const t = setTimeout(() => checkSlug(slug), 400);
-      return () => clearTimeout(t);
+    if (!slug || slug.length < 3) {
+      setSlugStatus("idle");
+      return;
     }
-  }, [slug, checkSlug]);
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+      setSlugStatus("invalid");
+      return;
+    }
+
+    // Debounce keystrokes AND abort any in-flight check before issuing the
+    // next one. Without the AbortController, a slow response for "abc" could
+    // arrive after a fresh response for "abcd" and stomp the displayed status.
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      setSlugStatus("checking");
+      try {
+        const res = await fetch(
+          `/api/domains/check-slug?slug=${encodeURIComponent(slug)}`,
+          { signal: controller.signal }
+        );
+        const data = await res.json();
+        setSlugStatus(data.available ? "available" : "taken");
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setSlugStatus("idle");
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [slug]);
 
   const submitDisabled =
     pending ||

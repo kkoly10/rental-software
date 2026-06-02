@@ -59,7 +59,12 @@ export function MonthGrid({ year, month, events }: Props) {
 
   const eventsByDay: Record<number, CalendarEvent[]> = {};
   for (const ev of events) {
+    // ev.date is expected to be a YYYY-MM-DD string; a malformed value
+    // like "2026-06" would silently produce parseInt(NaN) and bucket
+    // events under a meaningless key. Guard explicitly and skip rather
+    // than mis-bucketing.
     const day = parseInt(ev.date.slice(8, 10), 10);
+    if (!Number.isFinite(day) || day < 1 || day > 31) continue;
     if (!eventsByDay[day]) eventsByDay[day] = [];
     eventsByDay[day].push(ev);
   }

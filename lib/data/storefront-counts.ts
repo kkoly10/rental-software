@@ -6,6 +6,7 @@ import {
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
 import { getPublicOrgId } from "@/lib/auth/org-context";
+import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
 
 /**
  * Count of assets in a "ready / available / active" operational state for the
@@ -29,7 +30,7 @@ export const getReadyAssetCount = cache(async function getReadyAssetCount(): Pro
     .from("assets")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
-    .in("operational_status", ["ready", "available", "active"])
+    .in("operational_status", BOOKABLE_ASSET_STATUSES as unknown as string[])
     .is("deleted_at", null);
 
   if (error) return 0;

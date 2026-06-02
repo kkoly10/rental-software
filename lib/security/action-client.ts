@@ -1,10 +1,7 @@
 import { headers } from "next/headers";
+import { getTrustedClientIp } from "@/lib/security/request-client";
 
 export async function getActionClientKey() {
   const headerStore = await headers();
-  return (
-    headerStore.get("x-real-ip")?.trim() ||
-    headerStore.get("x-forwarded-for")?.split(",").at(-1)?.trim() ||
-    "unknown"
-  );
+  return getTrustedClientIp(headerStore);
 }

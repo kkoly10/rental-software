@@ -7,6 +7,7 @@ import {
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
 import { fromStripeMinorUnits } from "@/lib/money/currency";
+import { logAppError } from "@/lib/observability/server";
 import type Stripe from "stripe";
 
 // #360 After each material order/payment state change, invalidate the pages
@@ -164,7 +165,18 @@ export async function POST(request: NextRequest) {
                 break;
               }
               if (insertErr) {
-                console.error("Payment insert failed:", insertErr.message);
+                await logAppError({
+                  organizationId: orgId,
+                  source: "stripe-webhook",
+                  message: "checkout.session.completed: payment row insert failed",
+                  route: "/api/stripe/webhooks",
+                  context: {
+                    event_id: event.id,
+                    order_id: orderId,
+                    db_error_code: insertErr.code,
+                    db_error_message: insertErr.message,
+                  },
+                });
                 break;
               }
 
@@ -217,7 +229,7 @@ export async function POST(request: NextRequest) {
                 if (orderData?.customer_id) {
                   const { data: customer } = await admin
                     .from("customers")
-                    .select("first_name, email")
+                    .select("first_name, last_name, email")
                     .eq("id", orderData.customer_id)
                     .eq("organization_id", orgId)
                     .is("deleted_at", null)
@@ -241,7 +253,16 @@ export async function POST(request: NextRequest) {
                         deliveryFee: Number(orderData.delivery_fee_amount ?? 0),
                         total: Number(orderData.total_amount ?? 0),
                         depositDue: Number(orderData.deposit_due_amount ?? 0),
-                      }).catch((e: unknown) => console.error("Stripe webhook: order confirmation email failed:", e));
+                      }).catch((e: unknown) =>
+                        logAppError({
+                          organizationId: orgId,
+                          source: "stripe-webhook",
+                          message: "checkout.session.completed: order confirmation email failed",
+                          route: "/api/stripe/webhooks",
+                          context: { event_id: event.id, order_id: orderId, customer_email: customer.email },
+                          error: e,
+                        })
+                      );
                     }
 
                     await triggerPaymentReceivedEmail({
@@ -254,10 +275,30 @@ export async function POST(request: NextRequest) {
                       paymentMethod: "stripe",
                       newBalance: financials?.remainingBalance ?? Number(orderData.balance_due_amount ?? 0),
                     });
+
+                    // Operator-facing alert: customer just paid via Stripe.
+                    const { triggerOperatorActivityAlertEmail } = await import("@/lib/email/triggers");
+                    await triggerOperatorActivityAlertEmail({
+                      organizationId: orgId,
+                      orderId,
+                      orderNumber: orderData.order_number,
+                      customerName:
+                        `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() ||
+                        "Customer",
+                      event: "payment_received",
+                      detail: `$${amountPaid.toFixed(2)} via Stripe`,
+                    });
                   }
                 }
               } catch (emailErr) {
-                console.error("Stripe webhook: payment confirmation email failed:", emailErr);
+                await logAppError({
+                  organizationId: orgId,
+                  source: "stripe-webhook",
+                  message: "checkout.session.completed: payment confirmation email failed",
+                  route: "/api/stripe/webhooks",
+                  context: { event_id: event.id, order_id: orderId },
+                  error: emailErr,
+                });
               }
 
               // In-app notification for operator
@@ -278,8 +319,15 @@ export async function POST(request: NextRequest) {
                   `$${amountPaid.toFixed(2)} ${paymentType} via Stripe — Order ${orderNumber}`,
                   `/dashboard/orders/${orderId}`
                 );
-              } catch {
-                // Non-critical
+              } catch (notifErr) {
+                await logAppError({
+                  organizationId: orgId,
+                  source: "stripe-webhook",
+                  message: "checkout.session.completed: operator notification creation failed",
+                  route: "/api/stripe/webhooks",
+                  context: { event_id: event.id, order_id: orderId },
+                  error: notifErr,
+                });
               }
 
               revalidateOrderAndPayments(orderId);
@@ -307,7 +355,24 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (!originalPayment) break;
-        const refundOrgId = (originalPayment.orders as unknown as { organization_id: string }).organization_id;
+        // `orders` arrives as either a single row or an array depending on the
+        // PostgREST embed shape; narrow safely and bail out (logging) if the
+        // joined org is missing rather than dereferencing undefined.
+        const ordersJoin = originalPayment.orders as unknown;
+        const ordersRow = Array.isArray(ordersJoin) ? ordersJoin[0] : ordersJoin;
+        const refundOrgId =
+          typeof ordersRow === "object" && ordersRow !== null && typeof (ordersRow as { organization_id?: unknown }).organization_id === "string"
+            ? (ordersRow as { organization_id: string }).organization_id
+            : null;
+        if (!refundOrgId) {
+          await logAppError({
+            source: "stripe-webhook",
+            message: "charge.refunded: missing organization_id on original payment",
+            route: "/api/stripe/webhooks",
+            context: { event_id: event.id, payment_id: originalPayment.id, order_id: originalPayment.order_id },
+          });
+          break;
+        }
 
         // Process each individual refund object; each has a unique id for dedup.
         // Webhook Charge payloads don't reliably expand the `refunds` sub-list
@@ -325,14 +390,10 @@ export async function POST(request: NextRequest) {
         }
         for (const refund of refunds) {
           const refundKey = `refund_${refund.id}`;
-          const { count: existing } = await admin
-            .from("payments")
-            .select("id", { count: "exact", head: true })
-            .eq("order_id", originalPayment.order_id)
-            .eq("provider_payment_id", refundKey);
-
-          if ((existing ?? 0) > 0) continue;
-
+          // Atomic dedup: rely on the unique index (order_id, provider_payment_id)
+          // to gate duplicates. Two concurrent webhooks for the same refund.id
+          // both pass any SELECT-based check; only one INSERT wins. Catch
+          // 23505 (unique violation) below and treat as "already recorded".
           const { error: refundErr } = await admin.from("payments").insert({
             order_id: originalPayment.order_id,
             payment_type: "refund",
@@ -346,7 +407,11 @@ export async function POST(request: NextRequest) {
             paid_at: new Date().toISOString(),
           });
 
-          if (refundErr && refundErr.code !== "23505") {
+          if (refundErr?.code === "23505") {
+            // Already recorded by a concurrent / retried webhook — skip.
+            continue;
+          }
+          if (refundErr) {
             console.error("[webhook] charge.refunded: insert failed", refundErr.message);
           }
         }
@@ -378,23 +443,23 @@ export async function POST(request: NextRequest) {
           try {
             const { data: refundOrder } = await admin
               .from("orders")
-              .select("order_number, organization_id, customer_id")
+              .select("id, order_number, organization_id, customer_id")
               .eq("id", originalPayment.order_id)
               .is("deleted_at", null)
               .maybeSingle();
             if (refundOrder?.customer_id && refundOrder.organization_id) {
               const { data: refundCustomer } = await admin
                 .from("customers")
-                .select("first_name, email")
+                .select("first_name, last_name, email")
                 .eq("id", refundOrder.customer_id)
                 .eq("organization_id", refundOrgId)
                 .is("deleted_at", null)
                 .maybeSingle();
+              const totalRefunded = fromStripeMinorUnits(
+                refunds.reduce((sum, r) => sum + r.amount, 0),
+                refundCurrency
+              );
               if (refundCustomer?.email) {
-                const totalRefunded = fromStripeMinorUnits(
-                  refunds.reduce((sum, r) => sum + r.amount, 0),
-                  refundCurrency
-                );
                 const { triggerPaymentReceivedEmail } = await import("@/lib/email/triggers");
                 await triggerPaymentReceivedEmail({
                   organizationId: refundOrder.organization_id,
@@ -407,9 +472,27 @@ export async function POST(request: NextRequest) {
                   newBalance: refundFinancials.remainingBalance,
                 });
               }
+              const { triggerRefundOperatorAlertEmail } = await import("@/lib/email/triggers");
+              await triggerRefundOperatorAlertEmail({
+                organizationId: refundOrder.organization_id,
+                orderId: refundOrder.id,
+                orderNumber: refundOrder.order_number,
+                customerName:
+                  `${refundCustomer?.first_name ?? ""} ${refundCustomer?.last_name ?? ""}`.trim() ||
+                  "Customer",
+                amount: totalRefunded,
+                providerPaymentId: event.id,
+              });
             }
           } catch (refundEmailErr) {
-            console.error("[webhook] charge.refunded: refund email failed:", refundEmailErr);
+            await logAppError({
+              organizationId: refundOrgId,
+              source: "stripe-webhook",
+              message: "charge.refunded: refund notification email failed",
+              route: "/api/stripe/webhooks",
+              context: { event_id: event.id, order_id: originalPayment.order_id },
+              error: refundEmailErr,
+            });
           }
 
           revalidateOrderAndPayments(originalPayment.order_id);
@@ -487,6 +570,120 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "charge.dispute.created":
+      case "charge.dispute.updated":
+      case "charge.dispute.closed": {
+        // Disputes / chargebacks are a critical operator concern: a customer
+        // has contested a payment with their card issuer. Surface as an
+        // operator notification + structured log; we don't auto-refund or
+        // change order state — that's an explicit operator decision.
+        const dispute = event.data.object as Stripe.Dispute;
+        const chargeRef = dispute.charge;
+        const chargeId = typeof chargeRef === "string" ? chargeRef : chargeRef?.id ?? null;
+        const piRef = dispute.payment_intent;
+        const paymentIntentId = typeof piRef === "string" ? piRef : piRef?.id ?? null;
+
+        // Find the original order via the original Stripe payment row.
+        let orderId: string | null = null;
+        let orgId: string | null = null;
+        if (paymentIntentId) {
+          const { data: orig } = await admin
+            .from("payments")
+            .select("order_id, orders!inner(organization_id)")
+            .eq("provider_payment_id", paymentIntentId)
+            .eq("provider", "stripe")
+            .maybeSingle();
+          if (orig) {
+            orderId = orig.order_id;
+            const orders = Array.isArray(orig.orders) ? orig.orders[0] : orig.orders;
+            const orgRow = orders as { organization_id?: string } | null;
+            orgId = orgRow?.organization_id ?? null;
+          }
+        }
+
+        if (orgId) {
+          try {
+            const { createNotification } = await import("@/lib/data/notifications");
+            const stage = event.type.split(".").at(-1) ?? event.type;
+            const status = (dispute as { status?: string }).status ?? "unknown";
+            await createNotification(
+              orgId,
+              "payment_dispute",
+              `Card dispute ${stage}`,
+              `Stripe dispute on charge ${chargeId ?? paymentIntentId ?? "?"}: status=${status}, reason=${dispute.reason ?? "unknown"}`,
+              orderId ? `/dashboard/orders/${orderId}` : "/dashboard/payments"
+            );
+          } catch (notifErr) {
+            console.error("[webhook] dispute notification failed:", notifErr);
+          }
+        }
+
+        // Always log the dispute event so it's queryable even if we couldn't
+        // map it to an org / order.
+        await admin.from("app_event_logs").insert({
+          organization_id: orgId,
+          source: "stripe-webhook",
+          action: event.type,
+          status: "warning",
+          route: "/api/stripe/webhooks",
+          metadata: {
+            event_id: event.id,
+            dispute_id: dispute.id,
+            charge_id: chargeId,
+            payment_intent: paymentIntentId,
+            reason: dispute.reason,
+            status: (dispute as { status?: string }).status,
+            amount: dispute.amount,
+            currency: dispute.currency,
+          },
+        });
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        // Card declined / authentication failed. Record so the operator can
+        // see why a charge didn't go through (especially relevant for
+        // on-file card retries against an existing order).
+        const intent = event.data.object as Stripe.PaymentIntent;
+        const orderIdMeta = intent.metadata?.order_id ?? null;
+        const orgIdMeta = intent.metadata?.organization_id ?? null;
+        const lastError = intent.last_payment_error;
+
+        await admin.from("app_event_logs").insert({
+          organization_id: orgIdMeta,
+          source: "stripe-webhook",
+          action: "payment_intent.payment_failed",
+          status: "warning",
+          route: "/api/stripe/webhooks",
+          metadata: {
+            event_id: event.id,
+            payment_intent: intent.id,
+            order_id: orderIdMeta,
+            amount: intent.amount,
+            currency: intent.currency,
+            error_code: lastError?.code,
+            error_message: lastError?.message,
+            decline_code: (lastError as { decline_code?: string } | null)?.decline_code,
+          },
+        });
+
+        if (orgIdMeta) {
+          try {
+            const { createNotification } = await import("@/lib/data/notifications");
+            await createNotification(
+              orgIdMeta,
+              "payment_failed",
+              "Payment failed",
+              `Stripe declined a payment: ${lastError?.message ?? "no error message"}`,
+              orderIdMeta ? `/dashboard/orders/${orderIdMeta}` : "/dashboard/payments"
+            );
+          } catch (notifErr) {
+            console.error("[webhook] payment_failed notification failed:", notifErr);
+          }
+        }
+        break;
+      }
+
       default:
         // Unhandled event type — acknowledge receipt
         break;
@@ -494,7 +691,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Release the idempotency claim so Stripe's retry can reprocess this event.
     await admin.from("stripe_webhook_events").delete().eq("event_id", event.id);
-    console.error(`[stripe-webhook] Handler error for ${event.type}:`, error instanceof Error ? error.message : String(error));
+    await logAppError({
+      source: "stripe-webhook",
+      message: `Handler error for ${event.type}`,
+      route: "/api/stripe/webhooks",
+      context: { event_id: event.id, event_type: event.type },
+      error,
+    });
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
