@@ -656,15 +656,22 @@ export async function updateOrderStatus(
   // (lib/routes/actions.ts) both write `delivered` from `confirmed`.
   // #345 `delivered → cancelled` lets operators cancel misdeliveries from
   // the dashboard instead of requiring a manual SQL fix.
+  // `refunded` is reachable from every non-terminal state: the Stripe
+  // webhook flips an order to `refunded` when the net paid drops to zero,
+  // and the operator dashboard now needs the same option so it can
+  // reconcile manual refunds that weren't processed through Stripe.
+  // Previously only the webhook could write the value; the operator UI
+  // returned "Cannot move an order from X to refunded" for every
+  // attempt.
   const VALID_TRANSITIONS: Record<string, string[]> = {
-    inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled"],
-    quote_sent:       ["awaiting_deposit", "confirmed", "cancelled"],
-    awaiting_deposit: ["confirmed", "cancelled"],
-    confirmed:        ["scheduled", "out_for_delivery", "delivered", "cancelled"],
-    scheduled:        ["out_for_delivery", "delivered", "cancelled"],
-    out_for_delivery: ["delivered", "cancelled"],
-    delivered:        ["completed", "cancelled"],
-    completed:        [],
+    inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled", "refunded"],
+    quote_sent:       ["awaiting_deposit", "confirmed", "cancelled", "refunded"],
+    awaiting_deposit: ["confirmed", "cancelled", "refunded"],
+    confirmed:        ["scheduled", "out_for_delivery", "delivered", "cancelled", "refunded"],
+    scheduled:        ["out_for_delivery", "delivered", "cancelled", "refunded"],
+    out_for_delivery: ["delivered", "cancelled", "refunded"],
+    delivered:        ["completed", "cancelled", "refunded"],
+    completed:        ["refunded"],
     cancelled:        [],
     refunded:         [],
   };
