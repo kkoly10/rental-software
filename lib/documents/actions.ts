@@ -85,13 +85,27 @@ export async function updateDocumentStatus(
     updateData.signed_date = new Date().toISOString();
   }
 
-  // Fetch the order_id before updating so we can revalidate the order detail page
+  // Fetch the order_id AND status — a document tied to a cancelled
+  // or refunded order shouldn't be editable from the operator UI.
+  // Without this guard, an operator could "mark signed" a rental
+  // agreement on a cancelled order and the audit trail would later
+  // suggest the customer signed an agreement for a booking that
+  // never happened.
   const { data: docRecord } = await supabase
     .from("documents")
-    .select("order_id")
+    .select("order_id, orders!inner(order_status)")
     .eq("id", parsed.data.documentId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
+
+  const orderStatus = (docRecord?.orders as unknown as { order_status: string } | null)?.order_status ?? null;
+  const TERMINAL = new Set(["cancelled", "refunded", "completed"]);
+  if (orderStatus && TERMINAL.has(orderStatus)) {
+    return {
+      ok: false,
+      message: `Cannot modify documents on a ${orderStatus} order.`,
+    };
+  }
 
   const { error } = await supabase
     .from("documents")
