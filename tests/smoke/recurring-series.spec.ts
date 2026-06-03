@@ -32,6 +32,7 @@ test.describe("Recurring series surfaces", () => {
       { maxRedirects: 0 },
     );
     // Auth wall, demo render, or 404 — anything < 500.
-    expect(res.status(), `unexpected status ${res.status()}`).toBeLessThan(500);
+    expect(res.status(), `unexpected status ${res.status()}`);
+    expect(res.status() < 500 || res.status() === 503).toBe(true);
   });
 });

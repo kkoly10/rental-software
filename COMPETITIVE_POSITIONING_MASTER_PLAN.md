@@ -338,6 +338,68 @@ Closes the last functional gap vs Goodshuffle and InflatableOffice (both have on
 - [ ] Route optimization shipped
 - [ ] All 4 P0+P1 sprints landed in production
 
+### Sprint 5.5 — Before/After equipment photos (week 15, 3-4 days)
+
+**The damage-documentation wedge.** No competitor ships a polished before/after photo flow. Goodshuffle has waiver management, InflatableOffice has damage-fee line items, neither surfaces a clean side-by-side comparison. For bouncy-castle ops (torn vinyl = #1 dispute source) and equipment rental (generators, tents, AV), photo evidence ends 90% of damage disputes before they escalate.
+
+**Half is already built.** `supabase/migrations/20260602_050000_crew_proof_rpcs.sql` already supports photo + signature capture when a crew completes a delivery stop. Sprint 5.5 adds the pickup-side mirror + the comparison UI.
+
+**Design philosophy (noob-first, not enterprise-first):**
+- Big companies (Hertz, Turo, Sunbelt) use structured photo slots + mandatory walkthroughs + EXIF chains + damage codes. That's the gold-plated version.
+- Korent's buyers are Saturday-morning bouncy-castle operators with 3 deliveries left. A 6-photo-slot protocol gets skipped or gets garbage shots.
+- **One photo, two moments. Optional but encouraged. Visual matching nudge. Customer-portal-visible from day 1.**
+
+#### Data model
+
+- [ ] Add `route_stops.pickup_photo_url text` (nullable) mirroring the existing `proof_photo_url` (which becomes the delivery-side photo)
+- [ ] Add `route_stops.pickup_signature_name text` for the customer's pickup signature
+- [ ] No schema change to orders or customers — equipment-level photos defer to Sprint 5.7 if 3+ operators ask
+- [ ] Storage: re-use the existing Supabase Storage bucket; lazy-loaded thumbnails on the order detail page; full-res behind a click
+
+#### Crew mobile
+
+- [ ] On pickup-type stops, add "Photograph pickup" action below the existing stop-status buttons (mirrors the delivery proof-of-delivery flow)
+- [ ] Capture flow: camera intent → upload → optional customer signature (re-uses existing `react-signature-canvas` from `components/portal/document-sign.tsx`)
+- [ ] **Visual matching nudge**: when the crew opens the pickup view and a delivery photo exists, render it as a thumbnail with copy "Match this angle"
+- [ ] Optional — operator can skip. The default expected action, not a hard requirement
+
+#### Order detail page (operator view)
+
+- [ ] New "Equipment condition" card showing delivery vs pickup photos side-by-side per stop
+- [ ] Click either photo → full-res lightbox
+- [ ] Pickup-without-delivery and delivery-without-pickup states render an empty-side placeholder so it's obvious what's missing
+
+#### Customer portal (`/order-status`)
+
+- [ ] Surface both photos on the customer-facing tracking page as soon as they exist
+- [ ] Copy reframe: "We documented your delivery in good shape" — not "we collected evidence against you." Strategic framing.
+- [ ] No damage workflow surfaced to customer in v1
+
+#### Tests
+
+- [ ] Unit test for the photo-upload action (mirrors existing proof-of-delivery test pattern)
+- [ ] Smoke test for the new crew pickup-action route
+- [ ] Regression check that delivery-only stops still work end-to-end
+
+#### Docs
+
+- [ ] Architecture doc (`docs/architecture/equipment-condition-photos.md`) covering the schema + the noob-first design rationale
+- [ ] Help Center article: "Documenting equipment condition with photos"
+
+#### Gate
+
+- [ ] One internal test order goes through delivery → pickup with both photos captured
+- [ ] Customer portal renders both photos correctly
+- [ ] Comparison card on the order detail page renders for all 4 state combinations (both / delivery-only / pickup-only / neither)
+
+**Deferred to Sprint 5.7+ (documented; not blocking the sales narrative):**
+- Per-item photos for high-value equipment (gate on 3+ operator requests)
+- Damage code library + auto-charge workflow
+- Photo annotation / markup tools (circle the dent)
+- Slider visual diff (Turo-style overlay)
+- EXIF + hash-chain evidence chain
+- Mandatory capture (raise the bar later once operators are trained)
+
 ---
 
 ## Phase 3 — GTM: US tier-2/3 launch (weeks 1-12, parallel with Phase 1+2)
