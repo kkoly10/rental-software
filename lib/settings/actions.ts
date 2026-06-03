@@ -93,6 +93,59 @@ export async function updateBusinessProfile(
   return { ok: true, message: "Business profile updated." };
 }
 
+/**
+ * Sprint 1.5 — Smart Delivery Mode toggle.
+ *
+ * Owner/admin only. Writes the `routing_mode` column directly (not the
+ * settings JSON) so a future analytics query can answer "what fraction
+ * of orgs use auto mode?" without unpacking a jsonb.
+ */
+export async function updateRoutingMode(
+  _prevState: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const raw = String(formData.get("routing_mode") ?? "").trim();
+  if (raw !== "auto" && raw !== "manual") {
+    return { ok: false, message: "Invalid routing mode." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: routing mode would be updated." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+  const role = await getUserRole(supabase, ctx.organizationId, ctx.userId);
+  if (role !== "owner" && role !== "admin") {
+    return {
+      ok: false,
+      message: "Only owners and admins can change routing mode.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("organizations")
+    .update({ routing_mode: raw })
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/deliveries");
+  return {
+    ok: true,
+    message:
+      raw === "auto"
+        ? "Smart Delivery Mode is now on. New orders will auto-schedule."
+        : "Manual route management is now on. You'll create routes yourself.",
+  };
+}
+
 export async function updateWebsiteSettings(
   _prevState: SettingsActionState,
   formData: FormData

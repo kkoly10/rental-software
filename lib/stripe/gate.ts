@@ -40,14 +40,25 @@ export async function checkPlanLimit(
  * Check if a feature is available on the current plan.
  */
 export async function checkFeatureAccess(
-  feature: "stripe_payments" | "ai_copilot" | "csv_export" | "priority_support"
+  feature:
+    | "stripe_payments"
+    | "ai_copilot"
+    | "csv_export"
+    | "quickbooks_export"
+    | "priority_support"
 ): Promise<GateResult> {
   const sub = await getSubscriptionInfo();
 
+  // QuickBooks export sits at the Pro tier because the positioning is
+  // "Pro includes the QuickBooks sync Goodshuffle charges $39/mo for as
+  // an add-on" — see COMPETITIVE_POSITIONING_MASTER_PLAN.md. The general
+  // csv_export gate stays at Growth so we don't cannibalize the Growth
+  // upsell for bulk data dumps.
   const featurePlanRequirements: Record<string, PlanTier[]> = {
     stripe_payments: ["pro", "growth"],
     ai_copilot: ["pro", "growth"],
     csv_export: ["growth"],
+    quickbooks_export: ["pro", "growth"],
     priority_support: ["growth"],
   };
 

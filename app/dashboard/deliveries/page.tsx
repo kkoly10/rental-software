@@ -11,15 +11,19 @@ import { RouteMapWrapper } from "./route-map-wrapper";
 import { CreateRouteForm } from "@/components/deliveries/create-route-form";
 import { getTeamMembersForRoute } from "@/lib/data/unrouted-orders";
 import { getMessages } from "@/lib/i18n/server";
+import { getRoutingMode } from "@/lib/data/routing-mode";
 
 export default async function DeliveriesPage() {
-  const [board, teamMembers, m] = await Promise.all([
+  const [board, teamMembers, routingMode, m] = await Promise.all([
     getDeliveryBoardData(),
     getTeamMembersForRoute(),
+    getRoutingMode(),
     getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
+  const hasAnyRoutes =
+    board.assigned.length + board.inProgress.length + board.completed.length > 0;
   const enhancedRoute = board.primaryRoute
     ? await getRouteDetailEnhanced(board.primaryRoute.id)
     : null;
@@ -33,11 +37,32 @@ export default async function DeliveriesPage() {
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
       )}
 
-      <section className="panel" style={{ marginBottom: 20 }}>
-        <div className="kicker">{m.dashboard.deliveries.kickerDispatch}</div>
-        <h2 className="page-title-sm" style={{ marginTop: 6 }}>{m.dashboard.deliveries.sectionCreateRoute}</h2>
-        <CreateRouteForm teamMembers={teamMembers} />
-      </section>
+      {routingMode === "auto" ? (
+        <section className="panel" style={{ marginBottom: 20 }}>
+          <div className="kicker">{m.dashboard.deliveries.autoMode.kicker}</div>
+          <h2 className="page-title-sm" style={{ marginTop: 6 }}>
+            {hasAnyRoutes
+              ? m.dashboard.deliveries.autoMode.titleWithRoutes
+              : m.dashboard.deliveries.autoMode.titleEmpty}
+          </h2>
+          <p className="muted" style={{ fontSize: 14, marginTop: 8 }}>
+            {hasAnyRoutes
+              ? m.dashboard.deliveries.autoMode.bodyWithRoutes
+              : m.dashboard.deliveries.autoMode.bodyEmpty}
+          </p>
+          <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
+            <a href="/dashboard/settings" style={{ textDecoration: "underline" }}>
+              {m.dashboard.deliveries.autoMode.manualLink}
+            </a>
+          </p>
+        </section>
+      ) : (
+        <section className="panel" style={{ marginBottom: 20 }}>
+          <div className="kicker">{m.dashboard.deliveries.kickerDispatch}</div>
+          <h2 className="page-title-sm" style={{ marginTop: 6 }}>{m.dashboard.deliveries.sectionCreateRoute}</h2>
+          <CreateRouteForm teamMembers={teamMembers} />
+        </section>
+      )}
 
       <div className="delivery-board">
         <section className="panel">
@@ -66,6 +91,12 @@ export default async function DeliveriesPage() {
                         >
                           {m.dashboard.deliveries.openRoute}
                         </Link>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}/pull-sheet`}
+                          className="ghost-btn"
+                        >
+                          {m.dashboard.deliveries.pullSheet}
+                        </Link>
                       </div>
                     </div>
                   ))
@@ -91,6 +122,12 @@ export default async function DeliveriesPage() {
                         >
                           {m.dashboard.deliveries.openRoute}
                         </Link>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}/pull-sheet`}
+                          className="ghost-btn"
+                        >
+                          {m.dashboard.deliveries.pullSheet}
+                        </Link>
                       </div>
                     </div>
                   ))
@@ -115,6 +152,12 @@ export default async function DeliveriesPage() {
                           className="ghost-btn"
                         >
                           {m.dashboard.deliveries.openRoute}
+                        </Link>
+                        <Link
+                          href={`/dashboard/deliveries/${route.id}/pull-sheet`}
+                          className="ghost-btn"
+                        >
+                          {m.dashboard.deliveries.pullSheet}
                         </Link>
                       </div>
                     </div>

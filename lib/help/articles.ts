@@ -270,7 +270,252 @@ Use the action buttons next to each document to mark it as "Sent" or "Signed."
     related: ["creating-orders", "recording-payments"],
   },
 
+  // Orders
+  {
+    slug: "recurring-bookings",
+    title: "Setting up a recurring booking",
+    section: "Orders",
+    summary: "Auto-generate weekly, monthly, or custom-cadence bookings from a single template.",
+    body: `For customers who rent on a regular schedule — a Saturday bouncy castle for 8 weeks, or a monthly storage tent — Korent can generate the future bookings for you.
+
+**Create a recurring series:**
+
+1. Open the order you want to use as the template (same customer, address, items)
+2. In the action row, click **Make recurring**
+3. Pick a **Cadence** — Daily / Weekly / Every 2 weeks / Monthly / Quarterly
+4. Set the **multiplier** — "every 2 weeks" = cadence Weekly, multiplier 2
+5. Set a stop condition: either an **End date**, a **Max occurrences** count, or leave both blank for "indefinite"
+6. Click **Create series**
+
+Korent immediately generates the next ~2 years of bookings (or fewer if a stop condition kicks in earlier). Each child booking gets confirmed automatically and inherits the template's items and pricing.
+
+**Cancel or pause:**
+
+Open any order in the series — the **Recurring series** section at the bottom of the page lets you:
+- **Pause** — stop generating new bookings, leave existing ones intact. Use for seasonal pauses.
+- **Resume** — re-activate a paused series; catches up missed cycles.
+- **Cancel** — stop generation permanently. The checkbox "Also cancel future bookings" cancels child orders whose event date is still in the future. Past bookings are always preserved.
+
+**Edit the cadence:**
+
+Cadence is locked once the series is created. To change it, cancel the series and create a new one. (Editing the cadence on the fly is a planned follow-up.)
+
+**Edit the items:**
+
+Items are copied from the template at series-create time and frozen on each child. Editing the template later does NOT propagate to existing children. Regenerating with new items is also planned.
+
+**Tips:**
+
+- Use **monthly** for long-term equipment rentals (Booqable can't do this — it's a real Korent wedge)
+- Use **weekly** for repeat-event customers (every Saturday for the summer)
+- The **horizon** is 2 years out. If you set "indefinite," Korent keeps generating new bookings every night as the horizon rolls forward.`,
+    related: ["creating-orders", "cancelling-orders"],
+  },
+
+  // Notifications
+  {
+    slug: "whatsapp-notifications",
+    title: "Setting up WhatsApp notifications",
+    section: "Notifications",
+    summary: "Send order, deposit, and delivery updates over WhatsApp — the channel many of your customers actually use.",
+    body: `WhatsApp is the default messaging channel in Mexico, much of Latin America, and increasingly in US Hispanic markets. Korent can send order confirmations, deposit reminders, and delivery updates over WhatsApp to customers who opt in — with automatic SMS fallback for everyone else. **No other rental software ships this.**
+
+**External setup (do this before flipping the toggle):**
+
+1. **Twilio account**: open the Twilio Console → Messaging → Try it out → Send a WhatsApp message. Note the sandbox sender (typically <code>+1 415 523 8886</code>) for testing.
+
+2. **Submit templates for Meta approval**. Each notification type needs a pre-approved template. Use Korent's exact wording (we send these to Meta verbatim):
+
+   - Order Confirmation: "Hi from {{1}}! Your booking {{2}} is confirmed. We'll be in touch with delivery details."
+   - Deposit Reminder: "Reminder from {{1}}: a {{3}} deposit is due to confirm booking {{2}}."
+   - Delivery Scheduled: "{{1}} delivery for {{2}} is scheduled for {{3}}, {{4}}."
+   - Delivery En Route: "{{1}} is on the way with your order {{2}}. ETA {{3}}. Track: {{4}}"
+   - Delivery Completed: "Your delivery for {{2}} from {{1}} is complete. Thanks for choosing us!"
+
+   Approval is usually minutes for "utility" templates, longer for "marketing".
+
+3. **Add the Twilio Content SIDs** to your deployment as env vars:
+   <code>WHATSAPP_TEMPLATE_ORDER_CONFIRMATION</code>, <code>WHATSAPP_TEMPLATE_DEPOSIT_REMINDER</code>, etc. (one per template). Until these are set, the corresponding notification type falls back to SMS even if the channel is enabled.
+
+**Turning it on inside Korent:**
+
+1. Go to **Settings → SMS Notifications**
+2. Scroll to the **WhatsApp Business** section
+3. Tick **Enable WhatsApp notifications**
+4. Paste your Twilio WhatsApp sender number (E.164 format)
+5. Save
+
+**Customer opt-in:**
+
+Each customer has a separate "WhatsApp opt-in" flag on their detail page. Set it to ON for customers who've confirmed they want WhatsApp instead of SMS. Customers who haven't opted in keep receiving SMS — no spam risk.
+
+**What happens when something fails:**
+
+If WhatsApp send fails (template not approved, Twilio outage, customer never started a conversation), Korent automatically falls back to SMS. The communication log on the customer page shows which channel actually delivered.
+
+**Tips:**
+
+- Customers in the US who use iPhone Messages often have RCS/iMessage — those land via SMS, which is fine. WhatsApp opt-in is most valuable for international customers and the US Hispanic market.
+- Use the Twilio sandbox sender for testing. Production sender approval from Meta takes ~1-2 weeks once your business is verified.`,
+    related: ["sms-settings"],
+  },
+
+  // Payments
+  {
+    slug: "xero-sync",
+    title: "Connecting Xero",
+    section: "Payments",
+    summary: "Push paid invoices into Xero — same as QuickBooks, just a different accounting backend.",
+    body: `If your accountant uses Xero (especially common for newer or smaller businesses, or operators outside the US), Korent can push paid invoices straight into your Xero file.
+
+**Connect Xero:**
+
+1. **Settings → Integrations**, click **Connect Xero**
+2. Sign in to Xero and grant access to the organization you want to sync to
+3. If you have multiple Xero organizations, the first one in your list is used (multi-organization chooser is a planned follow-up)
+4. You'll land back on Settings with "Xero connected"
+
+**Test it on a real order:**
+
+Same drill as QuickBooks — open a Confirmed or Delivered order and click **Sync to Xero**. Open Xero in another tab and confirm the invoice landed under the contact.
+
+**Auto-sync trigger:**
+
+Orders sync automatically when they move to **Delivered**. Daily reconcile retries failures the next morning.
+
+**Both QuickBooks and Xero connected?**
+
+That's fine. Each integration tracks its own sync state. Every paid order tries both. You won't get duplicate invoices in one accounting system — each provider's sync is independent.
+
+**Tips:**
+
+- Contact matching uses the customer's name (display name in Xero). Two "John Smith" entries will match the first one — rename in Xero to disambiguate.
+- Invoices land as **Authorised** status, ready for your accountant to mark paid once the deposit is reconciled.
+- Item line descriptions come from Korent's stored item snapshot.`,
+    related: ["quickbooks-sync", "recording-payments"],
+  },
+
+  {
+    slug: "quickbooks-sync",
+    title: "Connecting QuickBooks Online",
+    section: "Payments",
+    summary: "Push your Korent invoices into QuickBooks so your accountant doesn't have to copy them.",
+    body: `**What this does:**
+
+Once connected, every order that reaches the **Delivered** status automatically becomes a QuickBooks invoice — with the customer, line items, and delivery fee. Your accountant opens QuickBooks, sees the up-to-date books, and you spend less time copying numbers.
+
+**Connect QuickBooks:**
+
+1. Go to **Settings → Integrations** in the sidebar
+2. Click **Connect QuickBooks**
+3. Sign in to Intuit and grant access to the company file you want to sync
+4. You'll land back on Settings with "QuickBooks connected"
+
+**Test it on a real order:**
+
+Don't trust the auto-sync blind — try it once:
+1. Open any **Confirmed** or **Delivered** order
+2. Click **Sync to QuickBooks**
+3. Open QuickBooks in another tab — the invoice should appear under the customer
+4. If anything's off, the "Last sync error" line on the Settings card tells you what happened
+
+**Auto-sync trigger:**
+
+Orders sync automatically when they move to **Delivered**. If a sync fails (network blip, rate limit), the daily reconcile job retries it the next morning.
+
+**Disconnect:**
+
+Settings → Integrations → **Disconnect**. Removes the connection from Korent and revokes the access at Intuit. Your existing QuickBooks invoices stay intact.
+
+**Tips:**
+
+- Customer names: Korent uses the customer's display name to find existing QBO customers. If you have two "John Smith" entries, only the first will be matched. Rename one in QBO if this becomes a problem.
+- Already-paid deposits: the QBO invoice is created with the full total. Marking the deposit paid is done inside QBO by your accountant.`,
+    related: ["recording-payments", "exporting-payments"],
+  },
+
   // Deliveries & Crew
+  {
+    slug: "route-optimization",
+    title: "Optimizing your delivery route",
+    section: "Deliveries & Crew",
+    summary: "One click reorders the day's stops by shortest drive time.",
+    body: `When you have 4+ stops on a route, ordering them by hand is a real time sink — and the wrong order means more miles, more gas, and an irritated crew. Sprint 5 ships a one-click optimizer that uses Mapbox to compute the shortest route through all stops.
+
+**How to use it:**
+
+1. Open the route detail page from the Deliveries kanban
+2. Click **Optimize route** in the action row
+3. Wait ~2 seconds — Mapbox computes the optimal order
+4. You'll see a confirmation: "Optimized — 47 mi, 1h 38m"
+5. The stops are re-numbered immediately; the crew mobile view picks up the new order on next refresh
+
+**Locked stops stay locked.** Stops your crew has already started (en route, completed, skipped) keep their original sequence at the head of the route. Only "Pending" stops get reordered.
+
+**Missing coordinates?** If a customer's delivery address never got geocoded, that stop falls to the tail of the route and you'll see a note "N stops without coordinates were left at the end." Fix it by adding a more specific address on the customer page.
+
+**When the button is hidden:** Routes in progress or completed can't be reordered (it would confuse the driver). Mark the route Planned again if you really need to re-optimize.
+
+**Cost:** Each click is roughly $0.002 on Mapbox's paid tier, free under the 50k/mo free tier. Most operators stay free.
+
+**External setup:** the operator needs to set <code>MAPBOX_ACCESS_TOKEN</code> in the deploy. Without it, the button surfaces a "Mapbox isn't configured" message and you can keep ordering by hand.`,
+    related: ["delivery-routes", "smart-delivery-mode", "pull-sheets"],
+  },
+  {
+    slug: "smart-delivery-mode",
+    title: "How auto-scheduling (Smart Delivery Mode) works",
+    section: "Deliveries & Crew",
+    summary: "Why you don't need to create a route by hand for every delivery.",
+    body: `Korent's default behavior is **Smart Delivery Mode** — the system auto-creates delivery routes and bundles same-day orders together so you can dispatch with a single click. No more "create route, then add stop, then start route" three-step ritual.
+
+**How it works:**
+
+1. **You confirm an order with a delivery address.** Korent checks if a route already exists for that delivery date.
+2. **If no route exists:** Korent creates one named "Deliveries for {date}" with no driver/vehicle assigned (you can fill those in later if you want).
+3. **If a route already exists:** Korent adds the new order to it. Stops are auto-sequenced by event time, so the loading order matches your day.
+4. **When the crew is ready to roll**, open the order and click **Send delivery**. The stop is marked en-route, the route is marked in-progress, and the customer gets an SMS (if you have SMS turned on).
+
+**What if I have 3 orders for the same Saturday?**
+
+All three land on the same auto-created "Deliveries for Saturday" route, in event-time order. One trip, multiple stops.
+
+**What if I want to drive the route myself?**
+
+Open the route from the Deliveries page. You can drag-reorder stops, assign a driver/vehicle, or even add a manual stop. Nothing is taken away — Smart Delivery Mode just removes the **mandatory** parts.
+
+**What happens if I cancel an order?**
+
+Korent automatically removes that order's stop from its route. If it was the only stop on a planned route, the empty route is cleaned up too.
+
+**Turning it off (manual mode):**
+
+If you prefer to plan routes manually before dispatching, go to **Settings → Smart Delivery Mode** and switch to manual. The classic flow is preserved exactly as it was.`,
+    related: ["delivery-routes", "crew-mobile", "pull-sheets"],
+  },
+  {
+    slug: "pull-sheets",
+    title: "Printing a pull sheet for a route",
+    section: "Deliveries & Crew",
+    summary: "Generate a printable load list for your delivery crew.",
+    body: `A pull sheet is a printable load list that tells the crew exactly what to load on the truck before leaving the warehouse — and what to drop at each stop once they arrive.
+
+**Two sections in every pull sheet:**
+
+- **Load totals** — aggregated counts across the whole route ("12 round tables, 88 chairs, 1 bounce house"). The crew uses this list to load the truck once.
+- **Stop-by-stop** — each delivery stop shows the customer, address, time window, and the specific items destined for that stop. Used at the venue to confirm what to drop.
+
+Pickup stops are intentionally excluded from the pull sheet since they're picked up at the end of the day, not loaded at the start.
+
+**How to print a pull sheet:**
+
+1. Go to **Deliveries** in the sidebar
+2. On any route card, click **Pull sheet** — or open the route detail page and click **Pull sheet** in the actions area
+3. Review the on-screen view
+4. Click **Download PDF** to save or print
+
+**Tip:** Print one copy per truck. The PDF includes checkboxes next to each item so the crew can tick items off as they load.`,
+    related: ["delivery-routes", "crew-mobile"],
+  },
   {
     slug: "delivery-routes",
     title: "Planning delivery routes",

@@ -11,6 +11,14 @@ import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
+import { SendDeliveryButton } from "@/components/orders/send-delivery-button";
+import { SyncQuickBooksButton } from "@/components/orders/sync-quickbooks-button";
+import { SyncXeroButton } from "@/components/orders/sync-xero-button";
+import { MakeRecurringForm } from "@/components/orders/make-recurring-form";
+import { SeriesInfoCard } from "@/components/orders/series-info-card";
+import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
+import { getXeroStatus } from "@/lib/data/xero-status";
+import { getOrderSeriesSummary } from "@/lib/data/order-series";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
@@ -34,12 +42,17 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications, routingState, m] = await Promise.all([
+  const [order, communications, routingState, qbStatus, xeroStatus, seriesSummary, m] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
     getOrderRoutingState(id),
+    getQuickBooksStatus(),
+    getXeroStatus(),
+    getOrderSeriesSummary(id),
     getMessages(),
   ]);
+  const qboConnected = qbStatus.configured && qbStatus.connected;
+  const xeroConnected = xeroStatus.configured && xeroStatus.connected;
 
   const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
@@ -225,6 +238,14 @@ export default async function OrderDetailPage({
               <SendQuoteButton orderId={id} />
             )}
             <ConfirmOrderButton orderId={id} currentStatus={order.status} />
+            <SendDeliveryButton orderId={id} currentStatus={order.status} />
+            {qboConnected && <SyncQuickBooksButton orderId={id} />}
+            {xeroConnected && <SyncXeroButton orderId={id} />}
+            <MakeRecurringForm
+              orderId={id}
+              orderStatus={order.status}
+              alreadyInSeries={Boolean(seriesSummary)}
+            />
             {(order.status === "Quote Sent" || order.status === "Inquiry") && (
               <a
                 href={`/api/quotes/${id}`}
@@ -255,6 +276,29 @@ export default async function OrderDetailPage({
           </div>
         </aside>
       </div>
+
+      {seriesSummary && (
+        <div className="panel stack-gap-sm" style={{ marginTop: 16 }}>
+          <div className="section-header">
+            <div>
+              <div className="kicker">Recurring series</div>
+              <h2 className="page-title-sm">Series controls</h2>
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <SeriesInfoCard
+              seriesId={seriesSummary.seriesId}
+              occurrenceNumber={seriesSummary.occurrenceNumber}
+              frequency={seriesSummary.frequency}
+              intervalCount={seriesSummary.intervalCount}
+              status={seriesSummary.status}
+              startDate={seriesSummary.startDate}
+              endDate={seriesSummary.endDate}
+              maxOccurrences={seriesSummary.maxOccurrences}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Communications audit trail */}
       <div className="panel stack-gap-sm">

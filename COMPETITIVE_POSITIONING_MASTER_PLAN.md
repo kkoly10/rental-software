@@ -40,54 +40,185 @@ Decisions that frame everything else. **Done** before any sprint starts.
 
 ---
 
-## Phase 1 — Gap closure: P0 features (weeks 1-6)
+## Phase 1 — Gap closure: P0 features (weeks 1-8)
 
 Goal: close the gaps that make a credible head-to-head comparison page against Goodshuffle Pro impossible to publish today.
 
-### Sprint 1 — Pull sheets / loading lists (week 1-2)
+### Sprint 1 — Pull sheets / loading lists + QBO CSV export (week 1-2)
 
-The smallest credible-gap close. Trivial from existing route + order data.
+The smallest credible-gap close. Trivial from existing route + order data. Also includes a 1-day QBO CSV export quick-win to remove the immediate "do you sync with QuickBooks?" sales objection before the full integration ships in Sprint 2.
 
-- [ ] Audit existing `routes` and `route_stops` tables for required fields
-- [ ] Build `lib/logistics/pull-sheet.ts` — given a route, return ordered list of items to load
-- [ ] Add `app/dashboard/deliveries/[routeId]/pull-sheet` page (printable view)
-- [ ] PDF export via existing jsPDF infra (`lib/invoices/generate-pdf.ts` pattern)
-- [ ] Add "Print pull sheet" button on the delivery board kanban card
-- [ ] Playwright test: route → print pull sheet → PDF contains all items
-- [ ] Update Help Center article on delivery workflow
-- [ ] **Gate**: pull sheet feature works end-to-end on staging
+**Pull sheets:**
+- [x] Audit existing `routes` and `route_stops` tables for required fields
+- [x] Build `lib/logistics/pull-sheet.ts` — given a route, return ordered list of items to load
+- [x] Add `app/dashboard/deliveries/[routeId]/pull-sheet` page (printable view)
+- [x] PDF export via existing jsPDF infra (`lib/invoices/generate-pdf.ts` pattern) — `lib/logistics/generate-pull-sheet-pdf.ts` + `app/api/deliveries/[id]/pull-sheet/route.ts`
+- [x] Add "Print pull sheet" button on the delivery board kanban card AND route detail page
+- [x] Playwright smoke test: `tests/smoke/pull-sheet.spec.ts`
+- [x] Help Center article: `pull-sheets` slug in `lib/help/articles.ts`
 
-### Sprint 2 — QuickBooks Online integration (weeks 3-4)
+**QBO CSV export (quick-win):**
+- [x] Build `lib/integrations/quickbooks/csv-export.ts` — format invoices for QBO import
+- [x] Add "Export for QuickBooks" button on `app/dashboard/payments/page.tsx`
+- [x] Match Intuit's expected import schema (InvoiceNo, Customer, InvoiceDate, DueDate, Item, ItemQuantity, ItemRate, ItemAmount, Memo)
+- [x] Documentation in `docs/integrations/quickbooks-csv.md` explaining the workflow to accountants
+- [x] Unit test for CSV escape logic: `tests/quickbooks-csv-format.test.ts` (7 tests, all passing)
+- [x] New `quickbooks_export` feature gate (Pro+) — `lib/stripe/gate.ts`
+- [ ] **Gate**: pull sheet + QBO CSV export both work end-to-end on staging (pending Vercel preview verification)
+
+**Deferred follow-ups** (small enhancements, not blocking):
+- [ ] Date-range picker on QBO export for quarterly bookkeeping workflows
+- [ ] Pull sheet PDF: support for pickup-stop section (currently delivery-only)
+- [ ] In-app Help Center article for the QBO CSV export workflow (currently dev-facing docs only)
+
+### Sprint 1.5 — Smart Delivery Mode (weeks 3-4)
+
+**Goal**: collapse the 3-click "create route → add stop → start delivery" ritual into a 1-click "Send delivery" per order for the ~80-90% of operators who are noobs or time-poor SMB owners. Preserve manual route control for the minority of power users via a Settings → Advanced toggle.
+
+**Background**: a recon of the existing delivery flow surfaced that a brand-new operator with 1 confirmed order today must (a) create a route, (b) navigate into that route, (c) add the order as a stop, (d) click Start Route — and the route abstraction is jargon they've never met before. The existing auto-attach (`lib/routes/auto-attach.ts`) silently fails when no route exists yet, which is the most common starting state.
+
+Market evidence: 80-90% of US/Mexico party rental operators are not on any rental SaaS today (see [`docs/strategy/01-market-analysis.md`](docs/strategy/01-market-analysis.md) and [`02-competitive-analysis.md`](docs/strategy/02-competitive-analysis.md)). The median Korent buyer has never used the word "route" professionally. The "route" abstraction is load-bearing for multi-stop dispatch but dead weight for single-order days. The strategic decision to ship Option C (route invisible by default + Settings toggle for power users) is recorded in [`docs/strategy/README.md`](docs/strategy/README.md).
+
+#### Data model
+
+- [x] Add `organizations.routing_mode text not null default 'auto'` with check constraint `in ('auto', 'manual')` — `supabase/migrations/20260603_010000_smart_delivery_mode.sql`
+- [x] Migration default for existing orgs: pre-flip to `'manual'` if the org has any existing routes (preserves their workflow); otherwise leave at `'auto'`
+- [x] Legacy `settings.auto_route_on_confirm = false` also pinned to `'manual'` as a safety net
+- [x] No schema change to `routes` or `route_stops` — the logic change is purely in actions + cleanup
+- [x] One-time zombie cleanup migration: past-dated `planned` routes with zero stops deleted on deploy
+
+#### Auto-create + auto-bundle (the core change)
+
+- [x] Extended `lib/routes/auto-attach.ts`: handles the "no route exists" branch by creating `"Deliveries for {formatted date}"` and attaching
+- [x] 2nd, Nth same-date order auto-bundles into the existing route
+- [x] Auto-sequence stops by `event_start_time` (timestamptz, already tz-corrected) on every insert via a safe two-pass renumber that respects the `(route_id, stop_sequence)` unique index
+- [x] Manual mode: existing behavior preserved (auto-attach bails on `no_route`)
+- [x] `AutoAttachResult` now carries `created: boolean` so the order action can render "Auto-scheduled on …" vs "Added to route …" appropriately
+
+#### Per-order "Send delivery" button
+
+- [x] `components/orders/send-delivery-button.tsx` — visible when order is `confirmed` or `scheduled`
+- [x] Mounted on `app/dashboard/orders/[id]/page.tsx` next to ConfirmOrderButton
+- [x] Atomic RPC `dispatch_order_delivery` in `supabase/migrations/20260603_020000_dispatch_order_delivery_rpc.sql`:
+  - Stop → `en_route`
+  - Route → `in_progress` (idempotent)
+  - Order → `out_for_delivery`
+- [x] `lib/routes/dispatch.ts` wraps the RPC with friendly error messages per documented `reason`
+- [x] Customer "delivery on the way" SMS fires from both the new path and the legacy `updateStopStatus` path via shared helper `lib/routes/send-en-route-sms.ts` (closes a gap where the new button would have silently skipped the customer notification)
+- [ ] **Deferred to follow-up**: render "Auto-scheduled on Deliveries for {date} (stop #N of M)" context line on the order detail page (the data is there but not yet surfaced)
+
+#### Cleanup rules (kill the zombies)
+
+- [x] `removeStopFromRoute` (lib/routes/actions.ts): last-stop removal on a `planned` route always deletes the route — broadened from "only if the route never had stops"
+- [x] `removeOrderStopOnCancel` in `lib/routes/remove-stop-on-cancel.ts`: when an order moves to `cancelled`, its stop is auto-removed, sequencing closed, and the route deleted if it was the last stop. Wired into `updateOrderStatus`. Applies in both auto AND manual mode.
+- [x] `refunded` intentionally NOT in the chain — refunds happen on already-delivered orders; tearing down a stop mid-delivery would confuse the crew. Documented in `docs/architecture/smart-delivery-mode.md`.
+
+#### Empty-state UX
+
+- [x] `/dashboard/deliveries` in auto mode: new top panel explains "Korent will auto-schedule"; manual-mode link in the footer
+- [x] Manual mode preserves the existing "Create a Route" form
+- [x] Settings → Smart Delivery Mode section with a one-click toggle (`components/settings/routing-mode-form.tsx`) — Pro+ copy explains auto vs manual
+
+#### Terminology change for single-stop routes
+
+- [ ] **Deferred**: kanban cards still show "Route" jargon. The auto-mode top panel reframes the page narrative; per-card label change is a small follow-up.
+
+#### Crew mobile
+
+- [x] Crew mobile path is unchanged at the data layer; works with auto-routes (routes look the same whether created by a human or by `auto-attach`). Smoke verified via build + typecheck.
+- [ ] **Deferred**: copy update on the "No routes for today" empty state.
+
+#### Tests
+
+- [x] `tests/auto-attach-create.test.ts` — 7 unit tests covering auto-create, auto-bundle, manual-mode bail, legacy kill-switch, no-event-date, no-address, ambiguous-routes
+- [x] All 20 unit tests pass (`compute-financials`, `portal-access-token`, `quickbooks-csv-format`, `rate-limit-policy`, `auto-attach-create`)
+- [ ] **Deferred**: Playwright walkthrough (signup → confirm → Send delivery → out_for_delivery); SQL test for the zombie cleanup migration. Both add coverage without changing behavior; they can land in a small follow-up.
+
+#### Documentation
+
+- [x] New Help Center article `smart-delivery-mode` in `lib/help/articles.ts`
+- [x] `docs/architecture/smart-delivery-mode.md` covering the algorithm, the two-pass re-sequence, the dispatch RPC contract, the cancellation chain, and the explicit non-goals
+- [ ] **Deferred**: refresh of the existing `delivery-routes` and `crew-mobile` Help Center articles to mention manual mode is now an opt-in
+
+#### Migration & rollout
+
+- [x] Two migrations: `20260603_010000_smart_delivery_mode.sql` + `20260603_020000_dispatch_order_delivery_rpc.sql`
+- [x] No feature flag. Auto is the default for new orgs; existing orgs with routes pre-flip to manual.
+- [x] i18n strings added to en/es/fr/pt for the auto-mode panel + Settings toggle + Send delivery button
+
+#### Gate
+
+- [x] TypeScript clean
+- [x] Production build clean
+- [x] All 20 unit tests pass
+- [ ] Manual smoke on Vercel preview: signup → create order → confirm → see auto-attach message → click Send delivery → order is `out_for_delivery`
+- [ ] Manual smoke: cancel an order with a stop → verify route is cleaned up if last stop
+- [ ] Manual smoke: Settings → switch to manual → verify deliveries dashboard reverts to "Create a Route" form
+
+### Sprint 2 — QuickBooks Online integration (weeks 5-6)
 
 The single biggest deal-blocker vs Goodshuffle. Even one-way sync (Korent → QBO invoices and payments) closes the practical use case.
 
+**External (founder, parallel to engineering):**
 - [ ] Register Intuit developer account + OAuth app (sandbox)
-- [ ] Build `lib/integrations/quickbooks/client.ts` — OAuth flow + token refresh
-- [ ] Database: add `organizations.qbo_company_id`, `qbo_access_token`, `qbo_refresh_token` (encrypted)
-- [ ] Connect / disconnect UI in `app/dashboard/settings/integrations/page.tsx`
-- [ ] Sync paid invoices → QBO Invoice + Payment objects
-- [ ] Sync customers → QBO Customer on first invoice
-- [ ] Map Korent products → QBO Items (one-time setup per org)
-- [ ] Webhook listener for QBO disconnects / token expiration
-- [ ] Daily reconciliation cron — handle sync failures
-- [ ] Playwright test: order paid → QBO invoice appears in sandbox
-- [ ] Apply for Intuit certification (production scope)
-- [ ] **Gate**: 1 internal test org has 10+ successfully synced invoices
+- [ ] Configure OAuth redirect URI in Intuit dev portal to match `QBO_REDIRECT_URI`
+- [ ] Set `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_ENVIRONMENT` env vars in Vercel
+- [ ] Apply for Intuit certification (production scope, 4-8 weeks Intuit review)
 
-### Sprint 3 — Recurring bookings UI (weeks 5-6)
+**Engineering:**
+- [x] `lib/integrations/quickbooks/client.ts` — OAuth + Accounting API client with auto-refresh on 401
+- [x] Database: `organizations.qbo_realm_id` + token columns + `quickbooks_invoice_sync` table with RLS — `supabase/migrations/20260603_040000_quickbooks_online_connection.sql`
+- [x] Connect / disconnect / callback routes in `app/api/integrations/quickbooks/*`
+- [x] Settings → Integrations card (`components/settings/quickbooks-card.tsx`)
+- [x] Auto-sync paid invoices on `delivered` (fire-and-forget hook in `updateOrderStatus`)
+- [x] Manual "Sync to QuickBooks" button on order page for first-time testing + recovery
+- [x] Sync customers → QBO Customer on first invoice (find-or-create by display name)
+- [x] Daily reconciliation cron `/api/cron/quickbooks-reconcile` — retries failed/missing syncs (1h cool-off, cap 100/org/run)
+- [x] Help Center article + architecture doc
+- [x] 7 unit tests (URL building, token refresh, 401 retry, 429, network errors)
+- [x] Playwright HTTP smoke for route auth gating + cron secret
 
-Schema is already there. Build the UI to unlock tent/equipment monthly rentals (a Booqable explicit weakness).
+**Deferred to Sprint 2.5** (documented in `docs/architecture/quickbooks-online-sync.md`):
+- [ ] Token-at-rest encryption via Supabase Vault
+- [ ] QBO → Korent webhook listener (customer-merged, account-deleted)
+- [ ] Map Korent products → QBO Items
+- [ ] Payment record push
+- [ ] Refund / void handling
+- [ ] Batch operations for high-volume orgs
 
-- [ ] Read existing `recurring_pattern` schema in `supabase/migrations/...initial_schema.sql`
-- [ ] Build "Make recurring" toggle in booking form
-- [ ] UI for cadence: weekly / monthly / custom interval
-- [ ] End-date or count-based termination
-- [ ] Server action to generate child bookings (capped at 24 months out)
-- [ ] Calendar view shows recurring instances with link to series
-- [ ] Cancel-series action (with confirmation)
-- [ ] Email/SMS templates respect recurring-instance context
-- [ ] Playwright test: create monthly recurring booking → 12 instances appear on calendar
-- [ ] **Gate**: tested with internal demo org
+**Gate:**
+- [ ] Operator wires `QBO_CLIENT_ID` / `QBO_CLIENT_SECRET` to a sandbox app
+- [ ] 1 internal test org has 10+ successfully synced invoices (manual smoke after env wiring)
+- [ ] Intuit certification submitted
+
+### Sprint 3 — Recurring bookings UI (weeks 7-8)
+
+Schema for recurring patterns did NOT actually exist (the Sprint 1 recon was wrong); designed and shipped fresh. Unlocks tent/equipment monthly rentals (Booqable explicit weakness) and repeat-event party rentals.
+
+- [x] Designed schema: `order_series` table + `orders.order_series_id` + `series_occurrence_number` — `supabase/migrations/20260603_050000_recurring_order_series.sql`
+- [x] Build "Make recurring" form on the order detail page (`components/orders/make-recurring-form.tsx`)
+- [x] UI for cadence: daily / weekly / biweekly / monthly / quarterly with multiplier (1-52)
+- [x] End-date OR max-occurrences termination (operator picks)
+- [x] Pure cadence math module (`lib/orders/series-cadence.ts`) with month-end clamp, year rollover, leap-year handling
+- [x] Server action `createSeriesFromOrder` generates child orders eagerly (~2 year horizon, 104-batch cap)
+- [x] Daily expansion cron `/api/cron/expand-recurring-series` rolls the horizon forward for indefinite series
+- [x] Cancel-series action with "also cancel future bookings" checkbox (past orders always preserved)
+- [x] Pause / resume series controls
+- [x] SeriesInfoCard on child order pages showing cadence summary + controls
+- [x] 17 unit tests for the cadence math (every edge: month-end clamp, leap year, end_date inclusive, max_occurrences, batch cap, alreadyGeneratedThrough cursor, misconfigured ranges)
+- [x] Playwright smoke for cron auth + order page render regression
+- [x] Help Center article (`recurring-bookings`) + architecture doc (`docs/architecture/recurring-bookings.md`)
+
+**Deferred to Sprint 3.5** (documented in architecture doc):
+- [ ] Calendar view badge showing "part of series"
+- [ ] Email/SMS template adjustment to mention "occurrence N of M"
+- [ ] Edit cadence after creation (today: cancel + recreate)
+- [ ] Regenerate-future-occurrences after editing template items
+- [ ] Variable per-occurrence pricing (price escalator for long-running rentals)
+- [ ] Live-Supabase end-to-end Playwright walk (today covered by 17 cadence unit tests + auth smoke)
+
+**Gate:**
+- [ ] Tested with internal demo org (manual smoke once migrations are applied to the preview Supabase)
 
 ### Phase 1 gate
 
@@ -98,37 +229,108 @@ Schema is already there. Build the UI to unlock tent/equipment monthly rentals (
 
 ---
 
-## Phase 2 — Differentiation: P1 features (weeks 7-12)
+## Phase 2 — Differentiation: P1 features (weeks 9-14)
 
 Goal: ship the wedge features nobody else has, so the positioning isn't just "cheaper" but "actually better for specific workflows."
 
-### Sprint 4 — WhatsApp Business API (weeks 7-9)
+### Sprint 3.5 — Xero integration (week 9, 3-4 days)
+
+Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqable does (in beta). Instantly leapfrogs Goodshuffle on a feature their customers explicitly request — particularly newer/younger operators who chose Xero over QuickBooks.
+
+**External (founder):**
+- [ ] Register Xero developer account at developer.xero.com
+- [ ] Create app, get OAuth credentials
+- [ ] Set env vars: `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET`, `XERO_REDIRECT_URI`
+
+**Engineering:**
+- [x] `lib/integrations/xero/client.ts` — OAuth (PKCE) + Accounting API client with auto-refresh on 401 + tenant header
+- [x] Database: `organizations.xero_*` columns + `xero_invoice_sync` table with RLS — `supabase/migrations/20260603_060000_xero_connection.sql`
+- [x] One-way sync: paid invoices → Xero Contact + Invoice (ACCREC, AUTHORISED) — `lib/integrations/xero/sync.ts`
+- [x] Contact find-or-create by display name (mirrors QBO pattern)
+- [x] Connect / callback / disconnect routes (owner/admin, PKCE + state cookies)
+- [x] Settings → Integrations card sits next to the QBO card with its own banner
+- [x] Manual "Sync to Xero" button on the order page
+- [x] Auto-sync on `delivered` fires both QBO and Xero in parallel
+- [x] Daily reconcile cron `/api/cron/xero-reconcile` at 06:30 UTC
+- [x] 7 unit tests (PKCE pair, authorize URL, token refresh with tenant preservation, tenant header on API, 401 retry, 429, network)
+- [x] Playwright HTTP smoke for auth gating + cron secret
+- [x] Architecture doc (`docs/architecture/xero-sync.md`) + Help Center article (`xero-sync`)
+
+**Deferred to Sprint 3.7:**
+- [ ] Multi-tenant chooser UI
+- [ ] Token-at-rest Vault encryption (shared with QBO migration)
+- [ ] Xero webhook listener
+- [ ] Account-code mapping
+- [ ] Payment record push
+
+**Gate:**
+- [ ] Operator wires `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` to a sandbox app
+- [ ] 1 internal test org has 5+ successfully synced Xero invoices (manual smoke after env wiring)
+
+### Sprint 4 — WhatsApp Business API (weeks 9-11)
 
 **The single highest-leverage net-new feature.** None of the three competitors ship WhatsApp natively. Reuses existing Twilio abstraction.
 
-- [ ] Spike: verify Twilio WhatsApp BSP supports template + freeform messages required for transactional sends
-- [ ] Apply for WhatsApp Business sender approval (Twilio handles the Meta application)
-- [ ] Extend `lib/sms/provider.ts` → `lib/messaging/provider.ts` to abstract SMS + WhatsApp
-- [ ] WhatsApp message templates (deposit reminder, day-before reminder, weather alert) submitted to Meta for approval
-- [ ] Operator-level toggle: "Use WhatsApp where customer has WhatsApp; fall back to SMS"
-- [ ] Customer profile field: `whatsapp_opted_in` (boolean)
-- [ ] In-app conversation view shows WhatsApp threads alongside SMS
-- [ ] Playwright tests + sandbox messages
-- [ ] **Gate**: 1 internal test customer receives a WhatsApp deposit reminder
+**External (founder/operator):**
+- [ ] Twilio Console — enable WhatsApp on the account, get sandbox sender
+- [ ] Submit 5 templates for Meta approval (bodies in `lib/messaging/whatsapp-templates.ts`)
+- [ ] Apply for production WhatsApp Business sender approval
+- [ ] Add `WHATSAPP_TEMPLATE_*` env vars to Vercel once Twilio surfaces Content SIDs
 
-### Sprint 5 — Route auto-optimization (weeks 10-12)
+**Engineering:**
+- [x] New `lib/messaging/` module — `whatsapp-provider.ts` (Twilio WhatsApp send), `whatsapp-templates.ts` (ContentSid registry + positional variables), `dispatch.ts` (WhatsApp → SMS decision tree)
+- [x] Schema: `customers.whatsapp_opted_in`, `customers.whatsapp_number`, `organizations.whatsapp_enabled`, `organizations.whatsapp_sender_id` — `supabase/migrations/20260603_070000_whatsapp_business.sql`
+- [x] Communication log channel widened to include `whatsapp` — `supabase/migrations/20260603_080000_communication_log_whatsapp.sql`
+- [x] Existing `sendSmsNotification` threads through the dispatcher; falls back automatically when WhatsApp preconditions fail
+- [x] Operator toggle in Settings → SMS Notifications → WhatsApp section (`components/settings/whatsapp-settings-form.tsx`)
+- [x] Per-channel logging — comm log records which channel actually delivered
+- [x] 6 unit tests pinning the full decision tree (`tests/whatsapp-dispatch.test.ts`)
+- [x] Architecture doc + Help Center article (`whatsapp-notifications`)
+- [x] `.env.example` documents 7 template Content SID env vars
+
+**Deferred to Sprint 4.5** (documented in architecture doc):
+- [ ] Customer-facing opt-in flow (currently operator-toggled per customer)
+- [ ] In-app WhatsApp inbound message thread view
+- [ ] Per-template approval status surface on Settings
+- [ ] Multi-sender per org
+- [ ] WhatsApp-native rich content (images, location, interactive buttons)
+
+**Gate:**
+- [ ] Operator wires `TWILIO_*` env vars (already done if SMS works) + `WHATSAPP_TEMPLATE_*` SIDs
+- [ ] 1 internal test customer opts in, receives a WhatsApp deposit reminder, sees it in the comm log with the WhatsApp badge
+
+### Sprint 5 — Route auto-optimization (weeks 12-14)
 
 Closes the last functional gap vs Goodshuffle and InflatableOffice (both have one-click solvers).
 
-- [ ] Pick provider: Google Routes API (better for US, ~$5 per 1k stops) vs Mapbox Optimization (cheaper, OSS-friendly)
-- [ ] Build `lib/logistics/route-optimizer.ts` — given a list of stops, return optimized order
-- [ ] "Optimize route" button on `app/dashboard/deliveries/[routeId]` page
-- [ ] Cost preview (estimated drive time + distance) before applying
-- [ ] Cache optimization results per route (don't re-charge on view)
-- [ ] Handle locked stops (driver already departed → don't reorder en-route stops)
-- [ ] Optional: auto-calculate gas cost (from distance × fuel price) and labor cost (from time × driver wage)
-- [ ] Playwright test: 5-stop route → click optimize → order changes per algorithm
-- [ ] **Gate**: time savings demoable to 3 beta customers
+**External (founder/operator):**
+- [ ] Create a Mapbox account, mint an access token at https://account.mapbox.com/access-tokens/
+- [ ] Add `MAPBOX_ACCESS_TOKEN` env var to Vercel
+
+**Engineering:**
+- [x] Picked Mapbox Optimization v2 ($2/1k vs Google Routes ~$5/1k; provider-agnostic interface so swapping is single-file)
+- [x] `lib/logistics/route-optimizer.ts` — pure orchestration with `RouteOptimizerProvider` interface
+- [x] `lib/logistics/optimizers/mapbox.ts` — Mapbox v2 submit + poll adapter
+- [x] `lib/logistics/optimize-route-action.ts` — server action with role gate + state gate (planned-only)
+- [x] Distance + time summary shown right after click (e.g., "Optimized — 47 mi, 1h 38m")
+- [x] Schema cache: `routes.last_optimized_at`, `optimization_distance_meters`, `optimization_duration_seconds`, `optimization_provider` — `supabase/migrations/20260603_090000_route_optimization.sql`
+- [x] Locked-stop handling: en_route / completed / skipped keep original sequence at head; only pending stops get reordered
+- [x] Unoptimizable-stop handling: pending stops missing coords land at the tail; count surfaced in the action result
+- [x] "Optimize route" button (`components/deliveries/optimize-route-button.tsx`) mounted on `/dashboard/deliveries/[id]`
+- [x] 6 unit tests pinning the orchestration decision tree (happy path, locked head, missing coords tail, fewer-than-2 short circuit, provider failure, locked-sequence sort)
+- [x] Architecture doc (`docs/architecture/route-optimization.md`) + Help Center article (`route-optimization`)
+
+**Deferred to Sprint 5.5:**
+- [ ] Persistent optimization summary on the route detail page (currently only the post-click toast)
+- [ ] Time-window constraints honoring `scheduled_window_start`
+- [ ] Gas + labor cost summary (`distance × fuel_price + duration × driver_wage`)
+- [ ] Playwright e2e against Mapbox sandbox (requires real token)
+- [ ] A/B comparing optimizers via `optimization_provider` history
+
+**Gate:**
+- [ ] Operator wires `MAPBOX_ACCESS_TOKEN` to a Mapbox account
+- [ ] 1 internal demo route with 5+ stops optimizes successfully
+- [ ] Time savings demoable to 3 beta customers
 
 ### Phase 2 gate
 
@@ -320,8 +522,8 @@ When evidence arrives, move these into a decision in [`docs/strategy/README.md`]
 
 | Phase | Gate | Metric |
 |---|---|---|
-| Phase 1 | Week 6 | 3 P0 features in production |
-| Phase 2 | Week 12 | WhatsApp + route optimization in production |
+| Phase 1 | Week 8 | 4 P0 features in production (pull sheets, QBO CSV, Smart Delivery Mode, QBO full sync, recurring bookings) |
+| Phase 2 | Week 14 | WhatsApp + route optimization in production |
 | Phase 3 | Day 90 | 15 US paying customers, ~$735 MRR |
 | Phase 4 | Day 180 | 8+ Mexican paying customers OR pivot to US-only doubled budget |
 | Phase 5 | Month 6 | 2 InflatableOffice churn customers (conditional) |

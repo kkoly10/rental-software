@@ -13,16 +13,60 @@ import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
+import { RoutingModeForm } from "@/components/settings/routing-mode-form";
+import { QuickBooksCard } from "@/components/settings/quickbooks-card";
+import { XeroCard } from "@/components/settings/xero-card";
+import { WhatsAppSettingsForm } from "@/components/settings/whatsapp-settings-form";
+import { getRoutingMode } from "@/lib/data/routing-mode";
+import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
+import { getXeroStatus } from "@/lib/data/xero-status";
+import { getWhatsAppSettings } from "@/lib/data/whatsapp-settings";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 
-export default async function SettingsPage() {
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, m] = await Promise.all([
+const QBO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
+  connected: { tone: "success", copy: "QuickBooks connected. Paid invoices will sync automatically." },
+  disconnected: { tone: "success", copy: "QuickBooks disconnected." },
+  not_configured: { tone: "warning", copy: "QuickBooks integration isn't configured on this deploy." },
+  forbidden: { tone: "warning", copy: "Only owners and admins can manage QuickBooks." },
+  missing_params: { tone: "warning", copy: "QuickBooks callback was missing parameters. Try connecting again." },
+  state_mismatch: { tone: "warning", copy: "Security check failed during QuickBooks callback. Try again from this page." },
+  token_exchange_failed: { tone: "warning", copy: "QuickBooks rejected the connection. Reconnect and try again." },
+  persist_failed: { tone: "warning", copy: "Couldn't save the QuickBooks connection. Try again." },
+  error: { tone: "warning", copy: "QuickBooks returned an error during the connection." },
+};
+
+const XERO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
+  connected: { tone: "success", copy: "Xero connected. Paid invoices will sync automatically." },
+  disconnected: { tone: "success", copy: "Xero disconnected." },
+  not_configured: { tone: "warning", copy: "Xero integration isn't configured on this deploy." },
+  forbidden: { tone: "warning", copy: "Only owners and admins can manage Xero." },
+  missing_params: { tone: "warning", copy: "Xero callback was missing parameters. Try connecting again." },
+  state_mismatch: { tone: "warning", copy: "Security check failed during Xero callback. Try again from this page." },
+  token_exchange_failed: { tone: "warning", copy: "Xero rejected the connection. Reconnect and try again." },
+  no_tenant: { tone: "warning", copy: "Xero didn't return a tenant. Make sure you authorized at least one organization." },
+  persist_failed: { tone: "warning", copy: "Couldn't save the Xero connection. Try again." },
+  error: { tone: "warning", copy: "Xero returned an error during the connection." },
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ qbo?: string; xero?: string }>;
+}) {
+  const params = await searchParams;
+  const qboBanner = params.qbo ? QBO_BANNERS[params.qbo] : undefined;
+  const xeroBanner = params.xero ? XERO_BANNERS[params.xero] : undefined;
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, xeroStatus, whatsappSettings, m] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
     getBookingPolicies(),
     getSmsLog(),
+    getRoutingMode(),
+    getQuickBooksStatus(),
+    getXeroStatus(),
+    getWhatsAppSettings(),
     getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
@@ -143,6 +187,12 @@ export default async function SettingsPage() {
           </div>
 
           <SmsSettingsForm defaults={smsSettings} />
+
+          <div style={{ marginTop: 24 }}>
+            <div className="kicker">WhatsApp</div>
+            <h3 style={{ margin: "6px 0 12px" }}>WhatsApp Business</h3>
+            <WhatsAppSettingsForm defaults={whatsappSettings} />
+          </div>
         </section>
 
         <aside className="panel">
@@ -156,6 +206,51 @@ export default async function SettingsPage() {
           <SmsLog entries={smsLog} />
         </aside>
       </div>
+      <div style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">{m.dashboard.settings.routingMode.kicker}</div>
+              <h2 style={{ margin: "6px 0 0" }}>{m.dashboard.settings.routingMode.title}</h2>
+            </div>
+          </div>
+          <RoutingModeForm currentMode={routingMode} />
+        </section>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">Integrations</div>
+              <h2 style={{ margin: "6px 0 0" }}>Accounting sync</h2>
+            </div>
+          </div>
+          {qboBanner && (
+            <div
+              className={`badge ${qboBanner.tone}`}
+              role={qboBanner.tone === "warning" ? "alert" : undefined}
+              style={{ marginBottom: 12, display: "inline-block", fontSize: 12 }}
+            >
+              {qboBanner.copy}
+            </div>
+          )}
+          {xeroBanner && (
+            <div
+              className={`badge ${xeroBanner.tone}`}
+              role={xeroBanner.tone === "warning" ? "alert" : undefined}
+              style={{ marginBottom: 12, display: "inline-block", fontSize: 12, marginLeft: 8 }}
+            >
+              {xeroBanner.copy}
+            </div>
+          )}
+          <div className="list">
+            <QuickBooksCard status={qbStatus} />
+            <XeroCard status={xeroStatus} />
+          </div>
+        </section>
+      </div>
+
       <div style={{ marginTop: 48 }}>
         <DeleteAccountCard />
       </div>

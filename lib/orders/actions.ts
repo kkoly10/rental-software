@@ -603,7 +603,16 @@ export async function createOrder(
         supabase,
       );
       if (result.attached) {
-        attachedTo = { routeId: result.routeId, routeName: result.routeName };
+        // We don't thread `created` into the redirect URL because the
+        // orders list page doesn't render a different message for
+        // it. The `updateOrderStatus` path surfaces the distinction
+        // in the action's return value instead. If we later add a
+        // toast on /dashboard/orders for "auto-scheduled on new
+        // route", revisit.
+        attachedTo = {
+          routeId: result.routeId,
+          routeName: result.routeName,
+        };
         const { revalidatePath } = await import("next/cache");
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
         revalidatePath("/dashboard/deliveries");
@@ -797,6 +806,105 @@ export async function updateOrderStatus(
     }
   }
 
+  // Sprint 2 / 3.5 — auto-sync to accounting integrations when an
+  // order transitions to `delivered`. Both QBO and Xero fire here;
+  // each one no-ops if the org isn't connected to that provider, so
+  // an org connected to one or both gets the right set of pushes.
+  // Fire-and-forget: failures land in *_last_sync_error and the
+  // daily reconcile crons retry.
+  if (parsed.data.newStatus === "delivered") {
+    try {
+      const { syncOrderToQuickBooks } = await import(
+        "@/lib/integrations/quickbooks/sync"
+      );
+      void syncOrderToQuickBooks(supabase, ctx.organizationId, parsed.data.orderId).catch(
+        (err) => {
+          console.error(
+            "[orders.updateOrderStatus] QBO auto-sync rejected for",
+            parsed.data.orderId,
+            err instanceof Error ? err.message : err,
+          );
+        },
+      );
+    } catch (err) {
+      console.error(
+        "[orders.updateOrderStatus] QBO auto-sync import failed for",
+        parsed.data.orderId,
+        err instanceof Error ? err.message : err,
+      );
+    }
+    try {
+      const { syncOrderToXero } = await import("@/lib/integrations/xero/sync");
+      void syncOrderToXero(supabase, ctx.organizationId, parsed.data.orderId).catch(
+        (err) => {
+          console.error(
+            "[orders.updateOrderStatus] Xero auto-sync rejected for",
+            parsed.data.orderId,
+            err instanceof Error ? err.message : err,
+          );
+        },
+      );
+    } catch (err) {
+      console.error(
+        "[orders.updateOrderStatus] Xero auto-sync import failed for",
+        parsed.data.orderId,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  // Smart Delivery Mode cancellation chain (Sprint 1.5): when an order
+  // is cancelled, auto-remove its route stop. Applies in both auto AND
+  // manual modes — keeping a stop for a non-event is bookkeeping
+  // garbage either way, and it creates a real count/list mismatch bug
+  // on the route detail page. If that was the last stop on a planned
+  // route, the route itself is also cleaned up.
+  //
+  // "refunded" is intentionally NOT included here because refunds
+  // happen on already-delivered orders (e.g., damage refunds), and
+  // tearing down the stop on a route that's mid-delivery would
+  // confuse the crew. Refund handling for newer flows (Stripe webhook)
+  // can revisit this if/when refund-then-undeliver becomes a real case.
+  if (parsed.data.newStatus === "cancelled") {
+    try {
+      const { removeOrderStopOnCancel } = await import(
+        "@/lib/routes/remove-stop-on-cancel"
+      );
+      const result = await removeOrderStopOnCancel(
+        ctx.organizationId,
+        parsed.data.orderId,
+        supabase,
+      );
+      if (result.ok && (result.removed || result.routeDeleted)) {
+        revalidatePath("/dashboard/deliveries");
+      }
+      if (!result.ok) {
+        const { logAppError } = await import("@/lib/observability/server");
+        await logAppError({
+          organizationId: ctx.organizationId,
+          source: "orders.updateOrderStatus",
+          message: "Failed to remove route stop on cancellation",
+          context: {
+            orderId: parsed.data.orderId,
+            reason: result.reason,
+            detail: result.detail,
+          },
+        });
+      }
+    } catch (err) {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "orders.updateOrderStatus",
+        message: "Cancellation chain threw unexpectedly",
+        context: {
+          orderId: parsed.data.orderId,
+          reason: err instanceof Error ? err.message : String(err),
+        },
+      });
+    }
+  }
+
   try {
     const { triggerOrderStatusEmail } = await import("@/lib/email/triggers");
     await triggerOrderStatusEmail({
@@ -931,7 +1039,13 @@ export async function updateOrderStatus(
         // Unnamed routes are common in newly-created orgs; fall back so
         // the operator doesn't see literal `Added to route "".`.
         const displayName = result.routeName?.trim() || "today's route";
-        autoAttachSuffix = ` Added to route "${displayName}".`;
+        // Smart Delivery Mode (Sprint 1.5): distinguish "we created
+        // the route for you" from "we added you to an existing one"
+        // so the auto-magic isn't invisible to noob operators on
+        // their very first confirm.
+        autoAttachSuffix = result.created
+          ? ` Auto-scheduled on "${displayName}".`
+          : ` Added to route "${displayName}".`;
         // Make sure the deliveries surfaces re-render with the new stop.
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
       } else if (result.reason === "insert_failed") {

@@ -6,6 +6,7 @@ import { RouteDetailMapWrapper } from "./route-detail-map-wrapper";
 import { RouteDetailTimeline } from "./route-detail-timeline";
 import { RouteStatusControls, StopStatusButton, RemoveStopButton } from "@/components/deliveries/route-controls";
 import { AddStopForm } from "@/components/deliveries/add-stop-form";
+import { OptimizeRouteButton } from "@/components/deliveries/optimize-route-button";
 import { getOrdersForRouteDate } from "@/lib/data/unrouted-orders";
 import { getTranslator } from "@/lib/i18n/server";
 
@@ -153,10 +154,14 @@ export default async function DeliveryDetailPage({
             );
           })()}
 
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link href="/crew/today" className="ghost-btn">
               Open crew mobile view
             </Link>
+            <Link href={`/dashboard/deliveries/${id}/pull-sheet`} className="ghost-btn">
+              {m.dashboard.deliveries.pullSheet}
+            </Link>
+            <OptimizeRouteButton routeId={id} routeStatus={route.routeStatus} />
           </div>
         </aside>
       </div>
