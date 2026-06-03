@@ -65,6 +65,7 @@ jobs:
           node --test --experimental-strip-types \
             tests/auto-attach-create.test.ts \
             tests/compute-financials.test.ts \
+            tests/html-to-plain-text.test.ts \
             tests/onboarding-vertical-allowlist.test.ts \
             tests/portal-access-token.test.ts \
             tests/quickbooks-client.test.ts \
@@ -74,6 +75,7 @@ jobs:
             tests/route-optimizer.test.ts \
             tests/series-cadence.test.ts \
             tests/smart-delivery-flow.test.ts \
+            tests/sync-backoff.test.ts \
             tests/twilio-inbound-keywords.test.ts \
             tests/whatsapp-dispatch.test.ts \
             tests/xero-client.test.ts

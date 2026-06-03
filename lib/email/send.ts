@@ -6,6 +6,8 @@ import { enqueueEmailForRetry } from "./outbox";
 import { signEmailViewToken } from "./view-token";
 import { randomUUID } from "node:crypto";
 
+import { htmlToPlainText } from "./html-to-text";
+
 function injectViewInBrowserLink(html: string, token: string): string {
   const siteUrl = getOptionalEnv("NEXT_PUBLIC_SITE_URL") ?? "";
   if (!siteUrl) return html;
@@ -77,13 +79,19 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     // The payload field was added in PR #189 but never reached the SDK
     // call — so two retries (same payload, same key) would still send two
     // emails. Threading it through here closes that gap.
+    // Auto-derive a plain-text part when the caller didn't supply one.
+    // HTML-only sends increasingly get demoted by Gmail / Outlook to
+    // Promotions or Spam; a parallel text/plain alternative meaningfully
+    // improves inbox placement and helps screen readers.
+    const textBody = payload.text ?? htmlToPlainText(payload.html);
+
     const { error, data: sendResult } = await resend.emails.send(
       {
         from: fromAddress,
         to: payload.to,
         subject: payload.subject,
         html: htmlWithPreheader,
-        text: payload.text,
+        text: textBody,
         replyTo: payload.replyTo,
         headers: payload.headers,
       },

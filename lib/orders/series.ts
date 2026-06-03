@@ -178,7 +178,58 @@ export async function createSeriesFromOrder(
  * horizon. Idempotent — re-calling on an already-fully-expanded
  * series is a no-op. Used by both the create flow and the daily cron.
  */
+// Lock auto-expires this far after expansion_locked_at so a crashed
+// Vercel function doesn't pin a series forever. Real expansions take
+// <2s; 10 minutes is comfortable headroom and still recovers a stuck
+// series quickly enough that the next daily cron run unsticks it.
+const EXPANSION_LOCK_STALE_MS = 10 * 60 * 1000;
+
 export async function expandSeriesInternal(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  seriesId: string,
+): Promise<{ generated: number; reachedTerminus: boolean }> {
+  // Acquire the per-series advisory lock before reading
+  // last_generated_through. The conditional UPDATE matches a row only
+  // when the lock is null OR stale (crashed run); a fresh lock held
+  // by a concurrent expansion produces zero matching rows, and we bail
+  // out cleanly with `generated: 0`. Without this, two concurrent
+  // expansions (cron + manual regenerate) double-generate child
+  // orders for every occurrence in the forward window.
+  const now = new Date();
+  const staleCutoff = new Date(now.getTime() - EXPANSION_LOCK_STALE_MS);
+  const { data: lockedRow } = await supabase
+    .from("order_series")
+    .update({ expansion_locked_at: now.toISOString() })
+    .eq("id", seriesId)
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null)
+    .or(
+      `expansion_locked_at.is.null,expansion_locked_at.lt.${staleCutoff.toISOString()}`,
+    )
+    .select("id")
+    .maybeSingle();
+
+  if (!lockedRow) {
+    // Someone else is expanding (or series doesn't exist / is deleted).
+    return { generated: 0, reachedTerminus: false };
+  }
+
+  try {
+    const result = await expandSeriesUnderLock(supabase, organizationId, seriesId);
+    return result;
+  } finally {
+    // Release regardless of success/failure so the next cron tick can
+    // pick up where this run left off.
+    await supabase
+      .from("order_series")
+      .update({ expansion_locked_at: null })
+      .eq("id", seriesId)
+      .eq("organization_id", organizationId);
+  }
+}
+
+async function expandSeriesUnderLock(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   organizationId: string,
   seriesId: string,

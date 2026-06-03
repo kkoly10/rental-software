@@ -99,8 +99,24 @@ export function enumerateOccurrences(input: {
   const batchLimit = input.batchLimit ?? MAX_EXPANSION_BATCH;
   const result: { eventDate: string; occurrenceNumber: number }[] = [];
 
-  // Walk from startDate, counting occurrences as we go. Skip past
-  // dates that are already covered by alreadyGeneratedThrough.
+  // For monthly/quarterly cadence, compute every occurrence date as
+  // (startDate + N months) rather than `nextOccurrenceDate(prev)`. The
+  // iterative path drifts permanently when the source day doesn't
+  // exist in a target month: Jan 31 → Feb 28 → Mar 28 → Apr 28 (the
+  // bouncy-castle customer who booked the 31st silently shifts to the
+  // 28th forever). Anchoring to startDate clamps in February but
+  // recovers Mar 31 / Apr 30 / May 31. Daily/weekly/biweekly don't
+  // have this drift hazard so they keep the lighter incremental walk.
+  const isAnchorCadence =
+    input.cadence.frequency === "monthly" ||
+    input.cadence.frequency === "quarterly";
+  const monthsPerCycle =
+    input.cadence.frequency === "monthly"
+      ? input.cadence.intervalCount
+      : input.cadence.frequency === "quarterly"
+      ? input.cadence.intervalCount * 3
+      : 0;
+
   let current = input.startDate;
   let occurrenceNumber = 0;
 
@@ -135,7 +151,11 @@ export function enumerateOccurrences(input: {
       }
     }
 
-    current = nextOccurrenceDate(current, input.cadence);
+    if (isAnchorCadence) {
+      current = shiftByMonths(input.startDate, occurrenceNumber * monthsPerCycle);
+    } else {
+      current = nextOccurrenceDate(current, input.cadence);
+    }
   }
 
   // Loop guard fired. Treat as soft stop — daily cron will retry.
