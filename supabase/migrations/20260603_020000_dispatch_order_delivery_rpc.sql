@@ -73,10 +73,26 @@ begin
     return;
   end if;
 
-  if v_stop.stop_status not in ('pending') then
-    -- Already dispatched or in a terminal state — refuse politely so the
-    -- caller can surface a "already underway" message instead of a 500.
+  if v_stop.stop_status = 'en_route' then
     return query select false, 'already_dispatched'::text, v_stop.stop_id, v_stop.route_id;
+    return;
+  end if;
+
+  if v_stop.stop_status in ('completed', 'skipped') then
+    -- Terminal states. Reachable if the operator hits the Send
+    -- delivery button on an order that the crew already marked done
+    -- on the mobile app, or that was completed by a previous
+    -- dispatch + crew flow. Distinguishing this from
+    -- already_dispatched lets the wrapper show a clearer message.
+    return query select false, 'already_completed'::text, v_stop.stop_id, v_stop.route_id;
+    return;
+  end if;
+
+  if v_stop.stop_status <> 'pending' then
+    -- Any other unexpected state — refuse safely rather than
+    -- forcing it into en_route from a state we haven't reasoned
+    -- about.
+    return query select false, 'invalid_state'::text, v_stop.stop_id, v_stop.route_id;
     return;
   end if;
 

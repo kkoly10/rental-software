@@ -64,11 +64,16 @@ Wrapper: `lib/routes/dispatch.ts::dispatchOrderDelivery`. UI: `components/orders
 
 ## Cancellation chain (kills zombie routes)
 
-`lib/routes/remove-stop-on-cancel.ts::removeOrderStopOnCancel` runs from `updateOrderStatus` when an order moves to `cancelled`. It:
-1. Finds the order's stop (if any) and verifies org ownership.
-2. Deletes the stop.
-3. Re-sequences remaining stops to close the gap.
-4. If that was the last stop AND the route is `planned`, deletes the route too.
+`lib/routes/remove-stop-on-cancel.ts::removeOrderStopOnCancel` runs from `updateOrderStatus` when an order moves to `cancelled`. It delegates to the `remove_order_stop_on_cancel` Postgres RPC (migration `20260603_030000`) which, inside a single transaction with a `FOR UPDATE` lock on the parent route, does:
+
+1. Finds the order's stop and locks the parent route.
+2. Verifies org ownership (`routes.organization_id = p_org_id`).
+3. Deletes the stop.
+4. Re-sequences remaining stops via `row_number() OVER (...)` so a concurrent reader can't observe a gap.
+5. If the route is now empty AND `route_status = 'planned'`, deletes the route too.
+6. Returns `{ ok, reason, removed, route_deleted, route_id }` so the wrapper can revalidate the affected dashboard paths.
+
+The row lock closes the race window the first cut had: a concurrent `auto-attach` insert was previously able to slip in a new stop between the count and the route delete, leaving a route with a stop on it.
 
 Applies in BOTH auto and manual mode — keeping a stop for a non-event is bookkeeping garbage either way, and the count/list mismatch (cancelled-order stops are filtered out of the route detail render but still counted in `route_stops`) is a real bug regardless of routing philosophy.
 
@@ -85,12 +90,14 @@ Applies in BOTH auto and manual mode — keeping a stop for a non-event is bookk
 | File | Purpose |
 |---|---|
 | `supabase/migrations/20260603_010000_smart_delivery_mode.sql` | Schema + backfill + zombie cleanup |
-| `supabase/migrations/20260603_020000_dispatch_order_delivery_rpc.sql` | Atomic dispatch RPC |
+| `supabase/migrations/20260603_020000_dispatch_order_delivery_rpc.sql` | Atomic dispatch RPC (with `already_dispatched` / `already_completed` / `invalid_state` distinctions) |
+| `supabase/migrations/20260603_030000_remove_order_stop_on_cancel_rpc.sql` | Atomic cancellation cleanup RPC |
 | `lib/routes/auto-attach.ts` | Auto-create + auto-bundle + auto-sequence |
 | `lib/routes/dispatch.ts` | `dispatchOrderDelivery` server action |
-| `lib/routes/remove-stop-on-cancel.ts` | Cancellation chain |
+| `lib/routes/remove-stop-on-cancel.ts` | RPC wrapper for the cancellation chain |
+| `lib/routes/send-en-route-sms.ts` | Shared SMS + tracking-link helper |
 | `lib/routes/actions.ts` (modified) | Empty-route cleanup on last-stop removal |
-| `lib/orders/actions.ts` (modified) | Cancellation chain wiring + auto-attach `created` signal |
+| `lib/orders/actions.ts` (modified) | Cancellation chain wiring + auto-attach result handling |
 | `lib/settings/actions.ts` (modified) | `updateRoutingMode` toggle |
 | `lib/data/routing-mode.ts` | Fetcher for the org's current mode |
 | `components/settings/routing-mode-form.tsx` | Settings → Advanced toggle UI |
@@ -100,6 +107,9 @@ Applies in BOTH auto and manual mode — keeping a stop for a non-event is bookk
 | `app/dashboard/orders/[id]/page.tsx` (modified) | Mounts SendDeliveryButton |
 | `lib/help/articles.ts` (modified) | `smart-delivery-mode` help article |
 | `lib/i18n/messages/{en,es,fr,pt}.ts` (modified) | New copy for auto-mode + toggle + button |
+| `tests/auto-attach-create.test.ts` | 7 tests covering auto-create + bundle + bails |
+| `tests/remove-stop-on-cancel.test.ts` | 7 tests covering the cancellation RPC wrapper |
+| `tests/smart-delivery-flow.test.ts` | 2 flow tests stitching auto-attach + cancellation cleanup end-to-end |
 
 ## Decisions explicitly NOT made in Sprint 1.5
 

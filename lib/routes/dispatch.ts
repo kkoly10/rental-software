@@ -80,6 +80,10 @@ export async function dispatchOrderDelivery(
           return "This order isn't on a route yet. Attach it to a route first.";
         case "already_dispatched":
           return "This delivery is already underway.";
+        case "already_completed":
+          return "This delivery has already been completed.";
+        case "invalid_state":
+          return "This stop is in a state that can't be dispatched. Refresh and try again.";
         default:
           return "Couldn't dispatch this delivery.";
       }

@@ -1,0 +1,158 @@
+/**
+ * `removeOrderStopOnCancel` wrapper — Sprint 1.5 follow-up
+ *
+ * The cancellation cleanup was moved into the Postgres RPC
+ * `remove_order_stop_on_cancel` (see migration 20260603_030000) so
+ * the delete-stop / re-sequence / delete-route steps run inside one
+ * transaction with a row lock on the parent route. The wrapper here
+ * just translates the RPC's return shape into the TypeScript result
+ * the orders cancellation flow consumes — these tests pin that
+ * translation so a future refactor can't silently desync the two.
+ */
+import test from "node:test";
+import assert from "node:assert/strict";
+import { removeOrderStopOnCancel } from "../lib/routes/remove-stop-on-cancel.ts";
+
+type Row = Record<string, unknown>;
+
+function makeFakeRpc(response: {
+  data: Row | null;
+  error?: { message: string };
+}) {
+  const calls: { fn: string; args: Row }[] = [];
+  const fake = {
+    rpc(fn: string, args: Row) {
+      calls.push({ fn, args });
+      return {
+        maybeSingle: () =>
+          Promise.resolve({
+            data: response.data,
+            error: response.error ?? null,
+          }),
+      };
+    },
+  };
+  return { fake, calls };
+}
+
+test("stop removed but route still has stops → removed=true, routeDeleted=false", async () => {
+  const { fake, calls } = makeFakeRpc({
+    data: {
+      ok: true,
+      reason: null,
+      removed: true,
+      route_deleted: false,
+      route_id: "route_a",
+    },
+  });
+
+  // @ts-expect-error narrow typing of the fake to match SupabaseClient
+  // is not worth the ceremony for a 60-line unit test.
+  const result = await removeOrderStopOnCancel("org_1", "order_1", fake);
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.removed, true);
+  assert.equal(result.routeDeleted, false);
+  assert.equal(result.routeId, "route_a");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].fn, "remove_order_stop_on_cancel");
+  assert.deepEqual(calls[0].args, { p_order_id: "order_1", p_org_id: "org_1" });
+});
+
+test("last stop removed → routeDeleted=true with route_id surfaced", async () => {
+  const { fake } = makeFakeRpc({
+    data: {
+      ok: true,
+      reason: null,
+      removed: true,
+      route_deleted: true,
+      route_id: "route_b",
+    },
+  });
+
+  // @ts-expect-error fake client
+  const result = await removeOrderStopOnCancel("org_2", "order_2", fake);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.removed, true);
+  assert.equal(result.routeDeleted, true);
+  assert.equal(result.routeId, "route_b");
+});
+
+test("order has no stop → idempotent success, removed=false", async () => {
+  const { fake } = makeFakeRpc({
+    data: {
+      ok: true,
+      reason: null,
+      removed: false,
+      route_deleted: false,
+      route_id: null,
+    },
+  });
+
+  // @ts-expect-error fake client
+  const result = await removeOrderStopOnCancel("org_3", "order_3", fake);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.removed, false);
+  assert.equal(result.routeDeleted, false);
+  assert.equal(result.routeId, null);
+});
+
+test("RPC returns ok=false → wrapper returns ok=false with reason", async () => {
+  const { fake } = makeFakeRpc({
+    data: {
+      ok: false,
+      reason: "org_mismatch",
+      removed: false,
+      route_deleted: false,
+      route_id: null,
+    },
+  });
+
+  // @ts-expect-error fake client
+  const result = await removeOrderStopOnCancel("org_4", "order_4", fake);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.reason, "org_mismatch");
+});
+
+test("RPC error surfaces as rpc_failed with detail", async () => {
+  const { fake } = makeFakeRpc({
+    data: null,
+    error: { message: "connection lost" },
+  });
+
+  // @ts-expect-error fake client
+  const result = await removeOrderStopOnCancel("org_5", "order_5", fake);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.reason, "rpc_failed");
+  assert.equal(result.detail, "connection lost");
+});
+
+test("RPC returns null data (empty result) surfaces as rpc_empty", async () => {
+  const { fake } = makeFakeRpc({ data: null });
+
+  // @ts-expect-error fake client
+  const result = await removeOrderStopOnCancel("org_6", "order_6", fake);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.reason, "rpc_empty");
+});
+
+test("thrown exception caught and reported as exception", async () => {
+  const fake = {
+    rpc() {
+      throw new Error("network exploded");
+    },
+  };
+
+  // @ts-expect-error fake client
+  const result = await removeOrderStopOnCancel("org_7", "order_7", fake);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.reason, "exception");
+  assert.equal(result.detail, "network exploded");
+});

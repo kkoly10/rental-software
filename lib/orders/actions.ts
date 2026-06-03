@@ -590,7 +590,7 @@ export async function createOrder(
   // render a one-shot toast.  updateOrderStatus appends to its return
   // message because it's an inline action; createOrder redirects, so
   // we ride the URL instead.
-  let attachedTo: { routeId: string; routeName: string; created: boolean } | null = null;
+  let attachedTo: { routeId: string; routeName: string } | null = null;
   let attachFailed = false;
   if (orderStatus === "confirmed" || orderStatus === "scheduled") {
     try {
@@ -603,10 +603,15 @@ export async function createOrder(
         supabase,
       );
       if (result.attached) {
+        // We don't thread `created` into the redirect URL because the
+        // orders list page doesn't render a different message for
+        // it. The `updateOrderStatus` path surfaces the distinction
+        // in the action's return value instead. If we later add a
+        // toast on /dashboard/orders for "auto-scheduled on new
+        // route", revisit.
         attachedTo = {
           routeId: result.routeId,
           routeName: result.routeName,
-          created: result.created,
         };
         const { revalidatePath } = await import("next/cache");
         revalidatePath(`/dashboard/deliveries/${result.routeId}`);
@@ -644,11 +649,6 @@ export async function createOrder(
   if (attachedTo) {
     redirectParams.set("attached_to_route", attachedTo.routeId);
     redirectParams.set("attached_to_route_name", attachedTo.routeName);
-    if (attachedTo.created) {
-      // Smart Delivery Mode signal — the page can render
-      // "Auto-scheduled on …" instead of "Added to route …".
-      redirectParams.set("route_was_created", "1");
-    }
   } else if (attachFailed) {
     redirectParams.set("attach_failed", "1");
   }
