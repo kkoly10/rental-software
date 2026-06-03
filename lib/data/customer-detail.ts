@@ -19,6 +19,8 @@ const fallbackCustomerDetail: CustomerDetail = {
   addressCity: "Stafford",
   addressState: "VA",
   addressZip: "22554",
+  whatsappOptedIn: false,
+  whatsappNumber: "",
   orders: [
     { id: "ord_1001", label: "Johnson Birthday Setup · Confirmed · $245.00" },
     { id: "ord_1002", label: "Neighborhood Cookout · Completed · $190.00" },
@@ -43,6 +45,7 @@ export async function getCustomerDetail(
     .from("customers")
     .select(`
       id, first_name, last_name, email, phone, notes, preferred_locale,
+      whatsapp_opted_in, whatsapp_number,
       customer_addresses(line1, line2, city, state, postal_code, is_default_delivery),
       orders(id, order_number, order_status, total_amount, event_date, deleted_at)
     `)
@@ -103,6 +106,11 @@ export async function getCustomerDetail(
     addressCity: defaultAddr?.city ?? "",
     addressState: defaultAddr?.state ?? "",
     addressZip: defaultAddr?.postal_code ?? "",
+    whatsappOptedIn: Boolean(
+      (data as { whatsapp_opted_in?: boolean | null }).whatsapp_opted_in,
+    ),
+    whatsappNumber:
+      (data as { whatsapp_number?: string | null }).whatsapp_number ?? "",
     orders: [...orders]
       .sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""))
       .map((o) => {

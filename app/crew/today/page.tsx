@@ -3,7 +3,9 @@ import { getRoutes } from "@/lib/data/routes";
 import { getRouteDetail, getRouteStops } from "@/lib/data/route-detail";
 import { StopActionButtons } from "@/components/crew/stop-actions";
 import { ProofPhotoUpload } from "@/components/crew/proof-photo-upload";
+import { PickupPhotoUpload } from "@/components/crew/pickup-photo-upload";
 import { SignaturePad } from "@/components/crew/signature-pad";
+import { PickupSignaturePad } from "@/components/crew/pickup-signature-pad";
 import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getMessages } from "@/lib/i18n/server";
@@ -79,8 +81,37 @@ export default async function CrewTodayPage() {
                       </div>
                       {stop.status !== "assigned" && (
                         <>
-                          <ProofPhotoUpload stopId={stop.id} existingUrl={stop.proofPhotoUrl} />
-                          {!stop.signatureName ? (
+                          {/* Sprint 5.5 — render the right capture
+                              control per stop type. Delivery stops get
+                              the existing proof-of-delivery flow;
+                              pickup stops get the new pickup capture
+                              with the visual matching nudge showing
+                              the same-order delivery photo. */}
+                          {stop.type.toLowerCase() === "pickup" ? (
+                            <PickupPhotoUpload
+                              stopId={stop.id}
+                              deliveryPhotoUrl={stop.matchingDeliveryPhotoUrl}
+                              existingUrl={stop.pickupPhotoUrl}
+                            />
+                          ) : (
+                            <ProofPhotoUpload stopId={stop.id} existingUrl={stop.proofPhotoUrl} />
+                          )}
+                          {/* Sprint 5.5 — match the signature pad to
+                              the stop type. Delivery stops still use
+                              the existing SignaturePad writing
+                              signature_name; pickup stops use the new
+                              PickupSignaturePad writing
+                              pickup_signature_name. */}
+                          {stop.type.toLowerCase() === "pickup" ? (
+                            !stop.pickupSignatureName ? (
+                              <PickupSignaturePad stopId={stop.id} />
+                            ) : (
+                              <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-soft)" }}>
+                                <span className="badge success" style={{ fontSize: 11, marginRight: 6 }}>{m.crew.signed}</span>
+                                {stop.pickupSignatureName}
+                              </div>
+                            )
+                          ) : !stop.signatureName ? (
                             <SignaturePad stopId={stop.id} />
                           ) : (
                             <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-soft)" }}>

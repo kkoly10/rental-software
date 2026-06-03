@@ -436,6 +436,42 @@ Settings → Integrations → **Disconnect**. Removes the connection from Korent
 
   // Deliveries & Crew
   {
+    slug: "equipment-condition-photos",
+    title: "Documenting equipment condition with photos",
+    section: "Deliveries & Crew",
+    summary: "Before-and-after photos at delivery and pickup — your dispute insurance policy.",
+    body: `Torn vinyl on a bouncy castle, a stain on a tablecloth, a dent on a generator. These are the kind of things customers and operators argue about. Photos at delivery + pickup end the argument before it starts.
+
+**How it works:**
+
+- **At delivery**, the crew can tap "Photograph delivery" on the crew mobile view to capture a photo of the equipment in good condition. Optional but encouraged.
+- **At pickup**, the crew sees the delivery photo as a thumbnail with "Match this angle" — no need to remember composition, just point the camera at the same view. Tap to capture.
+- Both photos save to the order automatically.
+
+**Where the photos show up:**
+
+- **Operator side**: open any order's detail page → scroll to the "Before & after photos" section. Click any photo to see it full size.
+- **Customer side**: the customer portal (the link in the confirmation email) shows both photos to the customer too. Framing matters — we present it as "documentation of your delivery," not "evidence collected against you." Disputes drop sharply.
+
+**What to do if you see damage at pickup:**
+
+For v1, the workflow is manual:
+1. Capture the pickup photo
+2. Open the order on your dashboard
+3. Record a damage fee as a new payment with type "Damage charge"
+4. Email or message the customer with a link to the order portal — they'll see both photos side-by-side and the fee
+
+Future versions will add a structured "damage detected" toggle that creates the fee automatically with a damage-code library.
+
+**Tips:**
+
+- Take the delivery photo **right after setup** — the equipment is in its cleanest, most representative state.
+- For the pickup photo, **match the delivery photo's angle as closely as possible**. The visual nudge in the app makes this easy.
+- For high-value equipment (generators, big AV), consider snapping a second close-up of any specific area you want documented (control panel, hose connections, etc.). Per-item photos are coming in a future release.
+- The Customer signature pad at pickup turns "they said it was fine" into "they signed that it was fine" — use it for high-value or high-trust-required rentals.`,
+    related: ["delivery-routes", "crew-mobile"],
+  },
+  {
     slug: "route-optimization",
     title: "Optimizing your delivery route",
     section: "Deliveries & Crew",

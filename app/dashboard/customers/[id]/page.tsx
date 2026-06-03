@@ -5,6 +5,7 @@ import { CommunicationList } from "@/components/communications/communication-lis
 import { getCustomerCommunications } from "@/lib/data/communication-history";
 import { EditCustomerForm } from "@/components/customers/edit-customer-form";
 import { AnonymizeCustomerButton } from "@/components/customers/anonymize-customer-button";
+import { WhatsAppPreferencesForm } from "@/components/customers/whatsapp-preferences-form";
 import { getMessages } from "@/lib/i18n/server";
 
 export default async function CustomerDetailPage({
@@ -57,6 +58,26 @@ export default async function CustomerDetailPage({
 
           <div style={{ marginTop: 16 }}>
             <EditCustomerForm customer={customer} />
+          </div>
+
+          <div
+            style={{
+              marginTop: 16,
+              borderTop: "1px solid var(--border)",
+              paddingTop: 12,
+            }}
+          >
+            <div className="kicker" style={{ marginBottom: 4 }}>WhatsApp</div>
+            <h3 className="page-title-sm" style={{ marginTop: 4, marginBottom: 12 }}>
+              Notification channel
+            </h3>
+            <WhatsAppPreferencesForm
+              customerId={customer.id}
+              defaults={{
+                optedIn: customer.whatsappOptedIn,
+                whatsappNumber: customer.whatsappNumber,
+              }}
+            />
           </div>
 
           <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>

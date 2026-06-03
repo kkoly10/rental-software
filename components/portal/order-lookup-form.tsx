@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { lookupOrder, type PortalLookupState } from "@/lib/portal/lookup";
 import { OrderTimeline } from "./order-timeline";
 import { DocumentSign } from "./document-sign";
+import { EquipmentConditionCard } from "@/components/orders/equipment-condition-card";
 import { CustomerMessageForm } from "./customer-message-form";
 import { InvoiceDownload } from "./invoice-download";
 import { PayBalanceButton } from "./pay-balance-button";
@@ -198,6 +199,13 @@ export function OrderLookupForm({ initialState }: Props) {
             <DocumentSign
               documents={state.order.documents}
               portalToken={activeToken}
+            />
+          )}
+
+          {state.order.conditionRows && state.order.conditionRows.length > 0 && (
+            <EquipmentConditionCard
+              rows={state.order.conditionRows}
+              customerFacing
             />
           )}
 

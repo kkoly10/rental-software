@@ -16,9 +16,11 @@ import { SyncQuickBooksButton } from "@/components/orders/sync-quickbooks-button
 import { SyncXeroButton } from "@/components/orders/sync-xero-button";
 import { MakeRecurringForm } from "@/components/orders/make-recurring-form";
 import { SeriesInfoCard } from "@/components/orders/series-info-card";
+import { EquipmentConditionCard } from "@/components/orders/equipment-condition-card";
 import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
 import { getXeroStatus } from "@/lib/data/xero-status";
 import { getOrderSeriesSummary } from "@/lib/data/order-series";
+import { getOrderConditionRows } from "@/lib/data/equipment-condition";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
@@ -42,17 +44,25 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications, routingState, qbStatus, xeroStatus, seriesSummary, m] = await Promise.all([
+  const [order, communications, routingState, qbStatus, xeroStatus, seriesSummary, conditionRows, m] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
     getOrderRoutingState(id),
     getQuickBooksStatus(),
     getXeroStatus(),
     getOrderSeriesSummary(id),
+    getOrderConditionRows(id),
     getMessages(),
   ]);
   const qboConnected = qbStatus.configured && qbStatus.connected;
   const xeroConnected = xeroStatus.configured && xeroStatus.connected;
+  // Sprint 5.5 — Equipment Condition card. Hide when no stops have
+  // any photos AND no stops have been picked up; once at least one
+  // stop reaches the pickup phase, the card surfaces so the operator
+  // can see what's been captured.
+  const hasAnyCondition = conditionRows.some(
+    (r) => r.deliveryPhotoUrl || r.pickupPhotoUrl || r.deliverySignature || r.pickupSignature,
+  );
 
   const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
@@ -298,6 +308,10 @@ export default async function OrderDetailPage({
             />
           </div>
         </div>
+      )}
+
+      {hasAnyCondition && (
+        <EquipmentConditionCard rows={conditionRows} customerFacing={false} />
       )}
 
       {/* Communications audit trail */}

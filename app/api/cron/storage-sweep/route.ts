@@ -128,15 +128,23 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 3. route_stops.proof_photo_url (uploads bucket).
+  // 3. route_stops.proof_photo_url + pickup_photo_url (uploads bucket).
+  // Sprint 5.5 added pickup_photo_url for the before/after pair; both
+  // columns are loaded in one query to avoid scanning the table twice.
   const { data: stops } = await admin
     .from("route_stops")
-    .select("proof_photo_url")
-    .not("proof_photo_url", "is", null)
+    .select("proof_photo_url, pickup_photo_url")
+    .or("proof_photo_url.not.is.null,pickup_photo_url.not.is.null")
     .limit(50_000);
   for (const r of stops ?? []) {
-    const path = extractPathFromPublicUrl(r.proof_photo_url, uploadsBucket);
-    if (path) referencedPaths.add(`${uploadsBucket}:${path}`);
+    if (r.proof_photo_url) {
+      const path = extractPathFromPublicUrl(r.proof_photo_url, uploadsBucket);
+      if (path) referencedPaths.add(`${uploadsBucket}:${path}`);
+    }
+    if (r.pickup_photo_url) {
+      const path = extractPathFromPublicUrl(r.pickup_photo_url, uploadsBucket);
+      if (path) referencedPaths.add(`${uploadsBucket}:${path}`);
+    }
   }
 
   // Walk both buckets and collect candidate orphans.

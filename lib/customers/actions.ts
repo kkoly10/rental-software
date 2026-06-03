@@ -15,6 +15,175 @@ export type CustomerActionState = {
   message: string;
 };
 
+/**
+ * Sprint 4.5 — operator-facing toggle for the customer's WhatsApp
+ * preferences. Closes the Sprint 4 gap where these columns existed
+ * but had no UI surface, forcing operators to flip them via SQL.
+ *
+ * Owner / admin / dispatcher can change. The action accepts the
+ * opt-in flag plus an optional WhatsApp number override (used when
+ * the customer's WhatsApp number differs from their primary phone).
+ * NULL/empty number means "fall back to customers.phone" per the
+ * dispatch decision tree in `lib/messaging/dispatch.ts`.
+ */
+export async function updateCustomerWhatsAppPreferences(
+  _prev: CustomerActionState,
+  formData: FormData,
+): Promise<CustomerActionState> {
+  const customerId = String(formData.get("customer_id") ?? "").trim();
+  const optedIn = String(formData.get("whatsapp_opted_in") ?? "") === "on";
+  const rawWhatsappNumber = String(formData.get("whatsapp_number") ?? "").trim();
+
+  if (!customerId) {
+    return { ok: false, message: "Missing customer id." };
+  }
+
+  // Light validation matching the SMS provider's normalizer. We
+  // accept E.164 with or without the leading `+`. Empty string means
+  // "use the primary phone."
+  const whatsappNumber = rawWhatsappNumber.length > 0 ? rawWhatsappNumber : null;
+  if (whatsappNumber && !/^\+?[0-9]{6,15}$/.test(whatsappNumber)) {
+    return {
+      ok: false,
+      message: "WhatsApp number must be in E.164 format (e.g. +14155551234).",
+    };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return {
+      ok: true,
+      message: "Demo mode: WhatsApp preferences would be updated.",
+    };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return {
+      ok: false,
+      message:
+        "Only dispatchers and above can change WhatsApp preferences.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("customers")
+    .update({
+      whatsapp_opted_in: optedIn,
+      whatsapp_number: whatsappNumber,
+    })
+    .eq("id", customerId)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null);
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath(`/dashboard/customers/${customerId}`);
+  return {
+    ok: true,
+    message: optedIn
+      ? "WhatsApp opt-in saved. This customer will receive notifications over WhatsApp where templates are approved; SMS is used otherwise."
+      : "Opt-out saved. This customer will receive notifications over SMS only.",
+  };
+}
+
+/**
+ * Sprint 4.5 — operator sends an SMS opt-in invite to a customer.
+ *
+ * Sends a short SMS that asks the customer to reply WHATSAPP. The
+ * inbound webhook (/api/twilio/inbound) recognizes that keyword and
+ * flips `customers.whatsapp_opted_in` automatically. This removes
+ * the operator-manually-flips-per-customer burden — the operator
+ * sends the invite once, customers self-select.
+ *
+ * Idempotent at the messaging layer: re-sending the invite to the
+ * same customer just sends another SMS. We don't track "invite
+ * pending" state because the keyword detection is unambiguous (a
+ * "WHATSAPP" reply only ever means opt-in).
+ */
+export async function sendWhatsAppOptInInvite(
+  _prev: CustomerActionState,
+  formData: FormData,
+): Promise<CustomerActionState> {
+  const customerId = String(formData.get("customer_id") ?? "").trim();
+  if (!customerId) return { ok: false, message: "Missing customer id." };
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: invite would be sent." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return {
+      ok: false,
+      message: "Only dispatchers and above can send opt-in invites.",
+    };
+  }
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("phone, first_name, sms_opt_in")
+    .eq("id", customerId)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!customer?.phone) {
+    return { ok: false, message: "Customer has no phone number on file." };
+  }
+  if (customer.sms_opt_in === false) {
+    return {
+      ok: false,
+      message:
+        "Customer has opted out of SMS — we can't send them an invite. Ask them to text START first.",
+    };
+  }
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const businessName = (org?.name as string | null) ?? "your rental company";
+
+  const body =
+    `Hi from ${businessName}! Would you like future order updates over WhatsApp instead of SMS? ` +
+    `Reply WHATSAPP to switch. Reply STOP to stop all messages.`;
+
+  const { sendSms } = await import("@/lib/sms/provider");
+  const result = await sendSms({ to: customer.phone, body });
+  if (!result.ok) {
+    return { ok: false, message: result.error ?? "Failed to send invite." };
+  }
+
+  revalidatePath(`/dashboard/customers/${customerId}`);
+  return {
+    ok: true,
+    message:
+      "Invite sent. The customer can reply WHATSAPP at any time to opt in.",
+  };
+}
+
 export async function updateCustomer(
   _prevState: CustomerActionState,
   formData: FormData
