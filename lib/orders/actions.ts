@@ -806,6 +806,38 @@ export async function updateOrderStatus(
     }
   }
 
+  // Sprint 2 — auto-sync to QuickBooks Online when an order transitions
+  // into a "the work is done, the customer owes the balance" state.
+  // We trigger on `delivered` rather than `completed` so QBO sees the
+  // invoice as soon as the crew finishes, not days later when the
+  // operator marks the paperwork closed. Best-effort: failures land
+  // in qbo_last_sync_error and the daily reconcile cron retries.
+  if (parsed.data.newStatus === "delivered") {
+    try {
+      const { syncOrderToQuickBooks } = await import(
+        "@/lib/integrations/quickbooks/sync"
+      );
+      // Don't block the status update on QBO. The sync is best-effort
+      // and the operator can always re-fire it manually from the order
+      // page if it fails.
+      void syncOrderToQuickBooks(supabase, ctx.organizationId, parsed.data.orderId).catch(
+        (err) => {
+          console.error(
+            "[orders.updateOrderStatus] QBO auto-sync rejected for",
+            parsed.data.orderId,
+            err instanceof Error ? err.message : err,
+          );
+        },
+      );
+    } catch (err) {
+      console.error(
+        "[orders.updateOrderStatus] QBO auto-sync import failed for",
+        parsed.data.orderId,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   // Smart Delivery Mode cancellation chain (Sprint 1.5): when an order
   // is cancelled, auto-remove its route stop. Applies in both auto AND
   // manual modes — keeping a stop for a non-event is bookkeeping

@@ -12,6 +12,8 @@ import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
 import { SendDeliveryButton } from "@/components/orders/send-delivery-button";
+import { SyncQuickBooksButton } from "@/components/orders/sync-quickbooks-button";
+import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
@@ -35,12 +37,14 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications, routingState, m] = await Promise.all([
+  const [order, communications, routingState, qbStatus, m] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
     getOrderRoutingState(id),
+    getQuickBooksStatus(),
     getMessages(),
   ]);
+  const qboConnected = qbStatus.configured && qbStatus.connected;
 
   const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
@@ -227,6 +231,7 @@ export default async function OrderDetailPage({
             )}
             <ConfirmOrderButton orderId={id} currentStatus={order.status} />
             <SendDeliveryButton orderId={id} currentStatus={order.status} />
+            {qboConnected && <SyncQuickBooksButton orderId={id} />}
             {(order.status === "Quote Sent" || order.status === "Inquiry") && (
               <a
                 href={`/api/quotes/${id}`}

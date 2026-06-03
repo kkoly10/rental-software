@@ -159,18 +159,37 @@ Market evidence: 80-90% of US/Mexico party rental operators are not on any renta
 
 The single biggest deal-blocker vs Goodshuffle. Even one-way sync (Korent → QBO invoices and payments) closes the practical use case.
 
+**External (founder, parallel to engineering):**
 - [ ] Register Intuit developer account + OAuth app (sandbox)
-- [ ] Build `lib/integrations/quickbooks/client.ts` — OAuth flow + token refresh
-- [ ] Database: add `organizations.qbo_company_id`, `qbo_access_token`, `qbo_refresh_token` (encrypted)
-- [ ] Connect / disconnect UI in `app/dashboard/settings/integrations/page.tsx`
-- [ ] Sync paid invoices → QBO Invoice + Payment objects
-- [ ] Sync customers → QBO Customer on first invoice
-- [ ] Map Korent products → QBO Items (one-time setup per org)
-- [ ] Webhook listener for QBO disconnects / token expiration
-- [ ] Daily reconciliation cron — handle sync failures
-- [ ] Playwright test: order paid → QBO invoice appears in sandbox
-- [ ] Apply for Intuit certification (production scope)
-- [ ] **Gate**: 1 internal test org has 10+ successfully synced invoices
+- [ ] Configure OAuth redirect URI in Intuit dev portal to match `QBO_REDIRECT_URI`
+- [ ] Set `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_ENVIRONMENT` env vars in Vercel
+- [ ] Apply for Intuit certification (production scope, 4-8 weeks Intuit review)
+
+**Engineering:**
+- [x] `lib/integrations/quickbooks/client.ts` — OAuth + Accounting API client with auto-refresh on 401
+- [x] Database: `organizations.qbo_realm_id` + token columns + `quickbooks_invoice_sync` table with RLS — `supabase/migrations/20260603_040000_quickbooks_online_connection.sql`
+- [x] Connect / disconnect / callback routes in `app/api/integrations/quickbooks/*`
+- [x] Settings → Integrations card (`components/settings/quickbooks-card.tsx`)
+- [x] Auto-sync paid invoices on `delivered` (fire-and-forget hook in `updateOrderStatus`)
+- [x] Manual "Sync to QuickBooks" button on order page for first-time testing + recovery
+- [x] Sync customers → QBO Customer on first invoice (find-or-create by display name)
+- [x] Daily reconciliation cron `/api/cron/quickbooks-reconcile` — retries failed/missing syncs (1h cool-off, cap 100/org/run)
+- [x] Help Center article + architecture doc
+- [x] 7 unit tests (URL building, token refresh, 401 retry, 429, network errors)
+- [x] Playwright HTTP smoke for route auth gating + cron secret
+
+**Deferred to Sprint 2.5** (documented in `docs/architecture/quickbooks-online-sync.md`):
+- [ ] Token-at-rest encryption via Supabase Vault
+- [ ] QBO → Korent webhook listener (customer-merged, account-deleted)
+- [ ] Map Korent products → QBO Items
+- [ ] Payment record push
+- [ ] Refund / void handling
+- [ ] Batch operations for high-volume orgs
+
+**Gate:**
+- [ ] Operator wires `QBO_CLIENT_ID` / `QBO_CLIENT_SECRET` to a sandbox app
+- [ ] 1 internal test org has 10+ successfully synced invoices (manual smoke after env wiring)
+- [ ] Intuit certification submitted
 
 ### Sprint 3 — Recurring bookings UI (weeks 7-8)
 

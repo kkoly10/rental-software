@@ -270,6 +270,46 @@ Use the action buttons next to each document to mark it as "Sent" or "Signed."
     related: ["creating-orders", "recording-payments"],
   },
 
+  // Payments
+  {
+    slug: "quickbooks-sync",
+    title: "Connecting QuickBooks Online",
+    section: "Payments",
+    summary: "Push your Korent invoices into QuickBooks so your accountant doesn't have to copy them.",
+    body: `**What this does:**
+
+Once connected, every order that reaches the **Delivered** status automatically becomes a QuickBooks invoice — with the customer, line items, and delivery fee. Your accountant opens QuickBooks, sees the up-to-date books, and you spend less time copying numbers.
+
+**Connect QuickBooks:**
+
+1. Go to **Settings → Integrations** in the sidebar
+2. Click **Connect QuickBooks**
+3. Sign in to Intuit and grant access to the company file you want to sync
+4. You'll land back on Settings with "QuickBooks connected"
+
+**Test it on a real order:**
+
+Don't trust the auto-sync blind — try it once:
+1. Open any **Confirmed** or **Delivered** order
+2. Click **Sync to QuickBooks**
+3. Open QuickBooks in another tab — the invoice should appear under the customer
+4. If anything's off, the "Last sync error" line on the Settings card tells you what happened
+
+**Auto-sync trigger:**
+
+Orders sync automatically when they move to **Delivered**. If a sync fails (network blip, rate limit), the daily reconcile job retries it the next morning.
+
+**Disconnect:**
+
+Settings → Integrations → **Disconnect**. Removes the connection from Korent and revokes the access at Intuit. Your existing QuickBooks invoices stay intact.
+
+**Tips:**
+
+- Customer names: Korent uses the customer's display name to find existing QBO customers. If you have two "John Smith" entries, only the first will be matched. Rename one in QBO if this becomes a problem.
+- Already-paid deposits: the QBO invoice is created with the full total. Marking the deposit paid is done inside QBO by your accountant.`,
+    related: ["recording-payments", "exporting-payments"],
+  },
+
   // Deliveries & Crew
   {
     slug: "smart-delivery-mode",
