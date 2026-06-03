@@ -140,6 +140,50 @@ test("enumerate: alreadyGeneratedThrough skips past dates but keeps numbering", 
   assert.equal(result.occurrences[0].eventDate, "2026-06-22");
 });
 
+test("enumerate: Jan 31 monthly recovers 31st each long month instead of permanently drifting to 28", () => {
+  // Regression for #30. The pre-fix iterative path called
+  // nextOccurrenceDate(prev) which clamps Feb 28 → Mar 28 (the
+  // previous occurrence's day-of-month) → Apr 28 → ... forever. The
+  // anchored path recomputes from startDate so the 31st recovers on
+  // every long month: Jan 31, Feb 28, Mar 31, Apr 30, May 31, Jun 30.
+  const result = enumerateOccurrences({
+    startDate: "2026-01-31",
+    endDate: null,
+    maxOccurrences: 6,
+    cadence: { frequency: "monthly", intervalCount: 1 },
+    alreadyGeneratedThrough: null,
+    through: "2026-12-31",
+  });
+  assert.deepEqual(
+    result.occurrences.map((o) => o.eventDate),
+    [
+      "2026-01-31",
+      "2026-02-28",
+      "2026-03-31",
+      "2026-04-30",
+      "2026-05-31",
+      "2026-06-30",
+    ],
+  );
+});
+
+test("enumerate: quarterly Aug 31 anchors correctly across short Novembers", () => {
+  // Aug 31 quarterly: Aug 31 → Nov 30 (clamp, Nov has 30) → Feb 28
+  // (clamp, non-leap) → May 31. The anchor must persist.
+  const result = enumerateOccurrences({
+    startDate: "2026-08-31",
+    endDate: null,
+    maxOccurrences: 4,
+    cadence: { frequency: "quarterly", intervalCount: 1 },
+    alreadyGeneratedThrough: null,
+    through: "2027-12-31",
+  });
+  assert.deepEqual(
+    result.occurrences.map((o) => o.eventDate),
+    ["2026-08-31", "2026-11-30", "2027-02-28", "2027-05-31"],
+  );
+});
+
 test("enumerate: max_occurrences=1 (start-only) returns just the start date", () => {
   // Pathological but legitimate — a "recurring" series with one
   // occurrence is sometimes how operators model "one-time but linked".
@@ -172,7 +216,11 @@ test("enumerate: batchLimit caps emissions and reports reachedTerminus=false", (
   assert.equal(result.occurrences[9].occurrenceNumber, 10);
 });
 
-test("enumerate: monthly across leap-year Feb gives clamped dates", () => {
+test("enumerate: monthly across leap-year Feb anchors and recovers Mar 31", () => {
+  // Post-#30 fix: Mar 31 recovers (not Mar 29) because each occurrence
+  // is shifted from startDate, not from the previous (Feb 29) clamped
+  // value. iCal RFC 5545 BYMONTHDAY semantics + most native calendar
+  // apps (iOS, Outlook) work this way too.
   const result = enumerateOccurrences({
     startDate: "2024-01-31",
     endDate: null,
@@ -184,12 +232,7 @@ test("enumerate: monthly across leap-year Feb gives clamped dates", () => {
   assert.equal(result.reachedTerminus, true);
   assert.deepEqual(
     result.occurrences.map((o) => o.eventDate),
-    ["2024-01-31", "2024-02-29", "2024-03-29"],
-    // Note: third occurrence is Mar 29 not Mar 31 because we shift
-    // from Feb 29 (the previous occurrence), not from Jan 31. This
-    // is the standard "previous occurrence drift" semantics and
-    // matches what calendar apps (Google, iCal) do for monthly
-    // recurring events that start on a high day.
+    ["2024-01-31", "2024-02-29", "2024-03-31"],
   );
 });
 
