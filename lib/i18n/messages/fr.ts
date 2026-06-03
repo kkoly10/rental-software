@@ -1886,6 +1886,17 @@ export const fr: Messages = {
         previewAlt: "Aperçu",
         setupPhotoAlt: "Photo d’installation",
       },
+      pickupPhoto: {
+        matchAngle: "Reproduisez cet angle",
+        matchAngleBody:
+          "Photo prise à la livraison. Essayez de capturer l’équipement sous le même angle pour faciliter la comparaison.",
+        savePhoto: "Enregistrer la photo de reprise",
+        saving: "Enregistrement…",
+        photoSaved: "Photo de reprise enregistrée.",
+        previewAlt: "Aperçu de la photo de reprise",
+        referenceAlt: "Photo de livraison comme référence",
+        ariaLabel: "Photo de l’état à la reprise",
+      },
       locationShare: {
         title: "Partage de position en direct",
         shareLiveLocation: "Partager la position en direct",

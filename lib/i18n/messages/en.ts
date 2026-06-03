@@ -1887,6 +1887,17 @@ const enValues = {
         previewAlt: "Preview",
         setupPhotoAlt: "Setup photo",
       },
+      pickupPhoto: {
+        matchAngle: "Match this angle",
+        matchAngleBody:
+          "Photo taken at delivery. Try to capture the equipment from the same angle so condition is easy to compare.",
+        savePhoto: "Save pickup photo",
+        saving: "Saving…",
+        photoSaved: "Pickup photo saved.",
+        previewAlt: "Pickup photo preview",
+        referenceAlt: "Delivery photo for matching reference",
+        ariaLabel: "Pickup condition photo",
+      },
       locationShare: {
         title: "Live location sharing",
         shareLiveLocation: "Share live location",

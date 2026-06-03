@@ -1873,6 +1873,17 @@ export const pt: Messages = {
         saving: "A guardar…",
         signed: "Assinado",
       },
+      pickupPhoto: {
+        matchAngle: "Combine este ângulo",
+        matchAngleBody:
+          "Foto tirada na entrega. Tente capturar o equipamento do mesmo ângulo para facilitar a comparação.",
+        savePhoto: "Salvar foto de coleta",
+        saving: "Salvando…",
+        photoSaved: "Foto de coleta salva.",
+        previewAlt: "Prévia da foto de coleta",
+        referenceAlt: "Foto da entrega como referência",
+        ariaLabel: "Foto de condição na coleta",
+      },
       proofPhoto: {
         title: "Fotografia de comprovativo",
         uploadPhoto: "Carregar fotografia",

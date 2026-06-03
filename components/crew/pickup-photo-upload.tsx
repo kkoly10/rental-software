@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { uploadPickupPhoto, type StopActionState } from "@/lib/crew/actions";
+import { useI18n } from "@/lib/i18n/provider";
 
 const initial: StopActionState = { ok: false, message: "" };
 
@@ -30,6 +31,8 @@ export function PickupPhotoUpload({
   deliveryPhotoUrl?: string | null;
   existingUrl?: string;
 }) {
+  const { messages } = useI18n();
+  const t = messages.forms.crew.pickupPhoto;
   const [state, action, pending] = useActionState(uploadPickupPhoto, initial);
   const [preview, setPreview] = useState<string | null>(existingUrl ?? null);
 
@@ -44,11 +47,11 @@ export function PickupPhotoUpload({
         {preview && (
           <img
             src={preview}
-            alt="Pickup photo"
+            alt={t.previewAlt}
             style={{ width: "100%", borderRadius: 8, marginBottom: 8 }}
           />
         )}
-        <span className="badge success">Pickup photo saved.</span>
+        <span className="badge success">{t.photoSaved}</span>
       </div>
     );
   }
@@ -71,16 +74,15 @@ export function PickupPhotoUpload({
             className="muted"
             style={{ fontSize: 12, marginBottom: 6, fontWeight: 600 }}
           >
-            Match this angle
+            {t.matchAngle}
           </div>
           <img
             src={deliveryPhotoUrl}
-            alt="Delivery photo for matching reference"
+            alt={t.referenceAlt}
             style={{ width: "100%", borderRadius: 6, opacity: 0.85 }}
           />
           <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-            Photo taken at delivery. Try to capture the equipment from
-            the same angle so condition is easy to compare.
+            {t.matchAngleBody}
           </div>
         </div>
       )}
@@ -88,7 +90,7 @@ export function PickupPhotoUpload({
       {preview && (
         <img
           src={preview}
-          alt="Pickup photo preview"
+          alt={t.previewAlt}
           style={{ width: "100%", borderRadius: 8, marginBottom: 8 }}
         />
       )}
@@ -99,7 +101,7 @@ export function PickupPhotoUpload({
           type="file"
           accept="image/*"
           capture="environment"
-          aria-label="Pickup condition photo"
+          aria-label={t.ariaLabel}
           onChange={handleChange}
           style={{ fontSize: 13, flex: 1 }}
         />
@@ -109,7 +111,7 @@ export function PickupPhotoUpload({
           disabled={pending}
           style={{ fontSize: 12, padding: "6px 14px", flexShrink: 0 }}
         >
-          {pending ? "Saving…" : "Save pickup photo"}
+          {pending ? t.saving : t.savePhoto}
         </button>
       </div>
 

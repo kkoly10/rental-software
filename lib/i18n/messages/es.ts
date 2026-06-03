@@ -1886,6 +1886,17 @@ export const es: Messages = {
         previewAlt: "Vista previa",
         setupPhotoAlt: "Foto de montaje",
       },
+      pickupPhoto: {
+        matchAngle: "Iguala este ángulo",
+        matchAngleBody:
+          "Foto tomada en la entrega. Intenta capturar el equipo desde el mismo ángulo para comparar fácilmente.",
+        savePhoto: "Guardar foto de recogida",
+        saving: "Guardando…",
+        photoSaved: "Foto de recogida guardada.",
+        previewAlt: "Vista previa de foto de recogida",
+        referenceAlt: "Foto de entrega como referencia",
+        ariaLabel: "Foto de condición de recogida",
+      },
       locationShare: {
         title: "Compartir ubicación en vivo",
         shareLiveLocation: "Compartir ubicación en vivo",
