@@ -4,6 +4,7 @@ import {
   createSupabaseAdminClient,
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 
 // Cron job: sweep orphaned storage objects whose DB row never landed
 // (or has been deleted), reclaiming bucket space.
@@ -23,13 +24,6 @@ import {
 //     audit what was removed.
 
 export const maxDuration = 60;
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const secret = getOptionalEnv("CRON_SECRET");
-  if (!secret) return false;
-  const authHeader = request.headers.get("authorization");
-  return authHeader === `Bearer ${secret}`;
-}
 
 const MAX_DELETES_PER_RUN = 500;
 const MIN_AGE_HOURS = 24;
