@@ -13,9 +13,11 @@ import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
 import { SendDeliveryButton } from "@/components/orders/send-delivery-button";
 import { SyncQuickBooksButton } from "@/components/orders/sync-quickbooks-button";
+import { SyncXeroButton } from "@/components/orders/sync-xero-button";
 import { MakeRecurringForm } from "@/components/orders/make-recurring-form";
 import { SeriesInfoCard } from "@/components/orders/series-info-card";
 import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
+import { getXeroStatus } from "@/lib/data/xero-status";
 import { getOrderSeriesSummary } from "@/lib/data/order-series";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
@@ -40,15 +42,17 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications, routingState, qbStatus, seriesSummary, m] = await Promise.all([
+  const [order, communications, routingState, qbStatus, xeroStatus, seriesSummary, m] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
     getOrderRoutingState(id),
     getQuickBooksStatus(),
+    getXeroStatus(),
     getOrderSeriesSummary(id),
     getMessages(),
   ]);
   const qboConnected = qbStatus.configured && qbStatus.connected;
+  const xeroConnected = xeroStatus.configured && xeroStatus.connected;
 
   const hasDocuments = order.documents.length > 0 && order.documents[0] !== "No documents";
 
@@ -236,6 +240,7 @@ export default async function OrderDetailPage({
             <ConfirmOrderButton orderId={id} currentStatus={order.status} />
             <SendDeliveryButton orderId={id} currentStatus={order.status} />
             {qboConnected && <SyncQuickBooksButton orderId={id} />}
+            {xeroConnected && <SyncXeroButton orderId={id} />}
             <MakeRecurringForm
               orderId={id}
               orderStatus={order.status}

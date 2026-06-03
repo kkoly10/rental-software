@@ -806,20 +806,17 @@ export async function updateOrderStatus(
     }
   }
 
-  // Sprint 2 — auto-sync to QuickBooks Online when an order transitions
-  // into a "the work is done, the customer owes the balance" state.
-  // We trigger on `delivered` rather than `completed` so QBO sees the
-  // invoice as soon as the crew finishes, not days later when the
-  // operator marks the paperwork closed. Best-effort: failures land
-  // in qbo_last_sync_error and the daily reconcile cron retries.
+  // Sprint 2 / 3.5 — auto-sync to accounting integrations when an
+  // order transitions to `delivered`. Both QBO and Xero fire here;
+  // each one no-ops if the org isn't connected to that provider, so
+  // an org connected to one or both gets the right set of pushes.
+  // Fire-and-forget: failures land in *_last_sync_error and the
+  // daily reconcile crons retry.
   if (parsed.data.newStatus === "delivered") {
     try {
       const { syncOrderToQuickBooks } = await import(
         "@/lib/integrations/quickbooks/sync"
       );
-      // Don't block the status update on QBO. The sync is best-effort
-      // and the operator can always re-fire it manually from the order
-      // page if it fails.
       void syncOrderToQuickBooks(supabase, ctx.organizationId, parsed.data.orderId).catch(
         (err) => {
           console.error(
@@ -832,6 +829,24 @@ export async function updateOrderStatus(
     } catch (err) {
       console.error(
         "[orders.updateOrderStatus] QBO auto-sync import failed for",
+        parsed.data.orderId,
+        err instanceof Error ? err.message : err,
+      );
+    }
+    try {
+      const { syncOrderToXero } = await import("@/lib/integrations/xero/sync");
+      void syncOrderToXero(supabase, ctx.organizationId, parsed.data.orderId).catch(
+        (err) => {
+          console.error(
+            "[orders.updateOrderStatus] Xero auto-sync rejected for",
+            parsed.data.orderId,
+            err instanceof Error ? err.message : err,
+          );
+        },
+      );
+    } catch (err) {
+      console.error(
+        "[orders.updateOrderStatus] Xero auto-sync import failed for",
         parsed.data.orderId,
         err instanceof Error ? err.message : err,
       );

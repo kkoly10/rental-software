@@ -237,14 +237,35 @@ Goal: ship the wedge features nobody else has, so the positioning isn't just "ch
 
 Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqable does (in beta). Instantly leapfrogs Goodshuffle on a feature their customers explicitly request — particularly newer/younger operators who chose Xero over QuickBooks.
 
-- [ ] Register Xero developer account + OAuth app
-- [ ] Build `lib/integrations/xero/client.ts` — OAuth flow + token refresh
-- [ ] Database: add `organizations.xero_tenant_id`, `xero_access_token`, `xero_refresh_token` (encrypted)
-- [ ] One-way sync: paid invoices → Xero Invoice + Payment objects
-- [ ] Customer + product mapping (mirror QBO module pattern)
-- [ ] Connect / disconnect UI extends the QBO integrations page
-- [ ] Playwright test: order paid → Xero invoice in sandbox
-- [ ] **Gate**: 1 internal test org has 5+ successfully synced Xero invoices
+**External (founder):**
+- [ ] Register Xero developer account at developer.xero.com
+- [ ] Create app, get OAuth credentials
+- [ ] Set env vars: `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET`, `XERO_REDIRECT_URI`
+
+**Engineering:**
+- [x] `lib/integrations/xero/client.ts` — OAuth (PKCE) + Accounting API client with auto-refresh on 401 + tenant header
+- [x] Database: `organizations.xero_*` columns + `xero_invoice_sync` table with RLS — `supabase/migrations/20260603_060000_xero_connection.sql`
+- [x] One-way sync: paid invoices → Xero Contact + Invoice (ACCREC, AUTHORISED) — `lib/integrations/xero/sync.ts`
+- [x] Contact find-or-create by display name (mirrors QBO pattern)
+- [x] Connect / callback / disconnect routes (owner/admin, PKCE + state cookies)
+- [x] Settings → Integrations card sits next to the QBO card with its own banner
+- [x] Manual "Sync to Xero" button on the order page
+- [x] Auto-sync on `delivered` fires both QBO and Xero in parallel
+- [x] Daily reconcile cron `/api/cron/xero-reconcile` at 06:30 UTC
+- [x] 7 unit tests (PKCE pair, authorize URL, token refresh with tenant preservation, tenant header on API, 401 retry, 429, network)
+- [x] Playwright HTTP smoke for auth gating + cron secret
+- [x] Architecture doc (`docs/architecture/xero-sync.md`) + Help Center article (`xero-sync`)
+
+**Deferred to Sprint 3.7:**
+- [ ] Multi-tenant chooser UI
+- [ ] Token-at-rest Vault encryption (shared with QBO migration)
+- [ ] Xero webhook listener
+- [ ] Account-code mapping
+- [ ] Payment record push
+
+**Gate:**
+- [ ] Operator wires `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` to a sandbox app
+- [ ] 1 internal test org has 5+ successfully synced Xero invoices (manual smoke after env wiring)
 
 ### Sprint 4 — WhatsApp Business API (weeks 9-11)
 

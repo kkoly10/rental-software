@@ -15,8 +15,10 @@ import { EnvStatusChecklist } from "@/components/settings/env-status-checklist";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { RoutingModeForm } from "@/components/settings/routing-mode-form";
 import { QuickBooksCard } from "@/components/settings/quickbooks-card";
+import { XeroCard } from "@/components/settings/xero-card";
 import { getRoutingMode } from "@/lib/data/routing-mode";
 import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
+import { getXeroStatus } from "@/lib/data/xero-status";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 
@@ -32,14 +34,28 @@ const QBO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }>
   error: { tone: "warning", copy: "QuickBooks returned an error during the connection." },
 };
 
+const XERO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
+  connected: { tone: "success", copy: "Xero connected. Paid invoices will sync automatically." },
+  disconnected: { tone: "success", copy: "Xero disconnected." },
+  not_configured: { tone: "warning", copy: "Xero integration isn't configured on this deploy." },
+  forbidden: { tone: "warning", copy: "Only owners and admins can manage Xero." },
+  missing_params: { tone: "warning", copy: "Xero callback was missing parameters. Try connecting again." },
+  state_mismatch: { tone: "warning", copy: "Security check failed during Xero callback. Try again from this page." },
+  token_exchange_failed: { tone: "warning", copy: "Xero rejected the connection. Reconnect and try again." },
+  no_tenant: { tone: "warning", copy: "Xero didn't return a tenant. Make sure you authorized at least one organization." },
+  persist_failed: { tone: "warning", copy: "Couldn't save the Xero connection. Try again." },
+  error: { tone: "warning", copy: "Xero returned an error during the connection." },
+};
+
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ qbo?: string }>;
+  searchParams: Promise<{ qbo?: string; xero?: string }>;
 }) {
   const params = await searchParams;
   const qboBanner = params.qbo ? QBO_BANNERS[params.qbo] : undefined;
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, m] = await Promise.all([
+  const xeroBanner = params.xero ? XERO_BANNERS[params.xero] : undefined;
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, xeroStatus, m] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
@@ -47,6 +63,7 @@ export default async function SettingsPage({
     getSmsLog(),
     getRoutingMode(),
     getQuickBooksStatus(),
+    getXeroStatus(),
     getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
@@ -209,8 +226,18 @@ export default async function SettingsPage({
               {qboBanner.copy}
             </div>
           )}
+          {xeroBanner && (
+            <div
+              className={`badge ${xeroBanner.tone}`}
+              role={xeroBanner.tone === "warning" ? "alert" : undefined}
+              style={{ marginBottom: 12, display: "inline-block", fontSize: 12, marginLeft: 8 }}
+            >
+              {xeroBanner.copy}
+            </div>
+          )}
           <div className="list">
             <QuickBooksCard status={qbStatus} />
+            <XeroCard status={xeroStatus} />
           </div>
         </section>
       </div>

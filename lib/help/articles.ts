@@ -314,6 +314,40 @@ Items are copied from the template at series-create time and frozen on each chil
 
   // Payments
   {
+    slug: "xero-sync",
+    title: "Connecting Xero",
+    section: "Payments",
+    summary: "Push paid invoices into Xero — same as QuickBooks, just a different accounting backend.",
+    body: `If your accountant uses Xero (especially common for newer or smaller businesses, or operators outside the US), Korent can push paid invoices straight into your Xero file.
+
+**Connect Xero:**
+
+1. **Settings → Integrations**, click **Connect Xero**
+2. Sign in to Xero and grant access to the organization you want to sync to
+3. If you have multiple Xero organizations, the first one in your list is used (multi-organization chooser is a planned follow-up)
+4. You'll land back on Settings with "Xero connected"
+
+**Test it on a real order:**
+
+Same drill as QuickBooks — open a Confirmed or Delivered order and click **Sync to Xero**. Open Xero in another tab and confirm the invoice landed under the contact.
+
+**Auto-sync trigger:**
+
+Orders sync automatically when they move to **Delivered**. Daily reconcile retries failures the next morning.
+
+**Both QuickBooks and Xero connected?**
+
+That's fine. Each integration tracks its own sync state. Every paid order tries both. You won't get duplicate invoices in one accounting system — each provider's sync is independent.
+
+**Tips:**
+
+- Contact matching uses the customer's name (display name in Xero). Two "John Smith" entries will match the first one — rename in Xero to disambiguate.
+- Invoices land as **Authorised** status, ready for your accountant to mark paid once the deposit is reconciled.
+- Item line descriptions come from Korent's stored item snapshot.`,
+    related: ["quickbooks-sync", "recording-payments"],
+  },
+
+  {
     slug: "quickbooks-sync",
     title: "Connecting QuickBooks Online",
     section: "Payments",
