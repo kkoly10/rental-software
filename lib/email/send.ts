@@ -77,7 +77,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     // The payload field was added in PR #189 but never reached the SDK
     // call — so two retries (same payload, same key) would still send two
     // emails. Threading it through here closes that gap.
-    const { error } = await resend.emails.send(
+    const { error, data: sendResult } = await resend.emails.send(
       {
         from: fromAddress,
         to: payload.to,
@@ -141,6 +141,14 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     });
 
     if (payload.organizationId) {
+      // Persist only the Resend message id, not the full HTML body.
+      // bodyPreview already carries a 200-char text snippet for human
+      // review; storing the entire HTML inflates communication_log by
+      // ~40 KB per send (with the view-link banner + preheader) and
+      // makes the JSONB column expensive to scan during the dashboard
+      // search. The view-in-browser archive (rendered via the
+      // archiveId + signed view-token route) is where the operator
+      // goes when they need to see the full content.
       await logCommunication({
         organizationId: payload.organizationId,
         orderId: payload.orderId,
@@ -151,7 +159,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
         subject: payload.subject,
         bodyPreview: payload.html.replace(/<[^>]*>/g, "").slice(0, 200),
         status: "sent",
-        metadata: { html: htmlWithViewLink },
+        metadata: { messageId: sendResult?.id ?? null },
         id: archiveId ?? undefined,
       }).catch(() => {});
     }
