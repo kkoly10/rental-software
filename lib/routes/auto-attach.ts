@@ -111,12 +111,18 @@ export async function autoAttachOrderToRouteIfEligible(
       .maybeSingle();
     if (existingStop) return { attached: false, reason: "already_attached" };
 
-    // 4) Find candidate routes for this org+date.
+    // 4) Find candidate routes for this org+date. Restrict to "planned"
+    // so a route the driver has already started or finished doesn't
+    // get a new stop bolted on mid-run. If the only candidate is in
+    // progress, fall through to the no-route branch — auto mode will
+    // create a fresh planned route alongside it, and manual mode will
+    // return no_route so the operator can choose.
     const { data: routes } = await supabase
       .from("routes")
       .select("id, name, route_status")
       .eq("organization_id", organizationId)
       .eq("route_date", eventDate)
+      .eq("route_status", "planned")
       .is("deleted_at", null);
 
     let targetRoute: { id: string; name: string; route_status: string } | null = null;

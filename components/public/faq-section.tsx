@@ -26,7 +26,12 @@ export function FaqSection({ customFaqs }: FaqSectionProps) {
 
         <div className="faq-list">
           {faqs.map((faq, index) => (
-            <div key={faq.question} className="faq-item">
+            // Two FAQs with the same question text would collide on
+            // `key={faq.question}`. The index is stable here because the
+            // list is server-rendered and re-renders preserve order,
+            // but combine both so any future client-side reorder stays
+            // safe and dedup-aware.
+            <div key={`${index}:${faq.question}`} className="faq-item">
               <button
                 type="button"
                 className="faq-trigger"
