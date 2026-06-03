@@ -73,15 +73,22 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
   try {
     const resend = getResend();
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: payload.to,
-      subject: payload.subject,
-      html: htmlWithPreheader,
-      text: payload.text,
-      replyTo: payload.replyTo,
-      headers: payload.headers,
-    });
+    // Resend dedupes by Idempotency-Key for 24h when callers pass one.
+    // The payload field was added in PR #189 but never reached the SDK
+    // call — so two retries (same payload, same key) would still send two
+    // emails. Threading it through here closes that gap.
+    const { error } = await resend.emails.send(
+      {
+        from: fromAddress,
+        to: payload.to,
+        subject: payload.subject,
+        html: htmlWithPreheader,
+        text: payload.text,
+        replyTo: payload.replyTo,
+        headers: payload.headers,
+      },
+      payload.idempotencyKey ? { idempotencyKey: payload.idempotencyKey } : undefined,
+    );
 
     if (error) {
       await logAppError({

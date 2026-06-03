@@ -375,6 +375,15 @@ export async function cancelSeries(
       .in("order_status", ["inquiry", "quote_sent", "awaiting_deposit", "confirmed"])
       .is("deleted_at", null);
 
+    // Mirror the cleanup chain that updateOrderStatus runs on a single
+    // cancellation: flip the status AND tear down any route stop the
+    // child had attached. Without this, a future child that was already
+    // bundled into a planned route would leave a zombie stop after the
+    // series cancels, and the driver would still see "Customer X — pickup"
+    // on their day's run.
+    const { removeOrderStopOnCancel } = await import(
+      "@/lib/routes/remove-stop-on-cancel"
+    );
     for (const child of children ?? []) {
       const { error } = await supabase
         .from("orders")
@@ -382,7 +391,21 @@ export async function cancelSeries(
         .eq("id", child.id)
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null);
-      if (!error) cancelledChildren += 1;
+      if (error) continue;
+      cancelledChildren += 1;
+      // Swallow stop-removal failures: the order is already cancelled,
+      // and the dispatcher gets a clearer signal from app_error_logs if
+      // the RPC failed (logged inside removeOrderStopOnCancel) than from
+      // an aborted series-cancel that's half done.
+      try {
+        await removeOrderStopOnCancel(
+          ctx.organizationId,
+          child.id,
+          supabase,
+        );
+      } catch {
+        // logged downstream
+      }
     }
   }
 

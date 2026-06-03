@@ -282,20 +282,31 @@ export async function uploadProofPhoto(
 
   const supabase = await createSupabaseServerClient();
 
+  // Validate stopId is a UUID before interpolating into the storage path.
+  // Without this, a crafted stop_id form value like "../../foo" would write
+  // to an attacker-chosen location in the uploads bucket.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stopId)) {
+    return { ok: false, message: "Invalid stop reference." };
+  }
+
   const MIME_TO_EXT: Record<string, string> = {
     "image/jpeg": "jpg",
     "image/png": "png",
     "image/webp": "webp",
-    "image/heic": "heic",
   };
-  const ext = MIME_TO_EXT[file.type] ?? "jpg";
+  // Use the sniffed type, not the client-declared file.type: a request can
+  // forge file.type="image/jpeg" while sending PNG bytes (or vice versa).
+  // The sniff has already validated the bytes against ALLOWED_PHOTO_TYPES
+  // above, so it's the trusted source for both the extension and the
+  // Content-Type header below.
+  const ext = MIME_TO_EXT[sniffedPhotoType] ?? "jpg";
 
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
   const filePath = `proof-photos/${ctx.organizationId}/${stopId}-${Date.now()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
     .from(bucket)
-    .upload(filePath, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+    .upload(filePath, file, { cacheControl: "3600", upsert: false, contentType: sniffedPhotoType });
 
   if (uploadError) {
     return { ok: false, message: uploadError.message };
@@ -443,12 +454,19 @@ export async function uploadPickupPhoto(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Same hardening as uploadProofPhoto: UUID-validate stopId so it can't
+  // path-traverse, and derive extension + content-type from the sniffed
+  // bytes (not the forgeable client-declared file.type).
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stopId)) {
+    return { ok: false, message: "Invalid stop reference." };
+  }
   const MIME_TO_EXT: Record<string, string> = {
     "image/jpeg": "jpg",
     "image/png": "png",
     "image/webp": "webp",
   };
-  const ext = MIME_TO_EXT[file.type] ?? "jpg";
+  const ext = MIME_TO_EXT[sniffedPhotoType] ?? "jpg";
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
   // Different prefix from proof-photos so listings stay tidy and an
   // operator browsing storage can tell delivery vs pickup at a glance.
@@ -459,7 +477,7 @@ export async function uploadPickupPhoto(
     .upload(filePath, file, {
       cacheControl: "3600",
       upsert: false,
-      contentType: file.type,
+      contentType: sniffedPhotoType,
     });
   if (uploadError) return { ok: false, message: uploadError.message };
 
