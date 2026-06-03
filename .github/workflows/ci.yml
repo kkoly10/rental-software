@@ -65,6 +65,7 @@ jobs:
           node --test --experimental-strip-types \
             tests/auto-attach-create.test.ts \
             tests/compute-financials.test.ts \
+            tests/onboarding-vertical-allowlist.test.ts \
             tests/portal-access-token.test.ts \
             tests/quickbooks-client.test.ts \
             tests/quickbooks-csv-format.test.ts \
