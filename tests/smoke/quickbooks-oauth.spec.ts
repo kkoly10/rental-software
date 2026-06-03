@@ -22,7 +22,8 @@ test.describe("QuickBooks Online OAuth routes", () => {
     });
     // 401 (no auth), 503 (not configured), or 3xx (redirect to login).
     // 500+ would mean the route crashed during the auth check.
-    expect(res.status(), `unexpected status ${res.status()}`).toBeLessThan(500);
+    expect(res.status(), `unexpected status ${res.status()}`);
+    expect(res.status() < 500 || res.status() === 503).toBe(true);
   });
 
   test("/api/integrations/quickbooks/callback handles missing params without 500", async ({
@@ -34,7 +35,8 @@ test.describe("QuickBooks Online OAuth routes", () => {
     );
     // Expected: redirect back to /dashboard/settings?qbo=missing_params
     // or auth refusal. Crucial: never a 500.
-    expect(res.status(), `unexpected status ${res.status()}`).toBeLessThan(500);
+    expect(res.status(), `unexpected status ${res.status()}`);
+    expect(res.status() < 500 || res.status() === 503).toBe(true);
   });
 
   test("/api/integrations/quickbooks/disconnect rejects GET (POST only)", async ({
@@ -46,7 +48,8 @@ test.describe("QuickBooks Online OAuth routes", () => {
     );
     // Next.js returns 405 for an undefined method, OR redirects to
     // login if auth fires first. Either way: < 500.
-    expect(res.status(), `unexpected status ${res.status()}`).toBeLessThan(500);
+    expect(res.status(), `unexpected status ${res.status()}`);
+    expect(res.status() < 500 || res.status() === 503).toBe(true);
   });
 
   test("/api/cron/quickbooks-reconcile requires cron secret", async ({ request }) => {

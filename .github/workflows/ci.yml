@@ -1,0 +1,118 @@
+name: CI
+
+# Runs on every PR + push to main. Fails the build on:
+#   - TypeScript errors
+#   - Unit test failures
+#   - Playwright HTTP smoke failures (boots the Next.js dev server,
+#     hits the new auth-walled API routes, asserts no 500s leak)
+#
+# What this does NOT cover (intentional — would require secrets +
+# external API access):
+#   - Live Intuit / Xero / Twilio / Mapbox sandbox round-trips
+#   - Authenticated UI walks (Supabase test database needed)
+#   - Migration SQL execution against a real Postgres
+#
+# Those are listed in docs/strategy/README.md confidence levels and
+# tracked as Sprint 5.7 follow-ups.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit lands on the same branch.
+# Saves Actions minutes when a developer rapid-fires fixes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+        # `npm run lint` is `tsc --noEmit` per package.json. Renaming
+        # to its semantic name in the job UI so a tsc failure shows
+        # up as "TypeScript" not "lint" in the GitHub checks panel.
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run node:test suite
+        # The package.json script is `node --test --experimental-strip-types tests/**/*.test.ts`.
+        # The shell glob `**` requires globstar; bash on ubuntu-latest
+        # supports it but the spawned subshell may not. Expand
+        # explicitly so the test runner gets every file regardless
+        # of shell settings.
+        run: |
+          node --test --experimental-strip-types \
+            tests/auto-attach-create.test.ts \
+            tests/compute-financials.test.ts \
+            tests/portal-access-token.test.ts \
+            tests/quickbooks-client.test.ts \
+            tests/quickbooks-csv-format.test.ts \
+            tests/rate-limit-policy.test.ts \
+            tests/remove-stop-on-cancel.test.ts \
+            tests/route-optimizer.test.ts \
+            tests/series-cadence.test.ts \
+            tests/smart-delivery-flow.test.ts \
+            tests/whatsapp-dispatch.test.ts \
+            tests/xero-client.test.ts
+
+  smoke-tests:
+    name: Playwright API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browsers
+        # The smoke tests are API-level (request-based, no real
+        # browser rendering) so technically chromium isn't required.
+        # We still install it because Playwright's config expects
+        # the browsers cache to exist and Playwright errors loudly
+        # otherwise on first run.
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        # Build before serving so the dev-server boot in
+        # playwright.config.ts uses the production output. Reduces
+        # cold-start flakes vs `next dev`.
+        run: npm run build
+      - name: Run smoke suite
+        # `npm run test:smoke` boots `npm run dev` per
+        # playwright.config.ts's webServer entry. The smoke tests
+        # hit /api/* paths + the dashboard pages and assert no 500s.
+        run: npm run test:smoke
+        env:
+          # Demo mode: no Supabase env, so auth-walled routes
+          # respond with 503 / redirect rather than crash. The
+          # smoke tests assert "anything < 500".
+          NEXT_PUBLIC_SUPABASE_URL: ""
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

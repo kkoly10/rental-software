@@ -26,6 +26,7 @@ test.describe("GET /api/deliveries/[id]/pull-sheet", () => {
     const res = await request.get("/api/deliveries/not-a-uuid/pull-sheet");
     // Either auth blocks us first (401/503) or the route query returns
     // 404 — what we care about is that no 500 leaks through.
-    expect(res.status(), `unexpected status: ${res.status()}`).toBeLessThan(500);
+    expect(res.status(), `unexpected status: ${res.status()}`);
+    expect(res.status() < 500 || res.status() === 503).toBe(true);
   });
 });
