@@ -45,10 +45,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${settingsUrl}?xero=missing_params`);
   }
 
-  const expectedState = request.cookies.get("xero_oauth_state")?.value;
+  // Cookie format set by connect is `${state}:${userId}`. Split,
+  // verify state, then verify userId matches the currently-auth user
+  // (shared-device defense — same as the QBO route).
+  const cookieValue = request.cookies.get("xero_oauth_state")?.value ?? "";
   const verifier = request.cookies.get("xero_oauth_verifier")?.value;
+  const sep = cookieValue.indexOf(":");
+  const expectedState = sep > 0 ? cookieValue.slice(0, sep) : cookieValue;
+  const expectedUserId = sep > 0 ? cookieValue.slice(sep + 1) : "";
   if (!expectedState || expectedState !== state || !verifier) {
     return NextResponse.redirect(`${settingsUrl}?xero=state_mismatch`);
+  }
+  if (!expectedUserId || expectedUserId !== ctx.userId) {
+    return NextResponse.redirect(`${settingsUrl}?xero=user_mismatch`);
   }
 
   let tokensWithoutTenant;

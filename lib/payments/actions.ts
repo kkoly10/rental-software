@@ -215,6 +215,23 @@ export async function recordPayment(
       .is("deleted_at", null);
   }
 
+  // Mirror the Stripe webhook's auto-flip to "refunded" for the manual
+  // refund path. The webhook handler at app/api/stripe/webhooks/route.ts
+  // does the same when refundFinancials.totalPaid <= 0; previously the
+  // manual path only auto-confirmed (the block above) and left the order
+  // dangling in its prior status after the refund cleared the balance.
+  // Don't overwrite terminal statuses (`cancelled` / `refunded`) — the
+  // .not() guard handles the TOCTOU window between SELECT and UPDATE.
+  if (paymentType === "refund" && netPaid <= 0) {
+    await supabase
+      .from("orders")
+      .update({ order_status: "refunded" })
+      .eq("id", orderId)
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null)
+      .not("order_status", "in", '("cancelled","refunded")');
+  }
+
   // Convert any temporary checkout_hold to permanent now that payment is recorded.
   // Without this, the cleanup cron could expire the hold before the Stripe webhook fires,
   // or for non-Stripe orders where no webhook exists at all.

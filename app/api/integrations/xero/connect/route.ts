@@ -57,7 +57,13 @@ export async function GET(_request: NextRequest) {
     path: "/api/integrations/xero",
     maxAge: 10 * 60,
   };
-  response.cookies.set("xero_oauth_state", state, cookieBase);
+  // Pin the initiating user into the state cookie. Without this, a
+  // shared device where user A starts a flow and user B finishes it
+  // would attach Xero tokens to user B's org context. Format mirrors
+  // the QBO route: `${state}:${userId}`. The verifier stays opaque
+  // (it's already a PKCE secret bound to this client by virtue of
+  // being a per-flow secret).
+  response.cookies.set("xero_oauth_state", `${state}:${ctx.userId}`, cookieBase);
   response.cookies.set("xero_oauth_verifier", verifier, cookieBase);
   return response;
 }
