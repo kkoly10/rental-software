@@ -436,6 +436,32 @@ Settings → Integrations → **Disconnect**. Removes the connection from Korent
 
   // Deliveries & Crew
   {
+    slug: "route-optimization",
+    title: "Optimizing your delivery route",
+    section: "Deliveries & Crew",
+    summary: "One click reorders the day's stops by shortest drive time.",
+    body: `When you have 4+ stops on a route, ordering them by hand is a real time sink — and the wrong order means more miles, more gas, and an irritated crew. Sprint 5 ships a one-click optimizer that uses Mapbox to compute the shortest route through all stops.
+
+**How to use it:**
+
+1. Open the route detail page from the Deliveries kanban
+2. Click **Optimize route** in the action row
+3. Wait ~2 seconds — Mapbox computes the optimal order
+4. You'll see a confirmation: "Optimized — 47 mi, 1h 38m"
+5. The stops are re-numbered immediately; the crew mobile view picks up the new order on next refresh
+
+**Locked stops stay locked.** Stops your crew has already started (en route, completed, skipped) keep their original sequence at the head of the route. Only "Pending" stops get reordered.
+
+**Missing coordinates?** If a customer's delivery address never got geocoded, that stop falls to the tail of the route and you'll see a note "N stops without coordinates were left at the end." Fix it by adding a more specific address on the customer page.
+
+**When the button is hidden:** Routes in progress or completed can't be reordered (it would confuse the driver). Mark the route Planned again if you really need to re-optimize.
+
+**Cost:** Each click is roughly $0.002 on Mapbox's paid tier, free under the 50k/mo free tier. Most operators stay free.
+
+**External setup:** the operator needs to set <code>MAPBOX_ACCESS_TOKEN</code> in the deploy. Without it, the button surfaces a "Mapbox isn't configured" message and you can keep ordering by hand.`,
+    related: ["delivery-routes", "smart-delivery-mode", "pull-sheets"],
+  },
+  {
     slug: "smart-delivery-mode",
     title: "How auto-scheduling (Smart Delivery Mode) works",
     section: "Deliveries & Crew",

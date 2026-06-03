@@ -303,15 +303,34 @@ Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqa
 
 Closes the last functional gap vs Goodshuffle and InflatableOffice (both have one-click solvers).
 
-- [ ] Pick provider: Google Routes API (better for US, ~$5 per 1k stops) vs Mapbox Optimization (cheaper, OSS-friendly)
-- [ ] Build `lib/logistics/route-optimizer.ts` — given a list of stops, return optimized order
-- [ ] "Optimize route" button on `app/dashboard/deliveries/[routeId]` page
-- [ ] Cost preview (estimated drive time + distance) before applying
-- [ ] Cache optimization results per route (don't re-charge on view)
-- [ ] Handle locked stops (driver already departed → don't reorder en-route stops)
-- [ ] Optional: auto-calculate gas cost (from distance × fuel price) and labor cost (from time × driver wage)
-- [ ] Playwright test: 5-stop route → click optimize → order changes per algorithm
-- [ ] **Gate**: time savings demoable to 3 beta customers
+**External (founder/operator):**
+- [ ] Create a Mapbox account, mint an access token at https://account.mapbox.com/access-tokens/
+- [ ] Add `MAPBOX_ACCESS_TOKEN` env var to Vercel
+
+**Engineering:**
+- [x] Picked Mapbox Optimization v2 ($2/1k vs Google Routes ~$5/1k; provider-agnostic interface so swapping is single-file)
+- [x] `lib/logistics/route-optimizer.ts` — pure orchestration with `RouteOptimizerProvider` interface
+- [x] `lib/logistics/optimizers/mapbox.ts` — Mapbox v2 submit + poll adapter
+- [x] `lib/logistics/optimize-route-action.ts` — server action with role gate + state gate (planned-only)
+- [x] Distance + time summary shown right after click (e.g., "Optimized — 47 mi, 1h 38m")
+- [x] Schema cache: `routes.last_optimized_at`, `optimization_distance_meters`, `optimization_duration_seconds`, `optimization_provider` — `supabase/migrations/20260603_090000_route_optimization.sql`
+- [x] Locked-stop handling: en_route / completed / skipped keep original sequence at head; only pending stops get reordered
+- [x] Unoptimizable-stop handling: pending stops missing coords land at the tail; count surfaced in the action result
+- [x] "Optimize route" button (`components/deliveries/optimize-route-button.tsx`) mounted on `/dashboard/deliveries/[id]`
+- [x] 6 unit tests pinning the orchestration decision tree (happy path, locked head, missing coords tail, fewer-than-2 short circuit, provider failure, locked-sequence sort)
+- [x] Architecture doc (`docs/architecture/route-optimization.md`) + Help Center article (`route-optimization`)
+
+**Deferred to Sprint 5.5:**
+- [ ] Persistent optimization summary on the route detail page (currently only the post-click toast)
+- [ ] Time-window constraints honoring `scheduled_window_start`
+- [ ] Gas + labor cost summary (`distance × fuel_price + duration × driver_wage`)
+- [ ] Playwright e2e against Mapbox sandbox (requires real token)
+- [ ] A/B comparing optimizers via `optimization_provider` history
+
+**Gate:**
+- [ ] Operator wires `MAPBOX_ACCESS_TOKEN` to a Mapbox account
+- [ ] 1 internal demo route with 5+ stops optimizes successfully
+- [ ] Time savings demoable to 3 beta customers
 
 ### Phase 2 gate
 
