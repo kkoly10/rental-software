@@ -3,6 +3,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyCronSecret } from "@/lib/security/cron-auth";
 import { syncOrderToQuickBooks } from "@/lib/integrations/quickbooks/sync";
+import { shouldSkipSyncForBackoff } from "@/lib/integrations/sync-backoff";
 
 export const maxDuration = 60;
 
@@ -44,14 +45,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, reason: "orgs_query_failed", detail: orgsErr.message }, { status: 500 });
   }
 
-  const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const summary: { orgId: string; attempted: number; succeeded: number; failed: number }[] = [];
+  const summary: {
+    orgId: string;
+    attempted: number;
+    succeeded: number;
+    failed: number;
+    skippedBackoff: number;
+    skippedMaxAttempts: number;
+  }[] = [];
 
   for (const org of connectedOrgs ?? []) {
     const orgId = org.id as string;
     let attempted = 0;
     let succeeded = 0;
     let failed = 0;
+    let skippedBackoff = 0;
+    let skippedMaxAttempts = 0;
 
     // Candidates: orders in a paid/closed status that don't yet have
     // a successful sync row, or whose last attempt was more than an
@@ -72,15 +81,19 @@ export async function GET(request: NextRequest) {
 
     const { data: syncRows } = await supabase
       .from("quickbooks_invoice_sync")
-      .select("order_id, sync_status, last_attempted_at")
+      .select("order_id, sync_status, last_attempted_at, attempts")
       .eq("organization_id", orgId)
       .in("order_id", orders.map((o) => o.id as string));
 
-    const syncByOrder = new Map<string, { status: string; lastAttempt: string }>();
+    const syncByOrder = new Map<
+      string,
+      { status: string; lastAttempt: string; attempts: number }
+    >();
     for (const row of syncRows ?? []) {
       syncByOrder.set(row.order_id as string, {
         status: row.sync_status as string,
         lastAttempt: row.last_attempted_at as string,
+        attempts: (row.attempts as number | null) ?? 0,
       });
     }
 
@@ -88,7 +101,17 @@ export async function GET(request: NextRequest) {
       const sync = syncByOrder.get(order.id as string);
       if (sync) {
         if (sync.status === "synced") continue;
-        if (sync.lastAttempt > cutoff) continue;
+        // Exponential backoff: 1h → 2h → 4h → 8h → 16h → 24h (cap),
+        // then give up entirely at MAX_SYNC_ATTEMPTS. Replaces the
+        // flat 1h retry that would otherwise hammer Intuit for an
+        // order that's never going to succeed (bad data, revoked
+        // perms, etc.).
+        const decision = shouldSkipSyncForBackoff(sync.attempts, sync.lastAttempt);
+        if (decision.skip) {
+          if (decision.reason === "max_attempts") skippedMaxAttempts += 1;
+          else skippedBackoff += 1;
+          continue;
+        }
       }
       attempted += 1;
       const result = await syncOrderToQuickBooks(supabase, orgId, order.id as string);
@@ -98,7 +121,7 @@ export async function GET(request: NextRequest) {
       if (attempted >= 100) break;
     }
 
-    summary.push({ orgId, attempted, succeeded, failed });
+    summary.push({ orgId, attempted, succeeded, failed, skippedBackoff, skippedMaxAttempts });
   }
 
   return NextResponse.json({ ok: true, summary });

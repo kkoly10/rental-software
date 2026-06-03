@@ -74,6 +74,7 @@ jobs:
             tests/route-optimizer.test.ts \
             tests/series-cadence.test.ts \
             tests/smart-delivery-flow.test.ts \
+            tests/sync-backoff.test.ts \
             tests/twilio-inbound-keywords.test.ts \
             tests/whatsapp-dispatch.test.ts \
             tests/xero-client.test.ts
