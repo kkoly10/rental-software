@@ -43,8 +43,11 @@ export async function enrichCatalogAvailability(
     }
   }
 
-  // Check availability for each product on the given date
-  if (!date) {
+  // Check availability for each product on the given date. Reject malformed
+  // input here rather than letting `new Date("foobar")` propagate downstream
+  // and silently return zero availability (which an operator reading the
+  // logs would mistake for "no stock" instead of "bad URL param").
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { products, zipValid, zipMessage };
   }
 
