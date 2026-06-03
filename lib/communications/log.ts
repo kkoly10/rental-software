@@ -5,7 +5,7 @@ export type CommunicationLogEntry = {
   organizationId: string;
   orderId?: string | null;
   customerId?: string | null;
-  channel: "email" | "sms" | "portal_message" | "system";
+  channel: "email" | "sms" | "whatsapp" | "portal_message" | "system";
   direction: "outbound" | "inbound";
   recipient?: string | null;
   subject?: string | null;

@@ -16,9 +16,11 @@ import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { RoutingModeForm } from "@/components/settings/routing-mode-form";
 import { QuickBooksCard } from "@/components/settings/quickbooks-card";
 import { XeroCard } from "@/components/settings/xero-card";
+import { WhatsAppSettingsForm } from "@/components/settings/whatsapp-settings-form";
 import { getRoutingMode } from "@/lib/data/routing-mode";
 import { getQuickBooksStatus } from "@/lib/data/quickbooks-status";
 import { getXeroStatus } from "@/lib/data/xero-status";
+import { getWhatsAppSettings } from "@/lib/data/whatsapp-settings";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 
@@ -55,7 +57,7 @@ export default async function SettingsPage({
   const params = await searchParams;
   const qboBanner = params.qbo ? QBO_BANNERS[params.qbo] : undefined;
   const xeroBanner = params.xero ? XERO_BANNERS[params.xero] : undefined;
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, xeroStatus, m] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, xeroStatus, whatsappSettings, m] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
@@ -64,6 +66,7 @@ export default async function SettingsPage({
     getRoutingMode(),
     getQuickBooksStatus(),
     getXeroStatus(),
+    getWhatsAppSettings(),
     getMessages(),
   ]);
   const guidanceState = await getGuidanceState();
@@ -184,6 +187,12 @@ export default async function SettingsPage({
           </div>
 
           <SmsSettingsForm defaults={smsSettings} />
+
+          <div style={{ marginTop: 24 }}>
+            <div className="kicker">WhatsApp</div>
+            <h3 style={{ margin: "6px 0 12px" }}>WhatsApp Business</h3>
+            <WhatsAppSettingsForm defaults={whatsappSettings} />
+          </div>
         </section>
 
         <aside className="panel">

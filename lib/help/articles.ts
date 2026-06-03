@@ -312,6 +312,54 @@ Items are copied from the template at series-create time and frozen on each chil
     related: ["creating-orders", "cancelling-orders"],
   },
 
+  // Notifications
+  {
+    slug: "whatsapp-notifications",
+    title: "Setting up WhatsApp notifications",
+    section: "Notifications",
+    summary: "Send order, deposit, and delivery updates over WhatsApp — the channel many of your customers actually use.",
+    body: `WhatsApp is the default messaging channel in Mexico, much of Latin America, and increasingly in US Hispanic markets. Korent can send order confirmations, deposit reminders, and delivery updates over WhatsApp to customers who opt in — with automatic SMS fallback for everyone else. **No other rental software ships this.**
+
+**External setup (do this before flipping the toggle):**
+
+1. **Twilio account**: open the Twilio Console → Messaging → Try it out → Send a WhatsApp message. Note the sandbox sender (typically <code>+1 415 523 8886</code>) for testing.
+
+2. **Submit templates for Meta approval**. Each notification type needs a pre-approved template. Use Korent's exact wording (we send these to Meta verbatim):
+
+   - Order Confirmation: "Hi from {{1}}! Your booking {{2}} is confirmed. We'll be in touch with delivery details."
+   - Deposit Reminder: "Reminder from {{1}}: a {{3}} deposit is due to confirm booking {{2}}."
+   - Delivery Scheduled: "{{1}} delivery for {{2}} is scheduled for {{3}}, {{4}}."
+   - Delivery En Route: "{{1}} is on the way with your order {{2}}. ETA {{3}}. Track: {{4}}"
+   - Delivery Completed: "Your delivery for {{2}} from {{1}} is complete. Thanks for choosing us!"
+
+   Approval is usually minutes for "utility" templates, longer for "marketing".
+
+3. **Add the Twilio Content SIDs** to your deployment as env vars:
+   <code>WHATSAPP_TEMPLATE_ORDER_CONFIRMATION</code>, <code>WHATSAPP_TEMPLATE_DEPOSIT_REMINDER</code>, etc. (one per template). Until these are set, the corresponding notification type falls back to SMS even if the channel is enabled.
+
+**Turning it on inside Korent:**
+
+1. Go to **Settings → SMS Notifications**
+2. Scroll to the **WhatsApp Business** section
+3. Tick **Enable WhatsApp notifications**
+4. Paste your Twilio WhatsApp sender number (E.164 format)
+5. Save
+
+**Customer opt-in:**
+
+Each customer has a separate "WhatsApp opt-in" flag on their detail page. Set it to ON for customers who've confirmed they want WhatsApp instead of SMS. Customers who haven't opted in keep receiving SMS — no spam risk.
+
+**What happens when something fails:**
+
+If WhatsApp send fails (template not approved, Twilio outage, customer never started a conversation), Korent automatically falls back to SMS. The communication log on the customer page shows which channel actually delivered.
+
+**Tips:**
+
+- Customers in the US who use iPhone Messages often have RCS/iMessage — those land via SMS, which is fine. WhatsApp opt-in is most valuable for international customers and the US Hispanic market.
+- Use the Twilio sandbox sender for testing. Production sender approval from Meta takes ~1-2 weeks once your business is verified.`,
+    related: ["sms-settings"],
+  },
+
   // Payments
   {
     slug: "xero-sync",

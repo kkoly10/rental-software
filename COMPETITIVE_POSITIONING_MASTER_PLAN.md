@@ -271,15 +271,33 @@ Same shape of integration code as QBO. Goodshuffle doesn't have Xero, only Booqa
 
 **The single highest-leverage net-new feature.** None of the three competitors ship WhatsApp natively. Reuses existing Twilio abstraction.
 
-- [ ] Spike: verify Twilio WhatsApp BSP supports template + freeform messages required for transactional sends
-- [ ] Apply for WhatsApp Business sender approval (Twilio handles the Meta application)
-- [ ] Extend `lib/sms/provider.ts` → `lib/messaging/provider.ts` to abstract SMS + WhatsApp
-- [ ] WhatsApp message templates (deposit reminder, day-before reminder, weather alert) submitted to Meta for approval
-- [ ] Operator-level toggle: "Use WhatsApp where customer has WhatsApp; fall back to SMS"
-- [ ] Customer profile field: `whatsapp_opted_in` (boolean)
-- [ ] In-app conversation view shows WhatsApp threads alongside SMS
-- [ ] Playwright tests + sandbox messages
-- [ ] **Gate**: 1 internal test customer receives a WhatsApp deposit reminder
+**External (founder/operator):**
+- [ ] Twilio Console — enable WhatsApp on the account, get sandbox sender
+- [ ] Submit 5 templates for Meta approval (bodies in `lib/messaging/whatsapp-templates.ts`)
+- [ ] Apply for production WhatsApp Business sender approval
+- [ ] Add `WHATSAPP_TEMPLATE_*` env vars to Vercel once Twilio surfaces Content SIDs
+
+**Engineering:**
+- [x] New `lib/messaging/` module — `whatsapp-provider.ts` (Twilio WhatsApp send), `whatsapp-templates.ts` (ContentSid registry + positional variables), `dispatch.ts` (WhatsApp → SMS decision tree)
+- [x] Schema: `customers.whatsapp_opted_in`, `customers.whatsapp_number`, `organizations.whatsapp_enabled`, `organizations.whatsapp_sender_id` — `supabase/migrations/20260603_070000_whatsapp_business.sql`
+- [x] Communication log channel widened to include `whatsapp` — `supabase/migrations/20260603_080000_communication_log_whatsapp.sql`
+- [x] Existing `sendSmsNotification` threads through the dispatcher; falls back automatically when WhatsApp preconditions fail
+- [x] Operator toggle in Settings → SMS Notifications → WhatsApp section (`components/settings/whatsapp-settings-form.tsx`)
+- [x] Per-channel logging — comm log records which channel actually delivered
+- [x] 6 unit tests pinning the full decision tree (`tests/whatsapp-dispatch.test.ts`)
+- [x] Architecture doc + Help Center article (`whatsapp-notifications`)
+- [x] `.env.example` documents 7 template Content SID env vars
+
+**Deferred to Sprint 4.5** (documented in architecture doc):
+- [ ] Customer-facing opt-in flow (currently operator-toggled per customer)
+- [ ] In-app WhatsApp inbound message thread view
+- [ ] Per-template approval status surface on Settings
+- [ ] Multi-sender per org
+- [ ] WhatsApp-native rich content (images, location, interactive buttons)
+
+**Gate:**
+- [ ] Operator wires `TWILIO_*` env vars (already done if SMS works) + `WHATSAPP_TEMPLATE_*` SIDs
+- [ ] 1 internal test customer opts in, receives a WhatsApp deposit reminder, sees it in the comm log with the WhatsApp badge
 
 ### Sprint 5 — Route auto-optimization (weeks 12-14)
 
