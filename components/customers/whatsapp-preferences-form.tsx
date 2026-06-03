@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   updateCustomerWhatsAppPreferences,
+  sendWhatsAppOptInInvite,
   type CustomerActionState,
 } from "@/lib/customers/actions";
 
@@ -38,6 +39,38 @@ export function WhatsAppPreferencesForm({
     initial,
   );
 
+  // The "Save preferences" form and the "Send invite" form are
+  // siblings, not nested — HTML forbids form-inside-form even though
+  // React would render it. Each owns its own useActionState so
+  // saving preferences doesn't clobber the invite feedback and vice
+  // versa.
+  return (
+    <div className="stack-gap">
+      <PreferencesForm
+        customerId={customerId}
+        defaults={defaults}
+        state={state}
+        action={action}
+        pending={pending}
+      />
+      <InviteRow customerId={customerId} />
+    </div>
+  );
+}
+
+function PreferencesForm({
+  customerId,
+  defaults,
+  state,
+  action,
+  pending,
+}: {
+  customerId: string;
+  defaults: { optedIn: boolean; whatsappNumber: string };
+  state: CustomerActionState;
+  action: (formData: FormData) => void;
+  pending: boolean;
+}) {
   return (
     <form action={action} className="stack-gap">
       <input type="hidden" name="customer_id" value={customerId} />
@@ -99,6 +132,65 @@ export function WhatsAppPreferencesForm({
           </span>
         )}
       </div>
+    </form>
+  );
+}
+
+/**
+ * Sprint 4.5 next slice — operator-initiated "Send opt-in invite"
+ * action that texts the customer a one-tap prompt. Sits inside the
+ * same form's <form> tag is technically nested, but the inner
+ * `<form>` semantics around action attributes work fine in React 19
+ * because each useActionState owns its own action target.
+ *
+ * Why a separate sub-component: this action has its own state that
+ * shouldn't reset the parent form's state when fired. Keeping it
+ * scoped lets the operator save preferences AND send an invite
+ * without each click clobbering the other's feedback message.
+ */
+function InviteRow({ customerId }: { customerId: string }) {
+  const [state, action, pending] = useActionState(
+    sendWhatsAppOptInInvite,
+    initial,
+  );
+  return (
+    <form
+      action={action}
+      style={{
+        marginTop: 8,
+        padding: 12,
+        borderTop: "1px solid var(--border)",
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
+      <input type="hidden" name="customer_id" value={customerId} />
+      <div style={{ flex: "1 1 280px", minWidth: 220 }}>
+        <strong style={{ fontSize: 13 }}>Customer self-opt-in</strong>
+        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+          Sends a one-line SMS asking the customer to reply WHATSAPP to opt
+          in. They can also reply WA STOP later to opt back out.
+        </div>
+      </div>
+      <button
+        type="submit"
+        className="ghost-btn"
+        disabled={pending}
+        style={{ fontSize: 13 }}
+      >
+        {pending ? "Sending…" : "Send invite SMS"}
+      </button>
+      {state.message && (
+        <div
+          className={state.ok ? "badge success" : "badge warning"}
+          style={{ fontSize: 12, flexBasis: "100%" }}
+          role={state.ok ? undefined : "alert"}
+        >
+          {state.message}
+        </div>
+      )}
     </form>
   );
 }

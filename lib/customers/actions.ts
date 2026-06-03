@@ -96,6 +96,94 @@ export async function updateCustomerWhatsAppPreferences(
   };
 }
 
+/**
+ * Sprint 4.5 — operator sends an SMS opt-in invite to a customer.
+ *
+ * Sends a short SMS that asks the customer to reply WHATSAPP. The
+ * inbound webhook (/api/twilio/inbound) recognizes that keyword and
+ * flips `customers.whatsapp_opted_in` automatically. This removes
+ * the operator-manually-flips-per-customer burden — the operator
+ * sends the invite once, customers self-select.
+ *
+ * Idempotent at the messaging layer: re-sending the invite to the
+ * same customer just sends another SMS. We don't track "invite
+ * pending" state because the keyword detection is unambiguous (a
+ * "WHATSAPP" reply only ever means opt-in).
+ */
+export async function sendWhatsAppOptInInvite(
+  _prev: CustomerActionState,
+  formData: FormData,
+): Promise<CustomerActionState> {
+  const customerId = String(formData.get("customer_id") ?? "").trim();
+  if (!customerId) return { ok: false, message: "Missing customer id." };
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: invite would be sent." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin", "dispatcher"].includes(membership?.role ?? "")) {
+    return {
+      ok: false,
+      message: "Only dispatchers and above can send opt-in invites.",
+    };
+  }
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("phone, first_name, sms_opt_in")
+    .eq("id", customerId)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!customer?.phone) {
+    return { ok: false, message: "Customer has no phone number on file." };
+  }
+  if (customer.sms_opt_in === false) {
+    return {
+      ok: false,
+      message:
+        "Customer has opted out of SMS — we can't send them an invite. Ask them to text START first.",
+    };
+  }
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", ctx.organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const businessName = (org?.name as string | null) ?? "your rental company";
+
+  const body =
+    `Hi from ${businessName}! Would you like future order updates over WhatsApp instead of SMS? ` +
+    `Reply WHATSAPP to switch. Reply STOP to stop all messages.`;
+
+  const { sendSms } = await import("@/lib/sms/provider");
+  const result = await sendSms({ to: customer.phone, body });
+  if (!result.ok) {
+    return { ok: false, message: result.error ?? "Failed to send invite." };
+  }
+
+  revalidatePath(`/dashboard/customers/${customerId}`);
+  return {
+    ok: true,
+    message:
+      "Invite sent. The customer can reply WHATSAPP at any time to opt in.",
+  };
+}
+
 export async function updateCustomer(
   _prevState: CustomerActionState,
   formData: FormData
