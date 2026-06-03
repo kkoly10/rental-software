@@ -118,6 +118,10 @@ export type CustomerDetail = {
   addressState: string;
   addressZip: string;
   notes: string;
+  /** Sprint 4.5 — WhatsApp opt-in flag, surfaced as a toggle on the customer detail page. */
+  whatsappOptedIn: boolean;
+  /** Sprint 4.5 — optional override when the WhatsApp number differs from the primary phone. */
+  whatsappNumber: string;
   orders: { id: string; label: string }[];
 };
 

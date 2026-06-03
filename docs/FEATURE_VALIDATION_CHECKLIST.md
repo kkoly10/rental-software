@@ -98,8 +98,9 @@ Requires `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` / `XERO_REDIRECT_URI`. Skip if 
 Requires Twilio WhatsApp sandbox + at least one approved Meta template + the corresponding `WHATSAPP_TEMPLATE_*` env var. Skip if not wired.
 
 - [ ] Settings → SMS Notifications → WhatsApp section → enable + paste sandbox sender
-- [ ] Open a customer detail page → enable **WhatsApp opt-in** flag
-- [ ] **(KNOWN GAP)** The customer page doesn't yet have a UI toggle for `whatsapp_opted_in` — flip via Supabase SQL editor for now
+- [ ] Open a customer detail page → scroll to the **WhatsApp / Notification channel** section
+- [ ] Tick **Send notifications over WhatsApp** and save → verify success badge
+- [ ] (Optional) Enter a separate WhatsApp number in the override field and save
 - [ ] Trigger an order confirmation (confirm a new order)
 - [ ] Verify the customer's WhatsApp received the template message (sandbox: opt-in by texting "join {sandbox-code}" to the Twilio number first)
 - [ ] Open the customer's comm log → verify the entry shows **WhatsApp** channel badge
