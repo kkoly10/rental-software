@@ -41,11 +41,16 @@ export async function uploadProductImage(
     return { ok: false, message: "Choose an image before uploading." };
   }
 
-  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  // GIF was previously allowed but its metadata strip path was a no-op
+  // (sharp can't safely re-encode animated GIFs without losing animation),
+  // which left an unvetted byte stream landing in a public bucket. Dropped
+  // until we have a real GIF-safe rewriter. Operators can convert to WebP
+  // or PNG if they need a non-photographic image.
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return { ok: false, message: "Only JPEG, PNG, WebP, or GIF images are allowed." };
+    return { ok: false, message: "Only JPEG, PNG, or WebP images are allowed." };
   }
 
   if (file.size > MAX_SIZE) {
@@ -105,22 +110,21 @@ export async function uploadProductImage(
   const bucket = getBucketName();
   const filePath = `${ctx.organizationId}/${productId}/${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
 
-  // Strip EXIF/IPTC/XMP from raster formats that carry them. GIF doesn't,
-  // so it passes through unchanged.
+  // Strip EXIF/IPTC/XMP from the raster. We always re-encode now that GIF
+  // is out — sharp returns both the stripped bytes and the canonical mime
+  // type, which we trust over file.type (which is forgeable).
   let uploadBody: File | Buffer = file;
-  let uploadContentType = file.type || undefined;
-  if (sniffedType !== "image/gif") {
-    try {
-      const stripped = await stripImageMetadata(file, sniffedType);
-      uploadBody = stripped.buffer;
-      uploadContentType = stripped.mimeType;
-    } catch (err) {
-      console.error("[products.image] strip failed:", err instanceof Error ? err.message : err);
-      return {
-        ok: false,
-        message: "Couldn't process the image. Please try a different file.",
-      };
-    }
+  let uploadContentType: string = sniffedType;
+  try {
+    const stripped = await stripImageMetadata(file, sniffedType);
+    uploadBody = stripped.buffer;
+    uploadContentType = stripped.mimeType;
+  } catch (err) {
+    console.error("[products.image] strip failed:", err instanceof Error ? err.message : err);
+    return {
+      ok: false,
+      message: "Couldn't process the image. Please try a different file.",
+    };
   }
 
   const { error: storageError } = await supabase.storage
