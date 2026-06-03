@@ -3,6 +3,7 @@ import { getRoutes } from "@/lib/data/routes";
 import { getRouteDetail, getRouteStops } from "@/lib/data/route-detail";
 import { StopActionButtons } from "@/components/crew/stop-actions";
 import { ProofPhotoUpload } from "@/components/crew/proof-photo-upload";
+import { PickupPhotoUpload } from "@/components/crew/pickup-photo-upload";
 import { SignaturePad } from "@/components/crew/signature-pad";
 import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -79,7 +80,21 @@ export default async function CrewTodayPage() {
                       </div>
                       {stop.status !== "assigned" && (
                         <>
-                          <ProofPhotoUpload stopId={stop.id} existingUrl={stop.proofPhotoUrl} />
+                          {/* Sprint 5.5 — render the right capture
+                              control per stop type. Delivery stops get
+                              the existing proof-of-delivery flow;
+                              pickup stops get the new pickup capture
+                              with the visual matching nudge showing
+                              the same-order delivery photo. */}
+                          {stop.type.toLowerCase() === "pickup" ? (
+                            <PickupPhotoUpload
+                              stopId={stop.id}
+                              deliveryPhotoUrl={stop.matchingDeliveryPhotoUrl}
+                              existingUrl={stop.pickupPhotoUrl}
+                            />
+                          ) : (
+                            <ProofPhotoUpload stopId={stop.id} existingUrl={stop.proofPhotoUrl} />
+                          )}
                           {!stop.signatureName ? (
                             <SignaturePad stopId={stop.id} />
                           ) : (

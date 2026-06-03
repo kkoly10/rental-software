@@ -18,6 +18,18 @@ export type RouteStopData = {
   productName?: string;
   proofPhotoUrl?: string;
   signatureName?: string;
+  /** Sprint 5.5 — pickup-side photo (the "after" of the before/after pair). */
+  pickupPhotoUrl?: string;
+  /** Sprint 5.5 — pickup-side customer signature. */
+  pickupSignatureName?: string;
+  /**
+   * Sprint 5.5 — for pickup-type stops, the matching delivery photo
+   * from the same order so the PickupPhotoUpload component can render
+   * its "match this angle" visual nudge.
+   */
+  matchingDeliveryPhotoUrl?: string;
+  /** Sprint 5.5 — order id used to resolve the matching delivery photo. */
+  orderId?: string;
 };
 
 const fallbackStops: RouteStopData[] = [
@@ -123,7 +135,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
     .from("route_stops")
-    .select("id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot))")
+    .select("id, order_id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, pickup_photo_url, pickup_signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot))")
     .eq("route_id", routeId)
     .eq("routes.organization_id", ctx.organizationId)
     .order("stop_sequence", { ascending: true });
@@ -135,6 +147,33 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
 
   if (!stops || stops.length === 0) {
     return [];
+  }
+
+  // Sprint 5.5 — for any pickup-type stops on this route, fetch the
+  // matching delivery stop's proof_photo_url so the crew UI can show
+  // the "match this angle" visual nudge. Same-order pairing: the
+  // delivery stop may live on a different route from the pickup.
+  const pickupOrderIds = stops
+    .filter((s) => (s.stop_type ?? "delivery") === "pickup")
+    .map((s) => (s as Record<string, unknown>).order_id as string | null)
+    .filter((id): id is string => Boolean(id));
+
+  const deliveryPhotosByOrder = new Map<string, string>();
+  if (pickupOrderIds.length > 0) {
+    const { data: deliveryStops } = await supabase
+      .from("route_stops")
+      .select("order_id, proof_photo_url, routes!inner(organization_id)")
+      .in("order_id", pickupOrderIds)
+      .eq("stop_type", "delivery")
+      .eq("routes.organization_id", ctx.organizationId)
+      .not("proof_photo_url", "is", null);
+    for (const row of deliveryStops ?? []) {
+      const orderId = row.order_id as string;
+      const photoUrl = row.proof_photo_url as string;
+      if (orderId && photoUrl && !deliveryPhotosByOrder.has(orderId)) {
+        deliveryPhotosByOrder.set(orderId, photoUrl);
+      }
+    }
   }
 
   return stops.map((stop, index) => {
@@ -158,7 +197,16 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       status: stop.stop_status ?? "assigned",
       address: addressParts.length > 0 ? addressParts.join(", ") : undefined,
       productName: order?.order_items?.[0]?.item_name_snapshot ?? undefined,
+      orderId: (stop as Record<string, unknown>).order_id as string | undefined,
       proofPhotoUrl: (stop as Record<string, unknown>).proof_photo_url as string | undefined,
+      pickupPhotoUrl: (stop as Record<string, unknown>).pickup_photo_url as string | undefined,
+      pickupSignatureName: (stop as Record<string, unknown>).pickup_signature_name as string | undefined,
+      matchingDeliveryPhotoUrl:
+        (stop.stop_type ?? "delivery") === "pickup"
+          ? deliveryPhotosByOrder.get(
+              (stop as Record<string, unknown>).order_id as string,
+            )
+          : undefined,
       signatureName: (stop as Record<string, unknown>).signature_name as string | undefined,
     };
   });

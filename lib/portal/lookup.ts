@@ -33,6 +33,12 @@ export type PortalOrder = {
   deliveryDate?: string;
   deliveryTimeWindow?: string;
   customerName: string;
+  /**
+   * Sprint 5.5 — Equipment Condition rows for the customer portal.
+   * Populated by `getOrderConditionRowsForPortal` against the same
+   * supabase client that resolved the portal token.
+   */
+  conditionRows?: import("@/lib/data/equipment-condition").ConditionRow[];
 };
 
 export type PortalLookupState = {
@@ -156,7 +162,46 @@ async function buildPortalOrder(
       return "See confirmation email for details";
     })(),
     customerName: `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || "Customer",
+    // Sprint 5.5 — populated lazily by the lookup callers via
+    // attachConditionRows below. Inline here so the satisfies-check
+    // passes; the actual data is filled before the result is
+    // returned to the page.
+    conditionRows: undefined,
   } satisfies PortalOrder;
+}
+
+/**
+ * Sprint 5.5 — attach equipment-condition rows to a built portal
+ * order. Called by both `lookupOrderByPortalToken` and `lookupOrder`
+ * after the order is built, so customer portal + magic-link both
+ * surface the photos.
+ */
+async function attachConditionRows(
+  portalOrder: PortalOrder,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  orgId: string,
+  orderId: string,
+): Promise<PortalOrder> {
+  try {
+    const { getOrderConditionRowsForPortal } = await import(
+      "@/lib/data/equipment-condition"
+    );
+    portalOrder.conditionRows = await getOrderConditionRowsForPortal(
+      supabase,
+      orgId,
+      orderId,
+    );
+  } catch (err) {
+    // Photo surface is opportunistic — never block the rest of the
+    // portal lookup on it. Log + leave undefined so the page renders
+    // cleanly without the card.
+    console.error(
+      "[portal.lookup] attachConditionRows failed for",
+      orderId,
+      err instanceof Error ? err.message : err,
+    );
+  }
+  return portalOrder;
 }
 
 export async function lookupOrderByPortalToken(token: string): Promise<PortalLookupState> {
@@ -229,11 +274,20 @@ export async function lookupOrderByPortalToken(token: string): Promise<PortalLoo
     .is("deleted_at", null)
     .maybeSingle();
 
+  const portalOrder = await buildPortalOrder(
+    order,
+    customer ?? { first_name: null, last_name: null },
+    orgId,
+  );
+  // Sprint 5.5 — attach equipment-condition rows so the customer
+  // portal renders the Equipment Condition card alongside the rest of
+  // the order detail.
+  await attachConditionRows(portalOrder, supabase, orgId, order.id);
   return {
     ok: true,
     message: "",
     portalToken: normalized,
-    order: await buildPortalOrder(order, customer ?? { first_name: null, last_name: null }, orgId),
+    order: portalOrder,
   };
 }
 
@@ -336,10 +390,12 @@ export async function lookupOrder(
 
   const newPortalToken = await issuePortalAccessToken({ supabase, orderId: order.id });
 
+  const portalOrder = await buildPortalOrder(order, customer, orgId);
+  await attachConditionRows(portalOrder, supabase, orgId, order.id);
   return {
     ok: true,
     message: "",
     portalToken: newPortalToken,
-    order: await buildPortalOrder(order, customer, orgId),
+    order: portalOrder,
   };
 }

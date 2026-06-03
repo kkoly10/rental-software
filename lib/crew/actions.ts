@@ -390,3 +390,168 @@ export async function saveSignature(
   revalidatePath("/crew/today");
   return { ok: true, message: `Signature saved for ${signerName}.` };
 }
+
+/**
+ * Sprint 5.5 — pickup-side variant of uploadProofPhoto.
+ *
+ * Same shape, same RPC pattern, just writes route_stops.pickup_photo_url
+ * instead of proof_photo_url. The two columns together form the
+ * before/after pair that powers the Equipment Condition card on the
+ * order detail page + the customer portal.
+ *
+ * Like its delivery sibling, this is optional — the crew can complete
+ * a pickup stop without uploading. Most operators will encourage but
+ * not require capture; the strategic value is having *something* on
+ * file, not forensic-grade evidence.
+ */
+export async function uploadPickupPhoto(
+  _prev: StopActionState,
+  formData: FormData,
+): Promise<StopActionState> {
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: pickup photo would be saved." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const stopId = String(formData.get("stop_id") ?? "");
+  const file = formData.get("photo");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Choose a photo first." };
+  }
+
+  // Same allowed-type list as uploadProofPhoto so behavior is
+  // identical across delivery + pickup. Diverging would create
+  // surprises for crews that captured a HEIC for delivery and a JPEG
+  // for pickup (or vice versa).
+  const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
+
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+    return { ok: false, message: "Only JPEG, PNG, or WebP photos are allowed." };
+  }
+
+  const sniffedPhotoType = await sniffImageType(file);
+  if (!sniffedPhotoType || !ALLOWED_PHOTO_TYPES.includes(sniffedPhotoType)) {
+    return { ok: false, message: "File content doesn't match a supported image format." };
+  }
+
+  if (file.size > MAX_PHOTO_SIZE) {
+    return { ok: false, message: "Photo must be under 20 MB." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const MIME_TO_EXT: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  const ext = MIME_TO_EXT[file.type] ?? "jpg";
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
+  // Different prefix from proof-photos so listings stay tidy and an
+  // operator browsing storage can tell delivery vs pickup at a glance.
+  const filePath = `pickup-photos/${ctx.organizationId}/${stopId}-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type,
+    });
+  if (uploadError) return { ok: false, message: uploadError.message };
+
+  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+
+  const { data: rpcRows, error: rpcError } = await supabase.rpc(
+    "crew_attach_pickup_photo",
+    {
+      p_stop_id: stopId,
+      p_org_id: ctx.organizationId,
+      p_user_id: ctx.userId,
+      p_photo_url: urlData.publicUrl,
+    },
+  );
+
+  if (rpcError) {
+    await supabase.storage.from(bucket).remove([filePath]);
+    return {
+      ok: false,
+      message: "Photo uploaded but could not be linked to stop. Please try again.",
+    };
+  }
+
+  const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+    | { ok: boolean; reason: string | null }
+    | null;
+
+  if (!result?.ok) {
+    await supabase.storage.from(bucket).remove([filePath]);
+    if (result?.reason === "not_assigned") {
+      return { ok: false, message: "You are not assigned to this route." };
+    }
+    if (result?.reason === "not_authorized") {
+      return { ok: false, message: "You don't have permission to upload pickup photos." };
+    }
+    return { ok: false, message: "Stop not found." };
+  }
+
+  revalidatePath("/crew/today");
+  return { ok: true, message: "Pickup photo saved." };
+}
+
+/**
+ * Sprint 5.5 — pickup-side variant of saveSignature. Same pattern as
+ * uploadPickupPhoto: mirror of the delivery action, atomic via the
+ * crew_attach_pickup_signature RPC.
+ */
+export async function savePickupSignature(
+  _prev: StopActionState,
+  formData: FormData,
+): Promise<StopActionState> {
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: pickup signature would be saved." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const stopId = String(formData.get("stop_id") ?? "");
+  const signerName = String(formData.get("signer_name") ?? "").trim();
+
+  if (!signerName) return { ok: false, message: "Customer name is required." };
+  if (signerName.length > 200) return { ok: false, message: "Signer name is too long." };
+
+  const supabase = await createSupabaseServerClient();
+  const signerLabel = `${signerName} — ${new Date().toISOString()}`;
+  const { data: rpcRows, error: rpcError } = await supabase.rpc(
+    "crew_attach_pickup_signature",
+    {
+      p_stop_id: stopId,
+      p_org_id: ctx.organizationId,
+      p_user_id: ctx.userId,
+      p_signer_name: signerLabel,
+    },
+  );
+
+  if (rpcError) return { ok: false, message: "Failed to save pickup signature." };
+
+  const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+    | { ok: boolean; reason: string | null }
+    | null;
+
+  if (!result?.ok) {
+    if (result?.reason === "not_assigned") {
+      return { ok: false, message: "You are not assigned to this route." };
+    }
+    if (result?.reason === "not_authorized") {
+      return { ok: false, message: "You don't have permission to save signatures." };
+    }
+    return { ok: false, message: "Stop not found." };
+  }
+
+  revalidatePath("/crew/today");
+  return { ok: true, message: `Pickup signature saved for ${signerName}.` };
+}
