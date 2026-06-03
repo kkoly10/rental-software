@@ -1429,6 +1429,24 @@ export const pt: Messages = {
       step1: "Passo 1",
       step2: "Passo 2",
       yourBusiness: "A sua empresa",
+      businessType: {
+        label: "Que tipo de alugueres oferece?",
+        hint: "Vamos criar categorias e termos de aluguer iniciais com base nesta opção. Escolha o que mais se aproxima.",
+        options: {
+          inflatable: {
+            label: "Insufláveis e alugueres para festas",
+            description: "Insufláveis, escorregas aquáticos, mesas, cadeiras, material de festa.",
+          },
+          car: {
+            label: "Veículos e frota",
+            description: "Carros, carrinhas, camiões, veículos de luxo.",
+          },
+          equipment: {
+            label: "Equipamento e ferramentas",
+            description: "Geradores, plataformas elevatórias, compressores, equipamento de obras.",
+          },
+        },
+      },
       whereDoYouDeliver: "Onde faz entregas?",
       deliveryBlurb: "Os clientes só podem fazer encomendas online dentro da sua área de serviço. Pode adicionar mais zonas de entrega mais tarde a partir do painel.",
       businessName: "Nome da empresa",

@@ -28,6 +28,10 @@ export function OnboardingForm() {
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  // No default selection: forcing an explicit pick is the whole point of
+  // the chooser. A pre-checked "inflatable" radio recreates the old
+  // hardcoded behavior for anyone who skims the form.
+  const [businessType, setBusinessType] = useState<"" | "inflatable" | "car" | "equipment">("");
 
   useEffect(() => {
     if (!slugEdited && businessName) {
@@ -72,6 +76,7 @@ export function OnboardingForm() {
 
   const submitDisabled =
     pending ||
+    !businessType ||
     slugStatus === "taken" ||
     slugStatus === "invalid" ||
     slugStatus === "checking";
@@ -80,12 +85,74 @@ export function OnboardingForm() {
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
-      <input type="hidden" name="business_type" value="inflatable" />
-
       <div style={{ marginBottom: 4 }}>
         <div className="kicker">{f.step1}</div>
         <strong style={{ fontSize: 15 }}>{f.yourBusiness}</strong>
       </div>
+
+      <fieldset
+        className="order-card"
+        style={{ border: "none", padding: 16, margin: 0 }}
+      >
+        <legend style={{ padding: 0 }}>
+          <strong>{f.businessType.label}</strong>
+        </legend>
+        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          {f.businessType.hint}
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 8,
+            marginTop: 12,
+          }}
+        >
+          {(["inflatable", "car", "equipment"] as const).map((value) => {
+            const selected = businessType === value;
+            const opt = f.businessType.options[value];
+            // Keeping the radio input visible (rather than opacity:0)
+            // keeps keyboard focus visible — when the operator tabs in,
+            // the browser's native focus ring lands on something they
+            // can see. The label/card highlight is the *selection*
+            // affordance, the radio is the *focus* affordance.
+            return (
+              <label
+                key={value}
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  padding: 12,
+                  border: selected
+                    ? "2px solid var(--primary)"
+                    : "1px solid var(--border)",
+                  // -1px on padding when selected so the 2px border
+                  // doesn't shift surrounding cards as selection moves.
+                  margin: selected ? 0 : 1,
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  background: selected ? "var(--primary-bg)" : "transparent",
+                }}
+              >
+                <input
+                  type="radio"
+                  name="business_type"
+                  value={value}
+                  checked={selected}
+                  onChange={() => setBusinessType(value)}
+                  style={{ marginTop: 3, flexShrink: 0 }}
+                />
+                <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <strong style={{ fontSize: 14 }}>{opt.label}</strong>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {opt.description}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <label className="order-card">
         <strong>{f.businessName}</strong>

@@ -1430,6 +1430,24 @@ const enValues = {
       step1: "Step 1",
       step2: "Step 2",
       yourBusiness: "Your business",
+      businessType: {
+        label: "What kind of rentals do you offer?",
+        hint: "We'll seed default categories and rental terms based on this. Pick the closest fit.",
+        options: {
+          inflatable: {
+            label: "Inflatables & party rentals",
+            description: "Bounce houses, water slides, tables, chairs, party gear.",
+          },
+          car: {
+            label: "Vehicles & fleet",
+            description: "Cars, vans, trucks, luxury vehicles.",
+          },
+          equipment: {
+            label: "Equipment & tools",
+            description: "Generators, lifts, compressors, construction gear.",
+          },
+        },
+      },
       whereDoYouDeliver: "Where do you deliver?",
       deliveryBlurb: "Customers can only place online orders within your service area. You can add more delivery zones from your dashboard later.",
       businessName: "Business name",
