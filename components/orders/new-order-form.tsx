@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createOrder } from "@/lib/orders/actions";
 import type {
   OrderFormProductOption,
@@ -37,14 +37,23 @@ export function NewOrderForm({
   });
 
   // `min` on the event_date <input> stops operators from accidentally
-  // booking yesterday.  We compute it once (locale-naive).  If the
-  // form was deep-linked with an already-past initialEventDate, we
-  // skip the min so the prefilled value still counts as valid — back-
-  // filling historical orders is a legitimate use case.
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const minEventDate =
-    initialEventDate && initialEventDate < todayIso ? undefined : todayIso;
+  // booking yesterday. Deferred to a post-mount effect so the SSR
+  // pass (which runs in UTC) and the hydration pass (which runs in
+  // the user's local timezone) don't disagree on `todayIso` and
+  // produce a React hydration warning. Until the effect fires, the
+  // input has no `min` — acceptable trade-off vs. the alternative of
+  // computing the date on the server and threading it through props
+  // for a value that's only used as a soft client-side guard. If the
+  // form was deep-linked with an already-past initialEventDate we
+  // leave minEventDate unset so the prefilled value still validates.
+  const [minEventDate, setMinEventDate] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    setMinEventDate(
+      initialEventDate && initialEventDate < todayIso ? undefined : todayIso,
+    );
+  }, [initialEventDate]);
 
   const orderStatuses = [
     { value: "inquiry", label: m.statuses.inquiry },
