@@ -50,13 +50,18 @@ export async function GET(_request: NextRequest) {
     );
   }
 
-  // CSRF state: opaque random value bound to the user via the cookie.
-  // The callback re-reads it and rejects mismatches.
+  // CSRF state: opaque random value sent to Intuit + a cookie payload
+  // that also pins the initiating user. Without the user pin, a shared
+  // device where user A starts a flow and user B finishes it would land
+  // the tokens on whichever org B currently belongs to — not the one A
+  // intended. The callback splits on ":" and verifies (a) state matches
+  // and (b) userId matches the currently-authenticated profile.
   const state = randomBytes(24).toString("base64url");
+  const cookieValue = `${state}:${ctx.userId}`;
   const authorizeUrl = buildAuthorizeUrl(state);
 
   const response = NextResponse.redirect(authorizeUrl);
-  response.cookies.set("qbo_oauth_state", state, {
+  response.cookies.set("qbo_oauth_state", cookieValue, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

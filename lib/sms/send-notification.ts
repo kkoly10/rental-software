@@ -85,6 +85,14 @@ export async function sendSmsNotification(
       const candidate = row?.preferred_locale;
       if (candidate && ["en", "fr", "es", "pt"].includes(candidate)) {
         customerLocale = candidate;
+      } else if (candidate) {
+        // Customer asked for a locale we don't ship templates in. Fall back
+        // to English (the existing default at line 61) but flag it so the
+        // operator notices — silent degradation means a Spanish-speaking
+        // customer keeps receiving English texts and no one knows why.
+        console.warn(
+          `[sms] unsupported customer locale "${candidate}" — falling back to English. customer=${context?.customerId} org=${organizationId}`,
+        );
       }
       whatsappOptedIn = Boolean(row?.whatsapp_opted_in);
       whatsappNumber = row?.whatsapp_number ?? null;

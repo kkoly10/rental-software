@@ -158,6 +158,20 @@ export async function sendWhatsAppOptInInvite(
     };
   }
 
+  // Honor the org-level SMS kill-switch the same way send-notification.ts
+  // does for transactional sends. Without this check, an operator who's
+  // disabled SMS at the org level (e.g. while paused on Twilio billing)
+  // would still get a charge for every WhatsApp invite sent from a
+  // customer page.
+  const { getSmsSettings } = await import("@/lib/data/sms-settings");
+  const smsSettings = await getSmsSettings(ctx.organizationId);
+  if (!smsSettings.enabled) {
+    return {
+      ok: false,
+      message: "SMS is disabled at the organization level. Enable it in Settings → Notifications first.",
+    };
+  }
+
   const { data: org } = await supabase
     .from("organizations")
     .select("name")

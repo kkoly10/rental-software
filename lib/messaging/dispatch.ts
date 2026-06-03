@@ -93,6 +93,14 @@ async function maybeSendWhatsApp(
   const contentSid = getWhatsAppContentSid(input.templateKey);
   if (!contentSid) {
     // No approved template — bail and let SMS take over.
+    // Operators don't always realise this is the path that fires when
+    // a template is pending Meta approval, so log a single warning the
+    // first time a given template falls through. They'll see SMS land
+    // and wonder why WhatsApp didn't — Sentry now gives them the
+    // answer: "WHATSAPP_TEMPLATE_X is unset on this deploy."
+    console.warn(
+      `[messaging] WhatsApp template "${input.templateKey}" has no ContentSid — falling back to SMS. org=${organizationId}`,
+    );
     return { channel: "none", ok: false };
   }
 

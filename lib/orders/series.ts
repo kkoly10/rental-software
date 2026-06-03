@@ -364,11 +364,14 @@ export async function cancelSeries(
   if (seriesErr) return { ok: false, message: seriesErr.message };
 
   let cancelledChildren = 0;
+  // Hoisted so the post-loop block can read it for the deposits-owed
+  // warning below without re-querying the orders table.
+  let unrefundedTotal = 0;
   if (cancelFuture) {
     const today = new Date().toISOString().slice(0, 10);
     const { data: children } = await supabase
       .from("orders")
-      .select("id, order_status, event_date")
+      .select("id, order_status, event_date, total_amount, balance_due_amount")
       .eq("organization_id", ctx.organizationId)
       .eq("order_series_id", seriesId)
       .gte("event_date", today)
@@ -406,17 +409,50 @@ export async function cancelSeries(
       } catch {
         // logged downstream
       }
+      // Tally any deposit already paid on this child so the operator
+      // sees a "deposits owed back" line in the success message. The
+      // flow doesn't auto-issue refunds — that's a separate workflow
+      // with Stripe-side mechanics + customer confirmation — but it
+      // must surface the obligation so the money doesn't get forgotten.
+      const total = Number(child.total_amount ?? 0);
+      const balance = Number(child.balance_due_amount ?? 0);
+      const paid = total - balance;
+      if (paid > 0) unrefundedTotal += paid;
     }
+  }
+
+  if (unrefundedTotal > 0) {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "orders.series.cancel",
+      action: "deposits_owed_to_customer",
+      status: "warning",
+      route: "lib/orders/series",
+      metadata: {
+        series_id: seriesId,
+        cancelled_children: cancelledChildren,
+        unrefunded_total: unrefundedTotal,
+      },
+    });
   }
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/calendar");
 
+  let message: string;
+  if (!cancelFuture) {
+    message = "Series cancelled. Existing future bookings preserved.";
+  } else if (unrefundedTotal > 0) {
+    message = `Series cancelled. ${cancelledChildren} future booking${cancelledChildren === 1 ? "" : "s"} also cancelled — $${unrefundedTotal.toFixed(2)} in deposits still needs to be refunded to the customer.`;
+  } else {
+    message = `Series cancelled. ${cancelledChildren} future booking${cancelledChildren === 1 ? "" : "s"} also cancelled.`;
+  }
+
   return {
     ok: true,
-    message: cancelFuture
-      ? `Series cancelled. ${cancelledChildren} future booking${cancelledChildren === 1 ? "" : "s"} also cancelled.`
-      : "Series cancelled. Existing future bookings preserved.",
+    message,
     seriesId,
   };
 }

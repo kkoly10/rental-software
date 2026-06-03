@@ -57,9 +57,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${settingsUrl}?qbo=missing_params`);
   }
 
-  const expectedState = request.cookies.get("qbo_oauth_state")?.value;
+  // Cookie format set by the connect route is `${state}:${userId}`.
+  // Split, then verify both halves — state catches CSRF + replay, and
+  // userId catches the shared-device case where user A initiated the
+  // flow and user B finishes it on the same browser.
+  const cookieValue = request.cookies.get("qbo_oauth_state")?.value ?? "";
+  const sep = cookieValue.indexOf(":");
+  const expectedState = sep > 0 ? cookieValue.slice(0, sep) : cookieValue;
+  const expectedUserId = sep > 0 ? cookieValue.slice(sep + 1) : "";
   if (!expectedState || expectedState !== state) {
     return NextResponse.redirect(`${settingsUrl}?qbo=state_mismatch`);
+  }
+  if (!expectedUserId || expectedUserId !== ctx.userId) {
+    return NextResponse.redirect(`${settingsUrl}?qbo=user_mismatch`);
   }
 
   let tokens;
