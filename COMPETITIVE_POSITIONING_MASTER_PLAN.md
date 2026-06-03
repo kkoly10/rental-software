@@ -193,18 +193,32 @@ The single biggest deal-blocker vs Goodshuffle. Even one-way sync (Korent → QB
 
 ### Sprint 3 — Recurring bookings UI (weeks 7-8)
 
-Schema is already there. Build the UI to unlock tent/equipment monthly rentals (a Booqable explicit weakness).
+Schema for recurring patterns did NOT actually exist (the Sprint 1 recon was wrong); designed and shipped fresh. Unlocks tent/equipment monthly rentals (Booqable explicit weakness) and repeat-event party rentals.
 
-- [ ] Read existing `recurring_pattern` schema in `supabase/migrations/...initial_schema.sql`
-- [ ] Build "Make recurring" toggle in booking form
-- [ ] UI for cadence: weekly / monthly / custom interval
-- [ ] End-date or count-based termination
-- [ ] Server action to generate child bookings (capped at 24 months out)
-- [ ] Calendar view shows recurring instances with link to series
-- [ ] Cancel-series action (with confirmation)
-- [ ] Email/SMS templates respect recurring-instance context
-- [ ] Playwright test: create monthly recurring booking → 12 instances appear on calendar
-- [ ] **Gate**: tested with internal demo org
+- [x] Designed schema: `order_series` table + `orders.order_series_id` + `series_occurrence_number` — `supabase/migrations/20260603_050000_recurring_order_series.sql`
+- [x] Build "Make recurring" form on the order detail page (`components/orders/make-recurring-form.tsx`)
+- [x] UI for cadence: daily / weekly / biweekly / monthly / quarterly with multiplier (1-52)
+- [x] End-date OR max-occurrences termination (operator picks)
+- [x] Pure cadence math module (`lib/orders/series-cadence.ts`) with month-end clamp, year rollover, leap-year handling
+- [x] Server action `createSeriesFromOrder` generates child orders eagerly (~2 year horizon, 104-batch cap)
+- [x] Daily expansion cron `/api/cron/expand-recurring-series` rolls the horizon forward for indefinite series
+- [x] Cancel-series action with "also cancel future bookings" checkbox (past orders always preserved)
+- [x] Pause / resume series controls
+- [x] SeriesInfoCard on child order pages showing cadence summary + controls
+- [x] 17 unit tests for the cadence math (every edge: month-end clamp, leap year, end_date inclusive, max_occurrences, batch cap, alreadyGeneratedThrough cursor, misconfigured ranges)
+- [x] Playwright smoke for cron auth + order page render regression
+- [x] Help Center article (`recurring-bookings`) + architecture doc (`docs/architecture/recurring-bookings.md`)
+
+**Deferred to Sprint 3.5** (documented in architecture doc):
+- [ ] Calendar view badge showing "part of series"
+- [ ] Email/SMS template adjustment to mention "occurrence N of M"
+- [ ] Edit cadence after creation (today: cancel + recreate)
+- [ ] Regenerate-future-occurrences after editing template items
+- [ ] Variable per-occurrence pricing (price escalator for long-running rentals)
+- [ ] Live-Supabase end-to-end Playwright walk (today covered by 17 cadence unit tests + auth smoke)
+
+**Gate:**
+- [ ] Tested with internal demo org (manual smoke once migrations are applied to the preview Supabase)
 
 ### Phase 1 gate
 

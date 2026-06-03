@@ -270,6 +270,48 @@ Use the action buttons next to each document to mark it as "Sent" or "Signed."
     related: ["creating-orders", "recording-payments"],
   },
 
+  // Orders
+  {
+    slug: "recurring-bookings",
+    title: "Setting up a recurring booking",
+    section: "Orders",
+    summary: "Auto-generate weekly, monthly, or custom-cadence bookings from a single template.",
+    body: `For customers who rent on a regular schedule — a Saturday bouncy castle for 8 weeks, or a monthly storage tent — Korent can generate the future bookings for you.
+
+**Create a recurring series:**
+
+1. Open the order you want to use as the template (same customer, address, items)
+2. In the action row, click **Make recurring**
+3. Pick a **Cadence** — Daily / Weekly / Every 2 weeks / Monthly / Quarterly
+4. Set the **multiplier** — "every 2 weeks" = cadence Weekly, multiplier 2
+5. Set a stop condition: either an **End date**, a **Max occurrences** count, or leave both blank for "indefinite"
+6. Click **Create series**
+
+Korent immediately generates the next ~2 years of bookings (or fewer if a stop condition kicks in earlier). Each child booking gets confirmed automatically and inherits the template's items and pricing.
+
+**Cancel or pause:**
+
+Open any order in the series — the **Recurring series** section at the bottom of the page lets you:
+- **Pause** — stop generating new bookings, leave existing ones intact. Use for seasonal pauses.
+- **Resume** — re-activate a paused series; catches up missed cycles.
+- **Cancel** — stop generation permanently. The checkbox "Also cancel future bookings" cancels child orders whose event date is still in the future. Past bookings are always preserved.
+
+**Edit the cadence:**
+
+Cadence is locked once the series is created. To change it, cancel the series and create a new one. (Editing the cadence on the fly is a planned follow-up.)
+
+**Edit the items:**
+
+Items are copied from the template at series-create time and frozen on each child. Editing the template later does NOT propagate to existing children. Regenerating with new items is also planned.
+
+**Tips:**
+
+- Use **monthly** for long-term equipment rentals (Booqable can't do this — it's a real Korent wedge)
+- Use **weekly** for repeat-event customers (every Saturday for the summer)
+- The **horizon** is 2 years out. If you set "indefinite," Korent keeps generating new bookings every night as the horizon rolls forward.`,
+    related: ["creating-orders", "cancelling-orders"],
+  },
+
   // Payments
   {
     slug: "quickbooks-sync",
