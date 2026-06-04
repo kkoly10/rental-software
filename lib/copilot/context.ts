@@ -57,6 +57,18 @@ export function getOperationalContext(snapshot: OperationalSnapshot): string {
     }
   }
 
+  if (snapshot.actionableOrders.length > 0) {
+    lines.push(
+      "",
+      "Open orders you can act on (use the orderId + current status to propose a valid status change via an ACTION block; link them so the operator can click through):"
+    );
+    for (const o of snapshot.actionableOrders) {
+      lines.push(
+        `- [${o.label}](${o.link}) — status: ${o.status}${o.eventDate ? `, event ${o.eventDate}` : ""} (orderId: ${o.id})`
+      );
+    }
+  }
+
   return lines.join("\n");
 }
 

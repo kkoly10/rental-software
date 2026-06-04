@@ -2646,6 +2646,12 @@ export const fr: Messages = {
       agreeing: "Enregistrement…",
       cancel: "Plus tard",
     },
+    orderStatus: {
+      title: "Mettre à jour le statut de la commande",
+      newStatus: "Nouveau statut",
+      confirm: "Mettre à jour le statut",
+      updating: "Mise à jour…",
+    },
   },
 
   trackingMap: {

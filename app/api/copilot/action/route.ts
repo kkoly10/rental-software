@@ -52,6 +52,24 @@ const paymentActionSchema = z.object({
   }),
 });
 
+const orderStatusActionSchema = z.object({
+  type: z.literal("update_order_status"),
+  preview: z.string().max(500).optional().default(""),
+  params: z.object({
+    orderId: z.string().uuid("Invalid order identifier."),
+    // Non-destructive forward statuses only; cancelled/refunded stay manual.
+    newStatus: z.enum([
+      "quote_sent",
+      "awaiting_deposit",
+      "confirmed",
+      "scheduled",
+      "out_for_delivery",
+      "delivered",
+      "completed",
+    ]),
+  }),
+});
+
 function jsonResponse(
   body: Record<string, unknown>,
   init?: ResponseInit
@@ -133,13 +151,16 @@ export async function POST(request: NextRequest) {
   }
 
   // Pick the schema by discriminator so error messages stay precise.
-  const isPayment =
-    typeof requestBody === "object" &&
-    requestBody !== null &&
-    (requestBody as { type?: unknown }).type === "record_payment";
-  const parsed = isPayment
-    ? paymentActionSchema.safeParse(requestBody)
-    : contentActionSchema.safeParse(requestBody);
+  const requestType =
+    typeof requestBody === "object" && requestBody !== null
+      ? (requestBody as { type?: unknown }).type
+      : undefined;
+  const parsed =
+    requestType === "record_payment"
+      ? paymentActionSchema.safeParse(requestBody)
+      : requestType === "update_order_status"
+        ? orderStatusActionSchema.safeParse(requestBody)
+        : contentActionSchema.safeParse(requestBody);
   if (!parsed.success) {
     await logAppError({
       organizationId: access.organizationId,
@@ -201,6 +222,26 @@ export async function POST(request: NextRequest) {
             amount: action.params.amount,
             paymentType: action.params.paymentType,
             paymentMethod: action.params.paymentMethod,
+            ip: clientIp,
+            userAgent,
+          },
+        });
+      } else if (action.type === "update_order_status") {
+        revalidatePath("/dashboard");
+        revalidatePath("/dashboard/orders");
+        revalidatePath(`/dashboard/orders/${action.params.orderId}`);
+
+        await logAppEvent({
+          organizationId: access.organizationId,
+          userId: access.userId,
+          source: "copilot.action",
+          action: "action_executed",
+          status: "success",
+          route: "/dashboard/orders",
+          metadata: {
+            actionType: action.type,
+            orderId: action.params.orderId,
+            newStatus: action.params.newStatus,
             ip: clientIp,
             userAgent,
           },

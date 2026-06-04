@@ -47,7 +47,35 @@ export type CopilotPaymentAction = {
   params: CopilotPaymentParams;
 };
 
-export type CopilotAction = CopilotContentAction | CopilotPaymentAction;
+// Forward/progress statuses the Copilot may set. `cancelled` and `refunded`
+// are intentionally excluded — those are destructive/financial and stay manual
+// (the underlying updateOrderStatus still enforces the full state machine).
+export type CopilotOrderStatus =
+  | "quote_sent"
+  | "awaiting_deposit"
+  | "confirmed"
+  | "scheduled"
+  | "out_for_delivery"
+  | "delivered"
+  | "completed";
+
+export type CopilotOrderStatusParams = {
+  orderId: string;
+  newStatus: CopilotOrderStatus;
+};
+
+// Operational action: advance an order to a new status. Delegates to the
+// fully-guarded updateOrderStatus server action (state machine + TOCTOU).
+export type CopilotOrderStatusAction = {
+  type: "update_order_status";
+  preview: string;
+  params: CopilotOrderStatusParams;
+};
+
+export type CopilotAction =
+  | CopilotContentAction
+  | CopilotPaymentAction
+  | CopilotOrderStatusAction;
 
 const ALLOWED_SETTINGS_FIELDS: Record<string, string> = {
   update_hero: "hero_message",
@@ -87,11 +115,25 @@ async function executePaymentAction(
   return { ok: result.ok, message: result.message };
 }
 
+async function executeOrderStatusAction(
+  action: CopilotOrderStatusAction
+): Promise<{ ok: boolean; message: string }> {
+  // Reuse updateOrderStatus: it enforces the VALID_TRANSITIONS state machine,
+  // role, rate limits, TOCTOU, and side effects (inventory release, accounting
+  // sync). The Copilot layer only ever proposes non-destructive forward statuses.
+  const { updateOrderStatus } = await import("@/lib/orders/actions");
+  const result = await updateOrderStatus(action.params.orderId, action.params.newStatus);
+  return { ok: result.ok, message: result.message };
+}
+
 export async function executeCopilotAction(
   action: CopilotAction
 ): Promise<{ ok: boolean; message: string }> {
   if (action.type === "record_payment") {
     return executePaymentAction(action);
+  }
+  if (action.type === "update_order_status") {
+    return executeOrderStatusAction(action);
   }
 
   if (!hasSupabaseEnv()) {

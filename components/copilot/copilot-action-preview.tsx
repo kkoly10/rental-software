@@ -5,9 +5,14 @@ import type {
   CopilotAction,
   CopilotContentAction,
   CopilotPaymentAction,
+  CopilotOrderStatusAction,
 } from "@/lib/copilot/actions";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Messages } from "@/lib/i18n/dictionaries";
+
+function humanizeStatus(status: string): string {
+  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   deposit: "Deposit",
@@ -89,6 +94,15 @@ export function CopilotActionPreview({
   if (action.type === "record_payment") {
     return (
       <PaymentActionPreview
+        action={action}
+        onApply={onApply}
+        onDismiss={onDismiss}
+      />
+    );
+  }
+  if (action.type === "update_order_status") {
+    return (
+      <OrderStatusActionPreview
         action={action}
         onApply={onApply}
         onDismiss={onDismiss}
@@ -321,6 +335,98 @@ function PaymentActionPreview({
           disabled={applying}
         >
           {applying ? rp.recording : rp.confirm}
+        </button>
+        <button
+          className="ghost-btn copilot-action-dismiss-btn"
+          onClick={onDismiss}
+          disabled={applying}
+        >
+          {m.copilot.dismiss}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OrderStatusActionPreview({
+  action,
+  onApply,
+  onDismiss,
+}: {
+  action: CopilotOrderStatusAction;
+  onApply: (action: CopilotAction) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  const { messages: m } = useI18n();
+  const os = m.copilot.orderStatus;
+  const [applying, setApplying] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(
+    null
+  );
+
+  const { params } = action;
+
+  async function handleApply() {
+    setApplying(true);
+    try {
+      await onApply(action);
+      setResult({ ok: true, message: m.copilot.appliedSuccess });
+    } catch (error) {
+      setResult({
+        ok: false,
+        message: error instanceof Error ? error.message : m.copilot.failedToApply,
+      });
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div
+        className={
+          result.ok
+            ? "copilot-action-preview copilot-action-success"
+            : "copilot-action-preview copilot-action-error"
+        }
+      >
+        <div className="copilot-action-field-label">
+          {result.ok ? m.copilot.appliedLabel : m.copilot.errorLabel}
+        </div>
+        <div style={{ fontSize: 13 }}>{result.message}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="copilot-action-preview">
+      <div className="copilot-action-field-label">{os.title}</div>
+      {action.preview && (
+        <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 6 }}>
+          {action.preview}
+        </div>
+      )}
+      <div style={{ fontSize: 13, display: "grid", gap: 4, marginBottom: 8 }}>
+        <div>
+          <strong>{m.copilot.recordPayment.order}:</strong>{" "}
+          <a
+            href={`/dashboard/orders/${params.orderId}`}
+            style={{ color: "var(--primary)" }}
+          >
+            {m.copilot.recordPayment.viewOrder}
+          </a>
+        </div>
+        <div>
+          <strong>{os.newStatus}:</strong> {humanizeStatus(params.newStatus)}
+        </div>
+      </div>
+      <div className="copilot-action-buttons">
+        <button
+          className="primary-btn copilot-action-apply-btn"
+          onClick={handleApply}
+          disabled={applying}
+        >
+          {applying ? os.updating : os.confirm}
         </button>
         <button
           className="ghost-btn copilot-action-dismiss-btn"
