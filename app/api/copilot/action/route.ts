@@ -7,6 +7,12 @@ import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { revalidatePath } from "next/cache";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getTrustedClientIp } from "@/lib/security/request-client";
+import {
+  hasAcknowledgedCopilotActions,
+  COPILOT_ACTIONS_TERMS_VERSION,
+  COPILOT_ACTIONS_TERMS,
+} from "@/lib/copilot/acknowledgment";
 
 export const runtime = "nodejs";
 
@@ -82,6 +88,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Captured for the audit trail (non-repudiation) on any executed action.
+  const clientIp = getTrustedClientIp(request.headers);
+  const userAgent = request.headers.get("user-agent")?.slice(0, 256) ?? null;
+
   // Copilot actions mutate organization settings — restrict to owners and admins
   const copilotSupabase = await createSupabaseServerClient();
   const { data: copilotMembership } = await copilotSupabase
@@ -149,6 +159,25 @@ export async function POST(request: NextRequest) {
 
   const action: CopilotAction = parsed.data;
 
+  // One-time acknowledgment gate: before the operator's first Copilot action,
+  // they must accept the AI-assistance terms. Backstops the client gate; fails
+  // open only when the acknowledgment table isn't provisioned yet, so the
+  // existing feature never hard-breaks while the migration is pending.
+  const ack = await hasAcknowledgedCopilotActions(
+    copilotSupabase,
+    access.organizationId,
+    access.userId,
+    COPILOT_ACTIONS_TERMS_VERSION
+  );
+  if (ack.provisioned && !ack.acknowledged) {
+    return jsonResponse({
+      ok: false,
+      needsAcknowledgment: true,
+      version: COPILOT_ACTIONS_TERMS_VERSION,
+      terms: COPILOT_ACTIONS_TERMS,
+    });
+  }
+
   try {
     const result = await executeCopilotAction(action);
 
@@ -172,6 +201,8 @@ export async function POST(request: NextRequest) {
             amount: action.params.amount,
             paymentType: action.params.paymentType,
             paymentMethod: action.params.paymentMethod,
+            ip: clientIp,
+            userAgent,
           },
         });
       } else {
@@ -188,6 +219,8 @@ export async function POST(request: NextRequest) {
           metadata: {
             actionType: action.type,
             field: action.field,
+            ip: clientIp,
+            userAgent,
           },
         });
       }

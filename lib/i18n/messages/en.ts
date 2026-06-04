@@ -2641,6 +2641,12 @@ const enValues = {
       viewOrder: "View order ↗",
       recording: "Recording...",
     },
+    acknowledgment: {
+      title: "Before Copilot acts for you",
+      agree: "I Agree",
+      agreeing: "Saving…",
+      cancel: "Not now",
+    },
   },
 
   trackingMap: {

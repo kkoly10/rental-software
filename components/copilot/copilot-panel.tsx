@@ -5,6 +5,7 @@ import { CopilotMessageList, type CopilotMessage } from "./copilot-message-list"
 import { CopilotInput } from "./copilot-input";
 import { CopilotSuggestedPrompts } from "./copilot-suggested-prompts";
 import { CopilotActionPreview } from "./copilot-action-preview";
+import { CopilotAckPrompt } from "./copilot-ack-prompt";
 import { getSuggestedPrompts } from "@/lib/copilot/suggested-prompts";
 import type { CopilotAction } from "@/lib/copilot/actions";
 import { parseActionFromResponse } from "@/lib/copilot/parse-action";
@@ -39,6 +40,14 @@ export function CopilotPanel({
   const [loading, setLoading] = useState(false);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [currentValues, setCurrentValues] = useState<Record<string, string>>({});
+  // One-time AI-assistance acknowledgment gate. `needed === null` while we
+  // don't yet know (treated as not-needed so we never block on a slow/failed
+  // fetch; the server re-checks on every action regardless).
+  const [ack, setAck] = useState<{
+    needed: boolean;
+    version: string;
+    terms: string;
+  } | null>(null);
   const prompts = getSuggestedPrompts(currentRoute);
 
   // Mirror of `messages` read at send time so the request carries the latest
@@ -63,7 +72,25 @@ export function CopilotPanel({
         // silently ignore – preview will just show "No current value"
       }
     }
+    async function fetchAckStatus() {
+      try {
+        const res = await fetch("/api/copilot/acknowledge");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && data && typeof data.acknowledged === "boolean") {
+            setAck({
+              needed: !data.acknowledged,
+              version: String(data.version ?? ""),
+              terms: String(data.terms ?? ""),
+            });
+          }
+        }
+      } catch {
+        // Ignore — leave ack null so we never block; the server re-checks.
+      }
+    }
     fetchCurrentValues();
+    fetchAckStatus();
     return () => { cancelled = true; };
   }, []);
 
@@ -89,6 +116,26 @@ export function CopilotPanel({
     setPendingActions((prev) =>
       prev.filter((pa) => pa.messageIndex !== messageIndex)
     );
+  }, []);
+
+  const handleAcknowledge = useCallback(async () => {
+    const res = await fetch("/api/copilot/acknowledge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version: ack?.version ?? "" }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.ok) {
+      throw new Error(
+        typeof data?.error === "string" ? data.error : i18n.copilot.genericError
+      );
+    }
+    setAck((prev) => (prev ? { ...prev, needed: false } : prev));
+  }, [ack?.version, i18n.copilot.genericError]);
+
+  const handleDismissAck = useCallback(() => {
+    // Dismiss the pending actions too — without acknowledgment they can't be applied.
+    setPendingActions([]);
   }, []);
 
   const sendMessage = useCallback(
@@ -189,15 +236,23 @@ export function CopilotPanel({
 
       <CopilotMessageList messages={messages} />
 
-      {pendingActions.map((pa) => (
-        <CopilotActionPreview
-          key={pa.messageIndex}
-          action={pa.action}
-          currentValues={currentValues}
-          onApply={handleApplyAction}
-          onDismiss={() => handleDismissAction(pa.messageIndex)}
+      {pendingActions.length > 0 && ack?.needed ? (
+        <CopilotAckPrompt
+          terms={ack.terms}
+          onAgree={handleAcknowledge}
+          onCancel={handleDismissAck}
         />
-      ))}
+      ) : (
+        pendingActions.map((pa) => (
+          <CopilotActionPreview
+            key={pa.messageIndex}
+            action={pa.action}
+            currentValues={currentValues}
+            onApply={handleApplyAction}
+            onDismiss={() => handleDismissAction(pa.messageIndex)}
+          />
+        ))
+      )}
 
       {messages.length === 0 && (
         <CopilotSuggestedPrompts prompts={prompts} onSelect={sendMessage} />
