@@ -95,6 +95,12 @@ export default async function ProductsPage({
                             tone="warning"
                           />
                         )}
+                        {product.hasOpenMaintenance && (
+                          <StatusBadge
+                            label={m.dashboard.products.openMaintenanceBadge}
+                            tone="warning"
+                          />
+                        )}
                         <StatusBadge
                           label={product.status}
                           tone={product.tone as "default" | "success" | "warning" | "danger"}

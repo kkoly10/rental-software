@@ -46,9 +46,13 @@ export async function recordPayment(
     parsed.data;
 
   if (!hasSupabaseEnv()) {
+    // Re-audit follow-up #3b: be explicit that the order's auto-confirm
+    // didn't fire either. Without this the dev gets the success toast,
+    // expects the order to flip to "confirmed", then stays confused
+    // because nothing happens.
     return {
       ok: true,
-      message: `Demo mode: $${amount.toFixed(2)} ${paymentType} payment would be recorded.`,
+      message: `Demo mode: $${amount.toFixed(2)} ${paymentType} payment would be recorded. The order status will not auto-update — connect Supabase to enable persistence and auto-confirm.`,
     };
   }
 

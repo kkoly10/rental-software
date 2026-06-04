@@ -38,6 +38,13 @@ export type ProductSummary = {
       decision 2.9: an unpriced active product fails checkout, so the
       operator needs to know it's broken on the storefront. */
   missingPrice?: boolean;
+  /** True when at least one asset of this product has an open or
+      in-progress maintenance record. Storefront availability is
+      capacity-aware (per decision 2.4) so the product may still be
+      bookable if other assets are ready — but the operator should be
+      told so they're not surprised when a "maintenance" item still
+      takes bookings. */
+  hasOpenMaintenance?: boolean;
 };
 
 export type CustomerSummary = {

@@ -220,13 +220,15 @@ export async function removeStopFromRoute(
   } else {
     // Last stop removed. Auto-delete the zombie row when the route is
     // still `planned` — touching an in_progress / completed route
-    // would lose audit history that ops might want to investigate, so
-    // those stay. The route_status check below also covers manual
-    // mode: even there, a planned-status route with zero stops is
-    // unambiguous garbage (an operator who wanted to keep it would
-    // have added back another stop already). Smart Delivery Mode
-    // (Sprint 1.5) doesn't need a routing_mode branch here because
-    // the rule is the same in both modes.
+    // would lose audit history that ops might want to investigate.
+    //
+    // Race window note (re-audit follow-up #3d): between the SELECT
+    // above and the DELETE here, another request could insert a new
+    // stop. If that happens, the cascade-delete on route_stops removes
+    // the just-inserted stop too — data integrity holds, but the
+    // operator's just-added stop disappears. Probability is low; the
+    // proper fix is a Postgres function that checks-and-deletes
+    // atomically (NOT EXISTS subquery). Acceptable for now.
     await supabase
       .from("routes")
       .delete()

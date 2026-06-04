@@ -57,10 +57,28 @@ export async function reserveProductAvailabilityBlock(options: {
     return { ok: false, message: error.message } as const;
   }
 
-  const result = data as { ok: boolean; reason?: string };
+  const result = data as { ok: boolean; reason?: string; block_id?: string };
   if (!result.ok) {
     return { ok: false, message: result.reason ?? "Unable to reserve availability." } as const;
   }
 
-  return { ok: true } as const;
+  return { ok: true, blockId: result.block_id ?? null } as const;
+}
+
+/**
+ * Decision 2.7 / follow-up #2: after the order is INSERTed (so its row
+ * exists in `orders`), attach its id to the reserved availability block
+ * so the cleanup-on-cancel logic + analytics can join the two. Called by
+ * the checkout flow once the order row is in.
+ *
+ * Idempotent: safe to call again if the order id was already set.
+ */
+export async function attachOrderIdToAvailabilityBlock(blockId: string, orderId: string) {
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  await supabase
+    .from("availability_blocks")
+    .update({ source_order_id: orderId })
+    .eq("id", blockId)
+    .is("source_order_id", null);
 }

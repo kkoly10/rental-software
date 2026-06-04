@@ -47,6 +47,19 @@ export function NewOrderForm({
   // form was deep-linked with an already-past initialEventDate we
   // leave minEventDate unset so the prefilled value still validates.
   const [minEventDate, setMinEventDate] = useState<string | undefined>(undefined);
+
+  // Track the event/rental dates and times for client-side validation
+  // (issue #1 from the post-launch follow-up: operator can silently submit
+  // a same-day rental with start_time == end_time, producing two stops
+  // with identical scheduled windows).
+  const [eventDate, setEventDate] = useState(initialEventDate ?? "");
+  const [rentalEndDate, setRentalEndDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const sameDay =
+    eventDate.length === 10 && rentalEndDate.length === 10 && eventDate === rentalEndDate;
+  const timeClash =
+    sameDay && startTime.length === 5 && endTime.length === 5 && startTime === endTime;
   useEffect(() => {
     const today = new Date();
     const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -114,7 +127,8 @@ export function NewOrderForm({
           <input
             name="event_date"
             type="date"
-            defaultValue={initialEventDate}
+            value={eventDate}
+            onChange={(e) => setEventDate(e.target.value)}
             min={minEventDate}
             style={{ marginTop: 10, width: "100%" }}
           />
@@ -124,6 +138,9 @@ export function NewOrderForm({
           <input
             name="start_time"
             type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            aria-invalid={timeClash || undefined}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -132,16 +149,27 @@ export function NewOrderForm({
           <input
             name="end_time"
             type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            aria-invalid={timeClash || undefined}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
       </div>
+
+      {timeClash && (
+        <div role="alert" className="badge warning" style={{ padding: "10px 14px" }}>
+          {m.sameDayTimeClashWarning}
+        </div>
+      )}
 
       <label className="order-card">
         <strong>{m.rentalEndDateLabel}</strong>
         <input
           name="rental_end_date"
           type="date"
+          value={rentalEndDate}
+          onChange={(e) => setRentalEndDate(e.target.value)}
           style={{ marginTop: 10, width: "100%" }}
         />
         <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
@@ -385,7 +413,7 @@ export function NewOrderForm({
       )}
 
       <div style={{ display: "flex", gap: 12 }}>
-        <button className="primary-btn" type="submit" disabled={pending}>
+        <button className="primary-btn" type="submit" disabled={pending || timeClash}>
           {pending ? m.submitting : m.submit}
         </button>
       </div>
