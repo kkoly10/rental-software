@@ -66,6 +66,7 @@ export async function getProductsPage(options?: {
     }
 
     const mappedPage = (data ?? []).map(mapProductRow);
+    await enrichWithOpenMaintenance(supabase, ctx.organizationId, mappedPage);
     const totalItems = count ?? mappedPage.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return {
@@ -95,6 +96,7 @@ export async function getProductsPage(options?: {
 
   const mapped: ProductSummary[] = data.map(mapProductRow);
   const filtered = mapped.filter((product) => matchesProductQuery(product, query));
+  await enrichWithOpenMaintenance(supabase, ctx.organizationId, filtered);
 
   return paginateItems(filtered, {
     page: options?.page,
@@ -111,6 +113,37 @@ type ProductRow = {
   is_active: boolean | null;
   deleted_at: string | null;
 };
+
+/**
+ * Post-fetch enrichment: mark each product as having open maintenance if
+ * any of its assets has an open or in-progress maintenance_record. Run
+ * as a single batched query keyed off the product_ids we just paged so
+ * we don't N+1 the list. Decision 2.4 / follow-up #5: storefront stays
+ * capacity-aware but the operator UI surfaces the signal.
+ */
+async function enrichWithOpenMaintenance(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  items: ProductSummary[]
+): Promise<void> {
+  if (items.length === 0) return;
+  const productIds = items.map((p) => p.id);
+  const { data } = await supabase
+    .from("maintenance_records")
+    .select("assets!inner(product_id)")
+    .eq("organization_id", organizationId)
+    .in("status", ["open", "in_progress"])
+    .in("assets.product_id", productIds);
+  if (!data) return;
+  const productsWithOpen = new Set<string>();
+  for (const row of data) {
+    const asset = (row as { assets?: { product_id?: string } | null }).assets;
+    if (asset?.product_id) productsWithOpen.add(asset.product_id);
+  }
+  for (const p of items) {
+    if (productsWithOpen.has(p.id)) p.hasOpenMaintenance = true;
+  }
+}
 
 function mapProductRow(product: ProductRow): ProductSummary {
   const category = (product as Record<string, unknown>).categories as

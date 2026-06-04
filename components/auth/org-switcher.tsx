@@ -25,7 +25,13 @@ export function OrgSwitcher({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  const activeName = active.name ?? "Organization";
+  // Re-audit follow-up #3c: render nothing when there's no active org
+  // (zero-membership state). Middleware should already redirect to
+  // /onboarding before this renders, but if a race lands us on the
+  // dashboard briefly, showing a literal "Organization" placeholder is
+  // worse than nothing.
+  if (!active.name) return null;
+  const activeName = active.name;
 
   if (options.length <= 1) {
     return (

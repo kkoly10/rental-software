@@ -154,6 +154,10 @@ export async function getCalendarEvents(
       const stopCount = Array.isArray(route.route_stops)
         ? route.route_stops.length
         : 0;
+      // Re-audit follow-up #3a: skip 0-stop routes so the calendar
+      // doesn't get cluttered with empty placeholder routes an
+      // operator pre-created but never populated.
+      if (stopCount === 0) continue;
       const status = route.route_status ?? "planned";
       events.push({
         id: `route:${route.id}`,
