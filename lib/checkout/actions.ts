@@ -49,6 +49,14 @@ export type CheckoutActionState = {
     total: string;
     depositDue: string;
     balanceDue: string;
+    // Sprint 6.0 — surfaced on the review screen as its own line item
+    // so the customer sees "(+$50 Wet upcharge)" explicitly instead
+    // of having to reconcile the subtotal in their head against the
+    // dry price they saw on the storefront. Only set when the wet
+    // upcharge applies; undefined for dry rentals, single-mode
+    // products, or wet rentals where the operator left the upcharge
+    // blank.
+    wetUpcharge?: string;
   };
 };
 
@@ -378,8 +386,15 @@ export async function createCheckoutOrder(
     requestedMode && productSupportsModes.includes(requestedMode)
       ? requestedMode
       : null;
-  if (effectiveMode === "wet" && (productWetUpchargeCents ?? 0) > 0) {
-    subtotal += (productWetUpchargeCents ?? 0) / 100;
+  // Captured here so the review-screen summary can show it as its own
+  // line item rather than baking it into a higher subtotal that
+  // surprises the customer. Zero when wet isn't applicable.
+  const wetUpchargeApplied =
+    effectiveMode === "wet" && (productWetUpchargeCents ?? 0) > 0
+      ? (productWetUpchargeCents ?? 0) / 100
+      : 0;
+  if (wetUpchargeApplied > 0) {
+    subtotal += wetUpchargeApplied;
   }
 
   if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
@@ -1004,6 +1019,7 @@ export async function createCheckoutOrder(
             total: fmt(total),
             depositDue: fmt(deposit),
             balanceDue: fmt(balance),
+            wetUpcharge: wetUpchargeApplied > 0 ? fmt(wetUpchargeApplied) : undefined,
           },
         };
       }
@@ -1057,6 +1073,7 @@ export async function createCheckoutOrder(
       total: fmt(total),
       depositDue: fmt(deposit),
       balanceDue: fmt(balance),
+      wetUpcharge: wetUpchargeApplied > 0 ? fmt(wetUpchargeApplied) : undefined,
     },
   };
 }

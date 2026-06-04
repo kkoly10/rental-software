@@ -101,6 +101,17 @@ export function CheckoutForm({
                 <span className="muted">{m.checkout.review.subtotal}</span>
                 <span>{s.subtotal}</span>
               </div>
+              {s.wetUpcharge && (
+                // Sprint 6.0 — surface the wet upcharge as its own
+                // line so the customer can reconcile the total against
+                // the per-mode price they saw on the storefront. Only
+                // renders when the customer actually picked wet AND
+                // the operator set a non-zero upcharge.
+                <div className="order-row">
+                  <span className="muted">{m.checkout.review.wetUpcharge}</span>
+                  <span>+{s.wetUpcharge}</span>
+                </div>
+              )}
               <div className="order-row">
                 <span className="muted">{m.checkout.review.deliveryFee}</span>
                 <span>{s.deliveryFee}</span>

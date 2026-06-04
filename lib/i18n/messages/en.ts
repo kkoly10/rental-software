@@ -1338,6 +1338,7 @@ const enValues = {
       eventDate: "Event date",
       deliveryTo: "Delivery to",
       subtotal: "Subtotal",
+      wetUpcharge: "Wet mode upcharge",
       deliveryFee: "Delivery fee",
       total: "Total",
       depositDueNow: "Deposit due now",
