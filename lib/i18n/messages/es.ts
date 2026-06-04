@@ -2673,6 +2673,12 @@ export const es: Messages = {
       confirm: "Actualizar estado",
       updating: "Actualizando…",
     },
+    documents: {
+      title: "Generar documentos",
+      body: "Crea un contrato de alquiler y una exención de responsabilidad para este pedido y los envía al cliente para que los firme.",
+      confirm: "Generar documentos",
+      generating: "Generando…",
+    },
   },
 
   trackingMap: {

@@ -72,10 +72,19 @@ export type CopilotOrderStatusAction = {
   params: CopilotOrderStatusParams;
 };
 
+// Operational action: generate the rental agreement + safety waiver for an
+// order (and email the customer to sign). Delegates to createDocumentsForOrder.
+export type CopilotGenerateDocumentsAction = {
+  type: "generate_documents";
+  preview: string;
+  params: { orderId: string };
+};
+
 export type CopilotAction =
   | CopilotContentAction
   | CopilotPaymentAction
-  | CopilotOrderStatusAction;
+  | CopilotOrderStatusAction
+  | CopilotGenerateDocumentsAction;
 
 const ALLOWED_SETTINGS_FIELDS: Record<string, string> = {
   update_hero: "hero_message",
@@ -126,6 +135,16 @@ async function executeOrderStatusAction(
   return { ok: result.ok, message: result.message };
 }
 
+async function executeGenerateDocumentsAction(
+  action: CopilotGenerateDocumentsAction
+): Promise<{ ok: boolean; message: string }> {
+  // Reuse createDocumentsForOrder: role check, duplicate guard, and the
+  // customer "documents ready to sign" email all live there.
+  const { createDocumentsForOrder } = await import("@/lib/documents/actions");
+  const result = await createDocumentsForOrder(action.params.orderId);
+  return { ok: result.ok, message: result.message };
+}
+
 export async function executeCopilotAction(
   action: CopilotAction
 ): Promise<{ ok: boolean; message: string }> {
@@ -134,6 +153,9 @@ export async function executeCopilotAction(
   }
   if (action.type === "update_order_status") {
     return executeOrderStatusAction(action);
+  }
+  if (action.type === "generate_documents") {
+    return executeGenerateDocumentsAction(action);
   }
 
   if (!hasSupabaseEnv()) {

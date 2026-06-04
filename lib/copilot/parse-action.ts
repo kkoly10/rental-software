@@ -42,6 +42,22 @@ function parseOrderStatusAction(parsed: Record<string, unknown>): CopilotAction 
   };
 }
 
+function parseGenerateDocumentsAction(parsed: Record<string, unknown>): CopilotAction | null {
+  const params = parsed.params;
+  if (typeof params !== "object" || params === null) return null;
+  const orderId =
+    typeof (params as Record<string, unknown>).orderId === "string"
+      ? ((params as Record<string, unknown>).orderId as string)
+      : "";
+  if (!orderId) return null;
+
+  return {
+    type: "generate_documents",
+    preview: typeof parsed.preview === "string" ? parsed.preview : "",
+    params: { orderId },
+  };
+}
+
 function parsePaymentAction(parsed: Record<string, unknown>): CopilotAction | null {
   const params = parsed.params;
   if (typeof params !== "object" || params === null) return null;
@@ -99,6 +115,8 @@ export function parseActionFromResponse(content: string): {
       action = parsePaymentAction(parsed);
     } else if (parsed.type === "update_order_status") {
       action = parseOrderStatusAction(parsed);
+    } else if (parsed.type === "generate_documents") {
+      action = parseGenerateDocumentsAction(parsed);
     } else if (parsed.type && parsed.field && parsed.value) {
       action = {
         type: parsed.type as CopilotAction["type"],

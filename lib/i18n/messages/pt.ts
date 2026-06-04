@@ -2673,6 +2673,12 @@ export const pt: Messages = {
       confirm: "Atualizar estado",
       updating: "A atualizar…",
     },
+    documents: {
+      title: "Gerar documentos",
+      body: "Cria um contrato de aluguer e um termo de responsabilidade para esta encomenda e envia-os ao cliente para assinatura.",
+      confirm: "Gerar documentos",
+      generating: "A gerar…",
+    },
   },
 
   trackingMap: {
