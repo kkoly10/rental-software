@@ -7,6 +7,7 @@ import { CopilotSuggestedPrompts } from "./copilot-suggested-prompts";
 import { CopilotActionPreview } from "./copilot-action-preview";
 import { getSuggestedPrompts } from "@/lib/copilot/suggested-prompts";
 import type { CopilotAction } from "@/lib/copilot/actions";
+import { parseActionFromResponse } from "@/lib/copilot/parse-action";
 import { COPILOT_HISTORY_LIMIT } from "@/lib/validation/copilot";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -19,40 +20,6 @@ function getErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
-}
-
-/**
- * Parse `[ACTION:{...}]` blocks from an AI response.
- * Returns the cleaned text (without the action block) and the parsed action if found.
- */
-function parseActionFromResponse(content: string): {
-  text: string;
-  action: CopilotAction | null;
-} {
-  const actionRegex = /\[ACTION:\s*(\{[\s\S]*?\})\s*\]/;
-  const match = content.match(actionRegex);
-
-  if (!match) {
-    return { text: content, action: null };
-  }
-
-  try {
-    const parsed = JSON.parse(match[1]);
-    if (parsed.type && parsed.field && parsed.value) {
-      const action: CopilotAction = {
-        type: parsed.type,
-        field: parsed.field,
-        value: parsed.value,
-        preview: parsed.preview || "",
-      };
-      const text = content.replace(actionRegex, "").trim();
-      return { text, action };
-    }
-  } catch {
-    // JSON parse failed, treat as normal text
-  }
-
-  return { text: content, action: null };
 }
 
 type PendingAction = {

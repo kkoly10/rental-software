@@ -10,7 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
-const copilotActionSchema = z.object({
+const contentActionSchema = z.object({
   type: z.enum([
     "update_hero",
     "update_service_area_text",
@@ -22,6 +22,28 @@ const copilotActionSchema = z.object({
   field: z.string().min(1).max(100),
   value: z.string().min(1).max(10000),
   preview: z.string().max(500).optional().default(""),
+});
+
+const paymentActionSchema = z.object({
+  type: z.literal("record_payment"),
+  preview: z.string().max(500).optional().default(""),
+  params: z.object({
+    orderId: z.string().uuid("Invalid order identifier."),
+    amount: z
+      .number()
+      .positive("Amount must be greater than zero.")
+      .max(100000, "Amount is too large."),
+    paymentType: z.enum(["deposit", "balance", "partial"]),
+    paymentMethod: z.enum([
+      "cash",
+      "check",
+      "card_manual",
+      "venmo",
+      "zelle",
+      "other",
+    ]),
+    referenceNote: z.string().max(120).optional(),
+  }),
 });
 
 function jsonResponse(
@@ -100,7 +122,14 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ error: "Invalid JSON payload." }, { status: 400 });
   }
 
-  const parsed = copilotActionSchema.safeParse(requestBody);
+  // Pick the schema by discriminator so error messages stay precise.
+  const isPayment =
+    typeof requestBody === "object" &&
+    requestBody !== null &&
+    (requestBody as { type?: unknown }).type === "record_payment";
+  const parsed = isPayment
+    ? paymentActionSchema.safeParse(requestBody)
+    : contentActionSchema.safeParse(requestBody);
   if (!parsed.success) {
     await logAppError({
       organizationId: access.organizationId,
@@ -124,21 +153,44 @@ export async function POST(request: NextRequest) {
     const result = await executeCopilotAction(action);
 
     if (result.ok) {
-      revalidatePath("/dashboard/website");
-      revalidatePath("/");
+      if (action.type === "record_payment") {
+        // recordPayment already revalidates payments/order/dashboard; refresh
+        // the dashboard's operational figures the Copilot reads from too.
+        revalidatePath("/dashboard");
+        revalidatePath("/dashboard/payments");
 
-      await logAppEvent({
-        organizationId: access.organizationId,
-        userId: access.userId,
-        source: "copilot.action",
-        action: "action_executed",
-        status: "success",
-        route: "/dashboard/website",
-        metadata: {
-          actionType: action.type,
-          field: action.field,
-        },
-      });
+        await logAppEvent({
+          organizationId: access.organizationId,
+          userId: access.userId,
+          source: "copilot.action",
+          action: "action_executed",
+          status: "success",
+          route: "/dashboard/payments",
+          metadata: {
+            actionType: action.type,
+            orderId: action.params.orderId,
+            amount: action.params.amount,
+            paymentType: action.params.paymentType,
+            paymentMethod: action.params.paymentMethod,
+          },
+        });
+      } else {
+        revalidatePath("/dashboard/website");
+        revalidatePath("/");
+
+        await logAppEvent({
+          organizationId: access.organizationId,
+          userId: access.userId,
+          source: "copilot.action",
+          action: "action_executed",
+          status: "success",
+          route: "/dashboard/website",
+          metadata: {
+            actionType: action.type,
+            field: action.field,
+          },
+        });
+      }
     }
 
     return jsonResponse(result);

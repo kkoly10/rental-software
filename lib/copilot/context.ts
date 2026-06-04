@@ -48,11 +48,11 @@ export function getOperationalContext(snapshot: OperationalSnapshot): string {
   if (snapshot.attentionOrders.length > 0) {
     lines.push(
       "",
-      "Specific upcoming orders that still owe money (use these exact markdown links when referring to them so the operator can click straight through):"
+      "Specific upcoming orders that still owe money (use these exact markdown links when referring to them so the operator can click straight through; the orderId is for recording a payment via an ACTION block):"
     );
     for (const o of snapshot.attentionOrders) {
       lines.push(
-        `- [${o.label}](${o.link}) — ${money(o.balance)} due${o.eventDate ? `, event ${o.eventDate}` : ""}`
+        `- [${o.label}](${o.link}) — ${money(o.balance)} due${o.eventDate ? `, event ${o.eventDate}` : ""} (orderId: ${o.id})`
       );
     }
   }

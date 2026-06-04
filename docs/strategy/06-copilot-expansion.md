@@ -79,8 +79,8 @@ Live answers to "How much am I owed?", "What's on today/this week?", "What needs
 ### Tier 2 — Proactive daily briefing
 A "What needs my attention today?" roundup (and optional auto-greeting) synthesizing events, unpaid deposits on imminent events, unsigned docs, unread messages, and overdue maintenance. The data for this shipped in Phase 1; the proactive surfacing is the remaining work.
 
-### Tier 3 — Action-taking with confirmation
-Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-radius mutations: record a payment, send a quote / document for signature, advance order status, draft & send a customer reply, log maintenance. Each reuses the role gate, rate limit, audit log, and preview already built.
+### Tier 3 — Action-taking with confirmation — **STARTED (Phase 3: record payment)**
+Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-radius mutations. **Recording an incoming payment is shipped** (see below); send a quote / document for signature, advance order status, draft & send a customer reply, and log maintenance are the queued follow-ons. Each reuses the role gate, rate limit, audit log, and preview already built.
 
 ### Tier 4 — Drafting & communication
 Let the model draft customer replies, quote follow-ups, event reminders, and review requests — including WhatsApp/SMS copy (ties to the strategy docs' "WhatsApp is the highest-leverage net-new feature" bet). Operator approves before send.
@@ -94,7 +94,7 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 
 1. **Phase 1 — read-only operational awareness.** ✅ *Shipped (see below).*
 2. **Phase 2 — conversation memory + deep-links.** ✅ *Shipped (see below).*
-3. **Phase 3 — action-taking** (payments, quotes, documents, status, message drafts), domain by domain behind the existing confirm-then-apply guardrails.
+3. **Phase 3 — action-taking** (payments, quotes, documents, status, message drafts), domain by domain behind the existing confirm-then-apply guardrails. 🚧 *Record-payment shipped (see below); rest queued.*
 4. **Phase 4 — proactive alerts + WhatsApp/SMS drafting.** Ties into GTM strategy.
 
 ---
@@ -128,3 +128,19 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 **Guardrails preserved:** still read-only; history is size- and count-bounded server-side; no new mutation surface.
 
 **Verification:** `tsc --noEmit` clean; full unit suite green, including new `tests/copilot-conversation.test.ts` (history normalization: well-formed, empty, leading-assistant, repeated-role, dangling-user, and an always-valid-shape invariant).
+
+## Phase 3 implementation (record payment — shipped)
+
+**Goal:** the first **write** action — let the Copilot record an incoming payment, behind the same confirm-then-apply preview that already protects content edits, reusing the fully-guarded `recordPayment` server action so no financial logic is re-implemented.
+
+**Design — defense in depth:**
+
+- **Reuses `lib/payments/actions.ts` `recordPayment`** verbatim via `executeCopilotAction` → `executePaymentAction()`. That action already re-validates the payload (`recordPaymentSchema`), enforces org-scoping, role (owner/admin/dispatcher), rate limits, terminal-state guards, records atomically through the `record_manual_payment` RPC (SELECT FOR UPDATE), writes an audit log, auto-confirms on deposit fulfilment, and fires customer email/SMS.
+- **Two extra gates on top:** the `/api/copilot/action` route restricts *all* Copilot actions to **owner/admin** (stricter than `recordPayment`'s own check), with origin validation, its own rate limit, and an audit-log entry carrying `{orderId, amount, paymentType, paymentMethod}`.
+- **Confirm-before-apply:** a dedicated payment preview (`PaymentActionPreview`) shows the amount, method, type, optional note, and a **"View order" deep-link to verify the order** before the operator clicks Record.
+- **Refunds are deliberately out of scope** — recording money *out* is the most error-sensitive operation, so it stays a manual Payments-page flow. The parser, route schema, type, and prompt all reject `refund`.
+- **Validated three times:** client parser (`lib/copilot/parse-action.ts`, extracted + unit-tested), the route's `paymentActionSchema`, and `recordPayment` itself.
+
+**Changes:** action types/union (`lib/copilot/actions.ts`); discriminated route schema + branched audit/revalidate (`app/api/copilot/action/route.ts`); extracted, hardened `parseActionFromResponse` (`lib/copilot/parse-action.ts`); payment preview + i18n in all four locales (`copilot-action-preview.tsx`, `messages/*`); `record_payment` protocol in the system prompt; order IDs exposed in the operational context; a "Record a payment" suggested prompt.
+
+**Verification:** `tsc --noEmit` clean; full unit suite green, including new `tests/copilot-parse-action.test.ts` (content + payment parsing, amount coercion, empty-note dropping, and rejection of bad method / non-positive amount / missing orderId / refund / malformed JSON).

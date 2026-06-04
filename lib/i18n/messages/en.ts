@@ -2629,6 +2629,18 @@ const enValues = {
       faq: "FAQ",
       aboutSection: "About Section",
     },
+    recordPayment: {
+      title: "Record payment",
+      order: "Order",
+      amount: "Amount",
+      method: "Method",
+      type: "Type",
+      note: "Note",
+      caution: "This records a real payment and may notify the customer.",
+      confirm: "Record Payment",
+      viewOrder: "View order ↗",
+      recording: "Recording...",
+    },
   },
 
   trackingMap: {

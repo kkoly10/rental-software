@@ -2628,6 +2628,18 @@ export const es: Messages = {
       faq: "FAQ",
       aboutSection: "Sección «Acerca de»",
     },
+    recordPayment: {
+      title: "Registrar pago",
+      order: "Pedido",
+      amount: "Importe",
+      method: "Método",
+      type: "Tipo",
+      note: "Nota",
+      caution: "Esto registra un pago real y puede notificar al cliente.",
+      confirm: "Registrar pago",
+      viewOrder: "Ver pedido ↗",
+      recording: "Registrando…",
+    },
   },
 
   trackingMap: {

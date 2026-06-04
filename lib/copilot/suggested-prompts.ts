@@ -28,7 +28,7 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
   ],
   "/dashboard/payments": [
     { label: "How much am I owed?", prompt: "How much money am I owed right now?" },
-    { label: "How do I record a payment?", prompt: "How do I record a payment for an order?" },
+    { label: "Record a payment", prompt: "Help me record a payment on an order that still owes a balance." },
     { label: "Why isn't my order confirming?", prompt: "Why is my order not automatically confirming after payment?" },
   ],
   "/dashboard/documents": [
