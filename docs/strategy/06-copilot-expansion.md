@@ -76,11 +76,11 @@ The Copilot sat on top of a platform with a deep operational surface it couldn't
 ### Tier 1 — Operational awareness (read-only) — **SHIPPED (Phase 1)**
 Live answers to "How much am I owed?", "What's on today/this week?", "What needs my attention?", "How am I doing this month?", "Any unread messages?". Reuses existing data patterns; zero new mutation risk.
 
-### Tier 2 — Proactive daily briefing
-A "What needs my attention today?" roundup (and optional auto-greeting) synthesizing events, unpaid deposits on imminent events, unsigned docs, unread messages, and overdue maintenance. The data for this shipped in Phase 1; the proactive surfacing is the remaining work.
+### Tier 2 — Proactive daily briefing — **SHIPPED (Phase 4)**
+When the Copilot panel opens it now seeds a deterministic "what needs my attention" briefing as the first assistant message (`lib/copilot/briefing.ts` + `GET /api/copilot/briefing`): events today / next 7 days, balances due soon, unsigned docs, unread messages, assets in maintenance — with deep-links to act. No AI cost; returns nothing (normal empty state) when there's nothing to report.
 
 ### Tier 3 — Action-taking with confirmation — **IN PROGRESS (Phase 3)**
-Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-radius mutations. **Shipped:** record an incoming payment; **advance order status** (`update_order_status`, non-destructive forward transitions only — `cancelled`/`refunded` stay manual; reuses `updateOrderStatus`'s state machine + TOCTOU); **generate documents** (`generate_documents` → `createDocumentsForOrder`: creates the rental agreement + safety waiver and emails the customer to sign; duplicate-guarded); **draft & send a customer reply** (`send_reply` → `sendReply`: drafts a reply grounded in an unread thread and **sends a real email** — surfaces unread threads in context; the preview shows the full draft + recipient + "this sends an email" notice; audit logs recipient + body length, not the full body). *Note:* the standalone `mark_document_sent` flip was intentionally skipped. **Queued:** send a quote. Each reuses the role gate, one-time acknowledgment, rate limit, audit log, and preview already built.
+Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-radius mutations. **Shipped:** record an incoming payment; **advance order status** (`update_order_status`, non-destructive forward transitions only — `cancelled`/`refunded` stay manual; reuses `updateOrderStatus`'s state machine + TOCTOU); **generate documents** (`generate_documents` → `createDocumentsForOrder`: creates the rental agreement + safety waiver and emails the customer to sign; duplicate-guarded); **draft & send a customer reply** (`send_reply` → `sendReply`: drafts a reply grounded in an unread thread and **sends a real email** — surfaces unread threads in context; the preview shows the full draft + recipient + "this sends an email" notice; audit logs recipient + body length, not the full body). **send a quote** (`send_quote` → `sendQuote`: emails the quote and moves an inquiry/quote_sent order to Quote Sent; status-guarded). *Note:* the standalone `mark_document_sent` flip was intentionally skipped. **All five action-taking capabilities are now shipped and individually live-verified.** Each reuses the role gate, one-time acknowledgment, rate limit, audit log, and preview already built.
 
 ### Tier 4 — Drafting & communication
 Let the model draft customer replies, quote follow-ups, event reminders, and review requests — including WhatsApp/SMS copy (ties to the strategy docs' "WhatsApp is the highest-leverage net-new feature" bet). Operator approves before send.
@@ -94,8 +94,8 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 
 1. **Phase 1 — read-only operational awareness.** ✅ *Shipped (see below).*
 2. **Phase 2 — conversation memory + deep-links.** ✅ *Shipped (see below).*
-3. **Phase 3 — action-taking** (payments, quotes, documents, status, message drafts), domain by domain behind the existing confirm-then-apply guardrails. 🚧 *Record-payment shipped (see below); rest queued.*
-4. **Phase 4 — proactive alerts + WhatsApp/SMS drafting.** Ties into GTM strategy.
+3. **Phase 3 — action-taking** (record payment, advance status, generate documents, draft & send reply, send quote), each behind the confirm-then-apply guardrails. ✅ *All five shipped + live-verified.*
+4. **Phase 4 — proactive briefing + WhatsApp/SMS drafting.** 🚧 *Proactive daily briefing shipped; WhatsApp/SMS drafting queued.*
 
 ---
 

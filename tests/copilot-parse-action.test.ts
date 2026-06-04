@@ -135,6 +135,20 @@ test("rejects send_reply with an invalid email", () => {
   assert.equal(parseActionFromResponse(raw).action, null);
 });
 
+test("parses a valid send_quote action", () => {
+  const raw = `Sending the quote.\n[ACTION:{"type":"send_quote","preview":"Send quote for #1042","params":{"orderId":"${ORDER_ID}"}}]`;
+  const { text, action } = parseActionFromResponse(raw);
+  assert.equal(text, "Sending the quote.");
+  assert.ok(action && action.type === "send_quote");
+  if (action.type === "send_quote") {
+    assert.equal(action.params.orderId, ORDER_ID);
+  }
+});
+
+test("rejects send_quote with a missing orderId", () => {
+  assert.equal(parseActionFromResponse(`[ACTION:{"type":"send_quote","params":{}}]`).action, null);
+});
+
 test("malformed JSON in the action block is treated as plain text", () => {
   const raw = "Sure.\n[ACTION:{not valid json}]";
   const { text, action } = parseActionFromResponse(raw);

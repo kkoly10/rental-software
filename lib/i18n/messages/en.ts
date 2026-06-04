@@ -2688,6 +2688,12 @@ const enValues = {
       confirm: "Send Reply",
       sending: "Sending…",
     },
+    sendQuote: {
+      title: "Send quote",
+      body: "Sends the quote to the customer by email and moves the order to Quote Sent.",
+      confirm: "Send Quote",
+      sending: "Sending…",
+    },
   },
 
   trackingMap: {

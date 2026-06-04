@@ -78,6 +78,14 @@ const generateDocumentsActionSchema = z.object({
   }),
 });
 
+const sendQuoteActionSchema = z.object({
+  type: z.literal("send_quote"),
+  preview: z.string().max(500).optional().default(""),
+  params: z.object({
+    orderId: z.string().uuid("Invalid order identifier."),
+  }),
+});
+
 const sendReplyActionSchema = z.object({
   type: z.literal("send_reply"),
   preview: z.string().max(500).optional().default(""),
@@ -184,7 +192,9 @@ export async function POST(request: NextRequest) {
           ? generateDocumentsActionSchema.safeParse(requestBody)
           : requestType === "send_reply"
             ? sendReplyActionSchema.safeParse(requestBody)
-            : contentActionSchema.safeParse(requestBody);
+            : requestType === "send_quote"
+              ? sendQuoteActionSchema.safeParse(requestBody)
+              : contentActionSchema.safeParse(requestBody);
   if (!parsed.success) {
     await logAppError({
       organizationId: access.organizationId,
@@ -281,6 +291,25 @@ export async function POST(request: NextRequest) {
           action: "action_executed",
           status: "success",
           route: "/dashboard/documents",
+          metadata: {
+            actionType: action.type,
+            orderId: action.params.orderId,
+            ip: clientIp,
+            userAgent,
+          },
+        });
+      } else if (action.type === "send_quote") {
+        revalidatePath("/dashboard");
+        revalidatePath("/dashboard/orders");
+        revalidatePath(`/dashboard/orders/${action.params.orderId}`);
+
+        await logAppEvent({
+          organizationId: access.organizationId,
+          userId: access.userId,
+          source: "copilot.action",
+          action: "action_executed",
+          status: "success",
+          route: "/dashboard/orders",
           metadata: {
             actionType: action.type,
             orderId: action.params.orderId,
