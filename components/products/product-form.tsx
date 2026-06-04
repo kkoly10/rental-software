@@ -1,10 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createProduct, updateProduct } from "@/lib/products/actions";
 import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
+
+const ANCHORING_METHOD_KEYS = [
+  "stakes",
+  "sandbags",
+  "water_barrels",
+  "concrete_weights",
+  "tie_downs",
+] as const;
 
 export function ProductForm({
   product,
@@ -21,14 +29,37 @@ export function ProductForm({
     isActive: boolean;
     visibility: string;
     requiresDelivery: boolean;
+    // Sprint 6.0 — inflatable-vertical optional fields.
+    supportsModes?: string[];
+    wetUpchargeCents?: number | null;
+    anchoringMethods?: string[];
+    requiredAnchorCount?: number | null;
   } | null;
-  categories: { id: string; name: string }[];
+  categories: { id: string; name: string; vertical: string }[];
 }) {
   const isEdit = !!product;
   const action = isEdit ? updateProduct : createProduct;
   const [state, formAction, pending] = useActionState(action, initialState);
   const { messages } = useI18n();
   const m = messages.forms.editProduct;
+
+  // Track category selection client-side so the inflatable-setup
+  // accordion can show/hide as the operator picks a different
+  // category without a full page round-trip. Defaults to the saved
+  // category in edit mode, empty in create mode.
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    product?.categoryId ?? "",
+  );
+  const selectedCategoryVertical =
+    categories.find((c) => c.id === selectedCategoryId)?.vertical ?? null;
+  const showInflatableSetup = selectedCategoryVertical === "inflatable";
+
+  const initialSupportsDry = product?.supportsModes?.includes("dry") ?? true;
+  const initialSupportsWet = product?.supportsModes?.includes("wet") ?? false;
+  const initialAnchoring = new Set(product?.anchoringMethods ?? []);
+  const initialWetUpcharge =
+    product?.wetUpchargeCents != null ? product.wetUpchargeCents / 100 : "";
+  const initialAnchorCount = product?.requiredAnchorCount ?? "";
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
@@ -50,7 +81,8 @@ export function ProductForm({
         <strong>{m.categoryLabel}</strong>
         <select
           name="category_id"
-          defaultValue={product?.categoryId ?? ""}
+          value={selectedCategoryId}
+          onChange={(e) => setSelectedCategoryId(e.target.value)}
           style={{ marginTop: 10, width: "100%" }}
         >
           <option value="">{m.categoryPlaceholder}</option>
@@ -123,6 +155,117 @@ export function ProductForm({
           style={{ marginTop: 10, width: "100%", fontFamily: "inherit", border: "1px solid var(--border)", borderRadius: 12, padding: 12 }}
         />
       </label>
+
+      {showInflatableSetup && (
+        <details className="order-card" open={isEdit && (initialSupportsWet || initialAnchoring.size > 0)}>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+            {m.inflatableSetup.title}
+          </summary>
+          <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+            {m.inflatableSetup.description}
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <strong>{m.inflatableSetup.anchoringMethodsLabel}</strong>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+              {m.inflatableSetup.anchoringMethodsHint}
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: 6,
+                marginTop: 8,
+              }}
+            >
+              {ANCHORING_METHOD_KEYS.map((key) => (
+                <label
+                  key={key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: 8,
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    name="anchoring_methods"
+                    value={key}
+                    defaultChecked={initialAnchoring.has(key)}
+                  />
+                  {m.inflatableSetup.anchoringMethodLabels[key]}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-2" style={{ marginTop: 16 }}>
+            <label>
+              <strong>{m.inflatableSetup.requiredAnchorCountLabel}</strong>
+              <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                {m.inflatableSetup.requiredAnchorCountHint}
+              </div>
+              <input
+                name="required_anchor_count"
+                type="number"
+                min="0"
+                max="64"
+                step="1"
+                defaultValue={initialAnchorCount}
+                style={{ marginTop: 8, width: "100%" }}
+              />
+            </label>
+
+            <div>
+              <strong>{m.inflatableSetup.availableModesLabel}</strong>
+              <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                {m.inflatableSetup.availableModesHint}
+              </div>
+              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    name="supports_modes"
+                    value="dry"
+                    defaultChecked={initialSupportsDry}
+                  />
+                  {m.inflatableSetup.dryLabel}
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    name="supports_modes"
+                    value="wet"
+                    defaultChecked={initialSupportsWet}
+                  />
+                  {m.inflatableSetup.wetLabel}
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <label style={{ display: "block", marginTop: 16 }}>
+            <strong>{m.inflatableSetup.wetUpchargeLabel}</strong>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+              {m.inflatableSetup.wetUpchargeHint}
+            </div>
+            <input
+              name="wet_upcharge"
+              type="number"
+              min="0"
+              max="500"
+              step="0.01"
+              defaultValue={initialWetUpcharge}
+              placeholder="50.00"
+              style={{ marginTop: 8, width: "100%", maxWidth: 200 }}
+            />
+          </label>
+        </details>
+      )}
 
       <div className="order-card" style={{ display: "flex", gap: 24 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
