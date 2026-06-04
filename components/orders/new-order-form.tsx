@@ -97,7 +97,19 @@ export function NewOrderForm({
     if (v.deliveryContactPhone !== undefined) setDeliveryContactPhone(v.deliveryContactPhone);
     if (v.deliverySetupNotes !== undefined) setDeliverySetupNotes(v.deliverySetupNotes);
     if (v.notes !== undefined) setNotes(v.notes);
+    if (v.orderStatus !== undefined && v.orderStatus !== "") setOrderStatus(v.orderStatus);
+    if (v.productId !== undefined) setProductId(v.productId);
+    if (v.serviceAreaId !== undefined) setServiceAreaId(v.serviceAreaId);
+    if (v.deliverySurfaceType !== undefined) setDeliverySurfaceType(v.deliverySurfaceType);
   }, [state.submittedValues]);
+
+  // Selects + checkbox: also controlled so a failed submit doesn't
+  // reset the operator's choice along with the text fields.
+  const [orderStatus, setOrderStatus] = useState(sv?.orderStatus && sv.orderStatus !== "" ? sv.orderStatus : "inquiry");
+  const [productId, setProductId] = useState(sv?.productId ?? "");
+  const [serviceAreaId, setServiceAreaId] = useState(sv?.serviceAreaId ?? "");
+  const [deliverySurfaceType, setDeliverySurfaceType] = useState(sv?.deliverySurfaceType ?? "");
+  const [smsOptIn, setSmsOptIn] = useState(false);
 
   // Idempotency key — generated once when the form mounts so a
   // double-click / network retry doesn't create a duplicate order.
@@ -284,6 +296,8 @@ export function NewOrderForm({
           name="sms_opt_in"
           type="checkbox"
           value="true"
+          checked={smsOptIn}
+          onChange={(e) => setSmsOptIn(e.target.checked)}
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
@@ -298,7 +312,8 @@ export function NewOrderForm({
           <strong>{m.orderStatusLabel}</strong>
           <select
             name="order_status"
-            defaultValue="inquiry"
+            value={orderStatus}
+            onChange={(e) => setOrderStatus(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           >
             {orderStatuses.map((s) => (
@@ -312,7 +327,8 @@ export function NewOrderForm({
           <strong>{m.productLabel}</strong>
           <select
             name="product_id"
-            defaultValue=""
+            value={productId}
+            onChange={(e) => setProductId(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           >
             <option value="">{m.noProductSelected}</option>
@@ -334,7 +350,8 @@ export function NewOrderForm({
           <strong>{m.serviceAreaLabel}</strong>
           <select
             name="service_area_id"
-            defaultValue=""
+            value={serviceAreaId}
+            onChange={(e) => setServiceAreaId(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           >
             <option value="">{m.serviceAreaPlaceholder}</option>
@@ -466,7 +483,7 @@ export function NewOrderForm({
           <div className="grid grid-3">
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.surfaceTypeLabel}</span>
-              <select name="delivery_surface_type" defaultValue="" style={{ width: "100%" }}>
+              <select name="delivery_surface_type" value={deliverySurfaceType} onChange={(e) => setDeliverySurfaceType(e.target.value)} style={{ width: "100%" }}>
                 <option value="">{m.surfaces.notSpecified}</option>
                 <option value="grass">{m.surfaces.grass}</option>
                 <option value="concrete">{m.surfaces.concrete}</option>
