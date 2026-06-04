@@ -2,7 +2,7 @@
 
 Companion to `docs/LOGIC_REVIEW.md`. Each item is a discrete, checkable fix.
 
-> **Status (2026-06):** all 43 items shipped across PRs **#203, #206, #209**.
+> **Status (2026-06):** 43 items audited across PRs **#203, #206, #209**. Marks: `[x]` shipped substantively (~35), `[~]` shipped partial (3 — 2.6/2.7/5.1), `[!]` audited and confirmed no-op or already-covered (4 — 2.10/3.8/3.9/4.7).
 > Five `[decision]` items were locked via web-research passes; sources are
 > cited inline next to each Decision block. Two items (2.10, 4.7) turned
 > out to be no-ops once audited and are flagged with notes. Re-run the
@@ -130,7 +130,7 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Files:** `components/orders/new-order-form.tsx`, `lib/orders/actions.ts`, `app/dashboard/orders/`, `lib/data/unrouted-orders.ts:68`
 - **Done when:** matches the chosen rule.
 
-### [x] 2.6 — Multi-day rentals: per-day stops — `[decision]` `[breaking-ux]`
+### [~] 2.6 — Multi-day rentals: per-day stops — `[decision]` `[breaking-ux]`
 - **Effort:** XL | **Impact:** 5 | **Owner:** ?
 - **Decision (locked in 2026-06):**
   - **Stop kinds:** `delivery` + `pickup` only. **No daily check-ins.** No researched platform models multi-day rentals as a daily-check-in chain — Goodshuffle Pro and Booqable both treat them as one delivery + one return.
@@ -144,7 +144,7 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Test:** Mon–Wed rental auto-creates a Mon delivery and a Wed pickup on the correct `route_date`s; calendar shows both; same-day rental still gets a separate pickup stop.
 - **Done when:** above + migration documented. This is XL — split into its own PR.
 
-### [x] 2.7 — Close the catalog check→reserve TOCTOU
+### [~] 2.7 — Close the catalog check→reserve TOCTOU
 - **Effort:** L | **Impact:** 5 | **Owner:** ?
 - **Test:** concurrent-booking test (two parallel checkouts for same product+date) produces exactly one order and zero orphans.
 - **Files:** `lib/checkout/actions.ts:443-472, 689-713, 808, 820-851`, `lib/availability/blocks.ts:45-54`
@@ -163,7 +163,7 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Files:** `lib/checkout/actions.ts:314-315`, `lib/data/catalog-list.ts:111-114`, dashboard product list
 - **Done when:** the `225` literal is gone; products with no price refuse checkout with "Pricing not set"; dashboard product list shows a "Missing price" warning badge on unpriced active products.
 
-### [x] 2.10 — Enforce service-area min order even when ZIP is missing
+### [!] 2.10 — Enforce service-area min order even when ZIP is missing
 - **Effort:** S | **Impact:** 4 | **Owner:** ?
 - **Files:** `lib/checkout/actions.ts:261-287, 385`
 - **Done when:** delivery checkout with missing/invalid ZIP rejected before pricing.
@@ -244,12 +244,12 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Test:** invite row with unrecognized role → membership creation rejected.
 - **Done when:** above.
 
-### [x] 3.8 — Welcome/tour state on shared machines
+### [!] 3.8 — Welcome/tour state on shared machines
 - **Effort:** S | **Impact:** 1 | **Owner:** ?
 - **Files:** `lib/guidance/actions.ts:66-74`, `components/guidance/welcome-modal.tsx`
 - **Done when:** tour doesn't auto-reopen on next sign-in if user dismissed and signed out.
 
-### [x] 3.9 — Rate-limit signup by IP (typo guard)
+### [!] 3.9 — Rate-limit signup by IP (typo guard)
 - **Effort:** S | **Impact:** 2 | **Owner:** ?
 - **Files:** `lib/auth/actions.ts:237-250`
 - **Done when:** single IP can't spin up N unverified accounts within the window. Tunable.
@@ -288,7 +288,7 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Files:** `components/onboarding/onboarding-form.tsx:208-213`
 - **Done when:** default derived from `Intl.DateTimeFormat().resolvedOptions().timeZone` with `America/New_York` fallback.
 
-### [x] 4.7 — Auto-reattach order to route on `event_date` or status change
+### [!] 4.7 — Auto-reattach order to route on `event_date` or status change
 - **Effort:** S | **Impact:** 3 | **Owner:** ?
 - **Files:** `lib/orders/actions.ts:595-645, 1021-1072`
 - **Done when:** changing `event_date` moves the order off the old route and onto the new date's route. Also: if a status changes into the routeable set (e.g. `awaiting_deposit → confirmed`) and no route exists, attach to the right one.
@@ -318,7 +318,7 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 
 ## Wave 5 — Re-audit after Wave 2 lands
 
-### [x] 5.1 — Re-run `/logic-review` against `main`
+### [~] 5.1 — Re-run `/logic-review` against `main`
 - **Effort:** S (kicks off the agents) | **Impact:** 4 | **Owner:** ?
 - **When:** after Wave 2 is merged. Fixing the top layer often surfaces a second layer of confusion (e.g. once maintenance blocks bookings, "what happens to existing bookings on a newly-flagged asset?" becomes the next question).
 - **Done when:** updated `docs/LOGIC_REVIEW.md` and a v4 fix plan are landed on a follow-up PR.

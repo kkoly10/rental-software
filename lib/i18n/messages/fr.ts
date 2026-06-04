@@ -827,6 +827,9 @@ export const fr: Messages = {
     },
     deliveries: {
       liveBadge: "En direct",
+      backfillPickups: "Backfill pickup stops [needs translation]",
+      backfillPickupsConfirm: "Scan in-flight multi-day rentals and create missing pickup stops? Idempotent. [needs translation]",
+      backfillPickupsRunning: "Scanning… [needs translation]",
       title: "Tableau des livraisons",
       description: "Uniquement les commandes assignées à une tournée, groupées par tournée et par jour. Utilisez cette vue pour dispatcher les équipes.",
       kickerDispatch: "Dispatch",

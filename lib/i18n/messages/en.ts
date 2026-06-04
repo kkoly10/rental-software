@@ -828,6 +828,9 @@ const enValues = {
     },
     deliveries: {
       liveBadge: "Live",
+      backfillPickups: "Backfill pickup stops",
+      backfillPickupsConfirm: "Scan every in-flight multi-day rental and create a pickup stop on the rental_end_date for any missing one. Idempotent — orders that already have a pickup are skipped. Continue?",
+      backfillPickupsRunning: "Scanning…",
       title: "Delivery Board",
       description: "Only orders routed for delivery, grouped by route and day. Use this view when you're dispatching crews.",
       kickerDispatch: "Dispatch",

@@ -827,6 +827,9 @@ export const es: Messages = {
     },
     deliveries: {
       liveBadge: "En vivo",
+      backfillPickups: "Backfill pickup stops [needs translation]",
+      backfillPickupsConfirm: "Scan in-flight multi-day rentals and create missing pickup stops? Idempotent. [needs translation]",
+      backfillPickupsRunning: "Scanning… [needs translation]",
       title: "Tablero de entregas",
       description: "Solo pedidos enrutados para entrega, agrupados por ruta y día. Usa esta vista para despachar equipos.",
       kickerDispatch: "Despacho",

@@ -424,15 +424,10 @@ export async function updateStopStatus(
 }
 
 /**
- * Detach a cancelled order from any open route stops. Called from
- * `updateOrderStatus` when an order transitions to `cancelled` (decision
- * 2.11). Completed stops stay in place — they're an audit record of work
- * the crew already did. This intentionally does *not* enforce a role
- * check; it's an internal helper called from another action that already
- * verified the operator's permission to cancel the order.
- *
- * Returns the number of stops removed plus the affected route IDs so the
- * caller can revalidate the right delivery board pages.
+ * Wrapper around `releaseRouteStopsForCancelledOrder` (in its own module
+ * so unit tests can hit the pure helper) that handles env gating, client
+ * creation, and revalidation. Called from `updateOrderStatus` when an
+ * order transitions to `cancelled` (decision 2.11).
  */
 export async function releaseRouteStopsForCancelledOrder(
   organizationId: string,
@@ -442,40 +437,15 @@ export async function releaseRouteStopsForCancelledOrder(
     return { removedCount: 0, affectedRouteIds: [] };
   }
   const supabase = await createSupabaseServerClient();
-
-  // Find non-completed stops attached to this order. Scope by route's
-  // organization_id via the inner join so we never touch another org's
-  // routing data even if the caller has the wrong orderId.
-  const { data: openStops } = await supabase
-    .from("route_stops")
-    .select("id, route_id, stop_status, routes!inner(organization_id)")
-    .eq("order_id", orderId)
-    .eq("routes.organization_id", organizationId)
-    .not("stop_status", "in", "(completed,skipped)");
-
-  if (!openStops || openStops.length === 0) {
-    return { removedCount: 0, affectedRouteIds: [] };
-  }
-
-  const stopIds: string[] = openStops.map((s) => String(s.id));
-  const affectedRouteIds: string[] = Array.from(
-    new Set(openStops.map((s) => String(s.route_id)))
+  const { releaseRouteStopsForCancelledOrder: helper } = await import(
+    "@/lib/routes/release-stops-on-cancel"
   );
+  const result = await helper(organizationId, orderId, supabase);
 
-  const { error: deleteError } = await supabase
-    .from("route_stops")
-    .delete()
-    .in("id", stopIds);
-
-  if (deleteError) {
-    return { removedCount: 0, affectedRouteIds: [] };
-  }
-
-  // Revalidate every affected route detail + the board itself.
-  for (const routeId of affectedRouteIds) {
+  for (const routeId of result.affectedRouteIds) {
     revalidatePath(`/dashboard/deliveries/${routeId}`);
   }
-  revalidatePath("/dashboard/deliveries");
+  if (result.removedCount > 0) revalidatePath("/dashboard/deliveries");
 
-  return { removedCount: stopIds.length, affectedRouteIds };
+  return result;
 }
