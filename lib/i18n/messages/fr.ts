@@ -408,6 +408,8 @@ export const fr: Messages = {
       signIn: "Se connecter",
       signingIn: "Connexion…",
       forgotPasswordLink: "Mot de passe oublié ?",
+      resendVerification: "Renvoyer l’e-mail de vérification",
+      resendingVerification: "Envoi…",
       name: "Nom complet",
       namePlaceholder: "Jean Dupont",
       businessName: "Nom de l’entreprise",
@@ -1478,6 +1480,7 @@ export const fr: Messages = {
       submitting: "Configuration…",
       siteLive: "Votre site de location est en ligne !",
       customersCanFindYou: "Les clients vous trouveront ici :",
+      resumeBanner: "Bon retour — nous avons gardé ce que vous aviez déjà rempli. Terminez ci-dessous et c'est bon.",
       bookmarkHint: "Mettez cette URL en favori ou partagez-la. Vous pourrez la changer plus tard dans les paramètres du site.",
       goToDashboard: "Aller au tableau de bord",
     },
@@ -2657,6 +2660,7 @@ export const fr: Messages = {
 
   calendar: {
     moreEvents: "+{count} de plus",
+    collapseEvents: "Afficher moins",
   },
 
   weatherBadge: {

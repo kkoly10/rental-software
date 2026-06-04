@@ -408,6 +408,8 @@ export const pt: Messages = {
       signIn: "Entrar",
       signingIn: "A entrar…",
       forgotPasswordLink: "Esqueceu-se da palavra-passe?",
+      resendVerification: "Reenviar e-mail de verificação",
+      resendingVerification: "A enviar…",
       name: "Nome completo",
       namePlaceholder: "João Silva",
       businessName: "Nome da empresa",
@@ -1478,6 +1480,7 @@ export const pt: Messages = {
       submitting: "A configurar…",
       siteLive: "O seu site de aluguer está online!",
       customersCanFindYou: "Os clientes encontram-no em:",
+      resumeBanner: "Bem-vindo de volta — guardámos o que já tinha preenchido. Termine abaixo e está pronto.",
       bookmarkHint: "Guarde este URL ou partilhe-o com os clientes. Pode alterá-lo mais tarde nas definições do site.",
       goToDashboard: "Ir para o painel",
     },
@@ -2657,6 +2660,7 @@ export const pt: Messages = {
 
   calendar: {
     moreEvents: "+{count} mais",
+    collapseEvents: "Mostrar menos",
   },
 
   weatherBadge: {

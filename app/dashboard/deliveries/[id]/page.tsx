@@ -112,7 +112,23 @@ export default async function DeliveryDetailPage({
                       currentStatus={stop.status ?? "assigned"}
                     />
                     {stop.status !== "completed" && (
-                      <RemoveStopButton stopId={stop.id} routeId={id} />
+                      // Visual gap + top border separates the destructive
+                      // Remove action from the in-line "Mark en route" /
+                      // "Mark delivered" buttons above. Previously the two
+                      // sat back-to-back with no separator, making a thumb
+                      // tap on mobile easy to land on the wrong one.
+                      <div
+                        style={{
+                          marginTop: 8,
+                          paddingTop: 6,
+                          borderTop: "1px dashed var(--border)",
+                          width: "100%",
+                          display: "flex",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <RemoveStopButton stopId={stop.id} routeId={id} />
+                      </div>
                     )}
                   </div>
                 </div>

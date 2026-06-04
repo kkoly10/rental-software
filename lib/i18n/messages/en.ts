@@ -409,6 +409,8 @@ const enValues = {
       signIn: "Sign In",
       signingIn: "Signing In…",
       forgotPasswordLink: "Forgot password?",
+      resendVerification: "Resend verification email",
+      resendingVerification: "Sending…",
       name: "Full Name",
       namePlaceholder: "Jane Doe",
       businessName: "Business Name",
@@ -1479,6 +1481,7 @@ const enValues = {
       submitting: "Setting up…",
       siteLive: "Your rental site is live!",
       customersCanFindYou: "Customers can find you at:",
+      resumeBanner: "Welcome back — we kept what you'd already filled in. Finish up below and you're done.",
       bookmarkHint: "Bookmark this URL or share it with customers. You can change it later from Website settings.",
       goToDashboard: "Go to Dashboard",
     },
@@ -2658,6 +2661,7 @@ const enValues = {
 
   calendar: {
     moreEvents: "+{count} more",
+    collapseEvents: "Show fewer",
   },
 
   weatherBadge: {

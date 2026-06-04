@@ -408,6 +408,8 @@ export const es: Messages = {
       signIn: "Iniciar sesión",
       signingIn: "Iniciando sesión…",
       forgotPasswordLink: "¿Olvidaste tu contraseña?",
+      resendVerification: "Reenviar correo de verificación",
+      resendingVerification: "Enviando…",
       name: "Nombre completo",
       namePlaceholder: "Juan Pérez",
       businessName: "Nombre de la empresa",
@@ -1478,6 +1480,7 @@ export const es: Messages = {
       submitting: "Configurando…",
       siteLive: "¡Tu sitio de alquiler está en línea!",
       customersCanFindYou: "Los clientes te encontrarán en:",
+      resumeBanner: "Bienvenido de nuevo — guardamos lo que ya habías rellenado. Termina abajo y listo.",
       bookmarkHint: "Guarda esta URL o compártela con los clientes. Puedes cambiarla más tarde en los ajustes del sitio.",
       goToDashboard: "Ir al panel",
     },
@@ -2657,6 +2660,7 @@ export const es: Messages = {
 
   calendar: {
     moreEvents: "+{count} más",
+    collapseEvents: "Mostrar menos",
   },
 
   weatherBadge: {

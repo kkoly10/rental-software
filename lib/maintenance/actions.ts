@@ -83,12 +83,20 @@ export async function logMaintenance(
   if (existingAsset) {
     assetId = existingAsset.id;
   } else {
+    // Derive a human-readable asset tag, then append a 6-char id suffix to
+    // avoid collisions when two products in the same org share a slug or
+    // name (the UUID asset.id is the real key — the tag is cosmetic). The
+    // suffix uses the cryptographically random asset id once we have one,
+    // but we don't have it yet here, so we generate a short random suffix
+    // up front. Math.random is fine for human-readable disambiguation.
+    const baseTag = product.slug ?? product.name.toLowerCase().replace(/\s+/g, "-");
+    const suffix = Math.random().toString(36).slice(2, 8);
     const { data: newAsset, error: assetError } = await supabase
       .from("assets")
       .insert({
         organization_id: ctx.organizationId,
         product_id: productId,
-        asset_tag: product.slug ?? product.name.toLowerCase().replace(/\s+/g, "-"),
+        asset_tag: `${baseTag}-${suffix}`,
         condition_status: "good",
         operational_status: "ready",
       })
