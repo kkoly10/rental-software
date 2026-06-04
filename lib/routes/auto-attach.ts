@@ -86,11 +86,17 @@ export async function autoAttachOrderToRouteIfEligible(
         ? "manual"
         : "auto";
 
-    // 2) Order prereqs.
+    // 2) Order prereqs. Delivery address lives on customer_addresses
+    //    joined via delivery_address_id — the old select referenced a
+    //    non-existent orders.delivery_line1 column, which PostgREST
+    //    silently returned as null, leaving hasAddress always false and
+    //    making auto-attach silently skip every order with reason
+    //    "no_address". Smart Delivery Mode never actually fired in
+    //    production until this fix landed.
     const { data: order } = await supabase
       .from("orders")
       .select(
-        "event_date, rental_end_date, delivery_line1, event_start_time, event_end_time"
+        "event_date, rental_end_date, event_start_time, event_end_time, delivery_address_id, customer_addresses!delivery_address_id(line1)"
       )
       .eq("id", orderId)
       .eq("organization_id", organizationId)
@@ -101,7 +107,10 @@ export async function autoAttachOrderToRouteIfEligible(
     const eventDate = (order.event_date as string | null) ?? "";
     if (!eventDate) return { attached: false, reason: "no_event_date" };
 
-    const hasAddress = !!((order.delivery_line1 as string | null) ?? "").trim();
+    const address = (order as Record<string, unknown>).customer_addresses as
+      | { line1?: string | null }
+      | null;
+    const hasAddress = !!address?.line1?.trim();
     if (!hasAddress) return { attached: false, reason: "no_address" };
 
     // Decision 2.6 — multi-day rentals (and same-day inflatable rentals
@@ -126,13 +135,17 @@ export async function autoAttachOrderToRouteIfEligible(
     // progress, fall through to the no-route branch — auto mode will
     // create a fresh planned route alongside it, and manual mode will
     // return no_route so the operator can choose.
+    // routes has no soft-delete column — the old `.is("deleted_at",
+    // null)` filter caused PostgREST to error out and return an empty
+    // route list, which in auto mode always took the "no route, create
+    // one" branch even when a planned route already existed for the
+    // date.
     const { data: routes } = await supabase
       .from("routes")
       .select("id, name, route_status")
       .eq("organization_id", organizationId)
       .eq("route_date", eventDate)
-      .eq("route_status", "planned")
-      .is("deleted_at", null);
+      .eq("route_status", "planned");
 
     let targetRoute: { id: string; name: string; route_status: string } | null = null;
     let createdRoute = false;
