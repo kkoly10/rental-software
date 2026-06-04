@@ -66,14 +66,22 @@ async function executePaymentAction(
   // log, auto-confirms, and fires customer notifications. We do not
   // duplicate any of that here.
   const { recordPayment } = await import("@/lib/payments/actions");
+  const { buildCopilotPaymentReferenceNote } = await import(
+    "@/lib/copilot/payment-note"
+  );
   const formData = new FormData();
   formData.set("order_id", action.params.orderId);
   formData.set("amount", String(action.params.amount));
   formData.set("payment_type", action.params.paymentType);
   formData.set("payment_method", action.params.paymentMethod);
-  if (action.params.referenceNote) {
-    formData.set("reference_note", action.params.referenceNote);
-  }
+  // Always stamp the stored note with the Copilot attribution marker, plus the
+  // operator's note if any. Deterministic + server-side so the mark can't be
+  // omitted by the model. `source=copilot` is recorded in the audit log.
+  formData.set(
+    "reference_note",
+    buildCopilotPaymentReferenceNote(action.params.referenceNote)
+  );
+  formData.set("source", "copilot");
 
   const result = await recordPayment({ ok: false, message: "" }, formData);
   return { ok: result.ok, message: result.message };

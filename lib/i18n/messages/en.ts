@@ -2636,7 +2636,7 @@ const enValues = {
       method: "Method",
       type: "Type",
       note: "Note",
-      caution: "This records a real payment and may notify the customer.",
+      caution: "By confirming, you authorize this payment to be recorded via Copilot under your account. The payment is timestamped and logged, and the customer may be notified.",
       confirm: "Record Payment",
       viewOrder: "View order ↗",
       recording: "Recording...",

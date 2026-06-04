@@ -2635,7 +2635,7 @@ export const fr: Messages = {
       method: "Moyen",
       type: "Type",
       note: "Note",
-      caution: "Ceci enregistre un paiement réel et peut notifier le client.",
+      caution: "En confirmant, vous autorisez l’enregistrement de ce paiement via le copilote sous votre compte. Le paiement est horodaté et journalisé, et le client peut être notifié.",
       confirm: "Enregistrer le paiement",
       viewOrder: "Voir la commande ↗",
       recording: "Enregistrement…",

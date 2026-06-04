@@ -2635,7 +2635,7 @@ export const pt: Messages = {
       method: "Método",
       type: "Tipo",
       note: "Nota",
-      caution: "Isto regista um pagamento real e pode notificar o cliente.",
+      caution: "Ao confirmar, autoriza que este pagamento seja registado através do Copilot na sua conta. O pagamento fica com data/hora e registado, e o cliente pode ser notificado.",
       confirm: "Registar pagamento",
       viewOrder: "Ver encomenda ↗",
       recording: "A registar…",

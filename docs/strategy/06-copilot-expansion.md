@@ -141,6 +141,12 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 - **Refunds are deliberately out of scope** — recording money *out* is the most error-sensitive operation, so it stays a manual Payments-page flow. The parser, route schema, type, and prompt all reject `refund`.
 - **Validated three times:** client parser (`lib/copilot/parse-action.ts`, extracted + unit-tested), the route's `paymentActionSchema`, and `recordPayment` itself.
 
+**Attribution / legal coverage.** Because the Copilot records real money, every Copilot-initiated payment is unambiguously attributable:
+- The payment row's reference note is deterministically stamped **"Added via Operator Copilot"** server-side (`lib/copilot/payment-note.ts`, unit-tested, capped to the 120-char column) — visible in the Payments view and the accounting CSV export. The note is internal-only (never shown to customers).
+- The recording **operator's identity** (authenticated user) and **timestamp** (`paid_at` / `created_at`) live on the payment row.
+- The authoritative `payments.record_manual` audit-log entry now carries `recorded_via: "copilot"` (in addition to actor, timestamp, amount, order), and the separate `copilot.action` audit entry independently records the same event — two correlated trails.
+- The confirm-before-apply preview shows an explicit **authorization notice**: confirming records the payment via Copilot under the operator's account, timestamped and logged.
+
 **Changes:** action types/union (`lib/copilot/actions.ts`); discriminated route schema + branched audit/revalidate (`app/api/copilot/action/route.ts`); extracted, hardened `parseActionFromResponse` (`lib/copilot/parse-action.ts`); payment preview + i18n in all four locales (`copilot-action-preview.tsx`, `messages/*`); `record_payment` protocol in the system prompt; order IDs exposed in the operational context; a "Record a payment" suggested prompt.
 
 **Verification:** `tsc --noEmit` clean; full unit suite green, including new `tests/copilot-parse-action.test.ts` (content + payment parsing, amount coercion, empty-note dropping, and rejection of bad method / non-positive amount / missing orderId / refund / malformed JSON).

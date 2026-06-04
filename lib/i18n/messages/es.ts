@@ -2635,7 +2635,7 @@ export const es: Messages = {
       method: "Método",
       type: "Tipo",
       note: "Nota",
-      caution: "Esto registra un pago real y puede notificar al cliente.",
+      caution: "Al confirmar, autorizas que este pago se registre mediante Copilot en tu cuenta. El pago queda con fecha y hora y registrado, y se puede notificar al cliente.",
       confirm: "Registrar pago",
       viewOrder: "Ver pedido ↗",
       recording: "Registrando…",
