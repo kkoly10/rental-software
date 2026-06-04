@@ -631,7 +631,7 @@ export const pt: Messages = {
     },
     orders: {
       title: "Encomendas",
-      description: "Acompanhe pedidos, reservas confirmadas, pagamentos e preparação para entrega.",
+      description: "Todas as encomendas no pipeline, do pedido à conclusão. Use esta vista para ver o funil completo.",
       kicker: "Pipeline de aluguer",
       sectionTitle: "Todas as encomendas",
       searchPlaceholder: "Pesquisar por cliente, artigo, estado ou valor",
@@ -823,7 +823,7 @@ export const pt: Messages = {
     deliveries: {
       liveBadge: "Ao vivo",
       title: "Quadro de entregas",
-      description: "Siga rotas, estado das paragens e progresso da equipa.",
+      description: "Apenas encomendas atribuídas a uma rota, agrupadas por rota e por dia. Use esta vista quando estiver a despachar equipas.",
       kickerDispatch: "Despacho",
       kickerOperations: "Operações",
       sectionCreateRoute: "Criar uma rota",
@@ -942,7 +942,7 @@ export const pt: Messages = {
     },
     calendar: {
       title: "Calendário",
-      description: "Veja reservas, entregas, bloqueios de disponibilidade e próxima atividade.",
+      description: "Todas as encomendas representadas pela sua data de evento. Use esta vista quando precisar de ver o que cai em cada dia.",
       kickerSchedule: "Vista de agenda",
       kickerBlocks: "Bloqueio de datas",
       kickerUpcoming: "Próximos 30 dias",
@@ -1102,6 +1102,10 @@ export const pt: Messages = {
       addArea: "Adicionar área",
       noAreas: "Sem áreas de serviço",
       noAreasDescription: "Adicione pelo menos uma área de serviço para que os clientes possam encomendar para entrega.",
+      overlapHeadline: "Cobertura sobreposta detetada — elimine duplicados para evitar pesquisas ambíguas.",
+      overlapCityState: "Cidade + estado em várias áreas",
+      overlapPostal: "Código postal em várias áreas",
+      overlapMore: "…e mais.",
     },
     help: {
       title: "Centro de ajuda",

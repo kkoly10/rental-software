@@ -631,7 +631,7 @@ export const es: Messages = {
     },
     orders: {
       title: "Pedidos",
-      description: "Sigue consultas, reservas confirmadas, pagos y preparación de entrega.",
+      description: "Todos los pedidos en el pipeline, desde consulta hasta completado. Usa esta vista para ver el embudo completo.",
       kicker: "Pipeline de alquiler",
       sectionTitle: "Todos los pedidos",
       searchPlaceholder: "Buscar por cliente, artículo, estado o importe",
@@ -823,7 +823,7 @@ export const es: Messages = {
     deliveries: {
       liveBadge: "En vivo",
       title: "Tablero de entregas",
-      description: "Sigue rutas, estado de paradas y avance del equipo.",
+      description: "Solo pedidos enrutados para entrega, agrupados por ruta y día. Usa esta vista para despachar equipos.",
       kickerDispatch: "Despacho",
       kickerOperations: "Operaciones",
       sectionCreateRoute: "Crear una ruta",
@@ -942,7 +942,7 @@ export const es: Messages = {
     },
     calendar: {
       title: "Calendario",
-      description: "Visualiza reservas, entregas, bloqueos de disponibilidad y próxima actividad.",
+      description: "Todos los pedidos representados por su fecha de evento. Usa esta vista cuando necesites ver qué cae en cada día.",
       kickerSchedule: "Vista del horario",
       kickerBlocks: "Bloqueo de fechas",
       kickerUpcoming: "Próximos 30 días",
@@ -1102,6 +1102,10 @@ export const es: Messages = {
       addArea: "Añadir área de servicio",
       noAreas: "Aún no hay áreas de servicio",
       noAreasDescription: "Añade al menos un área de servicio para que los clientes puedan hacer pedidos para entrega.",
+      overlapHeadline: "Cobertura superpuesta detectada — elimina duplicados para evitar búsquedas ambiguas.",
+      overlapCityState: "Ciudad + estado en varias áreas",
+      overlapPostal: "Código postal en varias áreas",
+      overlapMore: "…y más.",
     },
     help: {
       title: "Centro de ayuda",

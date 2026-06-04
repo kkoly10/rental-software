@@ -1,7 +1,11 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-import { normalizePostalCode } from "@/lib/service-areas/normalize";
+import {
+  normalizePostalCode,
+  normalizeCity,
+  normalizeState,
+} from "@/lib/service-areas/normalize";
 
 export type ServiceAreaAdminRecord = {
   id: string;
@@ -13,6 +17,19 @@ export type ServiceAreaAdminRecord = {
   deliveryFee: number;
   minimumOrderAmount: number;
   isActive: boolean;
+};
+
+/**
+ * A pair of service areas whose coverage overlaps. Surfacing these on the
+ * service-areas dashboard helps the operator clean up duplicates that would
+ * otherwise cause `resolveServiceAreaForAddress` to pick one arbitrarily.
+ * The lookup itself uses a deterministic tie-breaker (most-recently-updated)
+ * but the operator still needs to see the warning to fix the root cause.
+ */
+export type ServiceAreaOverlap = {
+  kind: "city_state" | "postal_code";
+  label: string;
+  areaIds: string[];
 };
 
 const fallbackAreas: ServiceAreaAdminRecord[] = [
@@ -78,4 +95,65 @@ export async function getServiceAreaAdminRecords(): Promise<ServiceAreaAdminReco
       isActive: area.is_active ?? true,
     };
   });
+}
+
+/**
+ * Detect pairs of active service areas with overlapping coverage. Two flavours:
+ *   - `city_state` — both records share the same (city, state) tuple.
+ *   - `postal_code` — both records list the same ZIP in either primary or
+ *     alternates.
+ * Only active records are considered, since archived areas no longer affect
+ * the lookup.
+ */
+export function findServiceAreaOverlaps(
+  records: ServiceAreaAdminRecord[]
+): ServiceAreaOverlap[] {
+  const active = records.filter((r) => r.isActive);
+  const overlaps: ServiceAreaOverlap[] = [];
+
+  // city + state collisions
+  const cityStateGroups = new Map<string, string[]>();
+  for (const r of active) {
+    const c = normalizeCity(r.city);
+    const s = normalizeState(r.state);
+    if (!c || !s) continue;
+    const key = `${c}|${s}`;
+    const existing = cityStateGroups.get(key) ?? [];
+    existing.push(r.id);
+    cityStateGroups.set(key, existing);
+  }
+  for (const [key, ids] of cityStateGroups) {
+    if (ids.length > 1) {
+      const [city, state] = key.split("|");
+      overlaps.push({
+        kind: "city_state",
+        label: `${city.replace(/\b\w/g, (c) => c.toUpperCase())}, ${state.toUpperCase()}`,
+        areaIds: ids,
+      });
+    }
+  }
+
+  // postal-code collisions across records
+  const zipToIds = new Map<string, Set<string>>();
+  for (const r of active) {
+    const zips = [r.primaryPostalCode, ...r.postalCodesText.split(/\s+/)]
+      .map((z) => normalizePostalCode(z))
+      .filter(Boolean);
+    for (const zip of zips) {
+      const set = zipToIds.get(zip) ?? new Set<string>();
+      set.add(r.id);
+      zipToIds.set(zip, set);
+    }
+  }
+  for (const [zip, idSet] of zipToIds) {
+    if (idSet.size > 1) {
+      overlaps.push({
+        kind: "postal_code",
+        label: zip,
+        areaIds: Array.from(idSet),
+      });
+    }
+  }
+
+  return overlaps;
 }

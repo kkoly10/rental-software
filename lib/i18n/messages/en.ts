@@ -632,7 +632,7 @@ const enValues = {
     },
     orders: {
       title: "Orders",
-      description: "Track inquiries, confirmed bookings, payments, and delivery readiness.",
+      description: "Every order in the pipeline, from inquiry to completed. Use this view to see the whole funnel.",
       kicker: "Rental pipeline",
       sectionTitle: "All orders",
       searchPlaceholder: "Search by customer, item, status, or amount",
@@ -824,7 +824,7 @@ const enValues = {
     deliveries: {
       liveBadge: "Live",
       title: "Delivery Board",
-      description: "Track routes, stop status, and crew progress.",
+      description: "Only orders routed for delivery, grouped by route and day. Use this view when you're dispatching crews.",
       kickerDispatch: "Dispatch",
       kickerOperations: "Operations",
       sectionCreateRoute: "Create a route",
@@ -943,7 +943,7 @@ const enValues = {
     },
     calendar: {
       title: "Calendar",
-      description: "View bookings, deliveries, availability blocks, and upcoming event activity.",
+      description: "Every order plotted by its event date. Use this view when you need to see what falls on which day.",
       kickerSchedule: "Schedule view",
       kickerBlocks: "Block dates",
       kickerUpcoming: "Next 30 days",
@@ -1103,6 +1103,10 @@ const enValues = {
       addArea: "Add service area",
       noAreas: "No service areas yet",
       noAreasDescription: "Add at least one service area so customers can place orders for delivery.",
+      overlapHeadline: "Overlapping coverage detected — clean up duplicates to avoid ambiguous lookups.",
+      overlapCityState: "City + state in multiple areas",
+      overlapPostal: "ZIP in multiple areas",
+      overlapMore: "…and more.",
     },
     help: {
       title: "Help Center",

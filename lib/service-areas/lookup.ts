@@ -27,7 +27,7 @@ export async function resolveServiceAreaForAddress(options: {
   const { data, error } = await supabase
     .from("service_areas")
     .select(
-      "id, label, zip_code, city, state, delivery_fee, minimum_order_amount, is_active, postal_codes, deleted_at"
+      "id, label, zip_code, city, state, delivery_fee, minimum_order_amount, is_active, postal_codes, deleted_at, updated_at"
     )
     .eq("organization_id", options.organizationId)
     .eq("is_active", true)
@@ -72,9 +72,10 @@ export async function resolveServiceAreaForAddress(options: {
 
   if (cityStateMatches.length > 1) {
     // Multiple service areas match this city+state (e.g. operator
-    // configured "New York, NY" twice with different ZIPs). The
-    // current behavior of returning the first match is arbitrary;
-    // log a warning so the operator can clean up the config.
+    // configured "New York, NY" twice with different ZIPs). Use a
+    // deterministic tie-breaker — most recently updated wins — so the
+    // operator gets the area that reflects their latest configuration.
+    // Also log a warning so they can clean up the duplicate in the UI.
     const { logAppEvent } = await import("@/lib/observability/server");
     await logAppEvent({
       source: "service-areas.lookup",
@@ -87,7 +88,12 @@ export async function resolveServiceAreaForAddress(options: {
         match_ids: cityStateMatches.map((m) => m.id),
       },
     });
-    return mapServiceArea(cityStateMatches[0]);
+    const sorted = [...cityStateMatches].sort((a, b) => {
+      const aT = (a as { updated_at?: string }).updated_at ?? "";
+      const bT = (b as { updated_at?: string }).updated_at ?? "";
+      return bT.localeCompare(aT);
+    });
+    return mapServiceArea(sorted[0]);
   }
 
   return null;

@@ -631,7 +631,7 @@ export const fr: Messages = {
     },
     orders: {
       title: "Commandes",
-      description: "Suivez les demandes, réservations confirmées, paiements et préparation de livraison.",
+      description: "Toutes les commandes dans le pipeline, de la demande à la fin. Utilisez cette vue pour voir l’entonnoir complet.",
       kicker: "Pipeline de location",
       sectionTitle: "Toutes les commandes",
       searchPlaceholder: "Recherche par client, article, statut ou montant",
@@ -823,7 +823,7 @@ export const fr: Messages = {
     deliveries: {
       liveBadge: "En direct",
       title: "Tableau des livraisons",
-      description: "Suivez les tournées, l’état des arrêts et l’avancement des équipes.",
+      description: "Uniquement les commandes assignées à une tournée, groupées par tournée et par jour. Utilisez cette vue pour dispatcher les équipes.",
       kickerDispatch: "Dispatch",
       kickerOperations: "Opérations",
       sectionCreateRoute: "Créer une tournée",
@@ -942,7 +942,7 @@ export const fr: Messages = {
     },
     calendar: {
       title: "Calendrier",
-      description: "Visualisez réservations, livraisons, disponibilités et événements à venir.",
+      description: "Toutes les commandes placées par leur date d’événement. Utilisez cette vue quand vous devez voir ce qui tombe quel jour.",
       kickerSchedule: "Vue planning",
       kickerBlocks: "Blocage de dates",
       kickerUpcoming: "30 prochains jours",
@@ -1102,6 +1102,10 @@ export const fr: Messages = {
       addArea: "Ajouter une zone",
       noAreas: "Aucune zone de service",
       noAreasDescription: "Ajoutez au moins une zone de service pour que les clients puissent passer commande pour livraison.",
+      overlapHeadline: "Couverture en double détectée — nettoyez les doublons pour éviter les recherches ambiguës.",
+      overlapCityState: "Ville + état dans plusieurs zones",
+      overlapPostal: "Code postal dans plusieurs zones",
+      overlapMore: "…et plus.",
     },
     help: {
       title: "Centre d’aide",
