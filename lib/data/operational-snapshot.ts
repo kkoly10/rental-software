@@ -4,6 +4,10 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import {
+  summarizeMonthPayments,
+  summarizeOpenOrders,
+} from "@/lib/data/operational-snapshot-summary";
 
 /**
  * A live, read-only snapshot of the things an operator most often needs to
@@ -57,14 +61,11 @@ const EMPTY: OperationalSnapshot = {
   available: false,
 };
 
-// Orders that represent a real, still-live booking (i.e. not a dead lead or a
-// closed-out/refunded order). Used for outstanding balance and schedule counts.
-const LIVE_STATUSES = [
-  "confirmed",
-  "scheduled",
-  "out_for_delivery",
-  "delivered",
-];
+// Order statuses that are fully closed out and therefore can't owe money or
+// represent an upcoming event. Everything else (inquiry → delivered) is "open"
+// and counts toward outstanding balance + the schedule. This mirrors the
+// Analytics page's outstanding-balance definition so the two surfaces agree.
+const CLOSED_STATUSES = "(cancelled,completed,refunded)";
 
 // Cap the active-orders pull so a huge book of business can't blow up the
 // Copilot request. Operators well past this won't get exact attention counts,
@@ -89,13 +90,14 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
 
   const [ordersRes, paymentsRes, docsRes, unreadRes, maintenanceRes] =
     await Promise.all([
-      // Live orders: drives outstanding balance + schedule + balance-due-soon.
+      // Open orders: drives outstanding balance + schedule + balance-due-soon.
+      // Excludes only the closed-out statuses, matching analytics.ts.
       supabase
         .from("orders")
-        .select("id, order_status, event_date, balance_due_amount")
+        .select("id, event_date, balance_due_amount")
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
-        .in("order_status", LIVE_STATUSES)
+        .not("order_status", "in", CLOSED_STATUSES)
         .limit(ACTIVE_ORDERS_LIMIT),
 
       // Payments collected this month (revenue source of truth, mirrors analytics).
@@ -107,14 +109,18 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
         .gte("paid_at", monthStart)
         .limit(10000),
 
-      // Unsigned paperwork for events that haven't happened yet.
+      // Unsigned paperwork (pending/sent, not signed/void) for upcoming events
+      // on orders that are still open.
       supabase
         .from("documents")
-        .select("id, document_status, orders!inner(event_date, order_status)")
+        .select("id, orders!inner(event_date, order_status)", {
+          count: "exact",
+          head: true,
+        })
         .eq("organization_id", ctx.organizationId)
         .in("document_status", ["pending", "sent"])
         .gte("orders.event_date", today)
-        .limit(2000),
+        .not("orders.order_status", "in", CLOSED_STATUSES),
 
       // Unread inbound customer messages.
       supabase
@@ -124,16 +130,17 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
         .eq("direction", "inbound")
         .eq("read", false),
 
-      // Assets currently out of service.
+      // Assets currently out of service. maintenance_records.status is one of
+      // open / in_progress / resolved; the first two mean "still needs work".
       supabase
         .from("maintenance_records")
-        .select("id, assets!inner(organization_id, deleted_at)", {
+        .select("id, assets!inner(deleted_at)", {
           count: "exact",
           head: true,
         })
-        .eq("assets.organization_id", ctx.organizationId)
+        .eq("organization_id", ctx.organizationId)
         .is("assets.deleted_at", null)
-        .in("status", ["open", "in_progress", "service_due"]),
+        .in("status", ["open", "in_progress"]),
     ]);
 
   if (ordersRes.error)
@@ -143,60 +150,22 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
   if (docsRes.error)
     console.error("[operational-snapshot] documents query failed:", docsRes.error.message);
 
-  const orders = ordersRes.data ?? [];
-
-  let outstandingBalance = 0;
-  let eventsToday = 0;
-  let eventsNext7Days = 0;
-  let balanceDueSoonCount = 0;
-  let balanceDueSoonTotal = 0;
-
-  for (const o of orders) {
-    const balance =
-      typeof o.balance_due_amount === "number" ? o.balance_due_amount : 0;
-    if (balance > 0) outstandingBalance += balance;
-
-    const eventDate = o.event_date ?? null;
-    if (eventDate === today) eventsToday += 1;
-    if (eventDate && eventDate >= today && eventDate <= next7Str) {
-      eventsNext7Days += 1;
-      if (balance > 0) {
-        balanceDueSoonCount += 1;
-        balanceDueSoonTotal += balance;
-      }
-    }
-  }
-
-  let revenueThisMonth = 0;
-  let paymentsThisMonthCount = 0;
-  for (const p of paymentsRes.data ?? []) {
-    const amt = typeof p.amount === "number" ? p.amount : 0;
-    if (p.payment_type === "refund") {
-      revenueThisMonth -= amt;
-    } else {
-      revenueThisMonth += amt;
-      paymentsThisMonthCount += 1;
-    }
-  }
-  revenueThisMonth = Math.max(0, revenueThisMonth);
+  const orderSummary = summarizeOpenOrders(ordersRes.data ?? [], today, next7Str);
+  const paymentSummary = summarizeMonthPayments(paymentsRes.data ?? []);
 
   return {
-    outstandingBalance: round2(outstandingBalance),
-    revenueThisMonth: round2(revenueThisMonth),
-    paymentsThisMonthCount,
-    eventsToday,
-    eventsNext7Days,
-    balanceDueSoonCount,
-    balanceDueSoonTotal: round2(balanceDueSoonTotal),
-    unsignedDocsUpcoming: (docsRes.data ?? []).length,
+    outstandingBalance: orderSummary.outstandingBalance,
+    revenueThisMonth: paymentSummary.revenueThisMonth,
+    paymentsThisMonthCount: paymentSummary.paymentsThisMonthCount,
+    eventsToday: orderSummary.eventsToday,
+    eventsNext7Days: orderSummary.eventsNext7Days,
+    balanceDueSoonCount: orderSummary.balanceDueSoonCount,
+    balanceDueSoonTotal: orderSummary.balanceDueSoonTotal,
+    unsignedDocsUpcoming: docsRes.count ?? 0,
     unreadMessages: unreadRes.count ?? 0,
     openMaintenance: maintenanceRes.count ?? 0,
     currency,
     locale,
     available: true,
   };
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

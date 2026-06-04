@@ -105,7 +105,8 @@ Deep-links to specific records (`/dashboard/orders/{id}`), multi-turn conversati
 
 **Changes:**
 
-- **`lib/data/operational-snapshot.ts`** (new) — `getOperationalSnapshot()` returns a tight, bounded set of live figures: outstanding balance, revenue collected this month, events today / next 7 days, upcoming orders with a balance owed, unsigned documents for upcoming events, unread messages, and assets in maintenance. Deliberately separate from the heavier `getAnalytics()` since the Copilot calls it on every message; all queries run in parallel and are row-capped.
+- **`lib/data/operational-snapshot.ts`** (new) — `getOperationalSnapshot()` returns a tight, bounded set of live figures: outstanding balance, revenue collected this month, events today / next 7 days, upcoming orders with a balance owed, unsigned documents for upcoming events, unread messages, and assets in maintenance. Deliberately separate from the heavier `getAnalytics()` since the Copilot calls it on every message; all queries run in parallel and are row-capped. Definitions are deliberately aligned with the surfaces operators already see: **outstanding balance** sums every open order (statuses other than `cancelled`/`completed`/`refunded`), matching `analytics.ts`, so the Copilot and the Analytics page never disagree; **assets in maintenance** counts `open`/`in_progress` records (not `resolved`).
+- **`lib/data/operational-snapshot-summary.ts`** (new) — pure, Supabase-free aggregation helpers (`summarizeOpenOrders`, `summarizeMonthPayments`) so the math is unit-testable in isolation.
 - **`lib/copilot/context.ts`** — `getOperationalContext()` renders the snapshot into a readable block (currency-aware via the org's formatting), with an explicit "data not available" path for demo mode.
 - **`lib/copilot/system-prompt.ts`** — new `LIVE OPERATIONS` section + guidance: use the exact numbers, never invent figures, point to the page to act, and remain read-only for orders/payments/messages.
 - **`app/api/copilot/route.ts`** — fetches the operational snapshot in parallel with the guidance snapshot, threads it into the AI system prompt, and — importantly — into the **local keyword fallback** so the no-API-key path can also answer "what needs my attention / how much am I owed / what's on today / how am I doing this month / any unread messages" from real data.
@@ -113,4 +114,4 @@ Deep-links to specific records (`/dashboard/orders/{id}`), multi-turn conversati
 
 **Guardrails preserved:** same auth, origin check, rate limits, org-scoping, and audit logging. No new mutation surface — the Copilot reports numbers and points operators to the page to act.
 
-**Verification:** `tsc --noEmit` clean; full unit suite (123 tests) green.
+**Verification:** `tsc --noEmit` clean; full unit suite green, including new coverage in `tests/operational-snapshot-summary.test.ts` for the balance/event/revenue aggregation (outstanding balance, event windows, balance-due-soon, refund netting, empty-business and never-negative edge cases).
