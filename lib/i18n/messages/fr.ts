@@ -686,6 +686,7 @@ export const fr: Messages = {
         confirmingOrder: "Confirmation…",
         sendDeliveryCta: "Lancer la livraison",
         dispatchingDelivery: "Envoi en cours…",
+        attachToRouteFirstCta: "Rattachez d'abord à une tournée",
         createDocuments: "Créer les documents",
         downloadPdf: "Télécharger le PDF",
         downloadQuote: "Télécharger le devis (PDF)",
@@ -740,6 +741,8 @@ export const fr: Messages = {
         published: "Actif / Publié",
         productCreatedBanner: "Produit créé !",
         productCreatedBody: "Ajoutez des images ci-dessous pour le mettre en valeur dans votre catalogue.",
+        assetPendingBanner: "Produit créé, mais le premier exemplaire n'a pas pu être ajouté automatiquement.",
+        assetPendingBody: "Les produits sans exemplaire prêt ne peuvent pas être réservés. Ajoutez-en un dans la section Exemplaires ci-dessous pour activer les réservations.",
         quickInfoKicker: "Infos rapides",
         currentSettings: "Paramètres actuels",
         perDay: "par jour",
@@ -1198,6 +1201,8 @@ export const fr: Messages = {
     pickup: "Retrait",
     delivery: "Livraison",
     stops: "arrêts",
+    routeMap: "Carte de la tournée",
+    openRouteInMaps: "Ouvrir la tournée dans Google Maps",
   },
 
   invite: {

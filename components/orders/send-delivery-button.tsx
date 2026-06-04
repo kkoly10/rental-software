@@ -21,9 +21,18 @@ const ALLOWED_FROM = new Set(["confirmed", "scheduled"]);
 export function SendDeliveryButton({
   orderId,
   currentStatus,
+  hasRouteStop = true,
 }: {
   orderId: string;
   currentStatus: string;
+  /**
+   * Whether this order is already attached to a route. The dispatch RPC
+   * returns `not_found` when no stop exists; rather than letting the
+   * operator click and bounce off that error (Gap #3 from the launch
+   * audit), we render a clear "Attach to a route first" CTA instead.
+   * Defaults true so older call sites keep working.
+   */
+  hasRouteStop?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(
@@ -60,6 +69,20 @@ export function SendDeliveryButton({
       <span className="badge success" style={{ fontSize: 12 }}>
         {result.message}
       </span>
+    );
+  }
+
+  // No route stop yet → don't let the operator click into a confusing
+  // "not_found" failure. Send them straight to the on-page assign card.
+  if (!hasRouteStop) {
+    return (
+      <a
+        href="#assign-to-route"
+        className="secondary-btn"
+        style={{ fontSize: 13 }}
+      >
+        {m.dashboard.orders.detail.attachToRouteFirstCta}
+      </a>
     );
   }
 

@@ -222,17 +222,37 @@ export async function createProduct(
   }
 
   // Auto-create the first asset so the product is immediately bookable.
-  // Asset-based model: products with zero assets cannot be reserved.
+  // Asset-based model: products with zero assets cannot be reserved, so
+  // a swallowed insert error here leaves the operator with a product
+  // that silently rejects every checkout. Log it so we can chase root
+  // causes (RLS, schema drift) and tag the redirect so the product page
+  // can surface a banner asking the operator to add an asset manually.
+  let assetCreated = false;
   if (isActive && inserted?.id) {
-    try {
-      await supabase.from("assets").insert({
-        organization_id: ctx.organizationId,
-        product_id: inserted.id,
-        asset_tag: `${slug}-${inserted.id.slice(-6)}-1`,
-        operational_status: "ready",
-        condition_status: "good",
+    const { error: assetError } = await supabase.from("assets").insert({
+      organization_id: ctx.organizationId,
+      product_id: inserted.id,
+      asset_tag: `${slug}-${inserted.id.slice(-6)}-1`,
+      operational_status: "ready",
+      condition_status: "good",
+    });
+    if (assetError) {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        userId: ctx.userId,
+        source: "products.create",
+        message: "Auto-asset creation failed after product insert",
+        context: {
+          productId: inserted.id,
+          slug,
+          assetError: assetError.message,
+          assetErrorCode: assetError.code ?? null,
+        },
       });
-    } catch { /* non-critical — product is created; operator can manage assets manually */ }
+    } else {
+      assetCreated = true;
+    }
   }
 
   try {
@@ -242,7 +262,11 @@ export async function createProduct(
 
   revalidatePath("/inventory");
   revalidatePath("/dashboard/products");
-  redirect(`/dashboard/products/${inserted.id}?created=1`);
+  // assetCreated=0 means the auto-asset insert failed; the product page
+  // reads it to render a "this product has no assets and can't be
+  // booked — add one" warning.
+  const flag = isActive && !assetCreated ? "&asset_pending=1" : "";
+  redirect(`/dashboard/products/${inserted.id}?created=1${flag}`);
 }
 
 export async function updateProduct(

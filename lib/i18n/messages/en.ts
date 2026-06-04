@@ -687,6 +687,7 @@ const enValues = {
         confirmingOrder: "Confirming…",
         sendDeliveryCta: "Send delivery",
         dispatchingDelivery: "Dispatching…",
+        attachToRouteFirstCta: "Attach to a route first",
         createDocuments: "Create documents",
         downloadPdf: "Download PDF",
         downloadQuote: "Download Quote PDF",
@@ -741,6 +742,8 @@ const enValues = {
         published: "Active / Published",
         productCreatedBanner: "Product created!",
         productCreatedBody: "Add images below to showcase it in your catalog.",
+        assetPendingBanner: "Product created, but the first asset couldn't be added automatically.",
+        assetPendingBody: "Products with zero ready assets can't be booked. Add one in the Assets section below to enable bookings.",
         quickInfoKicker: "Quick info",
         currentSettings: "Current settings",
         perDay: "per day",
@@ -1199,6 +1202,8 @@ const enValues = {
     pickup: "Pickup",
     delivery: "Delivery",
     stops: "stops",
+    routeMap: "Route map",
+    openRouteInMaps: "Open route in Google Maps",
   },
 
   invite: {

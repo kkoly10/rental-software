@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { getRoutes } from "@/lib/data/routes";
-import { getRouteDetail, getRouteStops } from "@/lib/data/route-detail";
+import {
+  getRouteDetail,
+  getRouteDetailEnhanced,
+  getRouteStops,
+} from "@/lib/data/route-detail";
 import { StopActionButtons } from "@/components/crew/stop-actions";
 import { ProofPhotoUpload } from "@/components/crew/proof-photo-upload";
 import { PickupPhotoUpload } from "@/components/crew/pickup-photo-upload";
@@ -9,14 +13,28 @@ import { PickupSignaturePad } from "@/components/crew/pickup-signature-pad";
 import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getMessages } from "@/lib/i18n/server";
+import { RouteDetailMapWrapper } from "@/components/maps/route-detail-map-wrapper";
+import { buildGoogleMapsRouteUrl } from "@/lib/maps/google-maps-route-url";
 
 export default async function CrewTodayPage() {
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
   const [routes, m] = await Promise.all([getRoutes(today), getMessages()]);
   const activeRoute = routes.find((r) => r.status === "in_progress") ?? routes[0];
-  const [routeDetail, stops] = activeRoute
-    ? await Promise.all([getRouteDetail(activeRoute.id), getRouteStops(activeRoute.id)])
-    : [null, []];
+  // Sprint 6.1 — pull both shapes for the active route: the basic detail
+  // + per-stop action list (proof photos, signatures) drives the
+  // existing crew UI; the enhanced detail has lat/lng + addresses so
+  // the new on-page map and Google Maps deeplink can render without a
+  // second round trip per stop.
+  const [routeDetail, stops, enhancedRoute] = activeRoute
+    ? await Promise.all([
+        getRouteDetail(activeRoute.id),
+        getRouteStops(activeRoute.id),
+        getRouteDetailEnhanced(activeRoute.id),
+      ])
+    : [null, [], null];
+  const mapsUrl = enhancedRoute
+    ? buildGoogleMapsRouteUrl(enhancedRoute.stops)
+    : null;
 
   return (
     <main className="page">
@@ -35,6 +53,25 @@ export default async function CrewTodayPage() {
 
             {routeDetail ? (
               <>
+                {enhancedRoute && enhancedRoute.stops.length > 0 && (
+                  <div className="mobile-card" style={{ padding: 0, overflow: "hidden", marginBottom: 12 }}>
+                    <RouteDetailMapWrapper stops={enhancedRoute.stops} height="260px" />
+                    {mapsUrl && (
+                      <div style={{ padding: 12 }}>
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="primary-btn"
+                          style={{ display: "block", textAlign: "center", fontSize: 14 }}
+                        >
+                          {m.crew.openRouteInMaps}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="list">
                   <div className="mobile-card">
                     <strong>{m.crew.vehicle}</strong>

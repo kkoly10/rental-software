@@ -686,6 +686,7 @@ export const es: Messages = {
         confirmingOrder: "Confirmando…",
         sendDeliveryCta: "Enviar entrega",
         dispatchingDelivery: "Despachando…",
+        attachToRouteFirstCta: "Asigna a una ruta primero",
         createDocuments: "Crear documentos",
         downloadPdf: "Descargar PDF",
         downloadQuote: "Descargar presupuesto (PDF)",
@@ -740,6 +741,8 @@ export const es: Messages = {
         published: "Activo / Publicado",
         productCreatedBanner: "¡Producto creado!",
         productCreatedBody: "Añade imágenes abajo para mostrarlo en tu catálogo.",
+        assetPendingBanner: "Producto creado, pero no se pudo añadir el primer activo automáticamente.",
+        assetPendingBody: "Los productos sin activos disponibles no se pueden reservar. Añade uno en la sección Activos para habilitar las reservas.",
         quickInfoKicker: "Información rápida",
         currentSettings: "Configuración actual",
         perDay: "por día",
@@ -1198,6 +1201,8 @@ export const es: Messages = {
     pickup: "Recogida",
     delivery: "Entrega",
     stops: "paradas",
+    routeMap: "Mapa de la ruta",
+    openRouteInMaps: "Abrir ruta en Google Maps",
   },
 
   invite: {

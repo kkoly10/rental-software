@@ -196,7 +196,7 @@ export default async function OrderDetailPage({
           </div>
 
           {routingState && (
-            <div style={{ marginTop: 18 }}>
+            <div id="assign-to-route" style={{ marginTop: 18, scrollMarginTop: 80 }}>
               <div className="kicker" style={{ marginBottom: 6 }}>
                 {m.forms.routing.assignToRoute.sectionKicker}
               </div>
@@ -266,7 +266,11 @@ export default async function OrderDetailPage({
               <SendQuoteButton orderId={id} />
             )}
             <ConfirmOrderButton orderId={id} currentStatus={order.status} />
-            <SendDeliveryButton orderId={id} currentStatus={order.status} />
+            <SendDeliveryButton
+              orderId={id}
+              currentStatus={order.status}
+              hasRouteStop={routingState?.kind === "already_assigned"}
+            />
             {qboConnected && <SyncQuickBooksButton orderId={id} />}
             {xeroConnected && <SyncXeroButton orderId={id} />}
             <MakeRecurringForm
