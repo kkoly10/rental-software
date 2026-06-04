@@ -105,7 +105,7 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
   const { data: rawStops, error: stopsError } = await supabase
     .from("route_stops")
     .select(
-      "id, stop_sequence, stop_type, scheduled_window_start, orders(order_number, customers(first_name, last_name, phone), customer_addresses!delivery_address_id(line1, city, state, postal_code), order_items(item_name_snapshot, quantity))"
+      "id, stop_sequence, stop_type, scheduled_window_start, orders(order_number, customers(first_name, last_name, phone), customer_addresses!delivery_address_id(line1, city, state, postal_code), order_items(item_name_snapshot, quantity, selected_mode, products(anchoring_methods, required_anchor_count)))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true })
@@ -136,7 +136,15 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
           state?: string;
           postal_code?: string;
         } | null;
-        order_items?: { item_name_snapshot?: string; quantity?: number }[] | null;
+        order_items?: {
+          item_name_snapshot?: string;
+          quantity?: number;
+          selected_mode?: string | null;
+          products?: {
+            anchoring_methods?: string[] | null;
+            required_anchor_count?: number | null;
+          } | null;
+        }[] | null;
       } | null;
 
       const customer = order?.customers;
@@ -149,10 +157,32 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
       ].filter(Boolean);
 
       const items = (order?.order_items ?? [])
-        .map((it) => ({
-          name: it.item_name_snapshot ?? "Item",
-          quantity: it.quantity ?? 1,
-        }))
+        .map((it) => {
+          // Sprint 6.0 — surface mode + anchoring on the pull sheet so
+          // the crew loading the truck sees "Tropical Combo (Wet) -
+          // Bring: stakes x6" instead of just the bare item name.
+          let name = it.item_name_snapshot ?? "Item";
+          if (it.selected_mode === "wet" || it.selected_mode === "dry") {
+            name += ` (${it.selected_mode === "wet" ? "Wet" : "Dry"})`;
+          }
+          const anchors = Array.isArray(it.products?.anchoring_methods)
+            ? (it.products?.anchoring_methods ?? [])
+            : [];
+          if (anchors.length > 0) {
+            const count = it.products?.required_anchor_count;
+            const friendly = anchors
+              .map((a) => a.replace(/_/g, " "))
+              .join(", ");
+            name +=
+              count != null && count > 0
+                ? ` - Bring: ${friendly} x${count}`
+                : ` - Bring: ${friendly}`;
+          }
+          return {
+            name,
+            quantity: it.quantity ?? 1,
+          };
+        })
         .filter((it) => it.quantity > 0);
 
       return {

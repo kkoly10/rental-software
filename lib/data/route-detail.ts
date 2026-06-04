@@ -135,7 +135,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
     .from("route_stops")
-    .select("id, order_id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, pickup_photo_url, pickup_signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot))")
+    .select("id, order_id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, pickup_photo_url, pickup_signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot, selected_mode, products(anchoring_methods, required_anchor_count)))")
     .eq("route_id", routeId)
     .eq("routes.organization_id", ctx.organizationId)
     .order("stop_sequence", { ascending: true });
@@ -181,11 +181,38 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       order_number: string;
       customers: { first_name: string; last_name: string } | null;
       customer_addresses: { line1?: string; city?: string; state?: string } | null;
-      order_items: { item_name_snapshot?: string }[] | null;
+      order_items: {
+        item_name_snapshot?: string;
+        selected_mode?: string | null;
+        products?: {
+          anchoring_methods?: string[] | null;
+          required_anchor_count?: number | null;
+        } | null;
+      }[] | null;
     } | null;
     const customer = order?.customers;
     const addr = order?.customer_addresses;
     const addressParts = [addr?.line1, addr?.city, addr?.state].filter(Boolean);
+    // Sprint 6.0 — surface mode + anchoring inline with the product
+    // name so the crew today card shows everything they need to load.
+    const firstItem = order?.order_items?.[0];
+    let productName = firstItem?.item_name_snapshot ?? undefined;
+    if (productName) {
+      if (firstItem?.selected_mode === "wet" || firstItem?.selected_mode === "dry") {
+        productName += ` (${firstItem.selected_mode === "wet" ? "Wet" : "Dry"})`;
+      }
+      const anchors = Array.isArray(firstItem?.products?.anchoring_methods)
+        ? (firstItem?.products?.anchoring_methods ?? [])
+        : [];
+      if (anchors.length > 0) {
+        const count = firstItem?.products?.required_anchor_count;
+        const friendly = anchors.map((a) => a.replace(/_/g, " ")).join(", ");
+        productName +=
+          count != null && count > 0
+            ? ` - Bring: ${friendly} x${count}`
+            : ` - Bring: ${friendly}`;
+      }
+    }
     return {
       id: stop.id,
       sequence: stop.stop_sequence ?? index + 1,
@@ -196,7 +223,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       type: (stop.stop_type ?? "delivery").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: stop.stop_status ?? "assigned",
       address: addressParts.length > 0 ? addressParts.join(", ") : undefined,
-      productName: order?.order_items?.[0]?.item_name_snapshot ?? undefined,
+      productName,
       orderId: (stop as Record<string, unknown>).order_id as string | undefined,
       proofPhotoUrl: (stop as Record<string, unknown>).proof_photo_url as string | undefined,
       pickupPhotoUrl: (stop as Record<string, unknown>).pickup_photo_url as string | undefined,

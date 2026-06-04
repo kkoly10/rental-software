@@ -48,7 +48,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       delivery_surface_type, delivery_gate_code,
       delivery_contact_name, delivery_contact_phone, delivery_setup_notes,
       customers(first_name, last_name, email, phone),
-      order_items(item_name_snapshot, line_total),
+      order_items(item_name_snapshot, line_total, selected_mode, products(anchoring_methods, required_anchor_count)),
       documents(id, document_type, document_status),
       customer_addresses!delivery_address_id(line1, line2, city, state, postal_code)
     `)
@@ -70,7 +70,15 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
 
   const items =
     ((data as Record<string, unknown>).order_items as
-      | { item_name_snapshot: string; line_total: number }[]
+      | {
+          item_name_snapshot: string;
+          line_total: number;
+          selected_mode?: string | null;
+          products?: {
+            anchoring_methods?: string[] | null;
+            required_anchor_count?: number | null;
+          } | null;
+        }[]
       | null) ?? [];
 
   const docs =
@@ -122,7 +130,31 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       : undefined,
     items:
       items.length > 0
-        ? items.map((i) => i.item_name_snapshot ?? "Item")
+        ? items.map((i) => {
+            // Sprint 6.0 — append mode + anchoring spec when present
+            // so the operator sees "Tropical Combo (Wet) - Bring:
+            // stakes x6" on the order detail page without a deeper
+            // drill-in.
+            const parts = [i.item_name_snapshot ?? "Item"];
+            if (i.selected_mode === "wet" || i.selected_mode === "dry") {
+              parts.push(`(${i.selected_mode === "wet" ? "Wet" : "Dry"})`);
+            }
+            const anchors = Array.isArray(i.products?.anchoring_methods)
+              ? (i.products?.anchoring_methods ?? [])
+              : [];
+            if (anchors.length > 0) {
+              const count = i.products?.required_anchor_count;
+              const friendly = anchors
+                .map((a) => a.replace(/_/g, " "))
+                .join(", ");
+              parts.push(
+                count != null && count > 0
+                  ? `- Bring: ${friendly} x${count}`
+                  : `- Bring: ${friendly}`,
+              );
+            }
+            return parts.join(" ");
+          })
         : ["No items added"],
     deliveryLabel: address
       ? [
