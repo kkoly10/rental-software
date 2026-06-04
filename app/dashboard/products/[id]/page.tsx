@@ -14,11 +14,12 @@ export default async function ProductDetailEditorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; asset_pending?: string }>;
 }) {
   const { id } = await params;
-  const { created } = await searchParams;
+  const { created, asset_pending } = await searchParams;
   const justCreated = created === "1";
+  const assetPending = asset_pending === "1";
   const [product, categories, images, assets, { messages: m, t }] = await Promise.all([
     getProductById(id),
     getCategories(),
@@ -36,9 +37,15 @@ export default async function ProductDetailEditorPage({
       title={m.dashboard.productDetail.title}
       description={m.dashboard.productDetail.description}
     >
-      {justCreated && (
+      {justCreated && !assetPending && (
         <div className="panel" style={{ background: "var(--success-bg, #e6f9e6)", border: "1px solid var(--success-border, #b3e6b3)", marginBottom: 16 }}>
           <strong>{m.dashboard.products.detail.productCreatedBanner}</strong> {m.dashboard.products.detail.productCreatedBody}
+        </div>
+      )}
+      {assetPending && (
+        <div className="panel" style={{ background: "#fff4e5", border: "1px solid #f5a623", marginBottom: 16 }} role="alert">
+          <strong>Product created, but the first asset couldn&apos;t be added automatically.</strong>{" "}
+          Products with zero ready assets can&apos;t be booked. Add one in the Assets section below to enable bookings.
         </div>
       )}
 

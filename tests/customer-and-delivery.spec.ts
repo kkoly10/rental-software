@@ -180,23 +180,37 @@ test("C04 — customer completes booking form on /checkout", async ({
   console.log("  email used     :", placedOrderEmail);
   console.log("  url after submit:", placedOrderUrl);
 
-  if (placedOrderUrl.includes("checkout.stripe.com")) {
+  const body = await page.locator("body").innerText().catch(() => "");
+  const bodyLower = body.toLowerCase();
+
+  // Gap #4: the previous assertion accepted any URL and only failed on
+  // 500-page text. A checkout that silently stays on /checkout (e.g.
+  // ZIP rejected, no service area coverage) would still be reported as
+  // "passed". Now we require a positive success signal: either a known
+  // success URL, or a success indicator in the page body.
+  const stripeRedirect = placedOrderUrl.includes("checkout.stripe.com");
+  const confirmationPage = placedOrderUrl.includes("/order-confirmation");
+  const inPageSuccess = /booking (received|submitted|confirmed)|order (received|placed|confirmed)|thank you/i.test(
+    body,
+  );
+
+  if (stripeRedirect) {
     console.log("  ✓ redirected to Stripe Checkout — deposit flow working");
-    // Don't actually pay; the order is already created server-side before
-    // the Stripe session.
-  } else if (placedOrderUrl.includes("/order-confirmation")) {
+  } else if (confirmationPage) {
     console.log("  ✓ landed on order-confirmation — no-deposit flow");
+  } else if (inPageSuccess) {
+    console.log("  ✓ in-page success indicator detected");
   } else {
-    // Form was submitted but something else happened — capture the page body
-    const body = await page.locator("body").innerText().catch(() => "");
     const snippet = body.replace(/\s+/g, " ").slice(0, 400);
-    console.warn("  ⚠ unexpected post-submit URL. Body snippet:", snippet);
+    console.warn("  ⚠ unexpected post-submit state. Body snippet:", snippet);
   }
 
-  // Whatever the outcome, we should NOT be on a 500 page.
-  const body = await page.locator("body").innerText().catch(() => "");
-  expect(body.toLowerCase()).not.toContain("application error");
-  expect(body.toLowerCase()).not.toContain("internal server error");
+  expect(bodyLower).not.toContain("application error");
+  expect(bodyLower).not.toContain("internal server error");
+  expect(
+    stripeRedirect || confirmationPage || inPageSuccess,
+    `checkout did not reach a known success state. url=${placedOrderUrl}`,
+  ).toBe(true);
 
   await ctx.close();
 });
