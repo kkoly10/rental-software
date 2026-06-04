@@ -141,6 +141,16 @@ export async function signDocument(
     return { ok: false, message: "This document has already been signed." };
   }
 
+  // A document must be explicitly "sent" by the operator before the customer
+  // can sign. Without this gate, customers could sign a document still in
+  // "pending" (never delivered) or one the operator already moved to "void".
+  if (doc.document_status !== "sent") {
+    return {
+      ok: false,
+      message: "This document isn't ready to be signed yet. Please contact us.",
+    };
+  }
+
   const hdrs = await headers();
   const { getTrustedClientIp } = await import("@/lib/security/request-client");
   const trustedIp = getTrustedClientIp(hdrs);
@@ -158,7 +168,7 @@ export async function signDocument(
       ...(signatureDataUrl ? { signature_data_url: signatureDataUrl } : {}),
     })
     .eq("id", documentId)
-    .eq("document_status", "pending")
+    .eq("document_status", "sent")
     .select("id");
 
   if (error) {

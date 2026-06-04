@@ -272,6 +272,8 @@ async function handleOpenAI(
     documentsCount: 0,
     hasBusinessProfile: false,
     hasWebsiteSettings: false,
+    hasBranding: false,
+    hasPricingRules: false,
   });
 
   try {
@@ -335,6 +337,8 @@ async function handleAnthropic(
     documentsCount: 0,
     hasBusinessProfile: false,
     hasWebsiteSettings: false,
+    hasBranding: false,
+    hasPricingRules: false,
   });
 
   try {

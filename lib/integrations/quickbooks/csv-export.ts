@@ -80,7 +80,6 @@ export async function exportQuickBooksInvoicesCsv(options?: {
       "scheduled",
       "out_for_delivery",
       "delivered",
-      "pickup_pending",
       "completed",
     ])
     .order("created_at", { ascending: false })

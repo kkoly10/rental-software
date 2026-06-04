@@ -1501,6 +1501,7 @@ export const pt: Messages = {
     pillZip: "Código postal: {value}",
     pillCategory: "Categoria: {value}",
     deliversTo: "Entregamos em: {area}. Introduza o seu código postal acima para confirmar a disponibilidade.",
+    pickDateHint: "Escolha uma data acima para ver a disponibilidade em tempo real para o seu evento.",
     availabilityResults: "Resultados de disponibilidade",
     availableRentals: "Alugueres disponíveis",
     optionsCount: "{count} opções para o seu evento",

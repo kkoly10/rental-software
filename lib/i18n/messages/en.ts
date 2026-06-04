@@ -1502,6 +1502,7 @@ const enValues = {
     pillZip: "ZIP: {value}",
     pillCategory: "Category: {value}",
     deliversTo: "We deliver to: {area}. Enter your ZIP above to confirm availability.",
+    pickDateHint: "Pick a date above to see real-time availability for your event.",
     availabilityResults: "Availability results",
     availableRentals: "Available rentals",
     optionsCount: "{count} options for your event",
