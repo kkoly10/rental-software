@@ -2658,6 +2658,12 @@ export const pt: Messages = {
       viewOrder: "Ver encomenda ↗",
       recording: "A registar…",
     },
+    acknowledgment: {
+      title: "Antes de o Copilot agir por si",
+      agree: "Aceito",
+      agreeing: "A guardar…",
+      cancel: "Agora não",
+    },
   },
 
   trackingMap: {
