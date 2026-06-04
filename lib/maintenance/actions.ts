@@ -124,12 +124,47 @@ export async function logMaintenance(
     return { ok: false, message: "Couldn't save the maintenance record." };
   }
 
+  // Re-audit follow-up — when an asset goes into maintenance, scan the
+  // confirmed/scheduled orders that already reserved the affected
+  // product so the operator isn't surprised by an unfulfillable booking
+  // at delivery time. Count + first-N order numbers come back in the
+  // success message; full handling (reassign / cancel) stays manual for
+  // now since the right action depends on context.
+  let warningSuffix = "";
+  try {
+    const { data: affected } = await supabase
+      .from("availability_blocks")
+      .select("source_order_id, orders!inner(order_number, order_status)")
+      .eq("organization_id", ctx.organizationId)
+      .eq("product_id", productId)
+      .gt("ends_at", new Date().toISOString())
+      .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
+      .limit(20);
+    const open = (affected ?? []).filter((b) => {
+      const o = (b as { orders?: { order_status?: string } | null }).orders;
+      const s = o?.order_status ?? "";
+      return !["cancelled", "refunded", "completed"].includes(s);
+    });
+    if (open.length > 0) {
+      const sample = open
+        .slice(0, 3)
+        .map((b) => {
+          const o = (b as { orders?: { order_number?: string } | null }).orders;
+          return o?.order_number ?? "?";
+        })
+        .join(", ");
+      warningSuffix = ` Heads up — ${open.length} confirmed order(s) already reserved this item (${sample}${open.length > 3 ? "…" : ""}). Review or reassign before the event date.`;
+    }
+  } catch {
+    // Non-fatal — operator still gets the maintenance record.
+  }
+
   revalidatePath("/dashboard/maintenance");
   // #372 maintenance writes can flip asset operational_status, which affects
   // product detail visibility and storefront availability.
   revalidatePath("/dashboard/products", "layout");
   revalidatePath("/inventory", "layout");
-  return { ok: true, message: "Maintenance record created." };
+  return { ok: true, message: `Maintenance record created.${warningSuffix}` };
 }
 
 export async function updateMaintenanceStatus(

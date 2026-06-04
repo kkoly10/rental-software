@@ -63,7 +63,7 @@ export async function getCalendarEvents(
       ? supabase
           .from("routes")
           .select(
-            "id, name, route_date, route_status, route_stops(id, orders(order_number, customers(first_name, last_name)))"
+            "id, name, route_date, route_status, route_stops(id, orders(id, order_number, customers(first_name, last_name)))"
           )
           .eq("organization_id", ctx.organizationId)
           .gte("route_date", startDate)
@@ -75,8 +75,27 @@ export async function getCalendarEvents(
 
   const events: CalendarEvent[] = [];
 
+  // De-duplicate when view === "both" — an order that's already been
+  // routed will appear as both an "order" event (plotted by event_date)
+  // and a "delivery" event (plotted by route_date). We render only the
+  // delivery row in that case so the operator can click straight to the
+  // route they actually need to dispatch.
+  const routedOrderIds = new Set<string>();
+  if (view === "both" && routesResult.data) {
+    for (const r of routesResult.data as Array<{
+      route_stops?: { orders?: { id?: string } | null }[] | null;
+    }>) {
+      const stops = r.route_stops ?? [];
+      for (const stop of stops) {
+        const id = stop?.orders?.id;
+        if (typeof id === "string") routedOrderIds.add(id);
+      }
+    }
+  }
+
   if (ordersResult.data) {
     for (const o of ordersResult.data) {
+      if (view === "both" && routedOrderIds.has(o.id)) continue;
       const c = (o as Record<string, unknown>).customers as
         | { first_name?: string | null; last_name?: string | null }
         | null;

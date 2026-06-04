@@ -60,7 +60,27 @@ const resolveOrgContext = cache(async (): Promise<OrgContext | null> => {
     const requested = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
     if (requested) {
       const match = memberships.find((m) => m.organization_id === requested);
-      if (match) chosen = match;
+      if (match) {
+        chosen = match;
+      } else {
+        // Cookie points to an org the user no longer belongs to (membership
+        // revoked or org deleted). Silently falling back to the oldest org
+        // can confuse the operator when they next try a write and it lands
+        // on a different tenant — log the swap so we can surface it later
+        // and prompt a re-pick.
+        try {
+          const { logAppEvent } = await import("@/lib/observability/server");
+          await logAppEvent({
+            userId: user.id,
+            source: "auth.org-context",
+            action: "stale_active_org_cookie",
+            status: "info",
+            metadata: { requested, fallback: chosen.organization_id },
+          });
+        } catch {
+          // Logging is best-effort.
+        }
+      }
     }
   }
 

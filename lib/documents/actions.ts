@@ -143,6 +143,29 @@ export async function updateDocumentStatus(
     };
   }
 
+  // Re-audit follow-up — the initial terminal-order check above was a
+  // read-time snapshot. Re-read the parent order status immediately
+  // before the update to narrow the TOCTOU window between "saw the
+  // order open" and "wrote to the document". Doesn't fully close it
+  // (the document update isn't transactional with the order read) but
+  // catches the common case of the operator cancelling the order in a
+  // second tab while this one was open.
+  if (docRecord.order_id) {
+    const { data: latestOrder } = await supabase
+      .from("orders")
+      .select("order_status")
+      .eq("id", docRecord.order_id)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+    const latestStatus = latestOrder?.order_status ?? null;
+    if (latestStatus && TERMINAL.has(latestStatus)) {
+      return {
+        ok: false,
+        message: `Cannot modify documents on a ${latestStatus} order.`,
+      };
+    }
+  }
+
   // Scope the UPDATE to the document_status we just read so a concurrent
   // status change can't slip a stale transition through.
   const { data: updated, error } = await supabase
