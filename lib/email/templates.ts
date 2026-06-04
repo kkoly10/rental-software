@@ -3,6 +3,10 @@
  * Inlines all styles for maximum email client compatibility.
  */
 
+import { emailCopy, type EmailLocale } from "./email-i18n";
+
+export type { EmailLocale } from "./email-i18n";
+
 // Escapes the OWASP-recommended HTML5-context character set PLUS
 // backtick (some legacy IE parsers treated it as a quote) and
 // forward-slash (CDATA-context safety). Total cost: 7 substitutions.
@@ -16,13 +20,19 @@ function esc(s: string | null | undefined): string {
   ));
 }
 
-function layout(businessName: string, body: string, footer?: string, preheader?: string): string {
+function layout(
+  businessName: string,
+  body: string,
+  footer?: string,
+  preheader?: string,
+  locale: EmailLocale = "en"
+): string {
   const safeName = esc(businessName);
   const preheaderSpan = preheader
     ? `<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${esc(preheader)}</span>`
     : "";
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${esc(locale)}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#10233f;line-height:1.6;">
   ${preheaderSpan}
@@ -88,39 +98,45 @@ export type OrderConfirmationData = {
   supportEmail: string | null;
   siteUrl: string;
   portalUrl: string;
+  locale: EmailLocale;
 };
 
 export function orderConfirmationEmail(data: OrderConfirmationData): string {
+  const t = emailCopy(data.locale);
+  const c = t.orderConfirmation;
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Booking received!</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, thanks for your reservation. Here are your details:
+      ${esc(c.intro(data.customerFirstName))}
     </p>
 
     ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Item", data.productName],
-      ["Event date", data.eventDate],
-      ["Subtotal", data.subtotal],
-      ["Delivery fee", data.deliveryFee],
-      ["Total", data.total],
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.item, data.productName],
+      [t.labels.eventDate, data.eventDate],
+      [t.labels.subtotal, data.subtotal],
+      [t.labels.deliveryFee, data.deliveryFee],
+      [t.labels.total, data.total],
     ])}
 
     <div style="background:#fff4e5;border:1px solid #fde2a7;border-radius:12px;padding:16px;margin:20px 0;">
-      <strong style="color:#a86a08;">Deposit required: ${esc(data.depositDue)}</strong>
+      <strong style="color:#a86a08;">${esc(c.depositRequired(data.depositDue))}</strong>
       <p style="margin:8px 0 0;font-size:14px;color:#a86a08;">
-        Please submit your deposit to confirm this booking. We'll reach out with payment instructions.
+        ${esc(c.depositInstructions)}
       </p>
     </div>
 
-    ${button("Open Secure Customer Portal", data.portalUrl)}
+    ${button(c.button, data.portalUrl)}
 
     <p style="font-size:14px;color:#55708f;">
-      Questions? Reply to this email${data.supportEmail ? ` or contact us at ${esc(data.supportEmail)}` : ""}.
+      ${esc(t.questions.replyOrContact(data.supportEmail))}
     </p>
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -237,42 +253,53 @@ export type PaymentReceivedData = {
   paymentMethod: string;
   newBalance: string;
   supportEmail: string | null;
+  locale: EmailLocale;
+  // Whether the booking is now fully paid. Optional so callers that don't
+  // pass it fall back to the legacy "$0.00" string check — but localized
+  // money strings (e.g. "0,00 €") wouldn't match that, so the trigger now
+  // passes this explicitly.
+  fullyPaid?: boolean;
 };
 
 export function paymentReceivedEmail(data: PaymentReceivedData): string {
-  const isFullyPaid = data.newBalance === "$0.00";
+  const isFullyPaid = data.fullyPaid ?? data.newBalance === "$0.00";
+  const t = emailCopy(data.locale);
+  const c = t.paymentReceived;
 
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Payment received</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, we received your ${esc(data.paymentType)} payment.
+      ${esc(c.intro(data.customerFirstName, data.paymentType))}
     </p>
 
     ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Amount", data.amount],
-      ["Method", data.paymentMethod],
-      ["Balance remaining", data.newBalance],
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.amount, data.amount],
+      [t.labels.method, data.paymentMethod],
+      [t.labels.balanceRemaining, data.newBalance],
     ])}
 
     ${isFullyPaid
       ? `<div style="background:#eaf9f4;border:1px solid #b6e8d3;border-radius:12px;padding:16px;margin:20px 0;">
-          <strong style="color:#188862;">Your booking is fully paid and confirmed!</strong>
+          <strong style="color:#188862;">${esc(c.fullyPaidTitle)}</strong>
           <p style="margin:8px 0 0;font-size:14px;color:#188862;">
-            We'll be in touch with delivery details before your event.
+            ${esc(c.fullyPaidBody)}
           </p>
         </div>`
       : `<p style="font-size:14px;color:#55708f;">
-          Your remaining balance of ${esc(data.newBalance)} is due before the event date.
+          ${esc(c.balanceDue(data.newBalance))}
         </p>`
     }
 
     ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
-      Questions? Contact us at ${esc(data.supportEmail)}.
+      ${esc(t.questions.contactAt(data.supportEmail))}
     </p>` : ""}
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -284,26 +311,32 @@ export type RefundProcessedData = {
   orderNumber: string;
   amount: string;
   supportEmail: string | null;
+  locale: EmailLocale;
 };
 
 export function refundProcessedEmail(data: RefundProcessedData): string {
+  const t = emailCopy(data.locale);
+  const c = t.refundProcessed;
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Refund processed</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, a refund has been issued for your order.
+      ${esc(c.intro(data.customerFirstName))}
     </p>
 
     ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Refund amount", data.amount],
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.refundAmount, data.amount],
     ])}
 
     <p style="font-size:14px;color:#55708f;">
-      The refund may take 5-10 business days to appear on your statement.${data.supportEmail ? ` Contact us at ${esc(data.supportEmail)} with any questions.` : ""}
+      ${esc(c.timing)}${data.supportEmail ? esc(c.contactSuffix(data.supportEmail)) : ""}
     </p>
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -319,56 +352,26 @@ export type OrderStatusUpdateData = {
   deliveryTimeWindow?: string;
   crewName?: string;
   portalUrl?: string;
-};
-
-const statusMessages: Record<string, { heading: string; body: string }> = {
-  awaiting_deposit: {
-    heading: "Quote accepted — deposit required",
-    body: "Thanks for accepting your quote! Your booking will be confirmed once your deposit is received. Use the button below to pay securely.",
-  },
-  confirmed: {
-    heading: "Your booking is confirmed!",
-    body: "Your event is locked in. We'll send delivery details as the date approaches.",
-  },
-  scheduled: {
-    heading: "Delivery scheduled",
-    body: "Your delivery has been scheduled. Our crew will arrive on the day of your event for setup.",
-  },
-  out_for_delivery: {
-    heading: "We're on our way!",
-    body: "Our delivery team is headed to your location. Please ensure the setup area is accessible.",
-  },
-  delivered: {
-    heading: "Setup complete!",
-    body: "Your rental equipment has been set up and is ready to go. Enjoy your event!",
-  },
-  completed: {
-    heading: "Thanks for renting with us!",
-    body: "Your rental is complete. We hope your event was a success! We'd love to have you back.",
-  },
-  cancelled: {
-    heading: "Order cancelled",
-    body: "Your order has been cancelled. If you have any questions about refunds, please contact us.",
-  },
+  locale: EmailLocale;
 };
 
 export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
-  const msg = statusMessages[data.newStatus] ?? {
-    heading: `Order updated`,
-    body: "Your order status has been updated.",
-  };
+  const t = emailCopy(data.locale);
+  const c = t.orderStatus;
+  const known = (c.statuses as Record<string, { heading: string; body: string }>)[data.newStatus];
+  const msg = known ?? { heading: c.fallbackHeading, body: c.fallbackBody };
 
   const rows: [string, string][] = [
-    ["Order", `#${data.orderNumber}`],
-    ["Status", data.newStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())],
-    ["Event date", data.eventDate],
+    [t.labels.order, `#${data.orderNumber}`],
+    [t.labels.status, data.newStatus.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())],
+    [t.labels.eventDate, data.eventDate],
   ];
 
   if (data.deliveryTimeWindow) {
-    rows.push(["Delivery window", data.deliveryTimeWindow]);
+    rows.push([t.labels.deliveryWindow, data.deliveryTimeWindow]);
   }
   if (data.crewName) {
-    rows.push(["Crew", data.crewName]);
+    rows.push([t.labels.crew, data.crewName]);
   }
 
   return layout(
@@ -376,7 +379,7 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
     `
     <h1 style="margin:0 0 8px;font-size:24px;">${esc(msg.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, here's an update on your booking:
+      ${esc(c.intro(data.customerFirstName))}
     </p>
 
     ${detailTable(rows)}
@@ -385,14 +388,17 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
 
     ${data.portalUrl ? `<p style="margin:20px 0;">
       <a href="${esc(data.portalUrl)}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;display:inline-block;">
-        View my order
+        ${esc(c.button)}
       </a>
     </p>` : ""}
 
     ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
-      Questions? Contact us at ${esc(data.supportEmail)}.
+      ${esc(t.questions.contactAt(data.supportEmail))}
     </p>` : ""}
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -405,34 +411,38 @@ export type DocumentsReadyData = {
   documentTypes: string[];
   supportEmail: string | null;
   portalUrl?: string;
+  locale: EmailLocale;
 };
 
 export function documentsReadyEmail(data: DocumentsReadyData): string {
-  const docList = esc(
-    data.documentTypes
-      .map((t) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
-      .join(" and ")
-  );
+  const t = emailCopy(data.locale);
+  const c = t.documentsReady;
+  const docList = data.documentTypes
+    .map((dt) => dt.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase()))
+    .join(c.listAnd);
+  const plural = data.documentTypes.length > 1;
 
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Documents ready to sign</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, your ${docList} for order #${esc(data.orderNumber)}
-      ${data.documentTypes.length > 1 ? "are" : "is"} ready for your signature.
+      ${esc(c.intro(data.customerFirstName, docList, data.orderNumber, plural))}
     </p>
 
     ${data.portalUrl ? `<p style="margin:20px 0;">
       <a href="${esc(data.portalUrl)}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;display:inline-block;">
-        Review &amp; sign documents
+        ${esc(c.button)}
       </a>
     </p>` : ""}
 
     <p style="font-size:14px;">
-      ${data.supportEmail ? `Questions? Contact us at ${esc(data.supportEmail)}.` : ""}
+      ${data.supportEmail ? esc(t.questions.contactAt(data.supportEmail)) : ""}
     </p>
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -448,43 +458,49 @@ export type EventReminderData = {
   deliveryAddress?: string;
   setupInstructions?: string;
   supportEmail: string | null;
+  locale: EmailLocale;
 };
 
 export function eventReminderEmail(data: EventReminderData): string {
+  const t = emailCopy(data.locale);
+  const c = t.eventReminder;
   const rows: [string, string][] = [
-    ["Order", `#${data.orderNumber}`],
-    ["Item", data.productName],
-    ["Event date", data.eventDate],
+    [t.labels.order, `#${data.orderNumber}`],
+    [t.labels.item, data.productName],
+    [t.labels.eventDate, data.eventDate],
   ];
 
-  if (data.deliveryTime) rows.push(["Delivery time", data.deliveryTime]);
-  if (data.deliveryAddress) rows.push(["Address", data.deliveryAddress]);
+  if (data.deliveryTime) rows.push([t.labels.deliveryTime, data.deliveryTime]);
+  if (data.deliveryAddress) rows.push([t.labels.address, data.deliveryAddress]);
 
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Your rental is tomorrow!</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, just a friendly reminder that your rental is coming up tomorrow.
+      ${esc(c.intro(data.customerFirstName))}
     </p>
 
     ${detailTable(rows)}
 
     ${data.setupInstructions
       ? `<div style="background:#f0f6ff;border:1px solid #c4d8f4;border-radius:12px;padding:16px;margin:20px 0;">
-          <strong style="color:#1e5dcf;">Setup Notes</strong>
+          <strong style="color:#1e5dcf;">${esc(c.setupNotesTitle)}</strong>
           <p style="margin:8px 0 0;font-size:14px;color:#10233f;">${esc(data.setupInstructions).replace(/\n/g, "<br />")}</p>
         </div>`
       : ""
     }
 
     <p style="font-size:14px;color:#55708f;">
-      Please ensure the setup area is accessible and clear of obstacles. Our crew will handle everything else!
+      ${esc(c.accessNote)}
     </p>
     ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
-      Questions? Contact us at ${esc(data.supportEmail)}.
+      ${esc(t.questions.contactAt(data.supportEmail))}
     </p>` : ""}
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -560,42 +576,48 @@ export type PostEventFollowUpData = {
   reviewUrl?: string;
   storefrontUrl: string;
   supportEmail: string | null;
+  locale: EmailLocale;
 };
 
 export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
+  const t = emailCopy(data.locale);
+  const c = t.postEventFollowUp;
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">How was your event?</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, we hope your event on ${esc(data.eventDate)} was a blast! Thank you for renting with ${esc(data.businessName)}.
+      ${esc(c.intro(data.customerFirstName, data.eventDate, data.businessName))}
     </p>
 
     ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Item", data.productName],
-      ["Event date", data.eventDate],
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.item, data.productName],
+      [t.labels.eventDate, data.eventDate],
     ])}
 
     ${data.reviewUrl
       ? `<div style="background:#fff9e6;border:1px solid #fde2a7;border-radius:12px;padding:16px;margin:20px 0;text-align:center;">
-          <strong style="color:#a86a08;">Loved it? Leave us a review!</strong>
+          <strong style="color:#a86a08;">${esc(c.reviewCallout)}</strong>
           <p style="margin:12px 0 0;">
-            ${button("Write a Review", data.reviewUrl)}
+            ${button(c.reviewButton, data.reviewUrl)}
           </p>
         </div>`
       : ""
     }
 
     <div style="text-align:center;margin:24px 0;">
-      <p style="font-size:16px;font-weight:600;margin:0 0 8px;">Planning another event?</p>
-      ${button("Book Again", data.storefrontUrl)}
+      <p style="font-size:16px;font-weight:600;margin:0 0 8px;">${esc(c.bookAgainPrompt)}</p>
+      ${button(c.bookAgainButton, data.storefrontUrl)}
     </div>
 
     ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
-      Questions or feedback? Contact us at ${esc(data.supportEmail)}.
+      ${esc(t.questions.feedbackContactAt(data.supportEmail))}
     </p>` : ""}
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -608,32 +630,37 @@ export function quoteSentEmail(data: {
   depositRequired: string;
   portalUrl: string;
   supportEmail: string | null;
+  locale: EmailLocale;
 }): string {
+  const t = emailCopy(data.locale);
+  const c = t.quoteSent;
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Your quote is ready!</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, we've prepared a quote for your upcoming event.
-      Review the details below and accept online to secure your booking.
+      ${esc(c.intro(data.customerFirstName))}
     </p>
 
     ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Event Date", data.eventDate],
-      ["Total", data.total],
-      ["Deposit to confirm", data.depositRequired],
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.eventDate, data.eventDate],
+      [t.labels.total, data.total],
+      [t.labels.depositToConfirm, data.depositRequired],
     ])}
 
     <div style="text-align:center;margin:28px 0;">
-      ${button("View & Accept Quote", data.portalUrl)}
+      ${button(c.button, data.portalUrl)}
     </div>
 
     <p style="font-size:13px;color:#55708f;text-align:center;">
-      This quote is not a confirmed booking. Pay your deposit to reserve your date.${data.supportEmail ? `<br>
-      Questions? Contact us at ${esc(data.supportEmail)}.` : ""}
+      ${esc(c.disclaimer)}${data.supportEmail ? `<br>
+      ${esc(t.questions.contactAt(data.supportEmail))}` : ""}
     </p>
-    `
+    `,
+    undefined,
+    undefined,
+    data.locale
   );
 }
 
@@ -648,34 +675,37 @@ export type DepositReminderData = {
   depositDue: string;
   portalUrl: string;
   supportEmail: string | null;
+  locale: EmailLocale;
 };
 
 export function depositReminderEmail(data: DepositReminderData): string {
+  const t = emailCopy(data.locale);
+  const c = t.depositReminder;
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Deposit reminder</h1>
+    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
     <p style="color:#55708f;margin:0 0 20px;">
-      Hi ${esc(data.customerFirstName)}, your booking is held but not yet
-      confirmed. Submit your deposit to secure your event date.
+      ${esc(c.intro(data.customerFirstName))}
     </p>
 
     ${detailTable([
-      ["Order", `#${data.orderNumber}`],
-      ["Item", data.productName],
-      ["Event date", data.eventDate],
-      ["Deposit due", data.depositDue],
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.item, data.productName],
+      [t.labels.eventDate, data.eventDate],
+      [t.labels.depositDue, data.depositDue],
     ])}
 
-    ${button("Pay Deposit", data.portalUrl)}
+    ${button(c.button, data.portalUrl)}
 
     ${data.supportEmail
       ? `<p style="font-size:14px;color:#55708f;">
-          Questions? Contact us at ${esc(data.supportEmail)}.
+          ${esc(t.questions.contactAt(data.supportEmail))}
         </p>`
       : ""}
     `,
     undefined,
-    `Pay your ${data.depositDue} deposit to confirm order #${data.orderNumber}.`
+    c.preheader(data.depositDue, data.orderNumber),
+    data.locale
   );
 }

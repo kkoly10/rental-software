@@ -65,9 +65,11 @@ jobs:
           node --test --experimental-strip-types \
             tests/auto-attach-create.test.ts \
             tests/compute-financials.test.ts \
+            tests/copilot-briefing.test.ts \
             tests/copilot-conversation.test.ts \
             tests/copilot-parse-action.test.ts \
             tests/copilot-payment-note.test.ts \
+            tests/email-i18n.test.ts \
             tests/operational-snapshot-summary.test.ts \
             tests/format-inflatable-item-line.test.ts \
             tests/html-to-plain-text.test.ts \
