@@ -48,8 +48,14 @@ export function CheckoutForm({
     createCheckoutOrder,
     initialState
   );
-  const [selectedDate, setSelectedDate] = useState(initialDate ?? "");
-  const [enteredZip, setEnteredZip] = useState(initialZip ?? "");
+  // Sticky values for the form. After a failed submit the action
+  // echoes back whatever the customer typed; we hand each input that
+  // value as defaultValue so the form remounts pre-populated instead
+  // of dropping the customer back at a blank slate after an
+  // out-of-coverage ZIP / missing terms / unavailable date.
+  const sv = state.submittedValues;
+  const [selectedDate, setSelectedDate] = useState(sv?.eventDate ?? initialDate ?? "");
+  const [enteredZip, setEnteredZip] = useState(sv?.postalCode ?? initialZip ?? "");
 
   // Decision 4.10 — refresh the server-rendered summary card when the
   // customer changes the ZIP. We push a new ?zip= into the URL so
@@ -237,6 +243,7 @@ export function CheckoutForm({
           <input
             name="first_name"
             type="text"
+            defaultValue={sv?.firstName ?? ""}
             autoComplete="given-name"
             placeholder={m.checkout.form.firstName}
             required
@@ -252,6 +259,7 @@ export function CheckoutForm({
           <input
             name="last_name"
             type="text"
+            defaultValue={sv?.lastName ?? ""}
             autoComplete="family-name"
             placeholder={m.checkout.form.lastName}
             required
@@ -267,6 +275,7 @@ export function CheckoutForm({
           <input
             name="phone"
             type="tel"
+            defaultValue={sv?.phone ?? ""}
             autoComplete="tel"
             placeholder="(540) 555-0100"
             aria-invalid={!!errors.phone || undefined}
@@ -296,6 +305,7 @@ export function CheckoutForm({
         <input
           name="email"
           type="email"
+            defaultValue={sv?.email ?? ""}
           autoComplete="email"
           placeholder={m.checkout.form.emailPlaceholder}
           required
@@ -312,7 +322,7 @@ export function CheckoutForm({
           name="event_date"
           type="date"
           required
-          defaultValue={initialDate}
+          defaultValue={sv?.eventDate ?? initialDate}
           min={minDate}
           max={maxDate}
           onChange={(e) => setSelectedDate(e.target.value)}
@@ -334,6 +344,7 @@ export function CheckoutForm({
           <input
             name="start_time"
             type="time"
+            defaultValue={sv?.startTime ?? ""}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -343,6 +354,7 @@ export function CheckoutForm({
           <input
             name="end_time"
             type="time"
+            defaultValue={sv?.endTime ?? ""}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -353,6 +365,7 @@ export function CheckoutForm({
         <input
           name="line1"
           type="text"
+            defaultValue={sv?.line1 ?? ""}
           autoComplete="street-address"
           placeholder={m.checkout.form.streetAddress}
           required
@@ -364,6 +377,7 @@ export function CheckoutForm({
         <input
           name="line2"
           type="text"
+            defaultValue={sv?.line2 ?? ""}
           autoComplete="address-line2"
           placeholder={m.checkout.form.line2Placeholder}
           style={{ marginTop: 8, width: "100%" }}
@@ -376,6 +390,7 @@ export function CheckoutForm({
           <input
             name="city"
             type="text"
+            defaultValue={sv?.city ?? ""}
             autoComplete="address-level2"
             placeholder={m.checkout.form.cityPlaceholder}
             required
@@ -391,6 +406,7 @@ export function CheckoutForm({
           <input
             name="state"
             type="text"
+            defaultValue={sv?.state ?? ""}
             autoComplete="address-level1"
             placeholder={m.checkout.form.statePlaceholder}
             required
@@ -409,7 +425,7 @@ export function CheckoutForm({
             autoComplete="postal-code"
             placeholder={m.checkout.form.zipPlaceholder}
             required
-            defaultValue={initialZip}
+            defaultValue={sv?.postalCode ?? initialZip}
             onChange={(e) => setEnteredZip(e.target.value)}
             aria-invalid={!!errors.postalCode || undefined}
             aria-describedby={errors.postalCode ? "err-postal-code" : undefined}
