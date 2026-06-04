@@ -59,11 +59,13 @@ export async function getUnroutedOrdersForDate(
 
   const routedOrderIds = new Set((routedStops ?? []).map((s) => s.order_id));
 
+  // Include event_date OR rental_end_date matches so multi-day rentals
+  // also surface for their pickup-date route (decision 2.6).
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, order_status, event_date, customers(first_name, last_name), order_items(item_name_snapshot)")
+    .select("id, order_number, order_status, event_date, rental_end_date, customers(first_name, last_name), order_items(item_name_snapshot)")
     .eq("organization_id", ctx.organizationId)
-    .eq("event_date", routeDate)
+    .or(`event_date.eq.${routeDate},rental_end_date.eq.${routeDate}`)
     .is("deleted_at", null)
     .in("order_status", ["confirmed", "scheduled"])
     .order("created_at", { ascending: true });
@@ -71,7 +73,10 @@ export async function getUnroutedOrdersForDate(
   if (!orders) return [];
 
   return orders
-    .filter((o) => !routedOrderIds.has(o.id))
+    // Don't exclude — same order is now allowed twice if it needs both
+    // a delivery stop AND a pickup stop on different dates. Per-stop-type
+    // dedup is enforced server-side in addOrderToRoute.
+    .filter((o) => true)
     .map((o) => {
       const customer = (o as Record<string, unknown>).customers as { first_name?: string; last_name?: string } | null;
       const items = (o as Record<string, unknown>).order_items as { item_name_snapshot?: string }[] | null;
@@ -131,11 +136,16 @@ export async function getOrdersForRouteDate(
   // which PostgREST silently returned as null, sending every
   // confirmed-and-addressed order into the "no_address" bucket and
   // emptying the Add Stop dropdown for every operator.
+  // Include orders whose EITHER event_date (delivery candidates) OR
+  // rental_end_date (pickup candidates) matches this route's date.
+  // Without the rental_end_date branch, multi-day rentals never appear
+  // as eligible for a pickup-date route, so manual-routing-mode orgs
+  // can't add the pickup stop (decision 2.6).
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, order_status, event_date, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1), order_items(item_name_snapshot)")
+    .select("id, order_number, order_status, event_date, rental_end_date, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1), order_items(item_name_snapshot)")
     .eq("organization_id", ctx.organizationId)
-    .eq("event_date", routeDate)
+    .or(`event_date.eq.${routeDate},rental_end_date.eq.${routeDate}`)
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
 

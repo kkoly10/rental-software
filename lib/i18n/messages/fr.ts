@@ -2009,11 +2009,11 @@ export const fr: Messages = {
         timeLabel: "Heure (facultatif)",
         submit: "Ajouter l’arrêt",
         submitting: "Ajout…",
-        noUnroutedOrders: "Aucune commande confirmée sans tournée pour cette date.",
+        noUnroutedOrders: "Aucune commande confirmée sans arrêt pour cette date.",
         empty: {
           noOrdersTitle: "Aucune commande pour cette date",
           noOrdersBody:
-            "Créez une commande avec la date d’événement {date} et le client apparaîtra ici pour l’ajouter comme arrêt.",
+            "Créez une commande dont la date d’événement ou la date de fin de location est {date} ; elle apparaîtra ici à ajouter comme arrêt de livraison ou de récupération.",
           createOrderCta: "Créer une commande pour cette date",
           blockedTitle: "{count} commande(s) à corriger pour cette date",
           blockedBody:

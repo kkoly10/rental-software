@@ -2009,11 +2009,11 @@ export const pt: Messages = {
         timeLabel: "Hora (opcional)",
         submit: "Adicionar paragem",
         submitting: "A adicionar…",
-        noUnroutedOrders: "Não há encomendas confirmadas sem rota para esta data.",
+        noUnroutedOrders: "Não há encomendas confirmadas sem paragem para esta data.",
         empty: {
           noOrdersTitle: "Ainda não há encomendas para esta data",
           noOrdersBody:
-            "Crie uma encomenda com data de evento {date} e o cliente aparecerá aqui para o adicionar como paragem.",
+            "Crie uma encomenda cuja data de evento ou data de fim de aluguer seja {date} e aparecerá aqui para adicionar como paragem de entrega ou de recolha.",
           createOrderCta: "Criar uma encomenda para esta data",
           blockedTitle: "{count} encomenda(s) nesta data precisam de uma correção",
           blockedBody:

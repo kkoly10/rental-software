@@ -113,18 +113,24 @@ export async function addOrderToRoute(
 
   if (!order) return { ok: false, message: "Order not found." };
 
-  // Guard: prevent adding the same order to multiple routes
+  // Guard: prevent adding the same order to multiple routes WITH THE
+  // SAME STOP KIND. Multi-day rentals legitimately have BOTH a delivery
+  // and a pickup row attached (decision 2.6), so the dedup has to be
+  // scoped by stop_type — otherwise once a delivery exists, the
+  // operator cannot add the pickup, and manual-routing-mode orgs are
+  // stuck with one-stop multi-day rentals.
   const { data: existingStop } = await supabase
     .from("route_stops")
     .select("id, route_id")
     .eq("order_id", orderId)
+    .eq("stop_type", stopType)
     .maybeSingle();
 
   if (existingStop) {
     if (existingStop.route_id === routeId) {
-      return { ok: false, message: "This order is already on this route." };
+      return { ok: false, message: `This order already has a ${stopType} stop on this route.` };
     }
-    return { ok: false, message: "This order is already assigned to another route." };
+    return { ok: false, message: `This order already has a ${stopType} stop on another route.` };
   }
 
   let scheduledWindowStart: string | null = null;
