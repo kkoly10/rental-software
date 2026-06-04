@@ -17,9 +17,35 @@ import { checkProductAvailability } from "@/lib/availability/check";
 import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { checkPlanLimit } from "@/lib/stripe/gate";
 
+export type OrderFieldErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  eventDate?: string;
+  startTime?: string;
+  endTime?: string;
+  productId?: string;
+  subtotal?: string;
+  deliveryFee?: string;
+  depositAmount?: string;
+  deliveryLine1?: string;
+  deliveryCity?: string;
+  deliveryState?: string;
+  deliveryZip?: string;
+};
+
 export type OrderActionState = {
   ok: boolean;
   message: string;
+  /**
+   * Per-field validation messages so the operator new-order form can
+   * highlight the offending input(s) inline instead of relying on the
+   * HTML5 :invalid border alone. Without this the operator stares at
+   * 20 fields, sees one toast at the top, and has to figure out which
+   * one needs fixing.
+   */
+  fieldErrors?: OrderFieldErrors;
 };
 
 function shouldReserveAvailability(status: string) {
@@ -68,10 +94,40 @@ export async function createOrder(
   });
 
   if (!parsed.success) {
+    const fieldErrors: OrderFieldErrors = {};
+    // Map zod issue paths (e.g. "firstName") to the keys consumed by
+    // the form. Keys are intentionally the same shape as the schema
+    // so the mapping is a no-op identity; spelled out so a future
+    // schema rename doesn't silently drop the inline message.
+    const fieldMap: Record<string, keyof OrderFieldErrors> = {
+      firstName: "firstName",
+      lastName: "lastName",
+      email: "email",
+      phone: "phone",
+      eventDate: "eventDate",
+      startTime: "startTime",
+      endTime: "endTime",
+      productId: "productId",
+      subtotal: "subtotal",
+      deliveryFee: "deliveryFee",
+      depositAmount: "depositAmount",
+      deliveryLine1: "deliveryLine1",
+      deliveryCity: "deliveryCity",
+      deliveryState: "deliveryState",
+      deliveryZip: "deliveryZip",
+    };
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string" && key in fieldMap) {
+        const mapped = fieldMap[key];
+        if (!fieldErrors[mapped]) fieldErrors[mapped] = issue.message;
+      }
+    }
     return {
       ok: false,
       message:
         parsed.error.issues[0]?.message ?? "Please review the order details.",
+      fieldErrors,
     };
   }
 

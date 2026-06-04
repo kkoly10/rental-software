@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { createOrder } from "@/lib/orders/actions";
+import { createOrder, type OrderActionState } from "@/lib/orders/actions";
 import type {
   OrderFormProductOption,
   OrderFormServiceAreaOption,
@@ -9,7 +9,29 @@ import type {
 import { useI18n } from "@/lib/i18n/provider";
 import { formatMessage } from "@/lib/i18n/format";
 
-const initialState = { ok: false, message: "" };
+const initialState: OrderActionState = { ok: false, message: "" };
+
+// Render an inline field-level error message right under its input.
+// Mirrors the checkout-form pattern so operators get the same "this
+// field needs attention" affordance customers do on the storefront.
+function FieldError({ message, id }: { message?: string; id?: string }) {
+  if (!message) return null;
+  return (
+    <div
+      id={id}
+      role="alert"
+      className="badge warning"
+      style={{
+        marginTop: 6,
+        padding: "4px 8px",
+        fontSize: 12,
+        display: "inline-block",
+      }}
+    >
+      {message}
+    </div>
+  );
+}
 
 export function NewOrderForm({
   products,
@@ -25,6 +47,10 @@ export function NewOrderForm({
   const [state, formAction, pending] = useActionState(createOrder, initialState);
   const { messages } = useI18n();
   const m = messages.forms.newOrder;
+  // Convenient handle for inline field error rendering — populated by
+  // createOrder on validation failure so each input can show its own
+  // message instead of relying solely on the top-of-form toast.
+  const fe = state.fieldErrors;
 
   // Idempotency key — generated once when the form mounts so a
   // double-click / network retry doesn't create a duplicate order.
@@ -89,6 +115,7 @@ export function NewOrderForm({
             placeholder={m.firstNamePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-first-name" message={fe?.firstName} />
         </label>
         <label className="order-card">
           <strong>{m.lastNameLabel}</strong>
@@ -99,6 +126,7 @@ export function NewOrderForm({
             placeholder={m.lastNamePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-last-name" message={fe?.lastName} />
         </label>
         <label className="order-card">
           <strong>{m.phoneLabel}</strong>
@@ -108,6 +136,7 @@ export function NewOrderForm({
             placeholder={m.phonePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-phone" message={fe?.phone} />
         </label>
       </div>
 
@@ -119,6 +148,7 @@ export function NewOrderForm({
           placeholder={m.emailPlaceholder}
           style={{ marginTop: 10, width: "100%" }}
         />
+          <FieldError id="err-email" message={fe?.email} />
       </label>
 
       <div className="grid grid-3">
@@ -132,6 +162,7 @@ export function NewOrderForm({
             min={minEventDate}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-event-date" message={fe?.eventDate} />
         </label>
         <label className="order-card">
           <strong>{m.startTimeLabel}</strong>
@@ -143,6 +174,7 @@ export function NewOrderForm({
             aria-invalid={timeClash || undefined}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-start-time" message={fe?.startTime} />
         </label>
         <label className="order-card">
           <strong>{m.endTimeLabel}</strong>
@@ -154,6 +186,7 @@ export function NewOrderForm({
             aria-invalid={timeClash || undefined}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-end-time" message={fe?.endTime} />
         </label>
       </div>
 
@@ -226,6 +259,7 @@ export function NewOrderForm({
               </option>
             ))}
           </select>
+          <FieldError id="err-product-id" message={fe?.productId} />
         </label>
       </div>
 
@@ -259,6 +293,7 @@ export function NewOrderForm({
             defaultValue={0}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-delivery-fee" message={fe?.deliveryFee} />
           <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
             {m.deliveryFeeHelp}
           </div>
@@ -273,6 +308,7 @@ export function NewOrderForm({
             defaultValue={0}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-subtotal" message={fe?.subtotal} />
           <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
             {m.subtotalHelp}
           </div>
@@ -290,6 +326,7 @@ export function NewOrderForm({
             defaultValue={0}
             style={{ marginTop: 10, width: "100%" }}
           />
+          <FieldError id="err-deposit-amount" message={fe?.depositAmount} />
         </label>
         <div className="order-card">
           <strong>{m.totalLabel}</strong>
@@ -310,6 +347,7 @@ export function NewOrderForm({
               placeholder={m.streetAddressPlaceholder}
               style={{ width: "100%" }}
             />
+          <FieldError id="err-delivery-line1" message={fe?.deliveryLine1} />
           </label>
           <label className="field-stack">
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.aptSuiteLabel}</span>
@@ -324,14 +362,17 @@ export function NewOrderForm({
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.cityLabel}</span>
               <input name="delivery_city" type="text" placeholder={m.cityPlaceholder} style={{ width: "100%" }} />
+          <FieldError id="err-delivery-city" message={fe?.deliveryCity} />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.stateLabel}</span>
               <input name="delivery_state" type="text" placeholder={m.statePlaceholder} maxLength={3} style={{ width: "100%" }} />
+          <FieldError id="err-delivery-state" message={fe?.deliveryState} />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.zipLabel}</span>
               <input name="delivery_zip" type="text" placeholder={m.zipPlaceholder} maxLength={10} style={{ width: "100%" }} />
+          <FieldError id="err-delivery-zip" message={fe?.deliveryZip} />
             </label>
           </div>
         </div>
