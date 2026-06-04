@@ -1,0 +1,8 @@
+# Minimal config for the migration deploy workflow.
+# The CI job at .github/workflows/db-migrate.yml uses `supabase link
+# --project-ref` against the production project, then `supabase db
+# push --linked` to apply any new migrations under supabase/migrations/.
+# The project ref and credentials live in repo secrets, not here, so
+# this file stays safe to commit.
+
+project_id = "rental-software"
