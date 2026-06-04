@@ -32,7 +32,7 @@ Web-first rental software purpose-built for inflatable rental businesses, with a
 - **Setup checklist** — 10-item progress tracker derived from real org data (products, images, service areas, orders, payments, documents, website settings); prominent placement on dashboard with progress bar
 - **Context help banners** — dismissible banners on all major dashboard pages explaining what each section does, with quick-action links; dismiss state persisted per user
 - **Help Center** — /dashboard/help with 18 searchable articles across 8 sections (Getting Started, Products, Orders, Payments, Documents, Deliveries & Crew, Website, Troubleshooting)
-- **AI Operator Copilot** — floating assistant on all dashboard pages; context-aware (current route, setup progress, page help); suggested prompts per page; powered by OpenAI/Anthropic when configured, or built-in knowledge base fallback. Read-only by default; owners and admins can opt in to letting it edit website content (hero, FAQ, about) via the action endpoint.
+- **AI Operator Copilot** — floating assistant on all dashboard pages; context-aware (current route, setup progress, page help); suggested prompts per page; powered by OpenAI/Anthropic when configured, or built-in knowledge base fallback. Live operational awareness: answers real questions from the operator's data ("What needs my attention today?", "How much am I owed?", "What's on this week?", "How am I doing this month?") using a read-only operational snapshot. Read-only by default; owners and admins can opt in to letting it edit website content (hero, FAQ, about) via the action endpoint.
 
 ### Crew mobile workspace
 - Mobile-optimized route view for delivery crews

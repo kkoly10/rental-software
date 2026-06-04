@@ -18,6 +18,7 @@ These docs are the source-of-truth for **why** product, pricing, and GTM decisio
 | 3 | [`03-payments-and-pricing.md`](./03-payments-and-pricing.md) | SaaS pricing benchmarks, Stripe Mexico capabilities, Conekta integration analysis, Mexican entity requirements, IVA obligations |
 | 4 | [`04-gtm-and-positioning.md`](./04-gtm-and-positioning.md) | GTM channels (US + Mexico), 30-article SEO content calendar, positioning statement vs Goodshuffle Pro |
 | 5 | [`05-vertical-roadmap.md`](./05-vertical-roadmap.md) | Vertical capability audit (12 verticals scored), US demand-vs-competition research, decision to lock inflatables as #1 and queue vehicles & fleet as #2 |
+| 6 | [`06-copilot-expansion.md`](./06-copilot-expansion.md) | Operator Copilot capability recon, gap analysis, and phased expansion roadmap (Phase 1: live operational awareness — shipped) |
 
 The actionable execution plan derived from this research lives at the repo root: [`COMPETITIVE_POSITIONING_MASTER_PLAN.md`](../../COMPETITIVE_POSITIONING_MASTER_PLAN.md).
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildSystemPrompt } from "@/lib/copilot/system-prompt";
 import {
   getArticleSummaries,
+  getOperationalContext,
   getPageHelpContext,
   getSnapshotContext,
 } from "@/lib/copilot/context";
@@ -9,6 +10,10 @@ import {
   getGuidanceSnapshot,
   type GuidanceSnapshot,
 } from "@/lib/data/guidance-snapshot";
+import {
+  getOperationalSnapshot,
+  type OperationalSnapshot,
+} from "@/lib/data/operational-snapshot";
 import { searchArticles } from "@/lib/help/articles";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { checklistItems } from "@/lib/guidance/checklist";
@@ -19,6 +24,7 @@ import { getCopilotAccessContext } from "@/lib/security/copilot-access";
 import { getRequestClientKey } from "@/lib/security/request-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 
 export const runtime = "nodejs";
 
@@ -176,10 +182,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const snapshot = await getGuidanceSnapshot();
+  const [snapshot, opSnapshot] = await Promise.all([
+    getGuidanceSnapshot(),
+    getOperationalSnapshot(),
+  ]);
   const pageHelp = getPageHelpContext(route);
   const snapshotContext = getSnapshotContext(snapshot);
+  const liveOpsContext = getOperationalContext(opSnapshot);
   const articleSummaries = getArticleSummaries();
+
+  // Built once and reused: it's both the no-provider response and the
+  // graceful fallback when a configured provider errors or times out.
+  const localResponse = generateLocalResponse(message, route, snapshot, opSnapshot);
 
   const openaiKey = getOptionalEnv("OPENAI_API_KEY");
   const anthropicKey = getOptionalEnv("ANTHROPIC_API_KEY");
@@ -191,7 +205,9 @@ export async function POST(request: NextRequest) {
       route,
       pageHelp,
       snapshotContext,
-      articleSummaries
+      liveOpsContext,
+      articleSummaries,
+      localResponse
     );
 
     await logAppEvent({
@@ -216,7 +232,9 @@ export async function POST(request: NextRequest) {
       route,
       pageHelp,
       snapshotContext,
-      articleSummaries
+      liveOpsContext,
+      articleSummaries,
+      localResponse
     );
 
     await logAppEvent({
@@ -247,7 +265,7 @@ export async function POST(request: NextRequest) {
   });
 
   return jsonResponse({
-    response: generateLocalResponse(message, route, snapshot),
+    response: localResponse,
   });
 }
 
@@ -257,30 +275,16 @@ async function handleOpenAI(
   route: string,
   pageHelp: string,
   snapshot: string,
-  articles: string
+  liveOps: string,
+  articles: string,
+  fallback: string
 ) {
-  const fallback = generateLocalResponse(message, route, {
-    businessName: "",
-    supportEmail: "",
-    phone: "",
-    heroMessage: "",
-    productsCount: 0,
-    productImagesCount: 0,
-    serviceAreasCount: 0,
-    ordersCount: 0,
-    paymentsCount: 0,
-    documentsCount: 0,
-    hasBusinessProfile: false,
-    hasWebsiteSettings: false,
-    hasBranding: false,
-    hasPricingRules: false,
-  });
-
   try {
     const systemPrompt = buildSystemPrompt({
       currentRoute: route,
       pageHelp,
       snapshot,
+      liveOps,
       articleSummaries: articles,
     });
 
@@ -322,30 +326,16 @@ async function handleAnthropic(
   route: string,
   pageHelp: string,
   snapshot: string,
-  articles: string
+  liveOps: string,
+  articles: string,
+  fallback: string
 ) {
-  const fallback = generateLocalResponse(message, route, {
-    businessName: "",
-    supportEmail: "",
-    phone: "",
-    heroMessage: "",
-    productsCount: 0,
-    productImagesCount: 0,
-    serviceAreasCount: 0,
-    ordersCount: 0,
-    paymentsCount: 0,
-    documentsCount: 0,
-    hasBusinessProfile: false,
-    hasWebsiteSettings: false,
-    hasBranding: false,
-    hasPricingRules: false,
-  });
-
   try {
     const systemPrompt = buildSystemPrompt({
       currentRoute: route,
       pageHelp,
       snapshot,
+      liveOps,
       articleSummaries: articles,
     });
 
@@ -379,12 +369,144 @@ async function handleAnthropic(
   }
 }
 
+function answerOperationalQuestion(
+  q: string,
+  ops: OperationalSnapshot
+): string | null {
+  const money = (n: number) => formatMoney(n, ops.currency, ops.locale);
+
+  // "What needs my attention?" — a quick daily-briefing roundup.
+  if (
+    (q.includes("attention") ||
+      q.includes("briefing") ||
+      q.includes("brief me") ||
+      q.includes("what's up") ||
+      q.includes("whats up") ||
+      q.includes("catch me up") ||
+      q.includes("to do") ||
+      q.includes("to-do") ||
+      q.includes("todo")) &&
+    !q.includes("how do")
+  ) {
+    const items: string[] = [];
+    if (ops.balanceDueSoonCount > 0) {
+      items.push(
+        `- **${ops.balanceDueSoonCount} upcoming order${ops.balanceDueSoonCount === 1 ? "" : "s"}** still owe ${money(ops.balanceDueSoonTotal)} — collect at [Payments](/dashboard/payments).`
+      );
+    }
+    if (ops.unsignedDocsUpcoming > 0) {
+      items.push(
+        `- **${ops.unsignedDocsUpcoming} document${ops.unsignedDocsUpcoming === 1 ? "" : "s"}** still unsigned for upcoming events — chase at [Documents](/dashboard/documents).`
+      );
+    }
+    if (ops.unreadMessages > 0) {
+      items.push(
+        `- **${ops.unreadMessages} unread message${ops.unreadMessages === 1 ? "" : "s"}** — reply at [Messages](/dashboard/messages).`
+      );
+    }
+    if (ops.openMaintenance > 0) {
+      items.push(
+        `- **${ops.openMaintenance} asset${ops.openMaintenance === 1 ? "" : "s"}** in maintenance — review at [Maintenance](/dashboard/maintenance).`
+      );
+    }
+
+    const header =
+      ops.eventsToday > 0
+        ? `You have **${ops.eventsToday} event${ops.eventsToday === 1 ? "" : "s"} today** and ${ops.eventsNext7Days} in the next 7 days.`
+        : `You have **${ops.eventsNext7Days} event${ops.eventsNext7Days === 1 ? "" : "s"}** in the next 7 days.`;
+
+    if (items.length === 0) {
+      return `${header}\n\nNothing is blocking your upcoming events — no balances due soon, no unsigned documents, no unread messages, and no assets in maintenance. You're in good shape. 🎉`;
+    }
+    return `${header}\n\nHere's what needs your attention:\n\n${items.join("\n")}`;
+  }
+
+  // Money owed / outstanding balance.
+  if (
+    q.includes("owed") ||
+    q.includes("owe me") ||
+    q.includes("outstanding") ||
+    q.includes("balance due") ||
+    q.includes("unpaid") ||
+    q.includes("who hasn't paid") ||
+    q.includes("who hasnt paid")
+  ) {
+    if (ops.outstandingBalance <= 0) {
+      return "You have no outstanding balances right now — every live order is fully paid. 🎉";
+    }
+    let msg = `You're owed **${money(ops.outstandingBalance)}** in total across your live orders.`;
+    if (ops.balanceDueSoonCount > 0) {
+      msg += ` Of that, ${money(ops.balanceDueSoonTotal)} is on **${ops.balanceDueSoonCount} order${ops.balanceDueSoonCount === 1 ? "" : "s"} with events in the next 7 days** — those are the most urgent to collect.`;
+    }
+    msg += `\n\nTo see who owes what and record payments, go to [Payments](/dashboard/payments) or open the specific order.`;
+    return msg;
+  }
+
+  // What's happening today / this week.
+  if (
+    q.includes("today") ||
+    q.includes("this week") ||
+    q.includes("upcoming") ||
+    q.includes("schedule") ||
+    q.includes("what's on") ||
+    q.includes("whats on") ||
+    q.includes("happening")
+  ) {
+    return `You have **${ops.eventsToday} event${ops.eventsToday === 1 ? "" : "s"} today** and **${ops.eventsNext7Days} in the next 7 days**.${
+      ops.balanceDueSoonCount > 0
+        ? ` ${ops.balanceDueSoonCount} of the upcoming order${ops.balanceDueSoonCount === 1 ? "" : "s"} still ${ops.balanceDueSoonCount === 1 ? "owes" : "owe"} a balance (${money(ops.balanceDueSoonTotal)}).`
+        : ""
+    }\n\nView the full schedule on the [Calendar](/dashboard/calendar) or plan delivery routes at [Deliveries](/dashboard/deliveries).`;
+  }
+
+  // How am I doing this month / revenue.
+  if (
+    q.includes("this month") ||
+    q.includes("revenue") ||
+    q.includes("how am i doing") ||
+    q.includes("how's business") ||
+    q.includes("hows business") ||
+    q.includes("collected") ||
+    q.includes("made this")
+  ) {
+    return `You've collected **${money(ops.revenueThisMonth)}** so far this month across ${ops.paymentsThisMonthCount} payment${ops.paymentsThisMonthCount === 1 ? "" : "s"}.${
+      ops.outstandingBalance > 0
+        ? ` You still have ${money(ops.outstandingBalance)} outstanding across live orders.`
+        : ""
+    }\n\nFor revenue trends, top products, and busiest days, open [Analytics](/dashboard/analytics).`;
+  }
+
+  // Unread messages.
+  if (
+    q.includes("message") ||
+    q.includes("unread") ||
+    q.includes("inbox") ||
+    q.includes("reply") ||
+    q.includes("replies")
+  ) {
+    if (ops.unreadMessages <= 0) {
+      return "Your inbox is clear — no unread customer messages right now. View the conversation history at [Messages](/dashboard/messages).";
+    }
+    return `You have **${ops.unreadMessages} unread customer message${ops.unreadMessages === 1 ? "" : "s"}**. Reply at [Messages](/dashboard/messages).`;
+  }
+
+  return null;
+}
+
 function generateLocalResponse(
   message: string,
   route: string,
-  snapshot: GuidanceSnapshot
+  snapshot: GuidanceSnapshot,
+  opSnapshot?: OperationalSnapshot
 ): string {
   const q = message.toLowerCase();
+
+  // Live operational questions — answered from real business data when
+  // available, so the no-API-key fallback is still genuinely useful.
+  if (opSnapshot?.available) {
+    const opsAnswer = answerOperationalQuestion(q, opSnapshot);
+    if (opsAnswer) return opsAnswer;
+  }
 
   if (
     q.includes("next") ||

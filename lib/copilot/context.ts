@@ -1,6 +1,8 @@
 import { pageHelpMap } from "@/lib/help/page-help";
 import { helpArticles } from "@/lib/help/articles";
 import type { GuidanceSnapshot } from "@/lib/data/guidance-snapshot";
+import type { OperationalSnapshot } from "@/lib/data/operational-snapshot";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 
 export function getPageHelpContext(route: string): string {
   const help = pageHelpMap[route];
@@ -22,6 +24,27 @@ export function getSnapshotContext(snapshot: GuidanceSnapshot): string {
     `Documents: ${snapshot.documentsCount}`,
     `Website hero message: ${snapshot.hasWebsiteSettings ? "Set" : "Not set"}`,
   ];
+  return lines.join("\n");
+}
+
+export function getOperationalContext(snapshot: OperationalSnapshot): string {
+  if (!snapshot.available) {
+    return "Live operational data is not available right now (demo mode or not signed in). Answer questions in general terms and point the operator to the relevant dashboard page.";
+  }
+
+  const money = (n: number) => formatMoney(n, snapshot.currency, snapshot.locale);
+
+  const lines = [
+    `Money owed to the business right now (outstanding balance across live orders): ${money(snapshot.outstandingBalance)}`,
+    `Revenue collected so far this month: ${money(snapshot.revenueThisMonth)} across ${snapshot.paymentsThisMonthCount} payment${snapshot.paymentsThisMonthCount === 1 ? "" : "s"}`,
+    `Events happening today: ${snapshot.eventsToday}`,
+    `Events in the next 7 days: ${snapshot.eventsNext7Days}`,
+    `Upcoming orders (next 7 days) with a balance still owed: ${snapshot.balanceDueSoonCount}${snapshot.balanceDueSoonCount > 0 ? ` (totaling ${money(snapshot.balanceDueSoonTotal)})` : ""}`,
+    `Documents still unsigned for upcoming events: ${snapshot.unsignedDocsUpcoming}`,
+    `Unread customer messages: ${snapshot.unreadMessages}`,
+    `Assets currently in maintenance / out of service: ${snapshot.openMaintenance}`,
+  ];
+
   return lines.join("\n");
 }
 
