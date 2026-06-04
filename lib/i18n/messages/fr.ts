@@ -2673,6 +2673,12 @@ export const fr: Messages = {
       confirm: "Mettre à jour le statut",
       updating: "Mise à jour…",
     },
+    documents: {
+      title: "Générer les documents",
+      body: "Crée un contrat de location et une décharge pour cette commande et les envoie au client pour signature.",
+      confirm: "Générer les documents",
+      generating: "Génération…",
+    },
   },
 
   trackingMap: {

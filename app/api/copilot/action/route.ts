@@ -70,6 +70,14 @@ const orderStatusActionSchema = z.object({
   }),
 });
 
+const generateDocumentsActionSchema = z.object({
+  type: z.literal("generate_documents"),
+  preview: z.string().max(500).optional().default(""),
+  params: z.object({
+    orderId: z.string().uuid("Invalid order identifier."),
+  }),
+});
+
 function jsonResponse(
   body: Record<string, unknown>,
   init?: ResponseInit
@@ -160,7 +168,9 @@ export async function POST(request: NextRequest) {
       ? paymentActionSchema.safeParse(requestBody)
       : requestType === "update_order_status"
         ? orderStatusActionSchema.safeParse(requestBody)
-        : contentActionSchema.safeParse(requestBody);
+        : requestType === "generate_documents"
+          ? generateDocumentsActionSchema.safeParse(requestBody)
+          : contentActionSchema.safeParse(requestBody);
   if (!parsed.success) {
     await logAppError({
       organizationId: access.organizationId,
@@ -242,6 +252,24 @@ export async function POST(request: NextRequest) {
             actionType: action.type,
             orderId: action.params.orderId,
             newStatus: action.params.newStatus,
+            ip: clientIp,
+            userAgent,
+          },
+        });
+      } else if (action.type === "generate_documents") {
+        revalidatePath("/dashboard/documents");
+        revalidatePath(`/dashboard/orders/${action.params.orderId}`);
+
+        await logAppEvent({
+          organizationId: access.organizationId,
+          userId: access.userId,
+          source: "copilot.action",
+          action: "action_executed",
+          status: "success",
+          route: "/dashboard/documents",
+          metadata: {
+            actionType: action.type,
+            orderId: action.params.orderId,
             ip: clientIp,
             userAgent,
           },

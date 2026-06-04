@@ -33,6 +33,7 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
     { label: "Why isn't my order confirming?", prompt: "Why is my order not automatically confirming after payment?" },
   ],
   "/dashboard/documents": [
+    { label: "Generate documents for an order", prompt: "Generate the rental agreement and waiver for one of my orders." },
     { label: "How do I generate documents?", prompt: "How do I generate documents for an order?" },
     { label: "What documents are created?", prompt: "What types of documents does Korent create?" },
   ],

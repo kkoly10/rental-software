@@ -2674,6 +2674,12 @@ const enValues = {
       confirm: "Update Status",
       updating: "Updating…",
     },
+    documents: {
+      title: "Generate documents",
+      body: "Creates a rental agreement and safety waiver for this order and emails the customer to sign.",
+      confirm: "Generate Documents",
+      generating: "Generating…",
+    },
   },
 
   trackingMap: {

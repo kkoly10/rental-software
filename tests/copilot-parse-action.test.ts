@@ -96,6 +96,21 @@ test("rejects update_order_status with a missing orderId", () => {
   assert.equal(parseActionFromResponse(raw).action, null);
 });
 
+test("parses a valid generate_documents action", () => {
+  const raw = `Generating those now.\n[ACTION:{"type":"generate_documents","preview":"Generate docs for #1042","params":{"orderId":"${ORDER_ID}"}}]`;
+  const { text, action } = parseActionFromResponse(raw);
+  assert.equal(text, "Generating those now.");
+  assert.ok(action && action.type === "generate_documents");
+  if (action.type === "generate_documents") {
+    assert.equal(action.params.orderId, ORDER_ID);
+  }
+});
+
+test("rejects generate_documents with a missing orderId", () => {
+  const raw = `[ACTION:{"type":"generate_documents","params":{}}]`;
+  assert.equal(parseActionFromResponse(raw).action, null);
+});
+
 test("malformed JSON in the action block is treated as plain text", () => {
   const raw = "Sure.\n[ACTION:{not valid json}]";
   const { text, action } = parseActionFromResponse(raw);
