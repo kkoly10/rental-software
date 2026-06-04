@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CopilotMessageList, type CopilotMessage } from "./copilot-message-list";
 import { CopilotInput } from "./copilot-input";
 import { CopilotSuggestedPrompts } from "./copilot-suggested-prompts";
 import { CopilotActionPreview } from "./copilot-action-preview";
 import { getSuggestedPrompts } from "@/lib/copilot/suggested-prompts";
 import type { CopilotAction } from "@/lib/copilot/actions";
+import { parseActionFromResponse } from "@/lib/copilot/parse-action";
+import { COPILOT_HISTORY_LIMIT } from "@/lib/validation/copilot";
 import { useI18n } from "@/lib/i18n/provider";
+
+// Keep history items comfortably under the server-side per-message cap.
+const HISTORY_CONTENT_MAX = 4000;
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
@@ -15,40 +20,6 @@ function getErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
-}
-
-/**
- * Parse `[ACTION:{...}]` blocks from an AI response.
- * Returns the cleaned text (without the action block) and the parsed action if found.
- */
-function parseActionFromResponse(content: string): {
-  text: string;
-  action: CopilotAction | null;
-} {
-  const actionRegex = /\[ACTION:\s*(\{[\s\S]*?\})\s*\]/;
-  const match = content.match(actionRegex);
-
-  if (!match) {
-    return { text: content, action: null };
-  }
-
-  try {
-    const parsed = JSON.parse(match[1]);
-    if (parsed.type && parsed.field && parsed.value) {
-      const action: CopilotAction = {
-        type: parsed.type,
-        field: parsed.field,
-        value: parsed.value,
-        preview: parsed.preview || "",
-      };
-      const text = content.replace(actionRegex, "").trim();
-      return { text, action };
-    }
-  } catch {
-    // JSON parse failed, treat as normal text
-  }
-
-  return { text: content, action: null };
 }
 
 type PendingAction = {
@@ -69,6 +40,13 @@ export function CopilotPanel({
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [currentValues, setCurrentValues] = useState<Record<string, string>>({});
   const prompts = getSuggestedPrompts(currentRoute);
+
+  // Mirror of `messages` read at send time so the request carries the latest
+  // conversation without putting `messages` in sendMessage's dependency list.
+  const messagesRef = useRef<CopilotMessage[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +96,15 @@ export function CopilotPanel({
       const trimmed = content.trim();
       if (!trimmed) return;
 
+      // Capture prior turns before appending the new one.
+      const history = messagesRef.current
+        .slice(-COPILOT_HISTORY_LIMIT)
+        .map((m) => ({
+          role: m.role,
+          content: m.content.slice(0, HISTORY_CONTENT_MAX),
+        }))
+        .filter((m) => m.content.trim().length > 0);
+
       const userMsg: CopilotMessage = { role: "user", content: trimmed };
       setMessages((prev) => [...prev, userMsg]);
       setLoading(true);
@@ -126,7 +113,7 @@ export function CopilotPanel({
         const res = await fetch("/api/copilot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed, route: currentRoute }),
+          body: JSON.stringify({ message: trimmed, route: currentRoute, history }),
         });
 
         const data = await res.json().catch(() => null);

@@ -32,6 +32,7 @@ export async function recordPayment(
     paymentMethod: String(formData.get("payment_method") ?? "cash"),
     referenceNote: String(formData.get("reference_note") ?? ""),
     paidAt: String(formData.get("paid_at") ?? ""),
+    source: String(formData.get("source") ?? "dashboard"),
   });
 
   if (!parsed.success) {
@@ -41,7 +42,7 @@ export async function recordPayment(
     };
   }
 
-  const { orderId, amount, paymentType, paymentMethod, referenceNote, paidAt } =
+  const { orderId, amount, paymentType, paymentMethod, referenceNote, paidAt, source } =
     parsed.data;
 
   if (!hasSupabaseEnv()) {
@@ -201,6 +202,10 @@ export async function recordPayment(
         payment_method: paymentMethod,
         net_paid: netPaid,
         new_balance: newBalance,
+        // Attribution channel for compliance: "copilot" means the operator
+        // recorded this through the AI Operator Copilot (still on their own
+        // authenticated account, with an explicit confirm-before-apply step).
+        recorded_via: source,
       },
     });
   }

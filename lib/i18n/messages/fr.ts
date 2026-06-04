@@ -2646,6 +2646,18 @@ export const fr: Messages = {
       faq: "FAQ",
       aboutSection: "Section À propos",
     },
+    recordPayment: {
+      title: "Enregistrer un paiement",
+      order: "Commande",
+      amount: "Montant",
+      method: "Moyen",
+      type: "Type",
+      note: "Note",
+      caution: "En confirmant, vous autorisez l’enregistrement de ce paiement via le copilote sous votre compte. Le paiement est horodaté et journalisé, et le client peut être notifié.",
+      confirm: "Enregistrer le paiement",
+      viewOrder: "Voir la commande ↗",
+      recording: "Enregistrement…",
+    },
   },
 
   trackingMap: {

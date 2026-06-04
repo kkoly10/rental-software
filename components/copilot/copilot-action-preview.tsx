@@ -1,11 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import type { CopilotAction } from "@/lib/copilot/actions";
+import type {
+  CopilotAction,
+  CopilotContentAction,
+  CopilotPaymentAction,
+} from "@/lib/copilot/actions";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Messages } from "@/lib/i18n/dictionaries";
 
-function getFieldLabel(action: CopilotAction, m: Messages): string {
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+  deposit: "Deposit",
+  balance: "Balance",
+  partial: "Partial",
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "Cash",
+  check: "Check",
+  card_manual: "Card",
+  venmo: "Venmo",
+  zelle: "Zelle",
+  other: "Other",
+};
+
+function getFieldLabel(action: CopilotContentAction, m: Messages): string {
   const fieldLabels: Record<string, string> = {
     hero_message: m.copilot.fields.heroMessage,
     service_area_text: m.copilot.fields.serviceAreaText,
@@ -62,6 +81,37 @@ export function CopilotActionPreview({
   onDismiss,
 }: {
   action: CopilotAction;
+  currentValues?: Record<string, string>;
+  onApply: (action: CopilotAction) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  // Dispatch by action kind so each preview owns its own hooks unconditionally.
+  if (action.type === "record_payment") {
+    return (
+      <PaymentActionPreview
+        action={action}
+        onApply={onApply}
+        onDismiss={onDismiss}
+      />
+    );
+  }
+  return (
+    <ContentActionPreview
+      action={action}
+      currentValues={currentValues}
+      onApply={onApply}
+      onDismiss={onDismiss}
+    />
+  );
+}
+
+function ContentActionPreview({
+  action,
+  currentValues,
+  onApply,
+  onDismiss,
+}: {
+  action: CopilotContentAction;
   currentValues?: Record<string, string>;
   onApply: (action: CopilotAction) => Promise<void>;
   onDismiss: () => void;
@@ -159,6 +209,118 @@ export function CopilotActionPreview({
           disabled={applying}
         >
           {applying ? m.copilot.applying : m.copilot.applyChanges}
+        </button>
+        <button
+          className="ghost-btn copilot-action-dismiss-btn"
+          onClick={onDismiss}
+          disabled={applying}
+        >
+          {m.copilot.dismiss}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentActionPreview({
+  action,
+  onApply,
+  onDismiss,
+}: {
+  action: CopilotPaymentAction;
+  onApply: (action: CopilotAction) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  const { messages: m, locale } = useI18n();
+  const [applying, setApplying] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(
+    null
+  );
+
+  const { params } = action;
+  const rp = m.copilot.recordPayment;
+  const amountDisplay = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(params.amount);
+
+  async function handleApply() {
+    setApplying(true);
+    try {
+      await onApply(action);
+      setResult({ ok: true, message: m.copilot.appliedSuccess });
+    } catch (error) {
+      setResult({
+        ok: false,
+        message: error instanceof Error ? error.message : m.copilot.failedToApply,
+      });
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div
+        className={
+          result.ok
+            ? "copilot-action-preview copilot-action-success"
+            : "copilot-action-preview copilot-action-error"
+        }
+      >
+        <div className="copilot-action-field-label">
+          {result.ok ? m.copilot.appliedLabel : m.copilot.errorLabel}
+        </div>
+        <div style={{ fontSize: 13 }}>{result.message}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="copilot-action-preview">
+      <div className="copilot-action-field-label">{rp.title}</div>
+      {action.preview && (
+        <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 6 }}>
+          {action.preview}
+        </div>
+      )}
+      <div style={{ fontSize: 13, display: "grid", gap: 4, marginBottom: 8 }}>
+        <div>
+          <strong>{rp.order}:</strong>{" "}
+          <a
+            href={`/dashboard/orders/${params.orderId}`}
+            style={{ color: "var(--primary)" }}
+          >
+            {rp.viewOrder}
+          </a>
+        </div>
+        <div>
+          <strong>{rp.amount}:</strong> {amountDisplay}
+        </div>
+        <div>
+          <strong>{rp.method}:</strong>{" "}
+          {PAYMENT_METHOD_LABELS[params.paymentMethod] ?? params.paymentMethod}
+        </div>
+        <div>
+          <strong>{rp.type}:</strong>{" "}
+          {PAYMENT_TYPE_LABELS[params.paymentType] ?? params.paymentType}
+        </div>
+        {params.referenceNote && (
+          <div>
+            <strong>{rp.note}:</strong> {params.referenceNote}
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 8 }}>
+        {rp.caution}
+      </div>
+      <div className="copilot-action-buttons">
+        <button
+          className="primary-btn copilot-action-apply-btn"
+          onClick={handleApply}
+          disabled={applying}
+        >
+          {applying ? rp.recording : rp.confirm}
         </button>
         <button
           className="ghost-btn copilot-action-dismiss-btn"

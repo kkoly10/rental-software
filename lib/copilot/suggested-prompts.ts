@@ -4,6 +4,7 @@ export type SuggestedPrompt = {
 };
 
 const globalPrompts: SuggestedPrompt[] = [
+  { label: "What needs my attention?", prompt: "What needs my attention today?" },
   { label: "Help me get set up", prompt: "Help me get set up. What should I do first?" },
   { label: "What should I do next?", prompt: "What should I do next based on my current setup progress?" },
   { label: "Explain this page", prompt: "Explain what this page is for and what I can do here." },
@@ -12,8 +13,10 @@ const globalPrompts: SuggestedPrompt[] = [
 
 const routePrompts: Record<string, SuggestedPrompt[]> = {
   "/dashboard": [
-    { label: "Explain the dashboard stats", prompt: "What do the dashboard stats mean?" },
-    { label: "How do I get my first booking?", prompt: "How do I get my first customer booking?" },
+    { label: "What needs my attention?", prompt: "What needs my attention today?" },
+    { label: "How much am I owed?", prompt: "How much money am I owed right now?" },
+    { label: "What's on this week?", prompt: "What events do I have coming up this week?" },
+    { label: "How am I doing this month?", prompt: "How much revenue have I collected this month?" },
   ],
   "/dashboard/products": [
     { label: "How do I add a product?", prompt: "How do I add a new product to my catalog?" },
@@ -24,7 +27,8 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
     { label: "Order statuses explained", prompt: "Explain the different order statuses and what they mean." },
   ],
   "/dashboard/payments": [
-    { label: "How do I record a payment?", prompt: "How do I record a payment for an order?" },
+    { label: "How much am I owed?", prompt: "How much money am I owed right now?" },
+    { label: "Record a payment", prompt: "Help me record a payment on an order that still owes a balance." },
     { label: "Why isn't my order confirming?", prompt: "Why is my order not automatically confirming after payment?" },
   ],
   "/dashboard/documents": [
