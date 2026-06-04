@@ -2009,11 +2009,11 @@ export const es: Messages = {
         timeLabel: "Hora (opcional)",
         submit: "Agregar parada",
         submitting: "Agregando…",
-        noUnroutedOrders: "No hay pedidos confirmados sin ruta para esta fecha.",
+        noUnroutedOrders: "No hay pedidos confirmados sin parada para esta fecha.",
         empty: {
           noOrdersTitle: "Aún no hay pedidos para esta fecha",
           noOrdersBody:
-            "Crea un pedido con fecha de evento {date} y el cliente aparecerá aquí para añadirlo como parada.",
+            "Crea un pedido cuya fecha de evento o fecha de fin de alquiler sea {date} y aparecerá aquí como parada de entrega o recogida.",
           createOrderCta: "Crear un pedido para esta fecha",
           blockedTitle: "{count} pedido(s) en esta fecha necesitan una corrección",
           blockedBody:

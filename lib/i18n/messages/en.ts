@@ -2010,11 +2010,11 @@ const enValues = {
         timeLabel: "Time (optional)",
         submit: "Add Stop",
         submitting: "Adding…",
-        noUnroutedOrders: "No confirmed orders without a route for this date.",
+        noUnroutedOrders: "No confirmed orders without a stop on this date.",
         empty: {
           noOrdersTitle: "No orders for this date yet",
           noOrdersBody:
-            "Create an order with event date {date} and the customer will appear here to attach as a stop.",
+            "Create an order whose event date or rental end date is {date} and it will appear here to attach as a delivery or pickup stop.",
           createOrderCta: "Create an order for this date",
           blockedTitle: "{count} order(s) on this date need a fix first",
           blockedBody:
