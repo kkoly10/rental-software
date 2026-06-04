@@ -57,6 +57,11 @@ export type CheckoutActionState = {
     // products, or wet rentals where the operator left the upcharge
     // blank.
     wetUpcharge?: string;
+    // Populated when the deposit minimum exceeded the order total and
+    // the system clamped the deposit down to the total. Surfaced on the
+    // review screen so a customer paying $50 on a $100-minimum config
+    // sees why, instead of the deposit silently shrinking.
+    depositClampNote?: string;
   };
 };
 
@@ -423,6 +428,17 @@ export async function createCheckoutOrder(
     return { ok: false, message: "Please select an event date to check availability." };
   }
 
+  // Reject a reversed multi-day range up front. Earlier code (~line 339)
+  // only entered the per-day pricing branch when rentalEndDate >= eventDate;
+  // a customer entering "Jun 15 to Jun 10" was silently charged for one day.
+  // Hard-fail with a clear message instead.
+  if (eventDate && rentalEndDate && rentalEndDate < eventDate) {
+    return {
+      ok: false,
+      message: "Rental end date must be on or after the event date.",
+    };
+  }
+
   // Enforce booking date policies (lead time and max advance).
   // event_date is a YYYY-MM-DD calendar day; we compare it to the calendar
   // day that's `lead_time_hours` from now, not to "now" directly — otherwise
@@ -655,8 +671,15 @@ export async function createCheckoutOrder(
   // a small order; charging more than the total is invalid. Previously
   // this clamp was silent; we now also surface a structured warning so
   // operators can spot the misconfiguration.
+  let depositClampNote: string | undefined;
   if (depositCents > totalCents) {
+    const configuredCents = depositCents;
     depositCents = totalCents;
+    depositClampNote = `Deposit shown is your order total ($${(totalCents / 100).toFixed(
+      2
+    )}). The configured minimum ($${(configuredCents / 100).toFixed(
+      2
+    )}) exceeds the order total, so the deposit was reduced.`;
     await logAppEvent({
       organizationId: orgId,
       source: "checkout.website",
@@ -1025,6 +1048,7 @@ export async function createCheckoutOrder(
             depositDue: fmt(deposit),
             balanceDue: fmt(balance),
             wetUpcharge: wetUpchargeApplied > 0 ? fmt(wetUpchargeApplied) : undefined,
+            depositClampNote,
           },
         };
       }
@@ -1081,6 +1105,7 @@ export async function createCheckoutOrder(
       depositDue: fmt(deposit),
       balanceDue: fmt(balance),
       wetUpcharge: wetUpchargeApplied > 0 ? fmt(wetUpchargeApplied) : undefined,
+      depositClampNote,
     },
   };
 }

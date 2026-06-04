@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { CalendarEvent } from "@/lib/data/calendar";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatMessage } from "@/lib/i18n/format";
@@ -49,6 +50,10 @@ function getMonthName(locale: string, monthOneBased: number): string {
 export function MonthGrid({ year, month, events }: Props) {
   const router = useRouter();
   const { locale, messages: m } = useI18n();
+  // Day number (1-31) of the day whose full event list is currently expanded
+  // inline, or null when no day is expanded. Replaces the previous static
+  // "+N more" pill that couldn't be clicked through.
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfWeek(year, month);
   const today = new Date();
@@ -168,62 +173,80 @@ export function MonthGrid({ year, month, events }: Props) {
                   >
                     {day}
                   </div>
-                  {dayEvents.slice(0, 3).map((ev) => (
-                    <div
-                      key={ev.id}
-                      title={ev.label}
-                      style={{
-                        fontSize: 11,
-                        padding: "2px 5px",
-                        marginBottom: 2,
-                        borderRadius: 4,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        background:
-                          ev.type === "block"
-                            ? "#fdeaea"
-                            : ev.tone === "success"
-                            ? "#eaf9f4"
-                            : ev.tone === "warning"
-                            ? "#fff4e5"
-                            : "#eef3fb",
-                        color:
-                          ev.type === "block"
-                            ? "#c33"
-                            : ev.tone === "success"
-                            ? "#188862"
-                            : ev.tone === "warning"
-                            ? "#a86a08"
-                            : "var(--text)",
-                      }}
-                    >
-                      {ev.type === "order" ? (
-                        <Link
-                          href={`/dashboard/orders/${ev.id}`}
-                          style={{
-                            color: "inherit",
-                            textDecoration: "none",
-                          }}
-                        >
-                          {ev.label}
-                        </Link>
-                      ) : (
-                        ev.label
-                      )}
-                    </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: "var(--text-soft)",
-                        paddingLeft: 5,
-                      }}
-                    >
-                      {formatMessage(m.calendar.moreEvents, { count: dayEvents.length - 3 })}
-                    </div>
-                  )}
+                  {(() => {
+                    const isExpanded = expandedDay === day;
+                    const visible = isExpanded ? dayEvents : dayEvents.slice(0, 3);
+                    return (
+                      <>
+                        {visible.map((ev) => (
+                          <div
+                            key={ev.id}
+                            title={ev.label}
+                            style={{
+                              fontSize: 11,
+                              padding: "2px 5px",
+                              marginBottom: 2,
+                              borderRadius: 4,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              background:
+                                ev.type === "block"
+                                  ? "#fdeaea"
+                                  : ev.tone === "success"
+                                  ? "#eaf9f4"
+                                  : ev.tone === "warning"
+                                  ? "#fff4e5"
+                                  : "#eef3fb",
+                              color:
+                                ev.type === "block"
+                                  ? "#c33"
+                                  : ev.tone === "success"
+                                  ? "#188862"
+                                  : ev.tone === "warning"
+                                  ? "#a86a08"
+                                  : "var(--text)",
+                            }}
+                          >
+                            {ev.type === "order" ? (
+                              <Link
+                                href={`/dashboard/orders/${ev.id}`}
+                                style={{
+                                  color: "inherit",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                {ev.label}
+                              </Link>
+                            ) : (
+                              ev.label
+                            )}
+                          </div>
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedDay(isExpanded ? null : day)}
+                            aria-expanded={isExpanded}
+                            style={{
+                              fontSize: 10,
+                              color: "var(--text-soft)",
+                              paddingLeft: 5,
+                              background: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              font: "inherit",
+                            }}
+                          >
+                            {isExpanded
+                              ? m.calendar.collapseEvents
+                              : formatMessage(m.calendar.moreEvents, { count: dayEvents.length - 3 })}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>

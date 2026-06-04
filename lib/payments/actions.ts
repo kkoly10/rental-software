@@ -222,7 +222,11 @@ export async function recordPayment(
   // dangling in its prior status after the refund cleared the balance.
   // Don't overwrite terminal statuses (`cancelled` / `refunded`) — the
   // .not() guard handles the TOCTOU window between SELECT and UPDATE.
-  if (paymentType === "refund" && netPaid <= 0) {
+  //
+  // Use a half-cent epsilon instead of `<= 0`: a $99.99 refund on a $100
+  // order leaves netPaid at $0.01 due to float math, and the strict zero
+  // check left those orders stuck in their prior status.
+  if (paymentType === "refund" && netPaid <= 0.005) {
     await supabase
       .from("orders")
       .update({ order_status: "refunded" })

@@ -33,6 +33,92 @@ export function OnboardingForm() {
   // hardcoded behavior for anyone who skims the form.
   const [businessType, setBusinessType] = useState<"" | "inflatable" | "car" | "equipment">("");
 
+  // Detect the browser timezone so a UK or Pacific operator isn't silently
+  // defaulted to Eastern US time. Only honour it when it matches one of the
+  // four options the dropdown actually exposes; otherwise the operator picks
+  // manually. SSR uses Eastern as the fallback to avoid hydration mismatch.
+  const KNOWN_TIMEZONES = [
+    "America/New_York",
+    "America/Chicago",
+    "America/Denver",
+    "America/Los_Angeles",
+  ] as const;
+  const [defaultTimezone, setDefaultTimezone] = useState<string>("America/New_York");
+  useEffect(() => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (detected && (KNOWN_TIMEZONES as readonly string[]).includes(detected)) {
+        setDefaultTimezone(detected);
+      }
+    } catch {
+      // Intl unavailable — keep the Eastern fallback.
+    }
+    // KNOWN_TIMEZONES is a static const; safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the partial form to localStorage so a user who closes the tab
+  // (or hits a network glitch mid-submit) can pick up where they left off.
+  // Cleared on a successful submit (see effect below).
+  const ONBOARDING_DRAFT_KEY = "korent-onboarding-draft";
+  const [resumedDraft, setResumedDraft] = useState(false);
+  useEffect(() => {
+    if (state.ok && typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+      } catch {
+        // ignore
+      }
+    }
+  }, [state.ok]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(ONBOARDING_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as {
+        businessName?: string;
+        slug?: string;
+        slugEdited?: boolean;
+        businessType?: "" | "inflatable" | "car" | "equipment";
+      };
+      let hydrated = false;
+      if (draft.businessName) {
+        setBusinessName(draft.businessName);
+        hydrated = true;
+      }
+      if (draft.slug) {
+        setSlug(draft.slug);
+        hydrated = true;
+      }
+      if (draft.slugEdited) setSlugEdited(true);
+      if (draft.businessType) {
+        setBusinessType(draft.businessType);
+        hydrated = true;
+      }
+      if (hydrated) setResumedDraft(true);
+    } catch {
+      // Corrupt JSON or storage blocked — silently start fresh.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Only write a draft once the user has typed something non-trivial;
+    // we don't want the resume banner to fire on a totally empty form.
+    if (!businessName && !slug && !businessType) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        ONBOARDING_DRAFT_KEY,
+        JSON.stringify({ businessName, slug, slugEdited, businessType })
+      );
+    } catch {
+      // Storage unavailable — skip silently; the form still works.
+    }
+  }, [businessName, slug, slugEdited, businessType]);
+
   useEffect(() => {
     if (!slugEdited && businessName) {
       setSlug(generateSlugClient(businessName));
@@ -205,7 +291,12 @@ export function OnboardingForm() {
 
       <label className="order-card">
         <strong>{f.timezone}</strong>
-        <select name="timezone" defaultValue="America/New_York" style={{ marginTop: 10, width: "100%" }}>
+        <select
+          key={defaultTimezone}
+          name="timezone"
+          defaultValue={defaultTimezone}
+          style={{ marginTop: 10, width: "100%" }}
+        >
           <option value="America/New_York">{f.timezoneOptions.eastern}</option>
           <option value="America/Chicago">{f.timezoneOptions.central}</option>
           <option value="America/Denver">{f.timezoneOptions.mountain}</option>
@@ -265,6 +356,16 @@ export function OnboardingForm() {
       {state.message && !state.ok && (
         <div className="badge warning" style={{ padding: "10px 14px" }}>
           {state.message}
+        </div>
+      )}
+
+      {resumedDraft && !state.ok && (
+        <div
+          role="status"
+          className="badge info"
+          style={{ padding: "10px 14px", display: "block" }}
+        >
+          {f.resumeBanner}
         </div>
       )}
 

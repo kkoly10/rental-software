@@ -130,6 +130,14 @@ export function CheckoutForm({
                 <span className="muted">{m.checkout.review.balanceDueLater}</span>
                 <span>{s.balanceDue}</span>
               </div>
+              {s.depositClampNote && (
+                <div
+                  className="muted"
+                  style={{ fontSize: 12, lineHeight: 1.4, marginTop: 4 }}
+                >
+                  {s.depositClampNote}
+                </div>
+              )}
             </div>
           </div>
         </div>

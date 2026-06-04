@@ -80,7 +80,7 @@ export const checklistItems: ChecklistItem[] = [
     description: "Upload your logo and choose brand colors to make your storefront uniquely yours.",
     href: "/dashboard/website",
     order: 9,
-    isComplete: () => false, // Manual — always shown until dismissed
+    isComplete: (s) => s.hasBranding,
   },
   {
     id: "navigation-links",
@@ -96,7 +96,7 @@ export const checklistItems: ChecklistItem[] = [
     description: "Set up weekend surcharges, early bird discounts, or seasonal rates to maximize revenue.",
     href: "/dashboard/pricing",
     order: 11,
-    isComplete: () => false, // Manual — always shown until dismissed
+    isComplete: (s) => s.hasPricingRules,
   },
   {
     id: "sms-setup",

@@ -19,6 +19,13 @@ import { logAppError, logAppEvent } from "@/lib/observability/server";
 export type AuthActionState = {
   ok: boolean;
   message: string;
+  // Set when sign-in is blocked because the email is unverified. The login
+  // form reads this and surfaces a "Resend verification email" affordance
+  // instead of leaving the user stuck with no self-serve recovery.
+  needsVerification?: boolean;
+  /** Echo back the email the user submitted so the resend-button can call
+      the resend action without making the user re-type it. */
+  email?: string;
 };
 
 function getValidationMessage(error: ZodError) {
@@ -183,6 +190,8 @@ export async function signInWithPassword(
     return {
       ok: false,
       message: "Please verify your email before signing in.",
+      needsVerification: true,
+      email: user.email ?? undefined,
     };
   }
 
@@ -320,6 +329,78 @@ export async function signUpWithPassword(
 
   await supabase.auth.signOut();
   redirect("/auth/verify-email");
+}
+
+/**
+ * Re-send the email-confirmation link for an account that signed up but
+ * never clicked through. Without this, a user who lost the original email
+ * has no self-serve path back into the product — they have to make a new
+ * account or contact support.
+ */
+export async function resendVerificationEmail(
+  _prevState: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) {
+    return { ok: false, message: "Enter the email you signed up with." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return {
+      ok: true,
+      message: "Demo mode: verification email would be resent.",
+    };
+  }
+
+  try {
+    const limits = await enforceRateLimit({
+      scope: "auth:resend-verification:email",
+      actor: email,
+      limit: 3,
+      windowSeconds: 600,
+      strict: true,
+    });
+    if (!limits.allowed) {
+      return {
+        ok: false,
+        message: "Too many requests. Wait a few minutes and try again.",
+      };
+    }
+  } catch {
+    return {
+      ok: false,
+      message: "Unable to send the verification email right now. Please try again shortly.",
+    };
+  }
+
+  const siteUrl = await getSiteUrl();
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${siteUrl}/auth/confirm?next=/onboarding`,
+    },
+  });
+
+  if (error) {
+    // Don't leak which emails are registered. A 'User not found' from
+    // Supabase still returns ok=true to the caller (mirrors the password
+    // reset action's behaviour).
+    await logAppEvent({
+      source: "auth.resend-verification",
+      action: "supabase_resend_returned_error",
+      status: "warning",
+      metadata: { message: error.message },
+    });
+  }
+
+  return {
+    ok: true,
+    message:
+      "If your account exists and is unverified, we just sent a fresh link. Check your email.",
+  };
 }
 
 export async function requestPasswordReset(

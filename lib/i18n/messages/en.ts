@@ -409,6 +409,8 @@ const enValues = {
       signIn: "Sign In",
       signingIn: "Signing In…",
       forgotPasswordLink: "Forgot password?",
+      resendVerification: "Resend verification email",
+      resendingVerification: "Sending…",
       name: "Full Name",
       namePlaceholder: "Jane Doe",
       businessName: "Business Name",
@@ -630,7 +632,7 @@ const enValues = {
     },
     orders: {
       title: "Orders",
-      description: "Track inquiries, confirmed bookings, payments, and delivery readiness.",
+      description: "Every order in the pipeline, from inquiry to completed. Use this view to see the whole funnel.",
       kicker: "Rental pipeline",
       sectionTitle: "All orders",
       searchPlaceholder: "Search by customer, item, status, or amount",
@@ -822,7 +824,7 @@ const enValues = {
     deliveries: {
       liveBadge: "Live",
       title: "Delivery Board",
-      description: "Track routes, stop status, and crew progress.",
+      description: "Only orders routed for delivery, grouped by route and day. Use this view when you're dispatching crews.",
       kickerDispatch: "Dispatch",
       kickerOperations: "Operations",
       sectionCreateRoute: "Create a route",
@@ -941,7 +943,7 @@ const enValues = {
     },
     calendar: {
       title: "Calendar",
-      description: "View bookings, deliveries, availability blocks, and upcoming event activity.",
+      description: "Every order plotted by its event date. Use this view when you need to see what falls on which day.",
       kickerSchedule: "Schedule view",
       kickerBlocks: "Block dates",
       kickerUpcoming: "Next 30 days",
@@ -1101,6 +1103,10 @@ const enValues = {
       addArea: "Add service area",
       noAreas: "No service areas yet",
       noAreasDescription: "Add at least one service area so customers can place orders for delivery.",
+      overlapHeadline: "Overlapping coverage detected — clean up duplicates to avoid ambiguous lookups.",
+      overlapCityState: "City + state in multiple areas",
+      overlapPostal: "ZIP in multiple areas",
+      overlapMore: "…and more.",
     },
     help: {
       title: "Help Center",
@@ -1479,6 +1485,7 @@ const enValues = {
       submitting: "Setting up…",
       siteLive: "Your rental site is live!",
       customersCanFindYou: "Customers can find you at:",
+      resumeBanner: "Welcome back — we kept what you'd already filled in. Finish up below and you're done.",
       bookmarkHint: "Bookmark this URL or share it with customers. You can change it later from Website settings.",
       goToDashboard: "Go to Dashboard",
     },
@@ -1502,6 +1509,7 @@ const enValues = {
     pillZip: "ZIP: {value}",
     pillCategory: "Category: {value}",
     deliversTo: "We deliver to: {area}. Enter your ZIP above to confirm availability.",
+    pickDateHint: "Pick a date above to see real-time availability for your event.",
     availabilityResults: "Availability results",
     availableRentals: "Available rentals",
     optionsCount: "{count} options for your event",
@@ -1519,6 +1527,8 @@ const enValues = {
 
   forms: {
     recordPayment: {
+      balanceLabel: "Outstanding balance",
+      depositRequiredLabel: "Deposit required",
       amountLabel: "Amount ($)",
       paymentTypeLabel: "Payment type",
       paymentTypes: {
@@ -1904,6 +1914,11 @@ const enValues = {
         updating: "Updating...",
         done: "Done",
         updateFailed: "Failed to update stop status.",
+        confirmEnRoute: "Send the customer a text with your live tracking link?",
+        confirmCompleted: "Mark complete and notify the customer this stop is done?",
+        confirmGeneric: "Update this stop?",
+        confirm: "Confirm",
+        cancel: "Cancel",
       },
       signature: {
         title: "Customer signature",
@@ -2650,6 +2665,7 @@ const enValues = {
 
   calendar: {
     moreEvents: "+{count} more",
+    collapseEvents: "Show fewer",
   },
 
   weatherBadge: {

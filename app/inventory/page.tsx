@@ -145,6 +145,21 @@ export default async function InventoryPage({
             </div>
           )}
 
+          {!params.date && sortedProducts.length > 0 && (
+            <div
+              className="badge info"
+              role="note"
+              style={{
+                padding: "12px 18px",
+                marginBottom: 8,
+                fontSize: 14,
+                display: "block",
+              }}
+            >
+              {m.inventory.pickDateHint}
+            </div>
+          )}
+
           {zipValid === false && zipMessage && (
             <div
               className="badge warning"

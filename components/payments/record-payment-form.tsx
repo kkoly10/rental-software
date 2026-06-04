@@ -7,7 +7,18 @@ import { toLocalISODate } from "@/lib/i18n/format-helpers";
 
 const initialState = { ok: false, message: "" };
 
-export function RecordPaymentForm({ orderId }: { orderId: string }) {
+export function RecordPaymentForm({
+  orderId,
+  balanceDue,
+  depositDue,
+}: {
+  orderId: string;
+  /** Display-ready outstanding balance (e.g. "$170.00"). Shown above the
+      amount input so operators don't have to flip between tabs. */
+  balanceDue?: string;
+  /** Display-ready deposit required (e.g. "$75.00"). */
+  depositDue?: string;
+}) {
   const [state, formAction, pending] = useActionState(recordPayment, initialState);
   const { messages } = useI18n();
   const m = messages.forms.recordPayment;
@@ -15,6 +26,31 @@ export function RecordPaymentForm({ orderId }: { orderId: string }) {
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
       <input type="hidden" name="order_id" value={orderId} />
+
+      {(balanceDue || depositDue) && (
+        <div
+          className="order-card"
+          style={{
+            display: "flex",
+            gap: 24,
+            flexWrap: "wrap",
+            fontSize: 13,
+          }}
+        >
+          {balanceDue && (
+            <div>
+              <span className="muted">{m.balanceLabel}: </span>
+              <strong>{balanceDue}</strong>
+            </div>
+          )}
+          {depositDue && (
+            <div>
+              <span className="muted">{m.depositRequiredLabel}: </span>
+              <strong>{depositDue}</strong>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-3">
         <label className="order-card">

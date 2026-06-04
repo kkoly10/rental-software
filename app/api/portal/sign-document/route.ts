@@ -120,6 +120,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "This document has already been signed." }, { status: 409 });
   }
 
+  // A document must be explicitly "sent" by the operator before the customer
+  // can sign. Without this gate, customers could sign a document still in
+  // "pending" (never delivered) or one the operator already moved to "void".
+  if (doc.document_status !== "sent") {
+    return NextResponse.json(
+      { error: "This document isn't ready to be signed yet. Please contact us." },
+      { status: 409 }
+    );
+  }
+
   const signerIp = clientIp;
   const signerUserAgent = hdrs.get("user-agent") ?? null;
 
@@ -133,7 +143,7 @@ export async function POST(request: NextRequest) {
       signer_user_agent: signerUserAgent,
     })
     .eq("id", documentId)
-    .eq("document_status", "pending")
+    .eq("document_status", "sent")
     .select("id");
 
   if (error) {

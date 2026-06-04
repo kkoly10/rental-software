@@ -15,6 +15,21 @@ export type DocumentActionState = {
   message: string;
 };
 
+// Document lifecycle state machine. Orders enforce transitions; documents
+// did not, which let an operator move a document through nonsensical
+// sequences like signed → void → sent → pending → signed again — the audit
+// trail would show the first signature but the row could be re-signed
+// later. Mirror the orders-actions VALID_TRANSITIONS shape so reviewers
+// don't have to learn two patterns.
+const DOC_VALID_TRANSITIONS: Record<string, string[]> = {
+  pending: ["sent", "void"],
+  sent: ["signed", "void"],
+  // signed → void is allowed only as an explicit revoke. Re-issue is a new
+  // row, not a status flip back to pending/sent.
+  signed: ["void"],
+  void: [],
+};
+
 export async function updateDocumentStatus(
   documentId: string,
   newStatus: string
@@ -85,20 +100,22 @@ export async function updateDocumentStatus(
     updateData.signed_date = new Date().toISOString();
   }
 
-  // Fetch the order_id AND status — a document tied to a cancelled
-  // or refunded order shouldn't be editable from the operator UI.
-  // Without this guard, an operator could "mark signed" a rental
-  // agreement on a cancelled order and the audit trail would later
-  // suggest the customer signed an agreement for a booking that
-  // never happened.
+  // Fetch the order_id, the parent order status, AND the current document
+  // status. The order check guards against editing docs on cancelled/
+  // completed orders; the document_status check feeds the VALID_TRANSITIONS
+  // table below.
   const { data: docRecord } = await supabase
     .from("documents")
-    .select("order_id, orders!inner(order_status)")
+    .select("order_id, document_status, orders!inner(order_status)")
     .eq("id", parsed.data.documentId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
 
-  const orderStatus = (docRecord?.orders as unknown as { order_status: string } | null)?.order_status ?? null;
+  if (!docRecord) {
+    return { ok: false, message: "Document not found." };
+  }
+
+  const orderStatus = (docRecord.orders as unknown as { order_status: string } | null)?.order_status ?? null;
   const TERMINAL = new Set(["cancelled", "refunded", "completed"]);
   if (orderStatus && TERMINAL.has(orderStatus)) {
     return {
@@ -107,14 +124,43 @@ export async function updateDocumentStatus(
     };
   }
 
-  const { error } = await supabase
+  const currentStatus = (docRecord.document_status as string | null) ?? "pending";
+  const allowed = DOC_VALID_TRANSITIONS[currentStatus];
+  if (!allowed) {
+    return {
+      ok: false,
+      message: `Document is in an unrecognized status (${currentStatus}).`,
+    };
+  }
+  if (currentStatus === parsed.data.newStatus) {
+    // Idempotent no-op — UI buttons sometimes double-fire.
+    return { ok: true, message: `Document is already ${currentStatus}.` };
+  }
+  if (!allowed.includes(parsed.data.newStatus)) {
+    return {
+      ok: false,
+      message: `Cannot move a ${currentStatus} document to ${parsed.data.newStatus}.`,
+    };
+  }
+
+  // Scope the UPDATE to the document_status we just read so a concurrent
+  // status change can't slip a stale transition through.
+  const { data: updated, error } = await supabase
     .from("documents")
     .update(updateData)
     .eq("id", parsed.data.documentId)
-    .eq("organization_id", ctx.organizationId);
+    .eq("organization_id", ctx.organizationId)
+    .eq("document_status", currentStatus)
+    .select("id");
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+  if (!updated || updated.length === 0) {
+    return {
+      ok: false,
+      message: "Document status changed in another tab. Please refresh.",
+    };
   }
 
   revalidatePath("/dashboard/documents");

@@ -408,6 +408,8 @@ export const es: Messages = {
       signIn: "Iniciar sesión",
       signingIn: "Iniciando sesión…",
       forgotPasswordLink: "¿Olvidaste tu contraseña?",
+      resendVerification: "Reenviar correo de verificación",
+      resendingVerification: "Enviando…",
       name: "Nombre completo",
       namePlaceholder: "Juan Pérez",
       businessName: "Nombre de la empresa",
@@ -629,7 +631,7 @@ export const es: Messages = {
     },
     orders: {
       title: "Pedidos",
-      description: "Sigue consultas, reservas confirmadas, pagos y preparación de entrega.",
+      description: "Todos los pedidos en el pipeline, desde consulta hasta completado. Usa esta vista para ver el embudo completo.",
       kicker: "Pipeline de alquiler",
       sectionTitle: "Todos los pedidos",
       searchPlaceholder: "Buscar por cliente, artículo, estado o importe",
@@ -821,7 +823,7 @@ export const es: Messages = {
     deliveries: {
       liveBadge: "En vivo",
       title: "Tablero de entregas",
-      description: "Sigue rutas, estado de paradas y avance del equipo.",
+      description: "Solo pedidos enrutados para entrega, agrupados por ruta y día. Usa esta vista para despachar equipos.",
       kickerDispatch: "Despacho",
       kickerOperations: "Operaciones",
       sectionCreateRoute: "Crear una ruta",
@@ -940,7 +942,7 @@ export const es: Messages = {
     },
     calendar: {
       title: "Calendario",
-      description: "Visualiza reservas, entregas, bloqueos de disponibilidad y próxima actividad.",
+      description: "Todos los pedidos representados por su fecha de evento. Usa esta vista cuando necesites ver qué cae en cada día.",
       kickerSchedule: "Vista del horario",
       kickerBlocks: "Bloqueo de fechas",
       kickerUpcoming: "Próximos 30 días",
@@ -1100,6 +1102,10 @@ export const es: Messages = {
       addArea: "Añadir área de servicio",
       noAreas: "Aún no hay áreas de servicio",
       noAreasDescription: "Añade al menos un área de servicio para que los clientes puedan hacer pedidos para entrega.",
+      overlapHeadline: "Cobertura superpuesta detectada — elimina duplicados para evitar búsquedas ambiguas.",
+      overlapCityState: "Ciudad + estado en varias áreas",
+      overlapPostal: "Código postal en varias áreas",
+      overlapMore: "…y más.",
     },
     help: {
       title: "Centro de ayuda",
@@ -1478,6 +1484,7 @@ export const es: Messages = {
       submitting: "Configurando…",
       siteLive: "¡Tu sitio de alquiler está en línea!",
       customersCanFindYou: "Los clientes te encontrarán en:",
+      resumeBanner: "Bienvenido de nuevo — guardamos lo que ya habías rellenado. Termina abajo y listo.",
       bookmarkHint: "Guarda esta URL o compártela con los clientes. Puedes cambiarla más tarde en los ajustes del sitio.",
       goToDashboard: "Ir al panel",
     },
@@ -1501,6 +1508,7 @@ export const es: Messages = {
     pillZip: "CP: {value}",
     pillCategory: "Categoría: {value}",
     deliversTo: "Entregamos en: {area}. Introduce tu código postal arriba para confirmar la disponibilidad.",
+    pickDateHint: "Elige una fecha arriba para ver la disponibilidad en tiempo real para tu evento.",
     availabilityResults: "Resultados de disponibilidad",
     availableRentals: "Alquileres disponibles",
     optionsCount: "{count} opciones para tu evento",
@@ -1518,6 +1526,8 @@ export const es: Messages = {
 
   forms: {
     recordPayment: {
+      balanceLabel: "Saldo pendiente",
+      depositRequiredLabel: "Depósito requerido",
       amountLabel: "Importe ($)",
       paymentTypeLabel: "Tipo de pago",
       paymentTypes: {
@@ -1903,6 +1913,11 @@ export const es: Messages = {
         updating: "Actualizando...",
         done: "Hecho",
         updateFailed: "No se pudo actualizar el estado de la parada.",
+        confirmEnRoute: "¿Enviar al cliente un SMS con el enlace de seguimiento en vivo?",
+        confirmCompleted: "¿Marcar como completada y notificar al cliente que la parada está hecha?",
+        confirmGeneric: "¿Actualizar esta parada?",
+        confirm: "Confirmar",
+        cancel: "Cancelar",
       },
       signature: {
         title: "Firma del cliente",
@@ -2649,6 +2664,7 @@ export const es: Messages = {
 
   calendar: {
     moreEvents: "+{count} más",
+    collapseEvents: "Mostrar menos",
   },
 
   weatherBadge: {
