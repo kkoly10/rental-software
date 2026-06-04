@@ -78,6 +78,18 @@ const generateDocumentsActionSchema = z.object({
   }),
 });
 
+const sendReplyActionSchema = z.object({
+  type: z.literal("send_reply"),
+  preview: z.string().max(500).optional().default(""),
+  params: z.object({
+    body: z.string().trim().min(1, "Reply cannot be empty.").max(5000),
+    customerEmail: z.string().email("Valid customer email required."),
+    customerId: z.string().uuid().nullish(),
+    orderId: z.string().uuid().nullish(),
+    orderNumber: z.string().max(100).nullish(),
+  }),
+});
+
 function jsonResponse(
   body: Record<string, unknown>,
   init?: ResponseInit
@@ -170,7 +182,9 @@ export async function POST(request: NextRequest) {
         ? orderStatusActionSchema.safeParse(requestBody)
         : requestType === "generate_documents"
           ? generateDocumentsActionSchema.safeParse(requestBody)
-          : contentActionSchema.safeParse(requestBody);
+          : requestType === "send_reply"
+            ? sendReplyActionSchema.safeParse(requestBody)
+            : contentActionSchema.safeParse(requestBody);
   if (!parsed.success) {
     await logAppError({
       organizationId: access.organizationId,
@@ -270,6 +284,27 @@ export async function POST(request: NextRequest) {
           metadata: {
             actionType: action.type,
             orderId: action.params.orderId,
+            ip: clientIp,
+            userAgent,
+          },
+        });
+      } else if (action.type === "send_reply") {
+        revalidatePath("/dashboard/messages");
+
+        await logAppEvent({
+          organizationId: access.organizationId,
+          userId: access.userId,
+          source: "copilot.action",
+          action: "action_executed",
+          status: "success",
+          route: "/dashboard/messages",
+          // Don't store the full customer-facing body here (it's already in the
+          // messages table + communications log); keep a length + recipient.
+          metadata: {
+            actionType: action.type,
+            customerEmail: action.params.customerEmail,
+            orderId: action.params.orderId ?? null,
+            bodyLength: action.params.body.length,
             ip: clientIp,
             userAgent,
           },

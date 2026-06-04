@@ -2680,6 +2680,14 @@ const enValues = {
       confirm: "Generate Documents",
       generating: "Generating…",
     },
+    sendReply: {
+      title: "Send reply to customer",
+      to: "To",
+      message: "Message",
+      caution: "This sends an email to the customer.",
+      confirm: "Send Reply",
+      sending: "Sending…",
+    },
   },
 
   trackingMap: {

@@ -80,11 +80,28 @@ export type CopilotGenerateDocumentsAction = {
   params: { orderId: string };
 };
 
+// Operational action: send a drafted reply to a customer message. The most
+// outward-facing action — it sends a real email. Delegates to sendReply.
+export type CopilotSendReplyParams = {
+  body: string;
+  customerEmail: string;
+  customerId?: string | null;
+  orderId?: string | null;
+  orderNumber?: string | null;
+};
+
+export type CopilotSendReplyAction = {
+  type: "send_reply";
+  preview: string;
+  params: CopilotSendReplyParams;
+};
+
 export type CopilotAction =
   | CopilotContentAction
   | CopilotPaymentAction
   | CopilotOrderStatusAction
-  | CopilotGenerateDocumentsAction;
+  | CopilotGenerateDocumentsAction
+  | CopilotSendReplyAction;
 
 const ALLOWED_SETTINGS_FIELDS: Record<string, string> = {
   update_hero: "hero_message",
@@ -145,6 +162,24 @@ async function executeGenerateDocumentsAction(
   return { ok: result.ok, message: result.message };
 }
 
+async function executeSendReplyAction(
+  action: CopilotSendReplyAction
+): Promise<{ ok: boolean; message: string }> {
+  // Reuse sendReply: rate limits, org-scope checks on customer/order, role
+  // check, message insert, communication log, and the customer email all live
+  // there. We just build the FormData it expects.
+  const { sendReply } = await import("@/lib/messages/actions");
+  const formData = new FormData();
+  formData.set("body", action.params.body);
+  formData.set("customer_email", action.params.customerEmail);
+  if (action.params.customerId) formData.set("customer_id", action.params.customerId);
+  if (action.params.orderId) formData.set("order_id", action.params.orderId);
+  if (action.params.orderNumber) formData.set("order_number", action.params.orderNumber);
+
+  const result = await sendReply({ ok: false, message: "" }, formData);
+  return { ok: result.ok, message: result.message };
+}
+
 export async function executeCopilotAction(
   action: CopilotAction
 ): Promise<{ ok: boolean; message: string }> {
@@ -156,6 +191,9 @@ export async function executeCopilotAction(
   }
   if (action.type === "generate_documents") {
     return executeGenerateDocumentsAction(action);
+  }
+  if (action.type === "send_reply") {
+    return executeSendReplyAction(action);
   }
 
   if (!hasSupabaseEnv()) {

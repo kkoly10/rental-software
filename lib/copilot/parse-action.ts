@@ -58,6 +58,34 @@ function parseGenerateDocumentsAction(parsed: Record<string, unknown>): CopilotA
   };
 }
 
+function optionalString(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() ? v : undefined;
+}
+
+function parseSendReplyAction(parsed: Record<string, unknown>): CopilotAction | null {
+  const params = parsed.params;
+  if (typeof params !== "object" || params === null) return null;
+  const p = params as Record<string, unknown>;
+  const body = typeof p.body === "string" ? p.body.trim() : "";
+  const customerEmail = typeof p.customerEmail === "string" ? p.customerEmail.trim() : "";
+
+  // Require a non-empty body and a plausible email; the server re-validates.
+  if (!body) return null;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(customerEmail)) return null;
+
+  return {
+    type: "send_reply",
+    preview: typeof parsed.preview === "string" ? parsed.preview : "",
+    params: {
+      body,
+      customerEmail,
+      customerId: optionalString(p.customerId) ?? null,
+      orderId: optionalString(p.orderId) ?? null,
+      orderNumber: optionalString(p.orderNumber) ?? null,
+    },
+  };
+}
+
 function parsePaymentAction(parsed: Record<string, unknown>): CopilotAction | null {
   const params = parsed.params;
   if (typeof params !== "object" || params === null) return null;
@@ -117,6 +145,8 @@ export function parseActionFromResponse(content: string): {
       action = parseOrderStatusAction(parsed);
     } else if (parsed.type === "generate_documents") {
       action = parseGenerateDocumentsAction(parsed);
+    } else if (parsed.type === "send_reply") {
+      action = parseSendReplyAction(parsed);
     } else if (parsed.type && parsed.field && parsed.value) {
       action = {
         type: parsed.type as CopilotAction["type"],

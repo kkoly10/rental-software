@@ -111,6 +111,30 @@ test("rejects generate_documents with a missing orderId", () => {
   assert.equal(parseActionFromResponse(raw).action, null);
 });
 
+test("parses a valid send_reply action and normalizes optional ids", () => {
+  const raw = `Here's a draft.\n[ACTION:{"type":"send_reply","preview":"Reply to Sarah","params":{"body":"Hi Sarah, your delivery is at 10am.","customerEmail":"sarah@example.com","orderNumber":"1042"}}]`;
+  const { text, action } = parseActionFromResponse(raw);
+  assert.equal(text, "Here's a draft.");
+  assert.ok(action && action.type === "send_reply");
+  if (action.type === "send_reply") {
+    assert.equal(action.params.customerEmail, "sarah@example.com");
+    assert.match(action.params.body, /Hi Sarah/);
+    assert.equal(action.params.orderNumber, "1042");
+    assert.equal(action.params.customerId, null);
+    assert.equal(action.params.orderId, null);
+  }
+});
+
+test("rejects send_reply with an empty body", () => {
+  const raw = `[ACTION:{"type":"send_reply","params":{"body":"   ","customerEmail":"a@b.com"}}]`;
+  assert.equal(parseActionFromResponse(raw).action, null);
+});
+
+test("rejects send_reply with an invalid email", () => {
+  const raw = `[ACTION:{"type":"send_reply","params":{"body":"hello","customerEmail":"not-an-email"}}]`;
+  assert.equal(parseActionFromResponse(raw).action, null);
+});
+
 test("malformed JSON in the action block is treated as plain text", () => {
   const raw = "Sure.\n[ACTION:{not valid json}]";
   const { text, action } = parseActionFromResponse(raw);

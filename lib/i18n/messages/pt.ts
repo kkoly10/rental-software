@@ -2679,6 +2679,14 @@ export const pt: Messages = {
       confirm: "Gerar documentos",
       generating: "A gerar…",
     },
+    sendReply: {
+      title: "Enviar resposta ao cliente",
+      to: "Para",
+      message: "Mensagem",
+      caution: "Isto envia um e-mail ao cliente.",
+      confirm: "Enviar resposta",
+      sending: "A enviar…",
+    },
   },
 
   trackingMap: {
