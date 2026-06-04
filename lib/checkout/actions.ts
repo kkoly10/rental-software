@@ -370,17 +370,13 @@ export async function createCheckoutOrder(
 
       const pricingModel = product.pricing_model ?? "flat_day";
       if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate >= eventDate) {
-        const startMs = new Date(eventDate + "T00:00:00Z").getTime();
-        const endMs = new Date(rentalEndDate + "T00:00:00Z").getTime();
-        // Both timestamps are UTC midnight of YYYY-MM-DD, so the
-        // diff is guaranteed to be a whole multiple of one day.
-        // Math.round previously masked any ms-level skew but could
-        // round 0 to 0 for same-day with millisecond drift; with
-        // both anchored at midnight Z, the diff is exact. +1 makes
-        // both start AND end dates count (Mon→Fri = 5 days, not 4).
-        const dayMs = 1000 * 60 * 60 * 24;
-        const dayDiff = Math.round((endMs - startMs) / dayMs);
-        const days = Math.max(1, dayDiff + 1);
+        // Centralised in lib/pricing/rental-days.ts so the storefront
+        // summary (lib/data/checkout-pricing.ts) and this submit path
+        // share one source of truth for day math (#4 — three-day,
+        // $300/day product was showing $300 on the summary and $900
+        // on the bill).
+        const { computeRentalDays } = await import("@/lib/pricing/rental-days");
+        const days = computeRentalDays(eventDate, rentalEndDate);
 
         const { data: orgData } = await supabase
           .from("organizations")

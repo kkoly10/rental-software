@@ -2383,6 +2383,8 @@ export const es: Messages = {
     kicker: "Resumen de la reserva",
     defaultTitle: "Tu reserva de alquiler",
     basePrice: "Precio base",
+    multiDayLabel: "{days} días",
+    multiDayExpression: "${price} × {days}",
     adjustedSubtotal: "Subtotal ajustado",
     subtotal: "Subtotal",
     wetUpcharge: "Recargo modo mojado",
