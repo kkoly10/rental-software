@@ -127,6 +127,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
           timeZone: "UTC",
         })
       : "TBD",
+    missingEventDate: !data.event_date,
     eventStartTime: data.event_start_time
       ? formatTimeInTimeZone(data.event_start_time, tz)
       : undefined,

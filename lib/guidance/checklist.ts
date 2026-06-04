@@ -21,7 +21,10 @@ export const checklistItems: ChecklistItem[] = [
   {
     id: "first-product",
     title: "Add your first product",
-    description: "Create a product listing with pricing and details for your catalog.",
+    // Decision 3.6 — any product counts, including drafts. Matches
+    // Shopify's onboarding pattern (the creation event fires the
+    // completion, regardless of publish status).
+    description: "Create a product (draft is fine — you can publish later).",
     href: "/dashboard/products/new",
     order: 2,
     isComplete: (s) => s.productsCount > 0,

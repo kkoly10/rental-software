@@ -116,17 +116,19 @@ function mapProductRow(product: ProductRow): ProductSummary {
   const category = (product as Record<string, unknown>).categories as
     | { name?: string | null; deleted_at?: string | null }
     | null;
+  const hasValidPrice =
+    typeof product.base_price === "number" && product.base_price > 0;
   return {
     id: product.id,
     name: product.name ?? "Unnamed",
     category:
       category && !category.deleted_at ? category.name ?? "Rental" : "Rental",
-    price:
-      typeof product.base_price === "number"
-        ? `$${product.base_price}/day`
-        : "$0/day",
+    price: hasValidPrice ? `$${product.base_price}/day` : "—",
     status: product.is_active ? "Active" : "Hidden",
     tone: (product.is_active ? "success" : "default") as ProductSummary["tone"],
+    // Only flag active products — a draft without a price is fine until
+    // it's published.
+    missingPrice: Boolean(product.is_active) && !hasValidPrice,
   };
 }
 

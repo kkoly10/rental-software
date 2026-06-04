@@ -20,6 +20,10 @@ export type OrderSummary = {
   status: string;
   tone: StatusTone;
   eventDateRaw?: string;
+  /** True when the order has no event_date. Surfaces the noob trap where
+      an order is invisible to the calendar / route board until a date
+      is set. Decided in 2.5 — allow null with prominent flagging. */
+  missingEventDate?: boolean;
   postalCode?: string;
 };
 
@@ -30,6 +34,10 @@ export type ProductSummary = {
   price: string;
   status: string;
   tone: StatusTone;
+  /** True when the product is active but has no base price set. Surfaces
+      decision 2.9: an unpriced active product fails checkout, so the
+      operator needs to know it's broken on the storefront. */
+  missingPrice?: boolean;
 };
 
 export type CustomerSummary = {
@@ -66,6 +74,14 @@ export type RouteSummary = {
   status: string;
   stops: number;
   driverName?: string;
+  /** Display-ready earliest scheduled time across all stops (e.g. "9:00 AM").
+      Surfaced on the delivery board so dispatchers can see when each route
+      kicks off without opening the detail page. Undefined when no stop on
+      the route has a `scheduled_window_start` set. */
+  earliestStopTime?: string;
+  /** Display-ready latest scheduled time. Same source / undefined rules as
+      `earliestStopTime`. */
+  latestStopTime?: string;
 };
 
 export type ServiceAreaSummary = {
@@ -83,6 +99,9 @@ export type OrderDetail = {
   customerPhone: string;
   status: string;
   eventDate: string;
+  /** True when the underlying event_date column is null. Surfaced as a
+      banner on the order detail page (decision 2.5). */
+  missingEventDate?: boolean;
   eventStartTime?: string;
   eventEndTime?: string;
   items: string[];

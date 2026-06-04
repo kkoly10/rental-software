@@ -94,10 +94,18 @@ export default async function OrdersPage({
                         <strong>{order.customer}</strong>
                         <div className="muted">{order.item}</div>
                       </div>
-                      <StatusBadge
-                        label={order.status}
-                        tone={order.tone as "default" | "success" | "warning" | "danger"}
-                      />
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {order.missingEventDate && (
+                          <StatusBadge
+                            label={m.dashboard.orders.missingEventDateBadge}
+                            tone="warning"
+                          />
+                        )}
+                        <StatusBadge
+                          label={order.status}
+                          tone={order.tone as "default" | "success" | "warning" | "danger"}
+                        />
+                      </div>
                     </div>
                     <div className="price-row">
                       <span className="muted">

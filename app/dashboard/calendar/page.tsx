@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getUpcomingBlocks } from "@/lib/availability/data";
-import { getCalendarEvents } from "@/lib/data/calendar";
+import { getCalendarEvents, type CalendarView } from "@/lib/data/calendar";
 import { BlockDatesForm } from "@/components/availability/block-dates-form";
 import { AvailabilityBlockCard } from "@/components/availability/availability-block-card";
 import { MonthGrid } from "@/components/calendar/month-grid";
@@ -11,19 +11,29 @@ import { getMessages } from "@/lib/i18n/server";
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const now = new Date();
   const year = params.year ? parseInt(params.year, 10) : now.getFullYear();
   const month = params.month ? parseInt(params.month, 10) : now.getMonth() + 1;
+  const view: CalendarView =
+    params.view === "deliveries" || params.view === "both"
+      ? params.view
+      : "events";
 
   const [events, blocks, products, m] = await Promise.all([
-    getCalendarEvents(year, month),
+    getCalendarEvents(year, month, view),
     getUpcomingBlocks(30),
     getProducts(),
     getMessages(),
   ]);
+
+  const viewOptions: { value: CalendarView; label: string }[] = [
+    { value: "events", label: m.dashboard.calendar.viewEvents },
+    { value: "deliveries", label: m.dashboard.calendar.viewDeliveries },
+    { value: "both", label: m.dashboard.calendar.viewBoth },
+  ];
 
   return (
     <DashboardShell
@@ -41,6 +51,32 @@ export default async function CalendarPage({
               <Link href="/dashboard/orders/new" className="primary-btn">
                 {m.dashboard.calendar.newBooking}
               </Link>
+            </div>
+
+            <div
+              role="tablist"
+              aria-label={m.dashboard.calendar.viewToggleLabel}
+              style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}
+            >
+              {viewOptions.map((opt) => {
+                const isActive = view === opt.value;
+                const query = new URLSearchParams();
+                query.set("year", String(year));
+                query.set("month", String(month));
+                if (opt.value !== "events") query.set("view", opt.value);
+                return (
+                  <Link
+                    key={opt.value}
+                    role="tab"
+                    aria-selected={isActive}
+                    href={`/dashboard/calendar?${query.toString()}`}
+                    className={isActive ? "primary-btn" : "ghost-btn"}
+                    style={{ fontSize: 13 }}
+                  >
+                    {opt.label}
+                  </Link>
+                );
+              })}
             </div>
 
             <MonthGrid year={year} month={month} events={events} />

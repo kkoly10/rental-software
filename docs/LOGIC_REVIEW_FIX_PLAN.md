@@ -96,19 +96,18 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 
 ### [ ] 2.2 — Block dashboard `confirmed → delivered` skip — `[breaking-ux]`
 - **Effort:** S | **Impact:** 5 | **Owner:** ?
-- **Telemetry:** count of dashboard-initiated `confirmed → delivered` attempts after ship (should be 0 — they should all be blocked or routed through `out_for_delivery`).
+- **Decision (locked in 2026-06):** Soft-warn with a confirmation modal + capture a reason. Don't hard-block, don't go silent. Matches Onfleet's "edit task completion status with note/reason" pattern. Refs: https://support.onfleet.com/hc/en-us/articles/20508526302868-Edit-Task-Completion-Status, https://knowledge.hubspot.com/object-settings/set-up-pipeline-rules (skip-restriction as opt-in, not default).
+- **Telemetry:** count of dashboard-initiated `confirmed → delivered` attempts after ship — these now produce a reason on the audit log instead of being blocked.
 - **Files:** `lib/orders/actions.ts:738` (data layer stays permissive for crew/route writes), the dashboard order-detail status dropdown
-- **Test:** dashboard E2E — "Mark delivered" is disabled on `confirmed`; crew/route writes still succeed.
+- **Test:** dashboard E2E — "Mark delivered" on a `confirmed` order opens a confirm modal naming the skipped state; submitting requires a reason; the reason ends up in `app_events`. Crew/route writes still succeed without the modal.
 - **Done when:** above.
 
-### [ ] 2.3 — Decide and enforce `payment_type` semantics — `[decision]` `[blocks-on 2.2]`
+### [ ] 2.3 — Decide and enforce `payment_type` semantics — `[blocks-on 2.2]`
 - **Effort:** M | **Impact:** 4 | **Owner:** ?
-- **Decide:**
-  - **A (Enforce):** "balance" payments require `depositFulfilled === true`; "deposit" cannot exceed `depositRequiredCents`. Auto-confirm fires only when `depositFulfilled`.
-  - **B (Honest label):** rename to "Payment (deposit — reporting only) / Payment (balance — reporting only)" with tooltip explaining both increment `net_paid`. No behavior change.
-- **Files:** `lib/payments/actions.ts:169-173`, `lib/payments/compute-financials.ts:56`, `components/payments/record-payment-form.tsx`
-- **Test:** unit tests for the chosen rule against auto-confirm.
-- **Done when:** behavior matches the label.
+- **Decision (locked in 2026-06): Option B — honest label.** Every researched rental SaaS (Goodshuffle Pro, Booqable, EZRentOut) treats payment type as a scheduled label/milestone, never as a hard gate. EZRentOut explicitly supports partial deposits. Enforcing the strict semantic would invent a constraint no peer has and would break workflows operators expect. Refs: https://help.goodshuffle.com/en/articles/10126552-creating-flexible-payment-policies, https://faq.ezrentout.com/faq/how-do-i-take-a-security-deposit-in-case-the-rentals-are-damaged/, https://help.booqable.com/en/articles/10704093-how-to-refund-payments.
+- **Files:** `components/payments/record-payment-form.tsx`, `lib/i18n/messages/{en,es,fr,pt}.ts`
+- **Test:** record-payment form shows the "reporting only" label and tooltip.
+- **Done when:** labels renamed; tooltip in place. No behaviour change.
 
 ### [ ] 2.4 — Make maintenance block bookings — `[migration]` `[breaking-ux]`
 - **Effort:** M | **Impact:** 5 | **Owner:** ?
@@ -118,26 +117,25 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Test:** asset toggled to `under_maintenance` disappears from `/inventory`; direct checkout attempt is rejected.
 - **Done when:** above, with the audit count in the PR description.
 
-### [ ] 2.5 — `event_date` required (or visibly flagged) — `[decision]`
+### [ ] 2.5 — `event_date` required (or visibly flagged)
 - **Effort:** S | **Impact:** 4 | **Owner:** ?
-- **Decide:**
-  - Hard-require (rejects orders without a date — clean but breaks workflows where ops creates a quote before the customer picks a date)
-  - Allow-null-with-banner ("Missing event date" filter pill + banner on order detail)
+- **Decision (locked in 2026-06): allow null + flag prominently.** Customer-facing flows on every researched platform are date-first because availability is the headline feature, but back-office workflows accommodate dateless quotes — Goodshuffle Pro has a documented "TBD Time" capability. Hard-requiring breaks the legitimate quote-before-date workflow. Refs: https://help.goodshuffle.com/en/articles/2775051-how-can-i-create-a-tbd-time-for-my-in-store-logistics.
 - **Files:** `components/orders/new-order-form.tsx`, `lib/orders/actions.ts`, `app/dashboard/orders/`, `lib/data/unrouted-orders.ts:68`
 - **Done when:** matches the chosen rule.
 
 ### [ ] 2.6 — Multi-day rentals: per-day stops — `[decision]` `[breaking-ux]`
 - **Effort:** XL | **Impact:** 5 | **Owner:** ?
-- **Decide:**
-  - **Scope of stop kinds.** Just `delivery` (day 1) + `pickup` (last day)? Or also daily `check_in`?
-  - **Config grain.** Per-product (some inflatables need daily inspection, some don't)? Or org-wide setting?
-  - **Backfill.** Auto-create pickup stops for currently in-flight multi-day rentals? Or only apply to new rentals after deploy?
-  - **Single-day handling.** When `event_date == rental_end_date`, do we still create a separate pickup stop or fold it into the delivery stop?
-  - **Calendar.** Do pickup stops show as separate events, or only delivery?
+- **Decision (locked in 2026-06):**
+  - **Stop kinds:** `delivery` + `pickup` only. **No daily check-ins.** No researched platform models multi-day rentals as a daily-check-in chain — Goodshuffle Pro and Booqable both treat them as one delivery + one return.
+  - **Config grain:** org-wide setting (KISS). Revisit if a customer asks for per-product.
+  - **Backfill:** auto-create pickup stops for in-flight multi-day rentals as part of the migration; skip rentals already past their end date.
+  - **Single-day handling:** always create a separate pickup row, even when `event_date == rental_end_date`. Inflatables drop off morning and pick up evening — those are two real stops with two crew dispatches.
+  - **Calendar:** show both delivery and pickup; tag visually so operators can tell which is which.
+  - **Refs:** https://help.goodshuffle.com/en/articles/1430325-add-delivery-or-in-store-carryout-return-logistics-to-projects ("Be sure to enter both drop-off and pickup!"), https://booqable.com/blog/optimize-pickups-returns/, https://lendcontrol.com/blog/bounce-house-rental-pricing/.
 - **Telemetry:** count of multi-day rentals before/after deploy where 1 stop got created (the bug) vs 2+ (the fix). Per-stop completion rates.
-- **Files:** `lib/routes/auto-attach.ts:99,124`, schema (add `stops.kind` enum), `app/dashboard/deliveries/`, calendar
-- **Test:** Mon–Wed rental auto-creates a Mon delivery and a Wed pickup on the correct `route_date`s; calendar shows both.
-- **Done when:** above + migration documented.
+- **Files:** `lib/routes/auto-attach.ts:99,124`, schema (add `stops.kind` enum: `'delivery' | 'pickup'`), `app/dashboard/deliveries/`, calendar
+- **Test:** Mon–Wed rental auto-creates a Mon delivery and a Wed pickup on the correct `route_date`s; calendar shows both; same-day rental still gets a separate pickup stop.
+- **Done when:** above + migration documented. This is XL — split into its own PR.
 
 ### [ ] 2.7 — Close the catalog check→reserve TOCTOU
 - **Effort:** L | **Impact:** 5 | **Owner:** ?
@@ -152,11 +150,11 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 
 ### [ ] 2.9 — Remove the magic `$225` price default — `[migration]` `[breaking-ux]` `[decision]`
 - **Effort:** S | **Impact:** 4 | **Owner:** ?
+- **Decision (locked in 2026-06): Option B — show + refuse checkout + operator warning.** WooCommerce — the most-deployed rental-adjacent storefront — does this by default (empty price disables Add-to-Cart). Shopify's permissive default is widely considered a bug by merchants. Refuse-at-checkout keeps the product browsable (for "request a quote" workflows) without silently billing the magic $225. Refs: https://barn2.com/blog/woocommerce-hide-price/, https://community.shopify.com/t/eliminate-ability-to-add-to-cart-of-price-is-0/408632.
 - **Data audit:** how many products currently have `base_price IS NULL OR base_price = 0`? List them in the PR.
-- **Decide:** hide from storefront, or refuse only at checkout?
 - **Telemetry:** count of "missing-price" checkout rejections per week; alert orgs on first occurrence.
 - **Files:** `lib/checkout/actions.ts:314-315`, `lib/data/catalog-list.ts:111-114`, dashboard product list
-- **Done when:** the `225` literal is gone; products with no price either don't appear or hard-fail checkout with "Pricing not set".
+- **Done when:** the `225` literal is gone; products with no price refuse checkout with "Pricing not set"; dashboard product list shows a "Missing price" warning badge on unpriced active products.
 
 ### [ ] 2.10 — Enforce service-area min order even when ZIP is missing
 - **Effort:** S | **Impact:** 4 | **Owner:** ?
@@ -179,11 +177,11 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Files:** `lib/checkout/actions.ts:643-656`, `components/checkout/CheckoutSummaryCard.tsx`
 - **Done when:** when the minimum is clamped, the summary card shows the configured minimum and the clamped amount side by side.
 
-### [ ] 2.14 — Completed-vs-cancelled refund payment asymmetry — `[decision]`
-- **Effort:** XS once decided | **Impact:** 2 | **Owner:** ?
-- **Decide:** should cancelled orders accept refunds, or do operators have to re-open the order first? Today: completed allows refund; cancelled doesn't.
+### [ ] 2.14 — Completed-vs-cancelled refund payment asymmetry
+- **Effort:** XS | **Impact:** 3 | **Owner:** ?
+- **Decision (locked in 2026-06): allow refunds on cancelled orders.** Strongest-evidence item in the set: ASC 606 + QuickBooks treat refunds as separate transactions against the payment, not as reopenings of the order. Booqable processes refunds against payment records while the order stays cancelled. Current asymmetry forces operators to "re-open then re-cancel" — a workaround for a state-machine bug. Refs: https://dart.deloitte.com/USDART/home/codification/revenue/asc606-10/roadmap-revenue-recognition/chapter-14-presentation/14-3-refund-liabilities, https://quickbooks.intuit.com/learn-support/en-us/help-article/customer-refunds-credits/refund-deposit-close-invoice/L1IrdDfCj_US_en_US, https://help.booqable.com/en/articles/10704093-how-to-refund-payments.
 - **Files:** `lib/payments/actions.ts:124-134`
-- **Done when:** behavior matches decision; UI hints why a payment was rejected if applicable.
+- **Done when:** cancelled orders accept refund payments (only); auto-flip to `refunded` continues to work via the 2.12 epsilon path.
 
 ---
 
@@ -227,11 +225,11 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Files:** above, plus their button components
 - **Done when:** in demo mode, no-op buttons are either disabled with "Demo mode — connect Supabase" tooltip, or show "saved locally only" after action.
 
-### [ ] 3.6 — Setup checklist: clarify "does a draft count?" — `[decision]`
-- **Effort:** XS once decided | **Impact:** 2 | **Owner:** ?
-- **Decide:** for each checklist item ("Add your first product", "Add a service area", "Upload a document template"), does a draft/inactive row count as complete? Default: only published/active count.
-- **Files:** `lib/guidance/checklist.ts:19-100`
-- **Done when:** each `isComplete` predicate is decisive and matches its description text.
+### [ ] 3.6 — Setup checklist: clarify "does a draft count?"
+- **Effort:** XS | **Impact:** 2 | **Owner:** ?
+- **Decision (locked in 2026-06): any record counts.** Shopify — the cleanest comparable for a catalog SaaS — marks "Add your first product" complete on the creation event, not on publish. Shopify defaults new products to Draft. Appcues' canonical guidance is to fire completion off the creation event itself. Match Shopify; revisit only if our own retention data shows publish is the activation moment. For checklist items that have no detectable signal (already fixed in 1.7), pair with a manual "Mark complete" affordance OR drop them. Refs: https://www.candu.ai/blog/shopify-onboarding-flow, https://docs.appcues.com/best-practices/checklist-best-practices.
+- **Files:** `lib/guidance/checklist.ts:19-100`, `lib/data/guidance-snapshot.ts`
+- **Done when:** descriptions explicitly say "draft counts" (or are silent on the distinction); the queries that feed `productsCount` etc. include drafts.
 
 ### [ ] 3.7 — Validate invite role on accept
 - **Effort:** XS | **Impact:** 2 | **Owner:** ?
@@ -293,11 +291,11 @@ For automatic sequencing, sort items by Impact / Effort. Highest first. The "Pic
 - **Files:** `components/deliveries/route-controls.tsx:133-170`
 - **Done when:** Remove Stop visually separated from action buttons (different row, destructive styling, or behind an overflow menu).
 
-### [ ] 4.9 — Catalog availability per-hour (or document the date-only constraint) — `[decision]`
-- **Effort:** L | **Impact:** 2 | **Owner:** ?
-- **Decide:** worth building per-hour flow, or document "we book by day"? Most inflatable rentals are full-day; default = document.
-- **Files:** `lib/availability/window.ts:45-75`, `components/public/CatalogFilterForm.tsx`
-- **Done when:** either time picker exists end-to-end, OR catalog copy explicitly says "bookings are by day".
+### [ ] 4.9 — Catalog availability per-hour (or document the date-only constraint)
+- **Effort:** S (document v1) | **Impact:** 2 | **Owner:** ?
+- **Decision (locked in 2026-06): document "we book by day" for v1; keep dates as datetimes underneath.** The bounce-house industry universally prices rentals as fixed 4/6/8h blocks; customers don't expect a time picker. Booqable, Goodshuffle, and EZRentOut all support datetimes internally but expose day-block UX. Storefront copy explicitly says "rentals are full-day"; data model stays datetime-based (already true) so v2 can add a time picker without a schema migration. Refs: https://lendcontrol.com/blog/bounce-house-rental-pricing/, https://help.booqable.com/en/articles/2003151-how-to-set-up-rental-period-settings, https://www.twicecommerce.com/blog/how-to-start-a-bounce-house-rental-business.
+- **Files:** `components/public/CatalogFilterForm.tsx`, storefront copy on `app/inventory/page.tsx`, `lib/i18n/messages/{en,es,fr,pt}.ts`
+- **Done when:** storefront copy explicitly states full-day rentals; no time picker added in v1. Schema already uses timestamps — no migration needed.
 
 ### [ ] 4.10 — Checkout summary card refreshes when ZIP changes
 - **Effort:** S | **Impact:** 2 | **Owner:** ?
