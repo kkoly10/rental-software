@@ -37,6 +37,7 @@ export type ActionableOrder = {
   status: string; // current order_status
   eventDate: string | null;
   link: string;
+  customerLocale: string; // customer's preferred language (en/fr/es/pt)
 };
 
 // An unread inbound customer message the Copilot can draft a reply to.
@@ -44,6 +45,7 @@ export type UnreadThread = {
   customerName: string;
   customerEmail: string | null;
   customerId: string | null;
+  customerLocale: string; // customer's preferred language (en/fr/es/pt)
   orderId: string | null;
   orderNumber: string | null;
   snippet: string; // the customer's message (truncated)
@@ -222,7 +224,7 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
       supabase
         .from("orders")
         .select(
-          "id, order_number, order_status, event_date, customers(first_name, last_name, deleted_at)"
+          "id, order_number, order_status, event_date, customers(first_name, last_name, deleted_at, preferred_locale)"
         )
         .eq("organization_id", ctx.organizationId)
         .is("deleted_at", null)
@@ -261,12 +263,18 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
     link: `/dashboard/orders/${o.id}`,
   }));
 
+  const customerLocaleOf = (o: Record<string, unknown>): string => {
+    const c = o.customers as { preferred_locale?: string | null } | null;
+    return c?.preferred_locale ?? "en";
+  };
+
   const actionableOrders: ActionableOrder[] = (actionableRes.data ?? []).map((o) => ({
     id: o.id,
     label: orderLabel(o as Record<string, unknown>),
     status: o.order_status ?? "inquiry",
     eventDate: o.event_date ?? null,
     link: `/dashboard/orders/${o.id}`,
+    customerLocale: customerLocaleOf(o as Record<string, unknown>),
   }));
 
   // Resolve customer + order details for the unread inbound messages so the
@@ -317,11 +325,11 @@ async function buildUnreadThreads(
     customerIds.length > 0
       ? supabase
           .from("customers")
-          .select("id, first_name, last_name, email")
+          .select("id, first_name, last_name, email, preferred_locale")
           .in("id", customerIds)
           .eq("organization_id", organizationId)
           .is("deleted_at", null)
-      : Promise.resolve({ data: [] as { id: string; first_name: string | null; last_name: string | null; email: string | null }[] }),
+      : Promise.resolve({ data: [] as { id: string; first_name: string | null; last_name: string | null; email: string | null; preferred_locale: string | null }[] }),
     orderIds.length > 0
       ? supabase
           .from("orders")
@@ -338,6 +346,7 @@ async function buildUnreadThreads(
       {
         name: [c.first_name, c.last_name].filter(Boolean).join(" ") || "",
         email: c.email,
+        locale: c.preferred_locale ?? "en",
       },
     ])
   );
@@ -350,6 +359,7 @@ async function buildUnreadThreads(
       customerName: customer?.name || r.sender_name || r.sender_email || "Customer",
       customerEmail: customer?.email ?? r.sender_email ?? null,
       customerId: r.customer_id,
+      customerLocale: customer?.locale ?? "en",
       orderId: r.order_id,
       orderNumber: r.order_id ? orderMap.get(r.order_id) ?? null : null,
       snippet,

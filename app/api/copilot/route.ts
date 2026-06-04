@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
       snapshotContext,
       liveOpsContext,
       articleSummaries,
+      opSnapshot.locale,
       localResponse
     );
 
@@ -240,6 +241,7 @@ export async function POST(request: NextRequest) {
       snapshotContext,
       liveOpsContext,
       articleSummaries,
+      opSnapshot.locale,
       localResponse
     );
 
@@ -284,6 +286,7 @@ async function handleOpenAI(
   snapshot: string,
   liveOps: string,
   articles: string,
+  operatorLocale: string,
   fallback: string
 ) {
   try {
@@ -293,6 +296,7 @@ async function handleOpenAI(
       snapshot,
       liveOps,
       articleSummaries: articles,
+      operatorLocale,
     });
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -336,6 +340,7 @@ async function handleAnthropic(
   snapshot: string,
   liveOps: string,
   articles: string,
+  operatorLocale: string,
   fallback: string
 ) {
   try {
@@ -345,6 +350,7 @@ async function handleAnthropic(
       snapshot,
       liveOps,
       articleSummaries: articles,
+      operatorLocale,
     });
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {

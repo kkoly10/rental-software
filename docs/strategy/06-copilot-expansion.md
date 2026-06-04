@@ -99,7 +99,13 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 
 ---
 
-## Phase 1 implementation (shipped)
+## Multilingual customer communication (shipped)
+
+Korent serves operators and customers in **English, French, Spanish, Portuguese**. The Copilot now communicates in the right language:
+- **Operator-facing:** responds in the operator's dashboard language (passed to the system prompt as `operatorLocale`).
+- **Customer-facing drafts:** every message the Copilot drafts for a customer — `send_reply` emails, SMS/WhatsApp copy — is written in that **customer's `preferred_locale`** (en/fr/es/pt). Each customer's preferred language is surfaced in the Copilot context (unread threads + actionable orders); the system prompt instructs the model to draft in it and tell the operator which language it used.
+
+**Known gap (separate from the Copilot):** the *templated* transactional emails in `lib/email/triggers.ts` (quote-sent, documents-ready, payment-received) are still **English-only** — `locale` is hardcoded to `"en"` and the template bodies aren't i18n'd (only money/date formatting is locale-aware). So the customer email *side effects* of `send_quote` / `generate_documents` / `record_payment` go out in English regardless of `preferred_locale`. Localizing those templates into all four languages is a separate, larger effort.
 
 **Goal:** the Copilot can answer real operational questions from this operator's live data, with no new write capability.
 
