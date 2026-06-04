@@ -2687,6 +2687,12 @@ export const pt: Messages = {
       confirm: "Enviar resposta",
       sending: "A enviar…",
     },
+    sendQuote: {
+      title: "Enviar orçamento",
+      body: "Envia o orçamento ao cliente por e-mail e muda a encomenda para Orçamento enviado.",
+      confirm: "Enviar orçamento",
+      sending: "A enviar…",
+    },
   },
 
   trackingMap: {

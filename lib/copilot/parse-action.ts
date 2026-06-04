@@ -58,6 +58,22 @@ function parseGenerateDocumentsAction(parsed: Record<string, unknown>): CopilotA
   };
 }
 
+function parseSendQuoteAction(parsed: Record<string, unknown>): CopilotAction | null {
+  const params = parsed.params;
+  if (typeof params !== "object" || params === null) return null;
+  const orderId =
+    typeof (params as Record<string, unknown>).orderId === "string"
+      ? ((params as Record<string, unknown>).orderId as string)
+      : "";
+  if (!orderId) return null;
+
+  return {
+    type: "send_quote",
+    preview: typeof parsed.preview === "string" ? parsed.preview : "",
+    params: { orderId },
+  };
+}
+
 function optionalString(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v : undefined;
 }
@@ -147,6 +163,8 @@ export function parseActionFromResponse(content: string): {
       action = parseGenerateDocumentsAction(parsed);
     } else if (parsed.type === "send_reply") {
       action = parseSendReplyAction(parsed);
+    } else if (parsed.type === "send_quote") {
+      action = parseSendQuoteAction(parsed);
     } else if (parsed.type && parsed.field && parsed.value) {
       action = {
         type: parsed.type as CopilotAction["type"],

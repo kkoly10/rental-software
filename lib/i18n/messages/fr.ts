@@ -2687,6 +2687,12 @@ export const fr: Messages = {
       confirm: "Envoyer la réponse",
       sending: "Envoi…",
     },
+    sendQuote: {
+      title: "Envoyer le devis",
+      body: "Envoie le devis au client par e-mail et passe la commande à Devis envoyé.",
+      confirm: "Envoyer le devis",
+      sending: "Envoi…",
+    },
   },
 
   trackingMap: {
