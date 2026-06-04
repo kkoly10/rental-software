@@ -17,3 +17,9 @@ next-env.d.ts
 .claude/
 playwright-report/
 test-results/
+
+# Supabase CLI scratch — created by `supabase link` and `db push` in CI.
+# config.toml is committed (project_id is non-secret); .temp holds the
+# linked access token + db password.
+supabase/.temp/
+supabase/.branches/
