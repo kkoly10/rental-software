@@ -60,13 +60,15 @@ export async function optimizeRoute(
 
   // Load the route + stops. The lat/lng come from the joined
   // customer_addresses; orders without geocoded addresses land as
-  // unoptimizable.
+  // unoptimizable. routes has no soft-delete column — the leftover
+  // .is("deleted_at", null) filter here used to error at PostgREST and
+  // return null, so every "Optimize route" click hit "Route not
+  // found." Same trap PR #217 swept from auto-attach.
   const { data: route } = await supabase
     .from("routes")
     .select("id, route_status")
     .eq("id", routeId)
     .eq("organization_id", ctx.organizationId)
-    .is("deleted_at", null)
     .maybeSingle();
   if (!route) return { ok: false, message: "Route not found." };
   if (route.route_status !== "planned") {

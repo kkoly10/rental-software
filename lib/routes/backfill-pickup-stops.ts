@@ -91,13 +91,15 @@ export async function backfillPickupStops(): Promise<BackfillResult> {
     // Use the same find-or-create-route logic as ensurePickupStop but
     // inline so this stays independent of auto-attach's mode flag —
     // backfill always behaves as "auto" (creates the route if missing).
+    // routes has no soft-delete column — the legacy .is("deleted_at",
+    // null) used to error at PostgREST and return null, so this branch
+    // always thought no pickup route existed and created duplicates.
     const { data: routes } = await supabase
       .from("routes")
       .select("id, route_status")
       .eq("organization_id", ctx.organizationId)
       .eq("route_date", pickupDate)
-      .eq("route_status", "planned")
-      .is("deleted_at", null);
+      .eq("route_status", "planned");
 
     let routeId: string | null = null;
     if (routes && routes.length === 1) {
