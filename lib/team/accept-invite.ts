@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isValidRole } from "@/lib/team/roles";
 
 export type AcceptInviteResult = {
   ok: boolean;
@@ -45,6 +46,17 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     return {
       ok: false,
       message: `This invite was sent to ${invite.invited_email}. Please sign in with that email address.`,
+    };
+  }
+
+  // Re-validate the stored role before writing it into a membership. The role
+  // was validated when the invite was created, but a corrupted row (or one
+  // written outside the team UI) could carry an unrecognized value that would
+  // silently bypass every permission check keyed on membership.role.
+  if (!invite.role || !isValidRole(String(invite.role))) {
+    return {
+      ok: false,
+      message: "This invite has an invalid role. Ask your team admin to send a new one.",
     };
   }
 

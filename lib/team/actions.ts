@@ -16,12 +16,10 @@ export type TeamActionState = {
   message: string;
 };
 
-const VALID_ROLES = ["admin", "dispatcher", "crew", "viewer"] as const;
-type TeamRole = (typeof VALID_ROLES)[number];
-
-function isValidRole(role: string): role is TeamRole {
-  return VALID_ROLES.includes(role as TeamRole);
-}
+// Role validation lives in `lib/team/roles.ts` so non-action callers (e.g.
+// `lib/team/accept-invite.ts`) can import without taking on this module's
+// "use server" boundary.
+import { isValidRole } from "@/lib/team/roles";
 
 // ─── Get current user's role ────────────────────────────────────────────────
 
