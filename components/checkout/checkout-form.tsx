@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createCheckoutOrder, type CheckoutActionState, type CheckoutFieldErrors } from "@/lib/checkout/actions";
 import { WeatherBadge } from "@/components/weather/weather-badge";
@@ -49,6 +50,27 @@ export function CheckoutForm({
   );
   const [selectedDate, setSelectedDate] = useState(initialDate ?? "");
   const [enteredZip, setEnteredZip] = useState(initialZip ?? "");
+
+  // Decision 4.10 — refresh the server-rendered summary card when the
+  // customer changes the ZIP. We push a new ?zip= into the URL so
+  // getCheckoutPricing runs again with the new service-area context.
+  // Debounced so every keystroke doesn't trigger a navigation; only
+  // a full 5-digit code does.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const normalized = enteredZip.replace(/\D/g, "");
+    if (normalized.length !== 5) return;
+    const current = searchParams?.get("zip") ?? "";
+    if (current === normalized) return;
+    const timer = setTimeout(() => {
+      const next = new URLSearchParams(searchParams?.toString() ?? "");
+      next.set("zip", normalized);
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [enteredZip, pathname, router, searchParams]);
 
   const errors: CheckoutFieldErrors = state.fieldErrors ?? {};
 

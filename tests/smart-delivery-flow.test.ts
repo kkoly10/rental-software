@@ -200,61 +200,70 @@ test("full noob flow: first confirm auto-creates route, second confirm bundles, 
 
   const { fake, rpcCalls } = makeFlowFake(tables);
 
-  // Step 1: first confirm.
+  // Step 1: first confirm. Decision 2.6 — each confirm now generates BOTH
+  // a delivery and a pickup stop (the pickup falls back to event_date for
+  // these same-day fixtures), so we expect two route_stops rows per order.
   // @ts-expect-error fake supabase
   const r1 = await autoAttachOrderToRouteIfEligible(orgId, "order_first", fake);
   assert.equal(r1.attached, true, "first confirm should attach");
   if (!r1.attached) return;
   assert.equal(r1.created, true, "first confirm should create the route");
   assert.equal(tables.routes.length, 1, "one route after first confirm");
-  assert.equal(tables.route_stops.length, 1, "one stop after first confirm");
+  assert.equal(tables.route_stops.length, 2, "delivery + pickup after first confirm");
 
   const routeId = tables.routes[0].id as string;
   assert.equal(r1.routeId, routeId);
 
-  // Step 2: second confirm same date — bundles into the same route.
+  // Step 2: second confirm same date — bundles into the same route, also
+  // adding a delivery + pickup pair → four total.
   // @ts-expect-error fake supabase
   const r2 = await autoAttachOrderToRouteIfEligible(orgId, "order_second", fake);
   assert.equal(r2.attached, true, "second confirm should attach");
   if (!r2.attached) return;
   assert.equal(r2.created, false, "second confirm should reuse existing route");
   assert.equal(tables.routes.length, 1, "still one route after second confirm");
-  assert.equal(tables.route_stops.length, 2, "two stops after second confirm");
+  assert.equal(tables.route_stops.length, 4, "four stops after second confirm");
   assert.equal(r2.routeId, routeId, "second confirm bundles into the first route");
 
-  // Step 3: cancel the first order — its stop is removed, route stays.
+  // Step 3: cancel the first order — BOTH its stops are removed (the
+  // wrapper loops until the RPC reports no more matches). Route stays
+  // because order_second still has stops.
   // @ts-expect-error fake supabase
   const c1 = await removeOrderStopOnCancel(orgId, "order_first", fake);
   assert.equal(c1.ok, true, "first cancel should succeed");
   if (!c1.ok) return;
-  assert.equal(c1.removed, true, "first cancel removes a stop");
-  assert.equal(c1.routeDeleted, false, "route still has the second stop");
-  assert.equal(tables.routes.length, 1, "route persists with remaining stop");
-  assert.equal(tables.route_stops.length, 1, "one stop remains");
-  assert.equal(tables.route_stops[0].order_id, "order_second");
+  assert.equal(c1.removed, true, "first cancel removes order_first stops");
+  assert.equal(c1.routeDeleted, false, "route still has order_second's stops");
+  assert.equal(tables.routes.length, 1, "route persists with remaining stops");
+  assert.equal(tables.route_stops.length, 2, "two order_second stops remain");
+  assert.ok(
+    tables.route_stops.every((s) => s.order_id === "order_second"),
+    "remaining stops all belong to order_second",
+  );
 
-  // Step 4: cancel the second (last) order — stop removed, route cleaned up.
+  // Step 4: cancel the second (last) order — its remaining stops removed,
+  // route cleaned up since it's now empty.
   // @ts-expect-error fake supabase
   const c2 = await removeOrderStopOnCancel(orgId, "order_second", fake);
   assert.equal(c2.ok, true, "second cancel should succeed");
   if (!c2.ok) return;
-  assert.equal(c2.removed, true, "second cancel removes a stop");
+  assert.equal(c2.removed, true, "second cancel removes order_second stops");
   assert.equal(c2.routeDeleted, true, "last stop gone → route cleaned up");
   assert.equal(tables.routes.length, 0, "zero routes after final cancel");
   assert.equal(tables.route_stops.length, 0, "zero stops after final cancel");
 
-  // Sanity check: the RPC calls hit the right names in the right order.
-  const rpcNames = rpcCalls.map((c) => c.fn);
-  assert.deepEqual(
-    rpcNames,
-    [
-      "add_stop_to_route",
-      "add_stop_to_route",
-      "remove_order_stop_on_cancel",
-      "remove_order_stop_on_cancel",
-    ],
-    "RPC sequence matches the flow",
-  );
+  // Sanity check: the add_stop_to_route RPC fires twice per confirm
+  // (delivery + pickup), and the remove RPC fires for each stop the
+  // wrapper loop cleans up (2 per order + 1 trailing "no more matches"
+  // call per cancel where the loop exits).
+  const addStopCount = rpcCalls.filter((c) => c.fn === "add_stop_to_route").length;
+  assert.equal(addStopCount, 4, "add_stop_to_route fires 4× (2 per order)");
+  const removeCount = rpcCalls.filter(
+    (c) => c.fn === "remove_order_stop_on_cancel",
+  ).length;
+  // Per order: N stops removed + 1 trailing "nothing left" call. For 2
+  // stops × 2 orders + 2 trailing calls = 6.
+  assert.equal(removeCount, 6, "remove RPC fires until each order is empty");
 });
 
 test("flow: cancel an order with no stop is idempotent — no error, no removal", async () => {

@@ -577,6 +577,8 @@ export const pt: Messages = {
       kicker: "Plataforma de aluguer",
       mobileMenu: "Menu do painel",
       openNav: "Abrir navegação do painel",
+      demoModeBadge: "Modo demo",
+      demoModeBody: "O Supabase não está configurado para esta implementação. Os botões parecem funcionar mas nenhuma alteração é guardada.",
     },
     overview: {
       title: "Painel do operador",
@@ -828,6 +830,9 @@ export const pt: Messages = {
     },
     deliveries: {
       liveBadge: "Ao vivo",
+      backfillPickups: "Backfill pickup stops [needs translation]",
+      backfillPickupsConfirm: "Scan in-flight multi-day rentals and create missing pickup stops? Idempotent. [needs translation]",
+      backfillPickupsRunning: "Scanning… [needs translation]",
       title: "Quadro de entregas",
       description: "Apenas encomendas atribuídas a uma rota, agrupadas por rota e por dia. Use esta vista quando estiver a despachar equipas.",
       kickerDispatch: "Despacho",

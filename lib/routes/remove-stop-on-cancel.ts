@@ -29,41 +29,61 @@ export async function removeOrderStopOnCancel(
   | { ok: true; removed: boolean; routeDeleted: boolean; routeId: string | null }
   | { ok: false; reason: string; detail?: string }
 > {
+  // Decision 2.6 — multi-day rentals now generate both a delivery AND a
+  // pickup stop, so a single cancellation may need to clean up multiple
+  // rows. The underlying RPC removes one stop per call, so we loop until
+  // a call reports `removed: false` (nothing left). Capped to 10 to
+  // prevent a runaway loop on an unexpected schema.
+  let lastRouteId: string | null = null;
+  let anyRemoved = false;
+  let routeDeleted = false;
+  const MAX_ITERATIONS = 10;
   try {
-    const { data, error } = await supabase
-      .rpc("remove_order_stop_on_cancel", {
-        p_order_id: orderId,
-        p_org_id: organizationId,
-      })
-      .maybeSingle();
+    for (let i = 0; i < MAX_ITERATIONS; i += 1) {
+      const { data, error } = await supabase
+        .rpc("remove_order_stop_on_cancel", {
+          p_order_id: orderId,
+          p_org_id: organizationId,
+        })
+        .maybeSingle();
 
-    if (error) {
-      return { ok: false, reason: "rpc_failed", detail: error.message };
-    }
+      if (error) {
+        return { ok: false, reason: "rpc_failed", detail: error.message };
+      }
 
-    const row = data as
-      | {
-          ok: boolean;
-          reason: string | null;
-          removed: boolean;
-          route_deleted: boolean;
-          route_id: string | null;
-        }
-      | null;
+      const row = data as
+        | {
+            ok: boolean;
+            reason: string | null;
+            removed: boolean;
+            route_deleted: boolean;
+            route_id: string | null;
+          }
+        | null;
 
-    if (!row) {
-      return { ok: false, reason: "rpc_empty" };
-    }
+      if (!row) {
+        return { ok: false, reason: "rpc_empty" };
+      }
 
-    if (!row.ok) {
-      return { ok: false, reason: row.reason ?? "unknown" };
+      if (!row.ok) {
+        return { ok: false, reason: row.reason ?? "unknown" };
+      }
+
+      if (!row.removed) {
+        // Idempotent / no more stops for this order — done.
+        break;
+      }
+
+      anyRemoved = true;
+      if (row.route_deleted) routeDeleted = true;
+      if (row.route_id) lastRouteId = row.route_id;
     }
 
     return {
       ok: true,
-      removed: row.removed,
-      routeDeleted: row.route_deleted,
-      routeId: row.route_id,
+      removed: anyRemoved,
+      routeDeleted,
+      routeId: lastRouteId,
     };
   } catch (err) {
     return {

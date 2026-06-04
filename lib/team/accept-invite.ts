@@ -1,9 +1,11 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isValidRole } from "@/lib/team/roles";
+import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-cookie";
 
 export type AcceptInviteResult = {
   ok: boolean;
@@ -114,7 +116,28 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     .is("deleted_at", null)
     .maybeSingle();
 
+  // Decision 3.3 — auto-switch to the newly-joined org so the operator's
+  // dashboard reflects what they just accepted (Notion / Linear / Slack
+  // pattern). Without this the success page shows "Welcome to {org}!" but
+  // the dashboard still renders the user's prior org.
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set({
+      name: ACTIVE_ORG_COOKIE,
+      value: invite.organization_id,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  } catch {
+    // Cookie write failures aren't fatal — getOrgContext falls back to
+    // the oldest membership. Log silently rather than blocking the user.
+  }
+
   revalidatePath("/dashboard/settings/team");
+  revalidatePath("/dashboard", "layout");
 
   return {
     ok: true,

@@ -577,6 +577,8 @@ export const fr: Messages = {
       kicker: "Plateforme de location",
       mobileMenu: "Menu du tableau de bord",
       openNav: "Ouvrir la navigation du tableau de bord",
+      demoModeBadge: "Mode démo",
+      demoModeBody: "Supabase n’est pas configuré pour ce déploiement. Les boutons semblent fonctionner mais aucune écriture n’est conservée.",
     },
     overview: {
       title: "Tableau de bord opérateur",
@@ -828,6 +830,9 @@ export const fr: Messages = {
     },
     deliveries: {
       liveBadge: "En direct",
+      backfillPickups: "Backfill pickup stops [needs translation]",
+      backfillPickupsConfirm: "Scan in-flight multi-day rentals and create missing pickup stops? Idempotent. [needs translation]",
+      backfillPickupsRunning: "Scanning… [needs translation]",
       title: "Tableau des livraisons",
       description: "Uniquement les commandes assignées à une tournée, groupées par tournée et par jour. Utilisez cette vue pour dispatcher les équipes.",
       kickerDispatch: "Dispatch",

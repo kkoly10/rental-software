@@ -7,6 +7,7 @@ import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { DeliveryStats } from "@/components/deliveries/delivery-stats";
+import { BackfillPickupButton } from "@/components/deliveries/backfill-pickup-button";
 import { RouteMapWrapper } from "./route-map-wrapper";
 import { CreateRouteForm } from "@/components/deliveries/create-route-form";
 import { getTeamMembersForRoute } from "@/lib/data/unrouted-orders";
@@ -71,7 +72,14 @@ export default async function DeliveriesPage() {
               <div className="kicker">{m.dashboard.deliveries.kickerOperations}</div>
               <h2 className="page-title-sm">{m.dashboard.deliveries.sectionBoard}</h2>
             </div>
-            <StatusBadge label={m.dashboard.deliveries.liveBadge} tone="success" />
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <BackfillPickupButton
+                label={m.dashboard.deliveries.backfillPickups}
+                confirm={m.dashboard.deliveries.backfillPickupsConfirm}
+                runningLabel={m.dashboard.deliveries.backfillPickupsRunning}
+              />
+              <StatusBadge label={m.dashboard.deliveries.liveBadge} tone="success" />
+            </div>
           </div>
 
           <div className="board-columns">
