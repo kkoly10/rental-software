@@ -51,6 +51,53 @@ export function NewOrderForm({
   // createOrder on validation failure so each input can show its own
   // message instead of relying solely on the top-of-form toast.
   const fe = state.fieldErrors;
+  // Echoed-back form values so the operator's inputs survive a failed
+  // submit. Hydrating from sv on first render covers SSR; useEffect
+  // below re-syncs whenever a fresh action result arrives. Same
+  // approach as components/checkout/checkout-form.tsx — React 19's
+  // <form action> reset semantics for uncontrolled inputs aren't
+  // reliable across the Next server-action path, so controlled inputs
+  // are the only way to guarantee the typed values stay put.
+  const sv = state.submittedValues;
+  const [firstName, setFirstName] = useState(sv?.firstName ?? "");
+  const [lastName, setLastName] = useState(sv?.lastName ?? "");
+  const [phone, setPhone] = useState(sv?.phone ?? "");
+  const [email, setEmail] = useState(sv?.email ?? "");
+  const [subtotal, setSubtotal] = useState(sv?.subtotal ?? "");
+  const [deliveryFee, setDeliveryFee] = useState(sv?.deliveryFee ?? "");
+  const [depositAmount, setDepositAmount] = useState(sv?.depositAmount ?? "");
+  const [deliveryLine1, setDeliveryLine1] = useState(sv?.deliveryLine1 ?? "");
+  const [deliveryLine2, setDeliveryLine2] = useState(sv?.deliveryLine2 ?? "");
+  const [deliveryCity, setDeliveryCity] = useState(sv?.deliveryCity ?? "");
+  const [deliveryStateField, setDeliveryStateField] = useState(sv?.deliveryState ?? "");
+  const [deliveryZip, setDeliveryZip] = useState(sv?.deliveryZip ?? "");
+  const [deliveryGateCode, setDeliveryGateCode] = useState(sv?.deliveryGateCode ?? "");
+  const [deliveryContactName, setDeliveryContactName] = useState(sv?.deliveryContactName ?? "");
+  const [deliveryContactPhone, setDeliveryContactPhone] = useState(sv?.deliveryContactPhone ?? "");
+  const [deliverySetupNotes, setDeliverySetupNotes] = useState(sv?.deliverySetupNotes ?? "");
+  const [notes, setNotes] = useState(sv?.notes ?? "");
+
+  useEffect(() => {
+    if (!state.submittedValues) return;
+    const v = state.submittedValues;
+    if (v.firstName !== undefined) setFirstName(v.firstName);
+    if (v.lastName !== undefined) setLastName(v.lastName);
+    if (v.phone !== undefined) setPhone(v.phone);
+    if (v.email !== undefined) setEmail(v.email);
+    if (v.subtotal !== undefined) setSubtotal(v.subtotal);
+    if (v.deliveryFee !== undefined) setDeliveryFee(v.deliveryFee);
+    if (v.depositAmount !== undefined) setDepositAmount(v.depositAmount);
+    if (v.deliveryLine1 !== undefined) setDeliveryLine1(v.deliveryLine1);
+    if (v.deliveryLine2 !== undefined) setDeliveryLine2(v.deliveryLine2);
+    if (v.deliveryCity !== undefined) setDeliveryCity(v.deliveryCity);
+    if (v.deliveryState !== undefined) setDeliveryStateField(v.deliveryState);
+    if (v.deliveryZip !== undefined) setDeliveryZip(v.deliveryZip);
+    if (v.deliveryGateCode !== undefined) setDeliveryGateCode(v.deliveryGateCode);
+    if (v.deliveryContactName !== undefined) setDeliveryContactName(v.deliveryContactName);
+    if (v.deliveryContactPhone !== undefined) setDeliveryContactPhone(v.deliveryContactPhone);
+    if (v.deliverySetupNotes !== undefined) setDeliverySetupNotes(v.deliverySetupNotes);
+    if (v.notes !== undefined) setNotes(v.notes);
+  }, [state.submittedValues]);
 
   // Idempotency key — generated once when the form mounts so a
   // double-click / network retry doesn't create a duplicate order.
@@ -77,11 +124,22 @@ export function NewOrderForm({
   // Track the event/rental dates and times for client-side validation
   // (issue #1 from the post-launch follow-up: operator can silently submit
   // a same-day rental with start_time == end_time, producing two stops
-  // with identical scheduled windows).
-  const [eventDate, setEventDate] = useState(initialEventDate ?? "");
-  const [rentalEndDate, setRentalEndDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  // with identical scheduled windows). Seed from sv on first render so
+  // they also survive a failed-submit round-trip alongside the other
+  // controlled inputs above.
+  const [eventDate, setEventDate] = useState(sv?.eventDate ?? initialEventDate ?? "");
+  const [rentalEndDate, setRentalEndDate] = useState(sv?.rentalEndDate ?? "");
+  const [startTime, setStartTime] = useState(sv?.startTime ?? "");
+  const [endTime, setEndTime] = useState(sv?.endTime ?? "");
+  // Resync the date/time controls when a new sv arrives on error.
+  useEffect(() => {
+    if (!state.submittedValues) return;
+    const v = state.submittedValues;
+    if (v.eventDate !== undefined) setEventDate(v.eventDate);
+    if (v.rentalEndDate !== undefined) setRentalEndDate(v.rentalEndDate);
+    if (v.startTime !== undefined) setStartTime(v.startTime);
+    if (v.endTime !== undefined) setEndTime(v.endTime);
+  }, [state.submittedValues]);
   const sameDay =
     eventDate.length === 10 && rentalEndDate.length === 10 && eventDate === rentalEndDate;
   const timeClash =
@@ -110,6 +168,8 @@ export function NewOrderForm({
           <strong>{m.firstNameLabel}</strong>
           <input
             name="first_name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
             type="text"
             required
             placeholder={m.firstNamePlaceholder}
@@ -121,6 +181,8 @@ export function NewOrderForm({
           <strong>{m.lastNameLabel}</strong>
           <input
             name="last_name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             type="text"
             required
             placeholder={m.lastNamePlaceholder}
@@ -132,6 +194,8 @@ export function NewOrderForm({
           <strong>{m.phoneLabel}</strong>
           <input
             name="phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             type="tel"
             placeholder={m.phonePlaceholder}
             style={{ marginTop: 10, width: "100%" }}
@@ -144,6 +208,8 @@ export function NewOrderForm({
         <strong>{m.emailLabel}</strong>
         <input
           name="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           type="email"
           placeholder={m.emailPlaceholder}
           style={{ marginTop: 10, width: "100%" }}
@@ -287,6 +353,8 @@ export function NewOrderForm({
           <strong>{m.deliveryFeeLabel}</strong>
           <input
             name="delivery_fee"
+            value={deliveryFee}
+            onChange={(e) => setDeliveryFee(e.target.value)}
             type="number"
             step="0.01"
             min="0"
@@ -302,6 +370,8 @@ export function NewOrderForm({
           <strong>{m.subtotalLabel}</strong>
           <input
             name="subtotal"
+            value={subtotal}
+            onChange={(e) => setSubtotal(e.target.value)}
             type="number"
             step="0.01"
             min="0"
@@ -320,6 +390,8 @@ export function NewOrderForm({
           <strong>{m.depositAmountLabel}</strong>
           <input
             name="deposit_amount"
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
             type="number"
             step="0.01"
             min="0"
@@ -343,6 +415,8 @@ export function NewOrderForm({
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.streetAddressLabel}</span>
             <input
               name="delivery_line1"
+            value={deliveryLine1}
+            onChange={(e) => setDeliveryLine1(e.target.value)}
               type="text"
               placeholder={m.streetAddressPlaceholder}
               style={{ width: "100%" }}
@@ -353,6 +427,8 @@ export function NewOrderForm({
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.aptSuiteLabel}</span>
             <input
               name="delivery_line2"
+            value={deliveryLine2}
+            onChange={(e) => setDeliveryLine2(e.target.value)}
               type="text"
               placeholder={m.aptSuitePlaceholder}
               style={{ width: "100%" }}
@@ -361,17 +437,23 @@ export function NewOrderForm({
           <div className="grid grid-3">
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.cityLabel}</span>
-              <input name="delivery_city" type="text" placeholder={m.cityPlaceholder} style={{ width: "100%" }} />
+              <input name="delivery_city"
+            value={deliveryCity}
+            onChange={(e) => setDeliveryCity(e.target.value)} type="text" placeholder={m.cityPlaceholder} style={{ width: "100%" }} />
           <FieldError id="err-delivery-city" message={fe?.deliveryCity} />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.stateLabel}</span>
-              <input name="delivery_state" type="text" placeholder={m.statePlaceholder} maxLength={3} style={{ width: "100%" }} />
+              <input name="delivery_state"
+            value={deliveryStateField}
+            onChange={(e) => setDeliveryStateField(e.target.value)} type="text" placeholder={m.statePlaceholder} maxLength={3} style={{ width: "100%" }} />
           <FieldError id="err-delivery-state" message={fe?.deliveryState} />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.zipLabel}</span>
-              <input name="delivery_zip" type="text" placeholder={m.zipPlaceholder} maxLength={10} style={{ width: "100%" }} />
+              <input name="delivery_zip"
+            value={deliveryZip}
+            onChange={(e) => setDeliveryZip(e.target.value)} type="text" placeholder={m.zipPlaceholder} maxLength={10} style={{ width: "100%" }} />
           <FieldError id="err-delivery-zip" message={fe?.deliveryZip} />
             </label>
           </div>
@@ -394,23 +476,31 @@ export function NewOrderForm({
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.gateCodeLabel}</span>
-              <input name="delivery_gate_code" type="text" placeholder={m.gateCodePlaceholder} style={{ width: "100%" }} />
+              <input name="delivery_gate_code"
+            value={deliveryGateCode}
+            onChange={(e) => setDeliveryGateCode(e.target.value)} type="text" placeholder={m.gateCodePlaceholder} style={{ width: "100%" }} />
             </label>
           </div>
           <div className="grid grid-3">
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.onSiteContactNameLabel}</span>
-              <input name="delivery_contact_name" type="text" placeholder={m.onSiteContactNamePlaceholder} style={{ width: "100%" }} />
+              <input name="delivery_contact_name"
+            value={deliveryContactName}
+            onChange={(e) => setDeliveryContactName(e.target.value)} type="text" placeholder={m.onSiteContactNamePlaceholder} style={{ width: "100%" }} />
             </label>
             <label className="field-stack">
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.onSiteContactPhoneLabel}</span>
-              <input name="delivery_contact_phone" type="tel" placeholder={m.onSiteContactPhonePlaceholder} style={{ width: "100%" }} />
+              <input name="delivery_contact_phone"
+            value={deliveryContactPhone}
+            onChange={(e) => setDeliveryContactPhone(e.target.value)} type="tel" placeholder={m.onSiteContactPhonePlaceholder} style={{ width: "100%" }} />
             </label>
           </div>
           <label className="field-stack">
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-soft)" }}>{m.setupNotesLabel}</span>
             <textarea
               name="delivery_setup_notes"
+            value={deliverySetupNotes}
+            onChange={(e) => setDeliverySetupNotes(e.target.value)}
               placeholder={m.setupNotesPlaceholder}
               rows={2}
               style={{
@@ -429,6 +519,8 @@ export function NewOrderForm({
         <strong>{m.internalNotesLabel}</strong>
         <textarea
           name="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
           placeholder={m.internalNotesPlaceholder}
           rows={3}
           style={{
