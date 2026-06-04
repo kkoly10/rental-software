@@ -107,7 +107,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at)"
+      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -200,5 +200,18 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
       sortedImages.length > 0
         ? sortedImages.map((image) => image.image_url).filter(Boolean)
         : fallbackGallery,
+    // Sprint 6.0 — inflatable wet/dry mode fields surface only when the
+    // operator has configured them. The storefront treats absent or
+    // single-mode products as "no toggle, render as today."
+    supportsModes:
+      Array.isArray((data as Record<string, unknown>).supports_modes)
+        ? ((data as Record<string, unknown>).supports_modes as string[])
+        : ["dry"],
+    wetUpchargeCents:
+      typeof (data as Record<string, unknown>).wet_upcharge_cents === "number"
+        ? ((data as Record<string, unknown>).wet_upcharge_cents as number)
+        : null,
+    basePriceCents:
+      typeof data.base_price === "number" ? Math.round(data.base_price * 100) : 0,
   };
 });

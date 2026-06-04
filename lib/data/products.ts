@@ -192,17 +192,36 @@ export async function getProductById(productId: string) {
     visibility: data.visibility ?? "public",
     requiresDelivery: data.requires_delivery ?? true,
     pricingModel: data.pricing_model ?? "flat_day",
+    // Sprint 6.0 — inflatable-vertical optional fields. Defaults
+    // mirror the migration so a row written before this column existed
+    // (effectively impossible at runtime since the migration was
+    // applied first, but defensive) reads as the simple default.
+    supportsModes:
+      Array.isArray(data.supports_modes) && data.supports_modes.length > 0
+        ? (data.supports_modes as string[])
+        : ["dry"],
+    wetUpchargeCents:
+      typeof data.wet_upcharge_cents === "number"
+        ? data.wet_upcharge_cents
+        : null,
+    anchoringMethods: Array.isArray(data.anchoring_methods)
+      ? (data.anchoring_methods as string[])
+      : [],
+    requiredAnchorCount:
+      typeof data.required_anchor_count === "number"
+        ? data.required_anchor_count
+        : null,
   };
 }
 
 export async function getCategories() {
   if (!hasSupabaseEnv()) {
     return [
-      { id: "cat_1", name: "Bounce House", slug: "bounce-houses" },
-      { id: "cat_2", name: "Water Slide", slug: "water-slides" },
-      { id: "cat_3", name: "Combo Unit", slug: "combos" },
-      { id: "cat_4", name: "Obstacle Course", slug: "obstacle-courses" },
-      { id: "cat_5", name: "Add-on", slug: "add-ons" },
+      { id: "cat_1", name: "Bounce House", slug: "bounce-houses", vertical: "inflatable" },
+      { id: "cat_2", name: "Water Slide", slug: "water-slides", vertical: "inflatable" },
+      { id: "cat_3", name: "Combo Unit", slug: "combos", vertical: "inflatable" },
+      { id: "cat_4", name: "Obstacle Course", slug: "obstacle-courses", vertical: "inflatable" },
+      { id: "cat_5", name: "Add-on", slug: "add-ons", vertical: "inflatable" },
     ];
   }
 
@@ -212,7 +231,10 @@ export async function getCategories() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, slug")
+    // Sprint 6.0 — include vertical so the product form can conditionally
+    // render the inflatable-setup accordion based on the selected
+    // category's vertical without an extra round-trip.
+    .select("id, name, slug, vertical")
     .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
     .is("deleted_at", null)
@@ -222,5 +244,10 @@ export async function getCategories() {
     return [];
   }
 
-  return data.map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
+  return data.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    vertical: c.vertical,
+  }));
 }

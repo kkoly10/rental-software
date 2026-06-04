@@ -172,4 +172,11 @@ export type CatalogDetail = {
   highlights: string[];
   imageUrl?: string;
   galleryImages?: string[];
+  // Sprint 6.0 — inflatable-vertical optional fields. Surfaced to the
+  // storefront so the customer can pick wet/dry. NULL/empty means
+  // the storefront renders no toggle and behaves like every other
+  // product.
+  supportsModes?: string[];
+  wetUpchargeCents?: number | null;
+  basePriceCents?: number;
 };

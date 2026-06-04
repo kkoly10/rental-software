@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
+import { getMessages } from "@/lib/i18n/server";
+import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 
 export type PullSheetStop = {
   sequence: number;
@@ -88,6 +90,9 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
   const ctx = await getOrgContext();
   if (!ctx) return null;
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  // Sprint 6.0 — locale-aware item line formatting for crew loading.
+  const i18nMessages = await getMessages();
+  const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   const supabase = await createSupabaseServerClient();
 
@@ -105,7 +110,7 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
   const { data: rawStops, error: stopsError } = await supabase
     .from("route_stops")
     .select(
-      "id, stop_sequence, stop_type, scheduled_window_start, orders(order_number, customers(first_name, last_name, phone), customer_addresses!delivery_address_id(line1, city, state, postal_code), order_items(item_name_snapshot, quantity))"
+      "id, stop_sequence, stop_type, scheduled_window_start, orders(order_number, customers(first_name, last_name, phone), customer_addresses!delivery_address_id(line1, city, state, postal_code), order_items(item_name_snapshot, quantity, selected_mode, products(anchoring_methods, required_anchor_count)))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true })
@@ -136,7 +141,15 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
           state?: string;
           postal_code?: string;
         } | null;
-        order_items?: { item_name_snapshot?: string; quantity?: number }[] | null;
+        order_items?: {
+          item_name_snapshot?: string;
+          quantity?: number;
+          selected_mode?: string | null;
+          products?: {
+            anchoring_methods?: string[] | null;
+            required_anchor_count?: number | null;
+          } | null;
+        }[] | null;
       } | null;
 
       const customer = order?.customers;
@@ -150,7 +163,19 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
 
       const items = (order?.order_items ?? [])
         .map((it) => ({
-          name: it.item_name_snapshot ?? "Item",
+          // Sprint 6.0 — formatInflatableItemLine renders the
+          // mode + Bring: spec inline with the item name using the
+          // operator's locale labels.
+          name: formatInflatableItemLine(
+            {
+              itemName: it.item_name_snapshot ?? "Item",
+              selectedMode: it.selected_mode,
+              anchoringMethods: it.products?.anchoring_methods ?? null,
+              requiredAnchorCount: it.products?.required_anchor_count ?? null,
+            },
+            inflatableLabels,
+            inflatableLabels.bringPrefix,
+          ),
           quantity: it.quantity ?? 1,
         }))
         .filter((it) => it.quantity > 0);

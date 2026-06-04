@@ -5,6 +5,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { geocodeZipServer } from "@/lib/maps/geocode-server";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
+import { getMessages } from "@/lib/i18n/server";
+import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 import type { RouteDetail, RouteDetailEnhanced, RouteStopEnhanced } from "@/lib/types";
 
 export type RouteStopData = {
@@ -131,11 +133,14 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   const ctx = await getOrgContext();
   if (!ctx) return [];
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  // Sprint 6.0 — locale-aware item line labels for crew today.
+  const i18nMessages = await getMessages();
+  const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
     .from("route_stops")
-    .select("id, order_id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, pickup_photo_url, pickup_signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot))")
+    .select("id, order_id, stop_sequence, stop_type, scheduled_window_start, stop_status, proof_photo_url, signature_name, pickup_photo_url, pickup_signature_name, routes!inner(organization_id), orders(order_number, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1, city, state), order_items(item_name_snapshot, selected_mode, products(anchoring_methods, required_anchor_count)))")
     .eq("route_id", routeId)
     .eq("routes.organization_id", ctx.organizationId)
     .order("stop_sequence", { ascending: true });
@@ -181,11 +186,35 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       order_number: string;
       customers: { first_name: string; last_name: string } | null;
       customer_addresses: { line1?: string; city?: string; state?: string } | null;
-      order_items: { item_name_snapshot?: string }[] | null;
+      order_items: {
+        item_name_snapshot?: string;
+        selected_mode?: string | null;
+        products?: {
+          anchoring_methods?: string[] | null;
+          required_anchor_count?: number | null;
+        } | null;
+      }[] | null;
     } | null;
     const customer = order?.customers;
     const addr = order?.customer_addresses;
     const addressParts = [addr?.line1, addr?.city, addr?.state].filter(Boolean);
+    // Sprint 6.0 — surface mode + anchoring inline with the product
+    // name so the crew today card shows everything they need to load.
+    // Uses the shared formatter so operator/crew labels stay
+    // consistent with the order detail page and the pull sheet.
+    const firstItem = order?.order_items?.[0];
+    const productName = firstItem?.item_name_snapshot
+      ? formatInflatableItemLine(
+          {
+            itemName: firstItem.item_name_snapshot,
+            selectedMode: firstItem.selected_mode,
+            anchoringMethods: firstItem.products?.anchoring_methods ?? null,
+            requiredAnchorCount: firstItem.products?.required_anchor_count ?? null,
+          },
+          inflatableLabels,
+          inflatableLabels.bringPrefix,
+        )
+      : undefined;
     return {
       id: stop.id,
       sequence: stop.stop_sequence ?? index + 1,
@@ -196,7 +225,7 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       type: (stop.stop_type ?? "delivery").replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: stop.stop_status ?? "assigned",
       address: addressParts.length > 0 ? addressParts.join(", ") : undefined,
-      productName: order?.order_items?.[0]?.item_name_snapshot ?? undefined,
+      productName,
       orderId: (stop as Record<string, unknown>).order_id as string | undefined,
       proofPhotoUrl: (stop as Record<string, unknown>).proof_photo_url as string | undefined,
       pickupPhotoUrl: (stop as Record<string, unknown>).pickup_photo_url as string | undefined,

@@ -65,7 +65,9 @@ jobs:
           node --test --experimental-strip-types \
             tests/auto-attach-create.test.ts \
             tests/compute-financials.test.ts \
+            tests/format-inflatable-item-line.test.ts \
             tests/html-to-plain-text.test.ts \
+            tests/inflatable-mode-pricing.test.ts \
             tests/onboarding-vertical-allowlist.test.ts \
             tests/portal-access-token.test.ts \
             tests/quickbooks-client.test.ts \

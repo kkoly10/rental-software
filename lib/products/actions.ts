@@ -13,6 +13,11 @@ import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { checkPlanLimit } from "@/lib/stripe/gate";
 import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
+// Sprint 6.0 — orphan-clear rule (Q2 in the design doc) lives in the
+// pricing helper so it can be unit-tested without this file's
+// Supabase + auth module graph. Re-exposed locally under its old name
+// to keep the existing call sites tidy.
+import { reconcileWetUpchargeCents as reconcileWetUpcharge } from "@/lib/pricing/inflatable-mode";
 
 export type ProductActionState = {
   ok: boolean;
@@ -25,6 +30,36 @@ function slugify(text: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+// Sprint 6.0 — pull the inflatable-vertical fields out of the form
+// post in one place so create + update share the same parsing logic.
+// FormData.getAll for the checkbox groups (supports_modes[],
+// anchoring_methods[]); single getters for the two numeric inputs.
+// The wet_upcharge orphan rule (Q2 answer in the design doc) is
+// applied server-side: if `wet` is not in supports_modes, the
+// upcharge is dropped to null regardless of what the form posted.
+function readInflatableSetupFields(formData: FormData) {
+  const supportsModes = formData
+    .getAll("supports_modes")
+    .map((v) => String(v))
+    .filter((v) => v === "dry" || v === "wet");
+  const anchoringMethods = formData
+    .getAll("anchoring_methods")
+    .map((v) => String(v))
+    .filter((v) =>
+      ["stakes", "sandbags", "water_barrels", "concrete_weights", "tie_downs"].includes(v),
+    );
+  const wetUpchargeRaw = String(formData.get("wet_upcharge") ?? "").trim();
+  const anchorCountRaw = String(formData.get("required_anchor_count") ?? "").trim();
+  return {
+    // The schema's default(["dry"]) kicks in when the array is empty.
+    supportsModes: supportsModes.length > 0 ? supportsModes : undefined,
+    anchoringMethods,
+    wetUpcharge: wetUpchargeRaw === "" ? undefined : wetUpchargeRaw,
+    requiredAnchorCount: anchorCountRaw === "" ? undefined : Number(anchorCountRaw),
+  };
+}
+
 
 export async function createProduct(
   _prevState: ProductActionState,
@@ -40,6 +75,7 @@ export async function createProduct(
     requiresDelivery: formData.get("requires_delivery") === "on",
     isActive: formData.get("is_active") !== null,
     visibility: String(formData.get("visibility") ?? "public"),
+    ...readInflatableSetupFields(formData),
   });
 
   if (!parsed.success) {
@@ -60,7 +96,13 @@ export async function createProduct(
     requiresDelivery,
     isActive,
     visibility,
+    supportsModes,
+    wetUpcharge,
+    anchoringMethods,
+    requiredAnchorCount,
   } = parsed.data;
+
+  const wetUpchargeCents = reconcileWetUpcharge(supportsModes, wetUpcharge);
 
   if (!hasSupabaseEnv()) {
     return {
@@ -163,6 +205,10 @@ export async function createProduct(
     visibility,
     pricing_model: "flat_day",
     rental_mode: "catalog_only",
+    supports_modes: supportsModes,
+    wet_upcharge_cents: wetUpchargeCents,
+    anchoring_methods: anchoringMethods,
+    required_anchor_count: requiredAnchorCount ?? null,
   }).select("id").single();
 
   if (error) {
@@ -214,6 +260,7 @@ export async function updateProduct(
     requiresDelivery: formData.get("requires_delivery") === "on",
     isActive: formData.get("is_active") !== null,
     visibility: String(formData.get("visibility") ?? "public"),
+    ...readInflatableSetupFields(formData),
   });
 
   if (!parsed.success) {
@@ -288,6 +335,11 @@ export async function updateProduct(
     }
   }
 
+  const updateWetUpchargeCents = reconcileWetUpcharge(
+    parsed.data.supportsModes,
+    parsed.data.wetUpcharge,
+  );
+
   const { error } = await supabase
     .from("products")
     .update({
@@ -301,6 +353,10 @@ export async function updateProduct(
       requires_delivery: parsed.data.requiresDelivery,
       is_active: parsed.data.isActive,
       visibility: parsed.data.visibility,
+      supports_modes: parsed.data.supportsModes,
+      wet_upcharge_cents: updateWetUpchargeCents,
+      anchoring_methods: parsed.data.anchoringMethods,
+      required_anchor_count: parsed.data.requiredAnchorCount ?? null,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)

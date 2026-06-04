@@ -5,6 +5,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
+import { getMessages } from "@/lib/i18n/server";
+import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 import type { OrderDetail } from "@/lib/types";
 
 const fallbackOrderDetail: OrderDetail = {
@@ -48,7 +50,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       delivery_surface_type, delivery_gate_code,
       delivery_contact_name, delivery_contact_phone, delivery_setup_notes,
       customers(first_name, last_name, email, phone),
-      order_items(item_name_snapshot, line_total),
+      order_items(item_name_snapshot, line_total, selected_mode, products(anchoring_methods, required_anchor_count)),
       documents(id, document_type, document_status),
       customer_addresses!delivery_address_id(line1, line2, city, state, postal_code)
     `)
@@ -70,7 +72,15 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
 
   const items =
     ((data as Record<string, unknown>).order_items as
-      | { item_name_snapshot: string; line_total: number }[]
+      | {
+          item_name_snapshot: string;
+          line_total: number;
+          selected_mode?: string | null;
+          products?: {
+            anchoring_methods?: string[] | null;
+            required_anchor_count?: number | null;
+          } | null;
+        }[]
       | null) ?? [];
 
   const docs =
@@ -96,6 +106,9 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const totalPaid = financials?.totalPaid ?? 0;
   const remainingBalance = financials?.remainingBalance ?? Number(data.total_amount ?? 0);
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  // Sprint 6.0 — locale-aware mode + anchoring labels for the items list.
+  const i18nMessages = await getMessages();
+  const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   return {
     id: data.id,
@@ -122,7 +135,18 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       : undefined,
     items:
       items.length > 0
-        ? items.map((i) => i.item_name_snapshot ?? "Item")
+        ? items.map((i) =>
+            formatInflatableItemLine(
+              {
+                itemName: i.item_name_snapshot ?? "Item",
+                selectedMode: i.selected_mode,
+                anchoringMethods: i.products?.anchoring_methods ?? null,
+                requiredAnchorCount: i.products?.required_anchor_count ?? null,
+              },
+              inflatableLabels,
+              inflatableLabels.bringPrefix,
+            ),
+          )
         : ["No items added"],
     deliveryLabel: address
       ? [
