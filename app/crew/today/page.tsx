@@ -13,7 +13,7 @@ import { PickupSignaturePad } from "@/components/crew/pickup-signature-pad";
 import { LocationShareButton } from "@/components/crew/location-share-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getMessages } from "@/lib/i18n/server";
-import { RouteDetailMapWrapper } from "@/app/dashboard/deliveries/[id]/route-detail-map-wrapper";
+import { RouteDetailMapWrapper } from "@/components/maps/route-detail-map-wrapper";
 import { buildGoogleMapsRouteUrl } from "@/lib/maps/google-maps-route-url";
 
 export default async function CrewTodayPage() {

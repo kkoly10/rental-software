@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getRouteDetailEnhanced } from "@/lib/data/route-detail";
 import { DeliveryStats } from "@/components/deliveries/delivery-stats";
-import { RouteDetailMapWrapper } from "./route-detail-map-wrapper";
+import { RouteDetailMapWrapper } from "@/components/maps/route-detail-map-wrapper";
 import { RouteDetailTimeline } from "./route-detail-timeline";
 import { RouteStatusControls, StopStatusButton, RemoveStopButton } from "@/components/deliveries/route-controls";
 import { AddStopForm } from "@/components/deliveries/add-stop-form";
