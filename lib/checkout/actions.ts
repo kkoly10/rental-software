@@ -1014,7 +1014,12 @@ export async function createCheckoutOrder(
             productName,
             eventDate: eventDate ?? "",
             address: addrParts.join(", "),
-            subtotal: fmt(subtotal),
+            // Display the subtotal without the wet upcharge baked in
+            // so the review screen's line items add up to the total
+            // (Subtotal + Wet upcharge + Delivery fee = Total). The
+            // stored subtotal in the DB still includes everything;
+            // this is purely for human-readable display arithmetic.
+            subtotal: fmt(subtotal - wetUpchargeApplied),
             deliveryFee: fmt(deliveryFee),
             total: fmt(total),
             depositDue: fmt(deposit),
@@ -1068,7 +1073,9 @@ export async function createCheckoutOrder(
       productName,
       eventDate: eventDate ?? "",
       address: addrParts.join(", "),
-      subtotal: fmt(subtotal),
+      // Same rationale as the Stripe branch above — display subtotal
+      // without the wet upcharge so the line items sum to the total.
+      subtotal: fmt(subtotal - wetUpchargeApplied),
       deliveryFee: fmt(deliveryFee),
       total: fmt(total),
       depositDue: fmt(deposit),
