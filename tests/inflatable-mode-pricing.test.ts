@@ -15,6 +15,7 @@ import assert from "node:assert/strict";
 import {
   computeInflatableLineTotal,
   normalizeSelectedMode,
+  reconcileWetUpchargeCents,
 } from "../lib/pricing/inflatable-mode.ts";
 
 test("single-mode dry product → line total is base * quantity", () => {
@@ -126,4 +127,46 @@ test("normalizeSelectedMode accepts 'dry' and 'wet', rejects everything else", (
   assert.equal(normalizeSelectedMode(undefined), null);
   assert.equal(normalizeSelectedMode(42), null);
   assert.equal(normalizeSelectedMode({ mode: "wet" }), null);
+});
+
+// Reconciliation tests — the Q2 orphan-clear rule from the design doc.
+// These pin the contract that the operator-form server action depends
+// on: silent stale data is worse than a forced re-entry when wet is
+// re-enabled. Operators always know their current price; ghost
+// upcharges from 6 months ago are pure risk.
+
+test("reconcile: wet enabled + valid upcharge → returns cents", () => {
+  // Operator entered $50 in the wet upcharge field. Stored as 5000c.
+  assert.equal(reconcileWetUpchargeCents(["dry", "wet"], 50), 5000);
+});
+
+test("reconcile: wet enabled + decimal upcharge → rounds to whole cents", () => {
+  // $49.995 → 4999.5 → 5000 (banker's rounding via Math.round).
+  assert.equal(reconcileWetUpchargeCents(["dry", "wet"], 49.995), 5000);
+  // $0.014 → 1.4 → 1 (rounds down).
+  assert.equal(reconcileWetUpchargeCents(["dry", "wet"], 0.014), 1);
+});
+
+test("reconcile: wet UNCHECKED + value sitting in form → cleared to null", () => {
+  // This is the orphan rule. Operator removed "wet" from
+  // supports_modes but left $50 in the form input. The action MUST
+  // null it out so re-enabling wet later doesn't silently restore a
+  // stale price.
+  assert.equal(reconcileWetUpchargeCents(["dry"], 50), null);
+});
+
+test("reconcile: wet enabled + zero upcharge → null (no semantic difference from null)", () => {
+  // Wet with a $0 upcharge is identical to no upcharge — collapse to
+  // null so catalog scans don't have to special-case the sentinel.
+  assert.equal(reconcileWetUpchargeCents(["dry", "wet"], 0), null);
+});
+
+test("reconcile: wet enabled + undefined upcharge → null (operator left field blank)", () => {
+  assert.equal(reconcileWetUpchargeCents(["dry", "wet"], undefined), null);
+});
+
+test("reconcile: wet enabled + negative upcharge → null (defensive)", () => {
+  // Can't happen via the form (min=0 on the input) but a crafted POST
+  // shouldn't bill a customer a negative upcharge or be persisted.
+  assert.equal(reconcileWetUpchargeCents(["dry", "wet"], -25), null);
 });

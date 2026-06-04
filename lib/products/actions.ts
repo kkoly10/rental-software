@@ -13,6 +13,11 @@ import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { checkPlanLimit } from "@/lib/stripe/gate";
 import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
+// Sprint 6.0 — orphan-clear rule (Q2 in the design doc) lives in the
+// pricing helper so it can be unit-tested without this file's
+// Supabase + auth module graph. Re-exposed locally under its old name
+// to keep the existing call sites tidy.
+import { reconcileWetUpchargeCents as reconcileWetUpcharge } from "@/lib/pricing/inflatable-mode";
 
 export type ProductActionState = {
   ok: boolean;
@@ -55,19 +60,6 @@ function readInflatableSetupFields(formData: FormData) {
   };
 }
 
-// Apply the orphan rule (Q2 answer in the design doc): if the
-// operator has unchecked "Wet" we must clear the upcharge field
-// server-side. Otherwise re-enabling Wet later would silently restore
-// a stale price, and the operator would have no idea why their
-// customers are being charged $50 extra for a wet rental.
-function reconcileWetUpcharge(
-  supportsModes: readonly string[],
-  wetUpcharge: number | undefined,
-): number | null {
-  if (!supportsModes.includes("wet")) return null;
-  if (wetUpcharge === undefined || wetUpcharge <= 0) return null;
-  return Math.round(wetUpcharge * 100);
-}
 
 export async function createProduct(
   _prevState: ProductActionState,

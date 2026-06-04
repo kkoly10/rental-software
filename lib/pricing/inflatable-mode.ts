@@ -58,3 +58,31 @@ export function normalizeSelectedMode(raw: unknown): "dry" | "wet" | null {
   if (raw === "dry" || raw === "wet") return raw;
   return null;
 }
+
+/**
+ * Operator orphan-upcharge reconciliation (Q2 answer in the design
+ * doc, codified in lib/products/actions.ts).
+ *
+ * Rule: if the operator unchecks "Wet" on the product form, any
+ * value sitting in the wet_upcharge field becomes meaningless — it
+ * would silently re-apply if Wet were re-enabled later. Clearing it
+ * to null server-side forces a deliberate re-entry then, which is
+ * what we want: prices may have changed in the months between
+ * disabling and re-enabling wet.
+ *
+ * Also normalizes: values <= 0 and undefined both collapse to null
+ * so we never write a row with `wet_upcharge_cents = 0` (semantically
+ * "no upcharge" which is what null already means, and null queries
+ * faster than a sentinel zero across the catalog scan).
+ *
+ * Returns cents so the caller can pass straight to the DB column.
+ * Input is in dollars (whatever the operator typed in the form).
+ */
+export function reconcileWetUpchargeCents(
+  supportsModes: readonly string[],
+  wetUpchargeDollars: number | undefined,
+): number | null {
+  if (!supportsModes.includes("wet")) return null;
+  if (wetUpchargeDollars === undefined || wetUpchargeDollars <= 0) return null;
+  return Math.round(wetUpchargeDollars * 100);
+}
