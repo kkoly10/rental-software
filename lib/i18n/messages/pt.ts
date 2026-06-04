@@ -2639,6 +2639,8 @@ export const pt: Messages = {
     dismiss: "Dispensar",
     openLauncher: "Abrir Copilot",
     closeLauncher: "Fechar Copilot",
+    copy: "Copiar",
+    copied: "Copiado",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "P:",
     faqAnswerPrefix: "R:",
