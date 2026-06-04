@@ -89,7 +89,9 @@ export async function autoAttachOrderToRouteIfEligible(
     // 2) Order prereqs.
     const { data: order } = await supabase
       .from("orders")
-      .select("event_date, delivery_line1, event_start_time")
+      .select(
+        "event_date, rental_end_date, delivery_line1, event_start_time, event_end_time"
+      )
       .eq("id", orderId)
       .eq("organization_id", organizationId)
       .is("deleted_at", null)
@@ -101,6 +103,13 @@ export async function autoAttachOrderToRouteIfEligible(
 
     const hasAddress = !!((order.delivery_line1 as string | null) ?? "").trim();
     if (!hasAddress) return { attached: false, reason: "no_address" };
+
+    // Decision 2.6 — multi-day rentals (and same-day inflatable rentals
+    // with a morning drop-off and evening pickup) get a separate pickup
+    // stop. Falls back to event_date when rental_end_date is missing, so
+    // a single-day rental still produces both rows.
+    const pickupDate =
+      (order.rental_end_date as string | null) ?? eventDate;
 
     // 3) Already on a route?  Don't double-route.
     const { data: existingStop } = await supabase
@@ -198,6 +207,21 @@ export async function autoAttachOrderToRouteIfEligible(
     //    sort last (deterministic by stop id as a tiebreaker).
     await resequenceStopsByScheduledTime(supabase, targetRoute.id);
 
+    // 8) Decision 2.6 — also generate a pickup stop. Lives on a route
+    //    for the rental_end_date (or the event_date for same-day
+    //    rentals). Failures here are non-fatal: the delivery stop is
+    //    already attached and operators can manually add the pickup
+    //    later from the route page. Errors land in app_events via the
+    //    caller's logging path.
+    await ensurePickupStop({
+      supabase,
+      organizationId,
+      orderId,
+      pickupDate,
+      mode,
+      pickupTime: (order.event_end_time as string | null) ?? null,
+    });
+
     return {
       attached: true,
       routeId: targetRoute.id,
@@ -211,6 +235,81 @@ export async function autoAttachOrderToRouteIfEligible(
       detail: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/**
+ * Decision 2.6 — find or create a route for the pickup date and attach a
+ * pickup stop for the given order. Idempotent: if a pickup stop already
+ * exists for this order, returns silently. Failures are swallowed (the
+ * caller's delivery attach already succeeded; an operator can recover
+ * manually) but logged via app_events when the caller surfaces them.
+ *
+ * Note: we re-check `route_stops` for "any stop tied to this order with
+ * stop_type='pickup'" rather than reusing the delivery `already_attached`
+ * check, because a multi-day rental legitimately has BOTH a delivery and
+ * a pickup row attached.
+ */
+async function ensurePickupStop(args: {
+  supabase: SupabaseClient;
+  organizationId: string;
+  orderId: string;
+  pickupDate: string;
+  mode: "auto" | "manual";
+  pickupTime: string | null;
+}): Promise<void> {
+  const { supabase, organizationId, orderId, pickupDate, mode, pickupTime } = args;
+
+  // 1) Idempotency — is there already a pickup row for this order?
+  const { data: existing } = await supabase
+    .from("route_stops")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("stop_type", "pickup")
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+
+  // 2) Find or create a route on the pickup date.
+  const { data: routes } = await supabase
+    .from("routes")
+    .select("id, name, route_status")
+    .eq("organization_id", organizationId)
+    .eq("route_date", pickupDate)
+    .eq("route_status", "planned")
+    .is("deleted_at", null);
+
+  let routeId: string | null = null;
+  if (routes && routes.length === 1) {
+    routeId = routes[0].id as string;
+  } else if ((!routes || routes.length === 0) && mode === "auto") {
+    const formatted = formatRouteDate(pickupDate);
+    const { data: newRoute } = await supabase
+      .from("routes")
+      .insert({
+        organization_id: organizationId,
+        name: `Pickups for ${formatted}`,
+        route_date: pickupDate,
+        route_status: "planned",
+      })
+      .select("id")
+      .single();
+    routeId = (newRoute?.id as string) ?? null;
+  } else if (routes && routes.length > 1) {
+    // Ambiguous — leave the pickup unattached for now. Operator picks
+    // manually from the route board.
+    return;
+  }
+  if (!routeId) return;
+
+  // 3) Attach. Same locking RPC as the delivery path.
+  await supabase.rpc("add_stop_to_route", {
+    p_route_id: routeId,
+    p_order_id: orderId,
+    p_stop_type: "pickup",
+    p_scheduled_window_start: pickupTime,
+  });
+
+  await resequenceStopsByScheduledTime(supabase, routeId);
 }
 
 function formatRouteDate(yyyyMmDd: string): string {

@@ -895,27 +895,72 @@ export async function createCheckoutOrder(
     });
 
     if (!reserveResult.ok) {
+      // Decision 2.7 — the reserve RPC is the source of truth (advisory
+      // lock + atomic insert), so a reserve failure means another
+      // checkout won the race for the slot. Roll back the order and the
+      // side-rows we created on the way in. Each delete is awaited
+      // INDIVIDUALLY so a single failure doesn't short-circuit the
+      // others — if one fails, we still try the rest and log every
+      // failure so operators can clean up.
+      const cleanupFailures: string[] = [];
       try {
-        await supabase.from("orders").delete().eq("id", order.id).eq("organization_id", orgId);
-        if (deliveryAddressId) {
-          await supabase.from("customer_addresses").delete().eq("id", deliveryAddressId).eq("customer_id", customerId);
+        const { error } = await supabase
+          .from("orders")
+          .delete()
+          .eq("id", order.id)
+          .eq("organization_id", orgId);
+        if (error) cleanupFailures.push(`orders: ${error.message}`);
+      } catch (err) {
+        cleanupFailures.push(
+          `orders: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+      if (deliveryAddressId) {
+        try {
+          const { error } = await supabase
+            .from("customer_addresses")
+            .delete()
+            .eq("id", deliveryAddressId)
+            .eq("customer_id", customerId);
+          if (error)
+            cleanupFailures.push(`customer_addresses: ${error.message}`);
+        } catch (err) {
+          cleanupFailures.push(
+            `customer_addresses: ${err instanceof Error ? err.message : String(err)}`
+          );
         }
-        if (newCustomerId) {
-          await supabase.from("customers").delete().eq("id", newCustomerId).eq("organization_id", orgId);
+      }
+      if (newCustomerId) {
+        try {
+          const { error } = await supabase
+            .from("customers")
+            .delete()
+            .eq("id", newCustomerId)
+            .eq("organization_id", orgId);
+          if (error) cleanupFailures.push(`customers: ${error.message}`);
+        } catch (err) {
+          cleanupFailures.push(
+            `customers: ${err instanceof Error ? err.message : String(err)}`
+          );
         }
-      } catch (cleanupErr) {
-        console.error("[checkout] Cleanup after reserve failure failed:", cleanupErr instanceof Error ? cleanupErr.message : cleanupErr, "orderId:", order.id);
       }
 
+      // Failure context now includes BOTH the original reserve reason and
+      // any cleanup failures, so operators monitoring app_events can spot
+      // orphan rows that need manual removal.
       await logAppError({
         organizationId: orgId,
         source: "checkout.website",
-        message: "Failed to reserve availability block during checkout",
+        message:
+          cleanupFailures.length > 0
+            ? "Reserve failed and cleanup also failed — orphan rows possible"
+            : "Failed to reserve availability block during checkout",
         context: {
           reason: reserveResult.message,
           orderId: order.id,
           productId,
           eventDate,
+          cleanupFailures: cleanupFailures.length > 0 ? cleanupFailures : undefined,
         },
       });
 
