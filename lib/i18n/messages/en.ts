@@ -1714,6 +1714,7 @@ const enValues = {
         wetLabel: "Wet",
         wetUpchargeLabel: "Wet upcharge ($)",
         wetUpchargeHint: "Added to the base price per unit when the customer picks wet. Leave blank to charge the same as dry.",
+        bringPrefix: "Bring:",
       },
     },
     businessProfile: {

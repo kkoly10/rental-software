@@ -5,6 +5,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { geocodeZipServer } from "@/lib/maps/geocode-server";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
+import { getMessages } from "@/lib/i18n/server";
+import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 import type { RouteDetail, RouteDetailEnhanced, RouteStopEnhanced } from "@/lib/types";
 
 export type RouteStopData = {
@@ -131,6 +133,9 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
   const ctx = await getOrgContext();
   if (!ctx) return [];
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  // Sprint 6.0 — locale-aware item line labels for crew today.
+  const i18nMessages = await getMessages();
+  const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   const supabase = await createSupabaseServerClient();
   const { data: stops, error } = await supabase
@@ -195,24 +200,21 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
     const addressParts = [addr?.line1, addr?.city, addr?.state].filter(Boolean);
     // Sprint 6.0 — surface mode + anchoring inline with the product
     // name so the crew today card shows everything they need to load.
+    // Uses the shared formatter so operator/crew labels stay
+    // consistent with the order detail page and the pull sheet.
     const firstItem = order?.order_items?.[0];
-    let productName = firstItem?.item_name_snapshot ?? undefined;
-    if (productName) {
-      if (firstItem?.selected_mode === "wet" || firstItem?.selected_mode === "dry") {
-        productName += ` (${firstItem.selected_mode === "wet" ? "Wet" : "Dry"})`;
-      }
-      const anchors = Array.isArray(firstItem?.products?.anchoring_methods)
-        ? (firstItem?.products?.anchoring_methods ?? [])
-        : [];
-      if (anchors.length > 0) {
-        const count = firstItem?.products?.required_anchor_count;
-        const friendly = anchors.map((a) => a.replace(/_/g, " ")).join(", ");
-        productName +=
-          count != null && count > 0
-            ? ` - Bring: ${friendly} x${count}`
-            : ` - Bring: ${friendly}`;
-      }
-    }
+    const productName = firstItem?.item_name_snapshot
+      ? formatInflatableItemLine(
+          {
+            itemName: firstItem.item_name_snapshot,
+            selectedMode: firstItem.selected_mode,
+            anchoringMethods: firstItem.products?.anchoring_methods ?? null,
+            requiredAnchorCount: firstItem.products?.required_anchor_count ?? null,
+          },
+          inflatableLabels,
+          inflatableLabels.bringPrefix,
+        )
+      : undefined;
     return {
       id: stop.id,
       sequence: stop.stop_sequence ?? index + 1,

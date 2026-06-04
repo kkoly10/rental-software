@@ -5,6 +5,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
+import { getMessages } from "@/lib/i18n/server";
+import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 import type { OrderDetail } from "@/lib/types";
 
 const fallbackOrderDetail: OrderDetail = {
@@ -104,6 +106,9 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const totalPaid = financials?.totalPaid ?? 0;
   const remainingBalance = financials?.remainingBalance ?? Number(data.total_amount ?? 0);
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  // Sprint 6.0 — locale-aware mode + anchoring labels for the items list.
+  const i18nMessages = await getMessages();
+  const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   return {
     id: data.id,
@@ -130,31 +135,18 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       : undefined,
     items:
       items.length > 0
-        ? items.map((i) => {
-            // Sprint 6.0 — append mode + anchoring spec when present
-            // so the operator sees "Tropical Combo (Wet) - Bring:
-            // stakes x6" on the order detail page without a deeper
-            // drill-in.
-            const parts = [i.item_name_snapshot ?? "Item"];
-            if (i.selected_mode === "wet" || i.selected_mode === "dry") {
-              parts.push(`(${i.selected_mode === "wet" ? "Wet" : "Dry"})`);
-            }
-            const anchors = Array.isArray(i.products?.anchoring_methods)
-              ? (i.products?.anchoring_methods ?? [])
-              : [];
-            if (anchors.length > 0) {
-              const count = i.products?.required_anchor_count;
-              const friendly = anchors
-                .map((a) => a.replace(/_/g, " "))
-                .join(", ");
-              parts.push(
-                count != null && count > 0
-                  ? `- Bring: ${friendly} x${count}`
-                  : `- Bring: ${friendly}`,
-              );
-            }
-            return parts.join(" ");
-          })
+        ? items.map((i) =>
+            formatInflatableItemLine(
+              {
+                itemName: i.item_name_snapshot ?? "Item",
+                selectedMode: i.selected_mode,
+                anchoringMethods: i.products?.anchoring_methods ?? null,
+                requiredAnchorCount: i.products?.required_anchor_count ?? null,
+              },
+              inflatableLabels,
+              inflatableLabels.bringPrefix,
+            ),
+          )
         : ["No items added"],
     deliveryLabel: address
       ? [

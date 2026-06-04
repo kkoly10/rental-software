@@ -1713,6 +1713,7 @@ export const fr: Messages = {
         wetLabel: "Mouillé",
         wetUpchargeLabel: "Supplément mouillé ($)",
         wetUpchargeHint: "Ajouté au prix de base par unité lorsque le client choisit mouillé. Laissez vide pour facturer le même prix que sec.",
+        bringPrefix: "Apporter :",
       },
     },
     businessProfile: {

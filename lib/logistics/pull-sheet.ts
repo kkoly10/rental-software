@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
+import { getMessages } from "@/lib/i18n/server";
+import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 
 export type PullSheetStop = {
   sequence: number;
@@ -88,6 +90,9 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
   const ctx = await getOrgContext();
   if (!ctx) return null;
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  // Sprint 6.0 — locale-aware item line formatting for crew loading.
+  const i18nMessages = await getMessages();
+  const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   const supabase = await createSupabaseServerClient();
 
@@ -157,32 +162,22 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
       ].filter(Boolean);
 
       const items = (order?.order_items ?? [])
-        .map((it) => {
-          // Sprint 6.0 — surface mode + anchoring on the pull sheet so
-          // the crew loading the truck sees "Tropical Combo (Wet) -
-          // Bring: stakes x6" instead of just the bare item name.
-          let name = it.item_name_snapshot ?? "Item";
-          if (it.selected_mode === "wet" || it.selected_mode === "dry") {
-            name += ` (${it.selected_mode === "wet" ? "Wet" : "Dry"})`;
-          }
-          const anchors = Array.isArray(it.products?.anchoring_methods)
-            ? (it.products?.anchoring_methods ?? [])
-            : [];
-          if (anchors.length > 0) {
-            const count = it.products?.required_anchor_count;
-            const friendly = anchors
-              .map((a) => a.replace(/_/g, " "))
-              .join(", ");
-            name +=
-              count != null && count > 0
-                ? ` - Bring: ${friendly} x${count}`
-                : ` - Bring: ${friendly}`;
-          }
-          return {
-            name,
-            quantity: it.quantity ?? 1,
-          };
-        })
+        .map((it) => ({
+          // Sprint 6.0 — formatInflatableItemLine renders the
+          // mode + Bring: spec inline with the item name using the
+          // operator's locale labels.
+          name: formatInflatableItemLine(
+            {
+              itemName: it.item_name_snapshot ?? "Item",
+              selectedMode: it.selected_mode,
+              anchoringMethods: it.products?.anchoring_methods ?? null,
+              requiredAnchorCount: it.products?.required_anchor_count ?? null,
+            },
+            inflatableLabels,
+            inflatableLabels.bringPrefix,
+          ),
+          quantity: it.quantity ?? 1,
+        }))
         .filter((it) => it.quantity > 0);
 
       return {
