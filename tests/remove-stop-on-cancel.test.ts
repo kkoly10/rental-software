@@ -15,19 +15,29 @@ import { removeOrderStopOnCancel } from "../lib/routes/remove-stop-on-cancel.ts"
 
 type Row = Record<string, unknown>;
 
-function makeFakeRpc(response: {
-  data: Row | null;
-  error?: { message: string };
-}) {
+function makeFakeRpc(
+  response:
+    | { data: Row | null; error?: { message: string } }
+    | { sequence: Array<{ data: Row | null; error?: { message: string } }> }
+) {
   const calls: { fn: string; args: Row }[] = [];
+  // Decision 2.6 — the wrapper now loops the RPC until it reports
+  // `removed: false` so a cancellation can clean up both a delivery and
+  // a pickup stop. Tests use `sequence` to feed a list of responses
+  // ending in {removed:false} so the loop exits.
+  let cursor = 0;
   const fake = {
     rpc(fn: string, args: Row) {
       calls.push({ fn, args });
+      const r =
+        "sequence" in response
+          ? response.sequence[Math.min(cursor++, response.sequence.length - 1)]
+          : response;
       return {
         maybeSingle: () =>
           Promise.resolve({
-            data: response.data,
-            error: response.error ?? null,
+            data: r.data,
+            error: r.error ?? null,
           }),
       };
     },
@@ -37,13 +47,27 @@ function makeFakeRpc(response: {
 
 test("stop removed but route still has stops → removed=true, routeDeleted=false", async () => {
   const { fake, calls } = makeFakeRpc({
-    data: {
-      ok: true,
-      reason: null,
-      removed: true,
-      route_deleted: false,
-      route_id: "route_a",
-    },
+    sequence: [
+      {
+        data: {
+          ok: true,
+          reason: null,
+          removed: true,
+          route_deleted: false,
+          route_id: "route_a",
+        },
+      },
+      // Loop-terminating response — order has no more stops.
+      {
+        data: {
+          ok: true,
+          reason: null,
+          removed: false,
+          route_deleted: false,
+          route_id: null,
+        },
+      },
+    ],
   });
 
   // @ts-expect-error narrow typing of the fake to match SupabaseClient
@@ -55,20 +79,35 @@ test("stop removed but route still has stops → removed=true, routeDeleted=fals
   assert.equal(result.removed, true);
   assert.equal(result.routeDeleted, false);
   assert.equal(result.routeId, "route_a");
-  assert.equal(calls.length, 1);
+  // 1 removing call + 1 terminating call (decision 2.6 loop).
+  assert.equal(calls.length, 2);
   assert.equal(calls[0].fn, "remove_order_stop_on_cancel");
   assert.deepEqual(calls[0].args, { p_order_id: "order_1", p_org_id: "org_1" });
 });
 
 test("last stop removed → routeDeleted=true with route_id surfaced", async () => {
   const { fake } = makeFakeRpc({
-    data: {
-      ok: true,
-      reason: null,
-      removed: true,
-      route_deleted: true,
-      route_id: "route_b",
-    },
+    sequence: [
+      {
+        data: {
+          ok: true,
+          reason: null,
+          removed: true,
+          route_deleted: true,
+          route_id: "route_b",
+        },
+      },
+      // Loop terminates here.
+      {
+        data: {
+          ok: true,
+          reason: null,
+          removed: false,
+          route_deleted: false,
+          route_id: null,
+        },
+      },
+    ],
   });
 
   // @ts-expect-error fake client
