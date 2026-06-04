@@ -2,14 +2,21 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { signInWithPassword, resendVerificationEmail } from "@/lib/auth/actions";
+import {
+  signInWithPassword,
+  resendVerificationEmail,
+  type AuthActionState,
+} from "@/lib/auth/actions";
 import { useI18n } from "@/lib/i18n/provider";
 
-const initialState = {
+// Explicit AuthActionState (not the inferred narrow shape) so the form can
+// destructure `needsVerification` / `email` after a sign-in attempt without
+// TS reporting them as unknown.
+const initialState: AuthActionState = {
   ok: false,
   message: "",
 };
-const resendInitial = { ok: false, message: "" };
+const resendInitial: AuthActionState = { ok: false, message: "" };
 
 interface LoginFormLabels {
   email: string;
