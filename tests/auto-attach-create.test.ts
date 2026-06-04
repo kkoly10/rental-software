@@ -161,6 +161,8 @@ test("auto mode + no existing route → creates 'Deliveries for {date}' and atta
   };
 
   const { fake, inserts, rpcCalls } = makeFakeSupabase(tables);
+  // @ts-expect-error — narrow typing of the fake to match SupabaseClient is
+  // not worth the ceremony for a 100-line unit test.
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
 
   assert.equal(result.attached, true);
@@ -170,14 +172,12 @@ test("auto mode + no existing route → creates 'Deliveries for {date}' and atta
 
   const routeInsert = inserts.find((i) => i.table === "routes");
   assert.ok(routeInsert, "expected a routes insert");
-  if (!routeInsert) return; // Type narrowing — assert.ok doesn't have TS asserts signatures.
   assert.equal((routeInsert.payload as Row).organization_id, orgId);
   assert.equal((routeInsert.payload as Row).route_date, "2026-07-04");
   assert.equal((routeInsert.payload as Row).route_status, "planned");
 
   const addStopCall = rpcCalls.find((c) => c.fn === "add_stop_to_route");
   assert.ok(addStopCall, "expected add_stop_to_route RPC");
-  if (!addStopCall) return;
   assert.equal((addStopCall.args as Row).p_order_id, orderId);
 });
 
@@ -203,6 +203,7 @@ test("manual mode + no existing route → bails with no_route (no creation)", as
   };
 
   const { fake, inserts } = makeFakeSupabase(tables);
+  // @ts-expect-error fake client
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
 
   assert.equal(result.attached, false);
@@ -254,6 +255,7 @@ test("auto mode + existing same-date route → bundles (no new route created)", 
   };
 
   const { fake, inserts } = makeFakeSupabase(tables);
+  // @ts-expect-error fake client
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
 
   assert.equal(result.attached, true);
@@ -293,6 +295,7 @@ test("legacy settings.auto_route_on_confirm=false is honored as manual", async (
   };
 
   const { fake, inserts } = makeFakeSupabase(tables);
+  // @ts-expect-error fake client
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
 
   assert.equal(result.attached, false);
@@ -321,6 +324,7 @@ test("order with no event_date returns no_event_date and skips work", async () =
   };
 
   const { fake, inserts, rpcCalls } = makeFakeSupabase(tables);
+  // @ts-expect-error fake client
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
   assert.equal(result.attached, false);
   if (result.attached) return;
@@ -348,6 +352,7 @@ test("order with no delivery address returns no_address and skips work", async (
   };
 
   const { fake, inserts } = makeFakeSupabase(tables);
+  // @ts-expect-error fake client
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
   assert.equal(result.attached, false);
   if (result.attached) return;
@@ -378,6 +383,7 @@ test("two routes for the same date → ambiguous (operator must pick)", async ()
   };
 
   const { fake, inserts, rpcCalls } = makeFakeSupabase(tables);
+  // @ts-expect-error fake client
   const result = await autoAttachOrderToRouteIfEligible(orgId, orderId, fake);
   assert.equal(result.attached, false);
   if (result.attached) return;

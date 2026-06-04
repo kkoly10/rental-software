@@ -203,6 +203,7 @@ test("full noob flow: first confirm auto-creates route, second confirm bundles, 
   // Step 1: first confirm. Decision 2.6 — each confirm now generates BOTH
   // a delivery and a pickup stop (the pickup falls back to event_date for
   // these same-day fixtures), so we expect two route_stops rows per order.
+  // @ts-expect-error fake supabase
   const r1 = await autoAttachOrderToRouteIfEligible(orgId, "order_first", fake);
   assert.equal(r1.attached, true, "first confirm should attach");
   if (!r1.attached) return;
@@ -215,6 +216,7 @@ test("full noob flow: first confirm auto-creates route, second confirm bundles, 
 
   // Step 2: second confirm same date — bundles into the same route, also
   // adding a delivery + pickup pair → four total.
+  // @ts-expect-error fake supabase
   const r2 = await autoAttachOrderToRouteIfEligible(orgId, "order_second", fake);
   assert.equal(r2.attached, true, "second confirm should attach");
   if (!r2.attached) return;
@@ -226,6 +228,7 @@ test("full noob flow: first confirm auto-creates route, second confirm bundles, 
   // Step 3: cancel the first order — BOTH its stops are removed (the
   // wrapper loops until the RPC reports no more matches). Route stays
   // because order_second still has stops.
+  // @ts-expect-error fake supabase
   const c1 = await removeOrderStopOnCancel(orgId, "order_first", fake);
   assert.equal(c1.ok, true, "first cancel should succeed");
   if (!c1.ok) return;
@@ -240,6 +243,7 @@ test("full noob flow: first confirm auto-creates route, second confirm bundles, 
 
   // Step 4: cancel the second (last) order — its remaining stops removed,
   // route cleaned up since it's now empty.
+  // @ts-expect-error fake supabase
   const c2 = await removeOrderStopOnCancel(orgId, "order_second", fake);
   assert.equal(c2.ok, true, "second cancel should succeed");
   if (!c2.ok) return;
@@ -272,6 +276,7 @@ test("flow: cancel an order with no stop is idempotent — no error, no removal"
 
   const { fake } = makeFlowFake(tables);
 
+  // @ts-expect-error fake supabase
   const result = await removeOrderStopOnCancel(orgId, "order_ghost", fake);
   assert.equal(result.ok, true);
   if (!result.ok) return;

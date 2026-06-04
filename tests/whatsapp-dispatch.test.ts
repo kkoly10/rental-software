@@ -79,6 +79,7 @@ test("WhatsApp path: enabled + opted-in + template → POST with whatsapp: prefi
     const calls = recordFetch();
     const { dispatchCustomerMessage } = await import("../lib/messaging/dispatch.ts");
     const result = await dispatchCustomerMessage(
+      // @ts-expect-error narrowed-fake supabase
       fakeSupabase({ whatsapp_enabled: true, whatsapp_sender_id: "+14155238886" }),
       "org_1",
       {
@@ -107,6 +108,7 @@ test("Falls back to SMS when org has whatsapp_enabled=false", async () => {
     const calls = recordFetch();
     const { dispatchCustomerMessage } = await import("../lib/messaging/dispatch.ts");
     const result = await dispatchCustomerMessage(
+      // @ts-expect-error fake supabase
       fakeSupabase({ whatsapp_enabled: false, whatsapp_sender_id: "+14155238886" }),
       "org_2",
       {
@@ -133,6 +135,7 @@ test("Falls back to SMS when customer is not opted in", async () => {
     const calls = recordFetch();
     const { dispatchCustomerMessage } = await import("../lib/messaging/dispatch.ts");
     const result = await dispatchCustomerMessage(
+      // @ts-expect-error fake supabase
       fakeSupabase({ whatsapp_enabled: true, whatsapp_sender_id: "+14155238886" }),
       "org_3",
       {
@@ -157,6 +160,7 @@ test("Falls back to SMS when template ContentSid env var is missing", async () =
     const calls = recordFetch();
     const { dispatchCustomerMessage } = await import("../lib/messaging/dispatch.ts");
     const result = await dispatchCustomerMessage(
+      // @ts-expect-error fake supabase
       fakeSupabase({ whatsapp_enabled: true, whatsapp_sender_id: "+14155238886" }),
       "org_4",
       {
@@ -180,6 +184,7 @@ test("Uses customer.whatsapp_number when set, instead of phone", async () => {
     const calls = recordFetch();
     const { dispatchCustomerMessage } = await import("../lib/messaging/dispatch.ts");
     const result = await dispatchCustomerMessage(
+      // @ts-expect-error fake supabase
       fakeSupabase({ whatsapp_enabled: true, whatsapp_sender_id: "+14155238886" }),
       "org_5",
       {
