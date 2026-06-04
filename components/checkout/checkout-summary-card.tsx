@@ -5,6 +5,10 @@ export type CheckoutPricing = {
   basePrice: number;
   adjustments: { ruleName: string; amount: number; percentage: number }[];
   subtotal: number;
+  /** Sprint 6.0 wet-mode upcharge ($), 0 when not applicable. Already
+   *  rolled into `subtotal`; surfaced separately so the summary can
+   *  show it as its own line item. */
+  wetUpcharge: number;
   deliveryFee: number | null;
   total: number | null;
   deposit: number | null;
@@ -59,6 +63,16 @@ export async function CheckoutSummaryCard({
                     </span>
                   </div>
                 ))}
+              {pricing.wetUpcharge > 0 && (
+                <div className="order-row">
+                  <span className="muted" style={{ fontSize: 13 }}>
+                    {m.checkoutSummary.wetUpcharge}
+                  </span>
+                  <span style={{ fontSize: 13 }}>
+                    +${pricing.wetUpcharge.toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="order-row">
                 <span className="muted">{hasAdjustments ? m.checkoutSummary.adjustedSubtotal : m.checkoutSummary.subtotal}</span>
                 <span>${pricing.subtotal.toFixed(2)}</span>

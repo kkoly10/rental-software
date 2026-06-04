@@ -2383,6 +2383,7 @@ export const fr: Messages = {
     basePrice: "Prix de base",
     adjustedSubtotal: "Sous-total ajusté",
     subtotal: "Sous-total",
+    wetUpcharge: "Supplément mode eau",
     deliveryFee: "Frais de livraison",
     deliveryTBD: "À déterminer",
     deliveryFree: "Gratuit",
