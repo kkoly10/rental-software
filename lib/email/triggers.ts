@@ -11,7 +11,7 @@ import {
   operatorActivityAlertEmail,
   type OperatorActivityEvent,
 } from "./templates";
-import { resolveEmailLocale, type EmailLocale } from "./email-i18n";
+import { resolveEmailLocale, emailCopy, type EmailLocale } from "./email-i18n";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
 import { sanitizeHeaderValue, strictParseEmail } from "@/lib/security/header-safe";
@@ -224,7 +224,7 @@ export async function triggerOrderConfirmationEmail(params: {
   await sendEmail({
     to: params.customerEmail,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Booking #${params.orderNumber} received — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.orderConfirmation(params.orderNumber, branding.businessName)),
     html: orderConfirmationEmail({
       businessName: branding.businessName,
       customerFirstName: params.customerFirstName,
@@ -353,7 +353,7 @@ export async function triggerPaymentReceivedEmail(params: {
     await sendEmail({
       to: params.customerEmail,
       from: branding.fromAddress,
-      subject: sanitizeHeaderValue(`Refund processed for order #${params.orderNumber} — ${branding.businessName}`),
+      subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.refundProcessed(params.orderNumber, branding.businessName)),
       html: refundProcessedEmail({
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
@@ -370,7 +370,7 @@ export async function triggerPaymentReceivedEmail(params: {
     await sendEmail({
       to: params.customerEmail,
       from: branding.fromAddress,
-      subject: sanitizeHeaderValue(`Payment received for order #${params.orderNumber} — ${branding.businessName}`),
+      subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.paymentReceived(params.orderNumber, branding.businessName)),
       html: paymentReceivedEmail({
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
@@ -507,7 +507,13 @@ export async function triggerOrderStatusEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Order #${order.order_number} — ${params.newStatus.replace(/_/g, " ")} — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(
+      (() => {
+        const sc = emailCopy(customerLocale).orderStatus;
+        const statusText = sc.statuses[params.newStatus as keyof typeof sc.statuses]?.heading ?? sc.fallbackHeading;
+        return emailCopy(customerLocale).subjects.orderStatus(order.order_number, branding.businessName, statusText);
+      })()
+    ),
     html: orderStatusUpdateEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -576,7 +582,7 @@ export async function triggerDocumentsReadyEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Documents ready for order #${order.order_number} — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.documentsReady(order.order_number, branding.businessName)),
     html: documentsReadyEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -642,7 +648,7 @@ export async function triggerQuoteSentEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Your quote for order #${params.orderNumber} — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.quoteSent(params.orderNumber, branding.businessName)),
     html: quoteSentEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -709,7 +715,7 @@ export async function triggerDepositReminderEmail(params: {
   return sendEmail({
     to: params.customerEmail,
     from: branding.fromAddress,
-    subject: `Deposit reminder — order #${params.orderNumber} — ${branding.businessName}`,
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.depositReminder(params.orderNumber, branding.businessName)),
     html: depositReminderEmail({
       businessName: branding.businessName,
       customerFirstName: params.customerFirstName,

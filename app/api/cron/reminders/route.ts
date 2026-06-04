@@ -10,7 +10,7 @@ import {
   postEventFollowUpEmail,
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
-import { resolveEmailLocale } from "@/lib/email/email-i18n";
+import { resolveEmailLocale, emailCopy } from "@/lib/email/email-i18n";
 import { formatEventDate as formatEventDateIntl } from "@/lib/i18n/format-helpers";
 import {
   todayUtc,
@@ -264,7 +264,7 @@ async function sendDayBeforeReminders(
       const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
-        subject: `Reminder: Your rental from ${branding.businessName} is tomorrow!`,
+        subject: emailCopy(customerLocale).subjects.eventReminder(branding.businessName),
         html: eventReminderEmail({
           businessName: branding.businessName,
           customerFirstName: customer.first_name ?? "there",
@@ -502,7 +502,7 @@ async function sendPostEventFollowUps(
       const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
-        subject: `How was your event? — ${branding.businessName}`,
+        subject: emailCopy(customerLocale).subjects.postEventFollowUp(branding.businessName),
         html: postEventFollowUpEmail({
           businessName: branding.businessName,
           customerFirstName: customer.first_name ?? "there",

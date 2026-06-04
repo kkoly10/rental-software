@@ -124,6 +124,18 @@ type EmailCopyBundle = {
     button: string;
     preheader: (depositDue: string, orderNumber: string) => string;
   };
+  /** Localized customer-facing email subject lines. */
+  subjects: {
+    orderConfirmation: (orderNumber: string, businessName: string) => string;
+    paymentReceived: (orderNumber: string, businessName: string) => string;
+    refundProcessed: (orderNumber: string, businessName: string) => string;
+    orderStatus: (orderNumber: string, businessName: string, statusText: string) => string;
+    documentsReady: (orderNumber: string, businessName: string) => string;
+    quoteSent: (orderNumber: string, businessName: string) => string;
+    depositReminder: (orderNumber: string, businessName: string) => string;
+    eventReminder: (businessName: string) => string;
+    postEventFollowUp: (businessName: string) => string;
+  };
 };
 
 const en: EmailCopyBundle = {
@@ -247,6 +259,17 @@ const en: EmailCopyBundle = {
     button: "Pay Deposit",
     preheader: (depositDue, orderNumber) =>
       `Pay your ${depositDue} deposit to confirm order #${orderNumber}.`,
+  },
+  subjects: {
+    orderConfirmation: (orderNumber, businessName) => `Booking #${orderNumber} received — ${businessName}`,
+    paymentReceived: (orderNumber, businessName) => `Payment received for order #${orderNumber} — ${businessName}`,
+    refundProcessed: (orderNumber, businessName) => `Refund processed for order #${orderNumber} — ${businessName}`,
+    orderStatus: (orderNumber, businessName, statusText) => `${statusText} — order #${orderNumber} — ${businessName}`,
+    documentsReady: (orderNumber, businessName) => `Documents ready for order #${orderNumber} — ${businessName}`,
+    quoteSent: (orderNumber, businessName) => `Your quote for order #${orderNumber} — ${businessName}`,
+    depositReminder: (orderNumber, businessName) => `Deposit reminder — order #${orderNumber} — ${businessName}`,
+    eventReminder: (businessName) => `Reminder: your rental from ${businessName} is tomorrow!`,
+    postEventFollowUp: (businessName) => `How was your event? — ${businessName}`,
   },
 };
 
@@ -379,6 +402,17 @@ const fr: EmailCopyBundle = {
     preheader: (depositDue, orderNumber) =>
       `Versez votre acompte de ${depositDue} pour confirmer la commande n° ${orderNumber}.`,
   },
+  subjects: {
+    orderConfirmation: (orderNumber, businessName) => `Réservation n° ${orderNumber} reçue — ${businessName}`,
+    paymentReceived: (orderNumber, businessName) => `Paiement reçu pour la commande n° ${orderNumber} — ${businessName}`,
+    refundProcessed: (orderNumber, businessName) => `Remboursement effectué pour la commande n° ${orderNumber} — ${businessName}`,
+    orderStatus: (orderNumber, businessName, statusText) => `${statusText} — commande n° ${orderNumber} — ${businessName}`,
+    documentsReady: (orderNumber, businessName) => `Documents prêts pour la commande n° ${orderNumber} — ${businessName}`,
+    quoteSent: (orderNumber, businessName) => `Votre devis pour la commande n° ${orderNumber} — ${businessName}`,
+    depositReminder: (orderNumber, businessName) => `Rappel d’acompte — commande n° ${orderNumber} — ${businessName}`,
+    eventReminder: (businessName) => `Rappel : votre location chez ${businessName} a lieu demain !`,
+    postEventFollowUp: (businessName) => `Comment s’est passé votre événement ? — ${businessName}`,
+  },
 };
 
 const es: EmailCopyBundle = {
@@ -509,6 +543,17 @@ const es: EmailCopyBundle = {
     preheader: (depositDue, orderNumber) =>
       `Paga tu depósito de ${depositDue} para confirmar el pedido n.º ${orderNumber}.`,
   },
+  subjects: {
+    orderConfirmation: (orderNumber, businessName) => `Reserva n.º ${orderNumber} recibida — ${businessName}`,
+    paymentReceived: (orderNumber, businessName) => `Pago recibido del pedido n.º ${orderNumber} — ${businessName}`,
+    refundProcessed: (orderNumber, businessName) => `Reembolso procesado del pedido n.º ${orderNumber} — ${businessName}`,
+    orderStatus: (orderNumber, businessName, statusText) => `${statusText} — pedido n.º ${orderNumber} — ${businessName}`,
+    documentsReady: (orderNumber, businessName) => `Documentos listos para el pedido n.º ${orderNumber} — ${businessName}`,
+    quoteSent: (orderNumber, businessName) => `Tu presupuesto del pedido n.º ${orderNumber} — ${businessName}`,
+    depositReminder: (orderNumber, businessName) => `Recordatorio de depósito — pedido n.º ${orderNumber} — ${businessName}`,
+    eventReminder: (businessName) => `Recordatorio: ¡tu alquiler con ${businessName} es mañana!`,
+    postEventFollowUp: (businessName) => `¿Qué tal tu evento? — ${businessName}`,
+  },
 };
 
 const pt: EmailCopyBundle = {
@@ -638,6 +683,17 @@ const pt: EmailCopyBundle = {
     button: "Pagar sinal",
     preheader: (depositDue, orderNumber) =>
       `Pague o seu sinal de ${depositDue} para confirmar o pedido n.º ${orderNumber}.`,
+  },
+  subjects: {
+    orderConfirmation: (orderNumber, businessName) => `Reserva n.º ${orderNumber} recebida — ${businessName}`,
+    paymentReceived: (orderNumber, businessName) => `Pagamento recebido do pedido n.º ${orderNumber} — ${businessName}`,
+    refundProcessed: (orderNumber, businessName) => `Reembolso processado do pedido n.º ${orderNumber} — ${businessName}`,
+    orderStatus: (orderNumber, businessName, statusText) => `${statusText} — pedido n.º ${orderNumber} — ${businessName}`,
+    documentsReady: (orderNumber, businessName) => `Documentos prontos para o pedido n.º ${orderNumber} — ${businessName}`,
+    quoteSent: (orderNumber, businessName) => `Seu orçamento do pedido n.º ${orderNumber} — ${businessName}`,
+    depositReminder: (orderNumber, businessName) => `Lembrete de sinal — pedido n.º ${orderNumber} — ${businessName}`,
+    eventReminder: (businessName) => `Lembrete: sua locação com a ${businessName} é amanhã!`,
+    postEventFollowUp: (businessName) => `Como foi o seu evento? — ${businessName}`,
   },
 };
 

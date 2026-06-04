@@ -38,6 +38,14 @@ test("documents intro agrees in number (singular vs plural)", () => {
   assert.match(singular, /está pronto/);
 });
 
+test("subject lines are localized", () => {
+  assert.equal(emailCopy("en").subjects.quoteSent("1042", "Acme"), "Your quote for order #1042 — Acme");
+  assert.match(emailCopy("es").subjects.paymentReceived("1042", "Acme"), /Pago recibido del pedido n\.º 1042 — Acme/);
+  assert.match(emailCopy("fr").subjects.orderConfirmation("1042", "Acme"), /Réservation n° 1042 reçue/);
+  assert.match(emailCopy("pt").subjects.depositReminder("1042", "Acme"), /Lembrete de sinal/);
+  assert.match(emailCopy("es").subjects.orderStatus("1042", "Acme", "Entrega programada"), /Entrega programada — pedido n\.º 1042 — Acme/);
+});
+
 test("every locale exposes the same key set as en (shape parity)", () => {
   const keys = (o: object): string[] =>
     Object.entries(o).flatMap(([k, v]) =>
