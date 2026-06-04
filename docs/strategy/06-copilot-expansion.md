@@ -142,10 +142,16 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 - **Validated three times:** client parser (`lib/copilot/parse-action.ts`, extracted + unit-tested), the route's `paymentActionSchema`, and `recordPayment` itself.
 
 **Attribution / legal coverage.** Because the Copilot records real money, every Copilot-initiated payment is unambiguously attributable:
-- The payment row's reference note is deterministically stamped **"Added via Operator Copilot"** server-side (`lib/copilot/payment-note.ts`, unit-tested, capped to the 120-char column) — visible in the Payments view and the accounting CSV export. The note is internal-only (never shown to customers).
-- The recording **operator's identity** (authenticated user) and **timestamp** (`paid_at` / `created_at`) live on the payment row.
-- The authoritative `payments.record_manual` audit-log entry now carries `recorded_via: "copilot"` (in addition to actor, timestamp, amount, order), and the separate `copilot.action` audit entry independently records the same event — two correlated trails.
+- The payment row's reference note is deterministically stamped **"Added via Operator Copilot on YYYY-MM-DD HH:MM UTC"** server-side (`lib/copilot/payment-note.ts`, unit-tested, capped to the 120-char column; UTC for timezone-unambiguity) — visible in the Payments view and the accounting CSV export. The note is internal-only (never shown to customers).
+- The recording **operator's identity** (authenticated user) and **timestamp** (`paid_at` / `created_at`) also live on the payment row.
+- The authoritative `payments.record_manual` audit-log entry carries `recorded_via: "copilot"` (in addition to actor, timestamp, amount, order), and the separate `copilot.action` audit entry independently records the same event — two correlated trails.
 - The confirm-before-apply preview shows an explicit **authorization notice**: confirming records the payment via Copilot under the operator's account, timestamped and logged.
+
+**Why this holds up (informal, not legal advice).** This design matches the controls regulators and e-records law emphasize for AI-assisted financial actions:
+- **Human-in-the-loop authorization** — the operator must explicitly confirm before anything is written. Industry guidance for agentic AI singles out *financial disbursements* as the category that should require human approval, and stresses that accountability rests with the human who authorizes — delegating to AI doesn't dilute it. Our confirm-before-apply preview is exactly this control.
+- **Attributable + timestamped + retainable records** (the E-SIGN / UETA integrity principles): who (authenticated operator), when (UTC stamp + `paid_at`/`created_at`), what (amount/method/order), and via-what-channel are all captured and retained.
+- **Tamper-resistance**: `app_event_logs` has RLS enabled and `revoke all ... from anon, authenticated`, so operators/staff cannot read, edit, or delete the audit log through the app (server-role writes only); and no code path edits a payment's `reference_note` after creation, so the stamp is write-once.
+- **Optional hardening not yet done**: capturing IP/user-agent on the action for stronger non-repudiation, and a cryptographic hash-chain (WORM) over `app_event_logs` for tamper-evidence beyond access control. Recommended only if a compliance need arises. **An attorney should review for the operator's jurisdiction before relying on this as legal protection.**
 
 **Changes:** action types/union (`lib/copilot/actions.ts`); discriminated route schema + branched audit/revalidate (`app/api/copilot/action/route.ts`); extracted, hardened `parseActionFromResponse` (`lib/copilot/parse-action.ts`); payment preview + i18n in all four locales (`copilot-action-preview.tsx`, `messages/*`); `record_payment` protocol in the system prompt; order IDs exposed in the operational context; a "Record a payment" suggested prompt.
 
