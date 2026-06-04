@@ -103,6 +103,18 @@ export function CopilotPanel({
 
     const data = await res.json().catch(() => null);
 
+    // Server-side acknowledgment backstop (e.g. the mount-time status fetch
+    // failed or raced): surface the acknowledgment prompt rather than a
+    // generic failure, so the operator can accept the terms and retry.
+    if (res.ok && data?.needsAcknowledgment) {
+      setAck({
+        needed: true,
+        version: typeof data.version === "string" ? data.version : "",
+        terms: typeof data.terms === "string" ? data.terms : "",
+      });
+      throw new Error(i18n.copilot.acknowledgment.title);
+    }
+
     if (!res.ok || !data?.ok) {
       throw new Error(
         typeof data?.message === "string"
@@ -110,7 +122,7 @@ export function CopilotPanel({
           : i18n.copilot.failedToApply
       );
     }
-  }, [i18n.copilot.failedToApply]);
+  }, [i18n.copilot.failedToApply, i18n.copilot.acknowledgment.title]);
 
   const handleDismissAction = useCallback((messageIndex: number) => {
     setPendingActions((prev) =>
