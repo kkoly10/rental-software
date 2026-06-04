@@ -49,10 +49,18 @@ export async function getOrderRoutingState(
 
   const supabase = await createSupabaseServerClient();
 
-  // Pull the prerequisites in a single round trip.
+  // Pull the prerequisites in a single round trip. Address lives on
+  // customer_addresses, NOT on orders directly. The previous select
+  // referenced orders.delivery_line1 which doesn't exist; PostgREST
+  // silently returned it as null, so hasAddress was always false and
+  // every order on the detail page showed "blocked: no_address" in
+  // the AssignToRouteCard — even orders that had a perfectly valid
+  // delivery_line1 in customer_addresses.
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_status, event_date, delivery_line1")
+    .select(
+      "id, order_status, event_date, delivery_address_id, customer_addresses!delivery_address_id(line1)"
+    )
     .eq("id", orderId)
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
@@ -62,7 +70,10 @@ export async function getOrderRoutingState(
 
   const eventDate = order.event_date as string | null;
   const status = (order.order_status as string) ?? "inquiry";
-  const hasAddress = !!(order.delivery_line1 as string | null)?.trim();
+  const address = (order as Record<string, unknown>).customer_addresses as
+    | { line1?: string | null }
+    | null;
+  const hasAddress = !!address?.line1?.trim();
 
   // Hard blockers first.
   if (!eventDate) {
@@ -75,16 +86,16 @@ export async function getOrderRoutingState(
     return { kind: "blocked", reason: "no_address", currentStatus: status };
   }
 
-  // Already on a route?  Stop here so the operator doesn't accidentally
-  // double-route the same order.  Scope to non-deleted routes only —
-  // otherwise an order attached to a soft-deleted route would still
-  // flag as "already assigned" with a dead View route → link.
+  // Already on a route? Stop here so the operator doesn't accidentally
+  // double-route the same order. routes has no soft-delete column —
+  // the previous deleted_at filter caused PostgREST to error out and
+  // return null, so the AssignToRouteCard never noticed when an order
+  // was already attached and showed "eligible" anyway.
   const { data: existingStop } = await supabase
     .from("route_stops")
-    .select("route_id, routes!inner(id, name, organization_id, route_date, deleted_at)")
+    .select("route_id, routes!inner(id, name, organization_id, route_date)")
     .eq("order_id", orderId)
     .eq("routes.organization_id", ctx.organizationId)
-    .is("routes.deleted_at", null)
     .limit(1)
     .maybeSingle();
 
@@ -103,19 +114,20 @@ export async function getOrderRoutingState(
     }
   }
 
-  // Eligible — list routes for that date.  We also report each route's
+  // Eligible — list routes for that date. We also report each route's
   // current stopCount so the card can hint at how loaded each one is.
-  // Filter out completed routes — they can't accept new stops, and the
-  // auto-attach helper (lib/routes/auto-attach.ts) already skips them,
-  // so showing them here as candidates would let the operator click
-  // "Attach" only to get a confusing server-side error.
+  // Filter out completed routes — they can't accept new stops. The
+  // routes table uses `route_status` (not `status`) and has no
+  // soft-delete column; the old query referenced both, errored at
+  // PostgREST, and returned an empty candidate list — meaning the
+  // AssignToRouteCard always told operators "no routes for this date"
+  // even when one existed.
   const { data: routes } = await supabase
     .from("routes")
-    .select("id, name, status, route_stops(id)")
+    .select("id, name, route_status, route_stops(id)")
     .eq("organization_id", ctx.organizationId)
     .eq("route_date", eventDate)
-    .is("deleted_at", null)
-    .neq("status", "completed")
+    .neq("route_status", "completed")
     .order("created_at", { ascending: true });
 
   const candidateRoutes = (routes ?? []).map((r) => {
@@ -125,7 +137,7 @@ export async function getOrderRoutingState(
     return {
       id: r.id as string,
       name: (r.name as string) ?? "",
-      routeStatus: (r.status as string) ?? "planned",
+      routeStatus: (r.route_status as string) ?? "planned",
       stopCount: stops?.length ?? 0,
     };
   });
