@@ -51,6 +51,10 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
     { label: "How do I customize my site?", prompt: "How do I customize my public storefront?" },
     { label: "What do customers see?", prompt: "What does my public storefront look like to customers?" },
   ],
+  "/dashboard/messages": [
+    { label: "Draft a reply to a message", prompt: "Help me reply to one of my unread customer messages." },
+    { label: "Any unread messages?", prompt: "Do I have any unread customer messages?" },
+  ],
   "/dashboard/settings": [
     { label: "What should I set up here?", prompt: "What settings should I fill in first?" },
     { label: "How do SMS notifications work?", prompt: "How do I set up SMS text message notifications for my customers?" },

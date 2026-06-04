@@ -69,6 +69,18 @@ export function getOperationalContext(snapshot: OperationalSnapshot): string {
     }
   }
 
+  if (snapshot.unreadThreads.length > 0) {
+    lines.push(
+      "",
+      "Unread customer messages you can draft a reply to (use the customerEmail/customerId/orderId/orderNumber to send a reply via a send_reply ACTION block; draft a reply grounded in the message text):"
+    );
+    for (const t of snapshot.unreadThreads) {
+      lines.push(
+        `- From ${t.customerName} (customerEmail: ${t.customerEmail ?? "unknown"}${t.customerId ? `, customerId: ${t.customerId}` : ""}${t.orderNumber ? `, order #${t.orderNumber}` : ""}${t.orderId ? `, orderId: ${t.orderId}` : ""}): "${t.snippet}"`
+      );
+    }
+  }
+
   return lines.join("\n");
 }
 

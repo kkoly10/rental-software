@@ -39,6 +39,17 @@ export type ActionableOrder = {
   link: string;
 };
 
+// An unread inbound customer message the Copilot can draft a reply to.
+export type UnreadThread = {
+  customerName: string;
+  customerEmail: string | null;
+  customerId: string | null;
+  orderId: string | null;
+  orderNumber: string | null;
+  snippet: string; // the customer's message (truncated)
+  link: string; // /dashboard/messages
+};
+
 export type OperationalSnapshot = {
   // Money
   outstandingBalance: number;
@@ -64,6 +75,9 @@ export type OperationalSnapshot = {
   // first, with their current status — so the model can target a real order.
   actionableOrders: ActionableOrder[];
 
+  // Unread inbound customer messages the Copilot can draft replies to.
+  unreadThreads: UnreadThread[];
+
   // Formatting hints so the context layer renders money correctly
   currency: string;
   locale: string;
@@ -86,6 +100,7 @@ const EMPTY: OperationalSnapshot = {
   openMaintenance: 0,
   attentionOrders: [],
   actionableOrders: [],
+  unreadThreads: [],
   currency: "USD",
   locale: "en",
   available: false,
@@ -95,6 +110,9 @@ const EMPTY: OperationalSnapshot = {
 const ATTENTION_ORDERS_LIMIT = 5;
 // How many open orders to surface as action targets (status changes, etc.).
 const ACTIONABLE_ORDERS_LIMIT = 12;
+// How many unread threads to surface as reply targets.
+const UNREAD_THREADS_LIMIT = 5;
+const MESSAGE_SNIPPET_MAX = 400;
 
 // Order statuses that are fully closed out and therefore can't owe money or
 // represent an upcoming event. Everything else (inquiry → delivered) is "open"
@@ -157,13 +175,19 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
         .gte("orders.event_date", today)
         .not("orders.order_status", "in", CLOSED_STATUSES),
 
-      // Unread inbound customer messages.
+      // Unread inbound customer messages — count (exact) + the latest few rows
+      // so the Copilot can draft contextual replies.
       supabase
         .from("messages")
-        .select("id", { count: "exact", head: true })
+        .select(
+          "id, customer_id, sender_email, sender_name, order_id, body, created_at",
+          { count: "exact" }
+        )
         .eq("organization_id", ctx.organizationId)
         .eq("direction", "inbound")
-        .eq("read", false),
+        .eq("read", false)
+        .order("created_at", { ascending: false })
+        .limit(UNREAD_THREADS_LIMIT),
 
       // Assets currently out of service. maintenance_records.status is one of
       // open / in_progress / resolved; the first two mean "still needs work".
@@ -245,6 +269,11 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
     link: `/dashboard/orders/${o.id}`,
   }));
 
+  // Resolve customer + order details for the unread inbound messages so the
+  // Copilot can draft a reply (it needs the customer email + the message body).
+  const unreadRows = unreadRes.data ?? [];
+  const unreadThreads = await buildUnreadThreads(supabase, ctx.organizationId, unreadRows);
+
   return {
     outstandingBalance: orderSummary.outstandingBalance,
     revenueThisMonth: paymentSummary.revenueThisMonth,
@@ -258,8 +287,73 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
     openMaintenance: maintenanceRes.count ?? 0,
     attentionOrders,
     actionableOrders,
+    unreadThreads,
     currency,
     locale,
     available: true,
   };
+}
+
+type UnreadRow = {
+  id: string;
+  customer_id: string | null;
+  sender_email: string | null;
+  sender_name: string | null;
+  order_id: string | null;
+  body: string | null;
+};
+
+async function buildUnreadThreads(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  rows: UnreadRow[]
+): Promise<UnreadThread[]> {
+  if (rows.length === 0) return [];
+
+  const customerIds = [...new Set(rows.map((r) => r.customer_id).filter(Boolean) as string[])];
+  const orderIds = [...new Set(rows.map((r) => r.order_id).filter(Boolean) as string[])];
+
+  const [customersRes, ordersRes] = await Promise.all([
+    customerIds.length > 0
+      ? supabase
+          .from("customers")
+          .select("id, first_name, last_name, email")
+          .in("id", customerIds)
+          .eq("organization_id", organizationId)
+          .is("deleted_at", null)
+      : Promise.resolve({ data: [] as { id: string; first_name: string | null; last_name: string | null; email: string | null }[] }),
+    orderIds.length > 0
+      ? supabase
+          .from("orders")
+          .select("id, order_number")
+          .in("id", orderIds)
+          .eq("organization_id", organizationId)
+          .is("deleted_at", null)
+      : Promise.resolve({ data: [] as { id: string; order_number: string | null }[] }),
+  ]);
+
+  const customerMap = new Map(
+    (customersRes.data ?? []).map((c) => [
+      c.id,
+      {
+        name: [c.first_name, c.last_name].filter(Boolean).join(" ") || "",
+        email: c.email,
+      },
+    ])
+  );
+  const orderMap = new Map((ordersRes.data ?? []).map((o) => [o.id, o.order_number]));
+
+  return rows.map((r) => {
+    const customer = r.customer_id ? customerMap.get(r.customer_id) : null;
+    const snippet = (r.body ?? "").trim().slice(0, MESSAGE_SNIPPET_MAX);
+    return {
+      customerName: customer?.name || r.sender_name || r.sender_email || "Customer",
+      customerEmail: customer?.email ?? r.sender_email ?? null,
+      customerId: r.customer_id,
+      orderId: r.order_id,
+      orderNumber: r.order_id ? orderMap.get(r.order_id) ?? null : null,
+      snippet,
+      link: "/dashboard/messages",
+    };
+  });
 }
