@@ -18,7 +18,11 @@ import { searchArticles } from "@/lib/help/articles";
 import { pageHelpMap } from "@/lib/help/page-help";
 import { checklistItems } from "@/lib/guidance/checklist";
 import { getOptionalEnv } from "@/lib/env";
-import { copilotRequestSchema } from "@/lib/validation/copilot";
+import {
+  copilotRequestSchema,
+  type CopilotHistoryMessage,
+} from "@/lib/validation/copilot";
+import { buildConversationMessages } from "@/lib/copilot/conversation";
 import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
 import { getCopilotAccessContext } from "@/lib/security/copilot-access";
 import { getRequestClientKey } from "@/lib/security/request-client";
@@ -126,7 +130,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { message, route } = parsed.data;
+  const { message, route, history } = parsed.data;
   const clientKey = getRequestClientKey(request);
 
   try {
@@ -202,6 +206,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = await handleOpenAI(
       openaiKey,
       message,
+      history,
       route,
       pageHelp,
       snapshotContext,
@@ -229,6 +234,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = await handleAnthropic(
       anthropicKey,
       message,
+      history,
       route,
       pageHelp,
       snapshotContext,
@@ -272,6 +278,7 @@ export async function POST(request: NextRequest) {
 async function handleOpenAI(
   apiKey: string,
   message: string,
+  history: CopilotHistoryMessage[],
   route: string,
   pageHelp: string,
   snapshot: string,
@@ -300,7 +307,7 @@ async function handleOpenAI(
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: message },
+          ...buildConversationMessages(history, message),
         ],
         max_tokens: 600,
         temperature: 0.3,
@@ -323,6 +330,7 @@ async function handleOpenAI(
 async function handleAnthropic(
   apiKey: string,
   message: string,
+  history: CopilotHistoryMessage[],
   route: string,
   pageHelp: string,
   snapshot: string,
@@ -352,7 +360,7 @@ async function handleAnthropic(
         model: "claude-haiku-4-5-20251001",
         max_tokens: 600,
         system: systemPrompt,
-        messages: [{ role: "user", content: message }],
+        messages: buildConversationMessages(history, message),
       }),
     });
 
@@ -374,6 +382,15 @@ function answerOperationalQuestion(
   ops: OperationalSnapshot
 ): string | null {
   const money = (n: number) => formatMoney(n, ops.currency, ops.locale);
+
+  // Deep-linked bullet list of the specific orders that still owe money.
+  const attentionOrderLines = () =>
+    ops.attentionOrders
+      .map(
+        (o) =>
+          `- [${o.label}](${o.link}) — ${money(o.balance)} due${o.eventDate ? `, event ${o.eventDate}` : ""}`
+      )
+      .join("\n");
 
   // "What needs my attention?" — a quick daily-briefing roundup.
   if (
@@ -418,7 +435,11 @@ function answerOperationalQuestion(
     if (items.length === 0) {
       return `${header}\n\nNothing is blocking your upcoming events — no balances due soon, no unsigned documents, no unread messages, and no assets in maintenance. You're in good shape. 🎉`;
     }
-    return `${header}\n\nHere's what needs your attention:\n\n${items.join("\n")}`;
+    let body = `${header}\n\nHere's what needs your attention:\n\n${items.join("\n")}`;
+    if (ops.attentionOrders.length > 0) {
+      body += `\n\nThe upcoming orders still owing money:\n\n${attentionOrderLines()}`;
+    }
+    return body;
   }
 
   // Money owed / outstanding balance.
@@ -438,7 +459,10 @@ function answerOperationalQuestion(
     if (ops.balanceDueSoonCount > 0) {
       msg += ` Of that, ${money(ops.balanceDueSoonTotal)} is on **${ops.balanceDueSoonCount} order${ops.balanceDueSoonCount === 1 ? "" : "s"} with events in the next 7 days** — those are the most urgent to collect.`;
     }
-    msg += `\n\nTo see who owes what and record payments, go to [Payments](/dashboard/payments) or open the specific order.`;
+    if (ops.attentionOrders.length > 0) {
+      msg += `\n\nMost urgent (soonest events first):\n\n${attentionOrderLines()}`;
+    }
+    msg += `\n\nTo see every balance and record payments, go to [Payments](/dashboard/payments) or open the specific order above.`;
     return msg;
   }
 

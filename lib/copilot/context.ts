@@ -45,6 +45,18 @@ export function getOperationalContext(snapshot: OperationalSnapshot): string {
     `Assets currently in maintenance / out of service: ${snapshot.openMaintenance}`,
   ];
 
+  if (snapshot.attentionOrders.length > 0) {
+    lines.push(
+      "",
+      "Specific upcoming orders that still owe money (use these exact markdown links when referring to them so the operator can click straight through):"
+    );
+    for (const o of snapshot.attentionOrders) {
+      lines.push(
+        `- [${o.label}](${o.link}) — ${money(o.balance)} due${o.eventDate ? `, event ${o.eventDate}` : ""}`
+      );
+    }
+  }
+
   return lines.join("\n");
 }
 

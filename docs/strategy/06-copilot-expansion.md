@@ -85,15 +85,15 @@ Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-
 ### Tier 4 — Drafting & communication
 Let the model draft customer replies, quote follow-ups, event reminders, and review requests — including WhatsApp/SMS copy (ties to the strategy docs' "WhatsApp is the highest-leverage net-new feature" bet). Operator approves before send.
 
-### Tier 5 — Navigation & memory
-Deep-links to specific records (`/dashboard/orders/{id}`), multi-turn conversation memory, and free-form analytics Q&A over the metrics already computed.
+### Tier 5 — Navigation & memory — **SHIPPED (Phase 2)**
+Multi-turn conversation memory and deep-links to specific records (`/dashboard/orders/{id}`). Free-form analytics Q&A over the metrics already computed remains a follow-on.
 
 ---
 
 ## Recommended phasing
 
 1. **Phase 1 — read-only operational awareness.** ✅ *Shipped (see below).*
-2. **Phase 2 — conversation memory + deep-links.** Small, makes everything feel native.
+2. **Phase 2 — conversation memory + deep-links.** ✅ *Shipped (see below).*
 3. **Phase 3 — action-taking** (payments, quotes, documents, status, message drafts), domain by domain behind the existing confirm-then-apply guardrails.
 4. **Phase 4 — proactive alerts + WhatsApp/SMS drafting.** Ties into GTM strategy.
 
@@ -115,3 +115,16 @@ Deep-links to specific records (`/dashboard/orders/{id}`), multi-turn conversati
 **Guardrails preserved:** same auth, origin check, rate limits, org-scoping, and audit logging. No new mutation surface — the Copilot reports numbers and points operators to the page to act.
 
 **Verification:** `tsc --noEmit` clean; full unit suite green, including new coverage in `tests/operational-snapshot-summary.test.ts` for the balance/event/revenue aggregation (outstanding balance, event windows, balance-due-soon, refund netting, empty-business and never-negative edge cases).
+
+## Phase 2 implementation (shipped)
+
+**Goal:** make the operational answers feel native — the Copilot remembers the conversation and links straight to the specific records it mentions.
+
+**Changes:**
+
+- **Conversation memory.** `lib/validation/copilot.ts` now accepts an optional `history` array (bounded to `COPILOT_HISTORY_LIMIT = 10` turns, each ≤4000 chars). The panel (`components/copilot/copilot-panel.tsx`) sends the recent turns via a `messagesRef` mirror (so `sendMessage` doesn't churn its dependency list). The route threads history into both providers through `lib/copilot/conversation.ts` → `buildConversationMessages()`, which normalizes any malformed history into a valid sequence (opens on a user turn, strictly alternates, no dangling trailing user turn) — important because Anthropic rejects otherwise. Follow-ups like "which ones?" / "what about last month?" now resolve against prior turns.
+- **Deep-links to specific records.** `getOperationalSnapshot()` now also returns `attentionOrders`: up to 5 specific upcoming orders that still owe money, soonest event first, each with a `/dashboard/orders/{id}` link and a `#order — customer` label. The context layer emits these as ready-to-use markdown links, and the local fallback lists them under the "owed" and "attention" answers. `renderSafeRichText` already renders `/`-relative markdown links as safe same-tab anchors, so they're clickable end-to-end. The system prompt instructs the model to use only the provided links/labels and never invent records.
+
+**Guardrails preserved:** still read-only; history is size- and count-bounded server-side; no new mutation surface.
+
+**Verification:** `tsc --noEmit` clean; full unit suite green, including new `tests/copilot-conversation.test.ts` (history normalization: well-formed, empty, leading-assistant, repeated-role, dangling-user, and an always-valid-shape invariant).

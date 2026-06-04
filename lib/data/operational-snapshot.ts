@@ -19,6 +19,16 @@ import {
  * Analytics page and is heavier) — the Copilot calls this on every message,
  * so it stays a tight, bounded set of parallel queries.
  */
+// A specific order the operator should chase, with a deep-link to its detail
+// page so the Copilot can surface a one-click reference instead of just a count.
+export type AttentionOrder = {
+  id: string;
+  label: string; // e.g. "#1042 — Sarah Mitchell"
+  balance: number;
+  eventDate: string | null; // YYYY-MM-DD
+  link: string; // /dashboard/orders/{id}
+};
+
 export type OperationalSnapshot = {
   // Money
   outstandingBalance: number;
@@ -35,6 +45,10 @@ export type OperationalSnapshot = {
   unsignedDocsUpcoming: number; // pending/sent agreements or waivers for upcoming events
   unreadMessages: number;
   openMaintenance: number;
+
+  // A few specific upcoming orders that still owe money, soonest first, each
+  // with a deep-link — powers clickable "here's exactly what to chase" answers.
+  attentionOrders: AttentionOrder[];
 
   // Formatting hints so the context layer renders money correctly
   currency: string;
@@ -56,10 +70,14 @@ const EMPTY: OperationalSnapshot = {
   unsignedDocsUpcoming: 0,
   unreadMessages: 0,
   openMaintenance: 0,
+  attentionOrders: [],
   currency: "USD",
   locale: "en",
   available: false,
 };
+
+// How many specific balance-due orders to surface with deep-links.
+const ATTENTION_ORDERS_LIMIT = 5;
 
 // Order statuses that are fully closed out and therefore can't owe money or
 // represent an upcoming event. Everything else (inquiry → delivered) is "open"
@@ -88,7 +106,7 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
   next7.setDate(next7.getDate() + 7);
   const next7Str = next7.toISOString().slice(0, 10);
 
-  const [ordersRes, paymentsRes, docsRes, unreadRes, maintenanceRes] =
+  const [ordersRes, paymentsRes, docsRes, unreadRes, maintenanceRes, attentionRes] =
     await Promise.all([
       // Open orders: drives outstanding balance + schedule + balance-due-soon.
       // Excludes only the closed-out statuses, matching analytics.ts.
@@ -141,6 +159,22 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
         .eq("organization_id", ctx.organizationId)
         .is("assets.deleted_at", null)
         .in("status", ["open", "in_progress"]),
+
+      // The specific upcoming orders that still owe money, soonest event first —
+      // surfaced as deep-linked references in the Copilot's answers.
+      supabase
+        .from("orders")
+        .select(
+          "id, order_number, event_date, balance_due_amount, customers(first_name, last_name, deleted_at)"
+        )
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
+        .not("order_status", "in", CLOSED_STATUSES)
+        .gte("event_date", today)
+        .lte("event_date", next7Str)
+        .gt("balance_due_amount", 0)
+        .order("event_date", { ascending: true })
+        .limit(ATTENTION_ORDERS_LIMIT),
     ]);
 
   if (ordersRes.error)
@@ -153,6 +187,25 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
   const orderSummary = summarizeOpenOrders(ordersRes.data ?? [], today, next7Str);
   const paymentSummary = summarizeMonthPayments(paymentsRes.data ?? []);
 
+  const attentionOrders: AttentionOrder[] = (attentionRes.data ?? []).map((o) => {
+    const customer = (o as Record<string, unknown>).customers as
+      | { first_name?: string | null; last_name?: string | null; deleted_at?: string | null }
+      | null;
+    const name =
+      customer && !customer.deleted_at
+        ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
+        : "";
+    const orderRef = o.order_number ? `#${o.order_number}` : "Order";
+    return {
+      id: o.id,
+      label: name ? `${orderRef} — ${name}` : orderRef,
+      balance:
+        typeof o.balance_due_amount === "number" ? o.balance_due_amount : 0,
+      eventDate: o.event_date ?? null,
+      link: `/dashboard/orders/${o.id}`,
+    };
+  });
+
   return {
     outstandingBalance: orderSummary.outstandingBalance,
     revenueThisMonth: paymentSummary.revenueThisMonth,
@@ -164,6 +217,7 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
     unsignedDocsUpcoming: docsRes.count ?? 0,
     unreadMessages: unreadRes.count ?? 0,
     openMaintenance: maintenanceRes.count ?? 0,
+    attentionOrders,
     currency,
     locale,
     available: true,
