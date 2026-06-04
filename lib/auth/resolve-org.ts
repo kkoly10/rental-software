@@ -1,5 +1,9 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseServiceRoleEnv,
+} from "@/lib/supabase/admin";
 
 const RESERVED_SLUGS = new Set([
   "www",
@@ -105,7 +109,16 @@ export async function resolveOrgFromHostname(
     return null;
   }
 
-  const supabase = await createSupabaseServerClient();
+  // CRITICAL: this lookup MUST use the admin (service_role) client.
+  // The anon SELECT policy on organizations (PR #196 RLS fix) requires
+  // an x-storefront-slug request header to even see a row. Middleware
+  // can't set that header before it knows the org — circular — so we
+  // bypass RLS for this routing-only lookup. We're not exposing any
+  // org data here, just answering "is there a tenant for this host?"
+  // and returning the id for downstream queries to use.
+  const supabase = hasSupabaseServiceRoleEnv()
+    ? createSupabaseAdminClient()
+    : await createSupabaseServerClient();
 
   // Check if it's a subdomain of the app domain
   if (hostWithoutPort.endsWith(`.${appDomainWithoutPort}`)) {
