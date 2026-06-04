@@ -74,6 +74,17 @@ export function CheckoutForm({
   const [stateField, setStateField] = useState(sv?.state ?? "");
   const [enteredZip, setEnteredZip] = useState(sv?.postalCode ?? initialZip ?? "");
 
+  // Checkboxes also need to be controlled — same reset hazard as the
+  // text inputs. The terms_accepted box is the one that actually
+  // matters: without controlled state the customer would unwittingly
+  // submit again with terms unchecked and get a second error, which
+  // is both annoying and lets them blow through the agreement gate
+  // unintentionally. sms_opt_in is also controlled so the customer's
+  // marketing-consent choice doesn't silently flip back to false after
+  // a failed submit.
+  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   // Re-hydrate the local state whenever the server action returns a
   // fresh submittedValues payload — covers the case where React's
   // form reset wiped the DOM inputs before our state had a chance to
@@ -335,6 +346,8 @@ export function CheckoutForm({
           name="sms_opt_in"
           type="checkbox"
           value="true"
+          checked={smsOptIn}
+          onChange={(e) => setSmsOptIn(e.target.checked)}
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
@@ -490,6 +503,8 @@ export function CheckoutForm({
           type="checkbox"
           required
           value="true"
+          checked={termsAccepted}
+          onChange={(e) => setTermsAccepted(e.target.checked)}
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-soft)" }}>
