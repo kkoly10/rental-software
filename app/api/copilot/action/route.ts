@@ -49,6 +49,10 @@ const paymentActionSchema = z.object({
       "other",
     ]),
     referenceNote: z.string().max(120).optional(),
+    // Client-generated per [ACTION:...] block so double-click / retry
+    // resolves to the same payments row. Optional for backwards
+    // compatibility with older clients.
+    idempotencyKey: z.string().uuid().optional(),
   }),
 });
 
@@ -130,7 +134,11 @@ export async function POST(request: NextRequest) {
   const clientIp = getTrustedClientIp(request.headers);
   const userAgent = request.headers.get("user-agent")?.slice(0, 256) ?? null;
 
-  // Copilot actions mutate organization settings — restrict to owners and admins
+  // Copilot actions mutate organization data — match the dashboard role
+  // policy of the underlying writes (recordPayment + updateOrderStatus
+  // both allow owner/admin/dispatcher). Previously the route blocked
+  // dispatchers from proposing actions they could perform directly in
+  // the dashboard.
   const copilotSupabase = await createSupabaseServerClient();
   const { data: copilotMembership } = await copilotSupabase
     .from("organization_memberships")
@@ -139,8 +147,8 @@ export async function POST(request: NextRequest) {
     .eq("profile_id", access.userId)
     .eq("status", "active")
     .maybeSingle();
-  if (!["owner", "admin"].includes(copilotMembership?.role ?? "")) {
-    return jsonResponse({ error: "Only owners and admins can modify organization settings." }, { status: 403 });
+  if (!["owner", "admin", "dispatcher"].includes(copilotMembership?.role ?? "")) {
+    return jsonResponse({ error: "You don't have permission to perform Copilot actions." }, { status: 403 });
   }
 
   // Rate limiting: 30 per 15 min per user

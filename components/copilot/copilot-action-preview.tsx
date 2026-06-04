@@ -271,6 +271,21 @@ function PaymentActionPreview({
     null
   );
 
+  // Generated once per preview mount and persisted through retries so the
+  // server-side dedupe in record_manual_payment collapses double-click
+  // and HTTP-retry into a single payment row. Generated lazily to avoid
+  // an SSR/CSR mismatch since the assistant reply already mounts client-
+  // side. Falls back to a high-entropy string when crypto.randomUUID
+  // isn't available.
+  const [idempotencyKey] = useState(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    // RFC-4122 v4 layout, sufficient for dedupe scope (order_id, key)
+    const r = () => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0");
+    return `${r().slice(0, 8)}-${r().slice(0, 4)}-4${r().slice(0, 3)}-a${r().slice(0, 3)}-${r()}${r().slice(0, 4)}`;
+  });
+
   const { params } = action;
   const rp = m.copilot.recordPayment;
   const amountDisplay = new Intl.NumberFormat(locale, {
@@ -281,7 +296,11 @@ function PaymentActionPreview({
   async function handleApply() {
     setApplying(true);
     try {
-      await onApply(action);
+      const withKey: CopilotPaymentAction = {
+        ...action,
+        params: { ...action.params, idempotencyKey },
+      };
+      await onApply(withKey);
       setResult({ ok: true, message: m.copilot.appliedSuccess });
     } catch (error) {
       setResult({
@@ -325,8 +344,11 @@ function PaymentActionPreview({
             href={`/dashboard/orders/${params.orderId}`}
             style={{ color: "var(--primary)" }}
           >
-            {rp.viewOrder}
+            {params.orderNumber ? `#${params.orderNumber}` : rp.viewOrder}
           </a>
+          {params.customerName && (
+            <span style={{ color: "var(--text-soft)" }}> — {params.customerName}</span>
+          )}
         </div>
         <div>
           <strong>{rp.amount}:</strong> {amountDisplay}
@@ -433,8 +455,11 @@ function OrderStatusActionPreview({
             href={`/dashboard/orders/${params.orderId}`}
             style={{ color: "var(--primary)" }}
           >
-            {m.copilot.recordPayment.viewOrder}
+            {params.orderNumber ? `#${params.orderNumber}` : m.copilot.recordPayment.viewOrder}
           </a>
+          {params.customerName && (
+            <span style={{ color: "var(--text-soft)" }}> — {params.customerName}</span>
+          )}
         </div>
         <div>
           <strong>{os.newStatus}:</strong> {humanizeStatus(params.newStatus)}

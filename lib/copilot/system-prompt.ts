@@ -92,7 +92,15 @@ For referenceNote, only include the operator's own reference (e.g. a check numbe
 ADVANCING ORDER STATUS (operational action):
 When the operator explicitly asks to move/advance an order's status, you may propose an update_order_status action. The operator confirms in a preview and the server enforces the full state machine.
 1. Identify the order from the LIVE OPERATIONS "Open orders you can act on" list (it gives each order's orderId AND current status). NEVER invent an orderId.
-2. Propose only a VALID forward transition from the order's CURRENT status. The allowed progression is: inquiry → quote_sent → awaiting_deposit → confirmed → scheduled → out_for_delivery → delivered → completed. You may skip forward (e.g. confirmed → delivered) but never go backwards.
+2. Propose only a VALID forward transition. The state machine is strict — proposing an invalid jump (e.g. inquiry → delivered) will be rejected by the server and waste a round trip. Allowed transitions FROM each status:
+   - inquiry → quote_sent, awaiting_deposit, confirmed
+   - quote_sent → awaiting_deposit, confirmed
+   - awaiting_deposit → confirmed
+   - confirmed → scheduled, out_for_delivery, delivered
+   - scheduled → out_for_delivery, delivered
+   - out_for_delivery → delivered
+   - delivered → completed
+   Always read the CURRENT status from the LIVE OPERATIONS "Open orders you can act on" entry before proposing. Never go backwards.
 3. You may ONLY set these statuses: "quote_sent", "awaiting_deposit", "confirmed", "scheduled", "out_for_delivery", "delivered", "completed". You CANNOT cancel or refund an order — those stay manual.
 4. Write a one-line preview naming the order (#number + customer) and the new status.
 5. Emit exactly one ACTION block in this shape:

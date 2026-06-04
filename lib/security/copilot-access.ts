@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
 
 export type CopilotAccessContext = {
   userId: string;
@@ -7,8 +8,20 @@ export type CopilotAccessContext = {
   organizationId: string;
 };
 
+/**
+ * Resolve the Copilot caller's org via `getOrgContext`, which honors the
+ * active-org cookie when the user has multiple memberships. The previous
+ * implementation here selected the *oldest* membership unconditionally,
+ * which produced a multi-tenancy hole: the route-level role gate ran
+ * against the wrong org for any operator with ≥2 active orgs (gate
+ * passes/fails against tenant A while the inner write lands on tenant B).
+ * Audit logs were also filed under the wrong tenant.
+ */
 export async function getCopilotAccessContext(): Promise<CopilotAccessContext | null> {
   if (!hasSupabaseEnv()) return null;
+  const ctx = await getOrgContext();
+  if (!ctx) return null;
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -18,22 +31,9 @@ export async function getCopilotAccessContext(): Promise<CopilotAccessContext | 
     return null;
   }
 
-  const { data: membership } = await supabase
-    .from("organization_memberships")
-    .select("organization_id")
-    .eq("profile_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) {
-    return null;
-  }
-
   return {
-    userId: user.id,
+    userId: ctx.userId,
     email: user.email ?? null,
-    organizationId: membership.organization_id,
+    organizationId: ctx.organizationId,
   };
 }

@@ -202,6 +202,10 @@ export async function POST(request: NextRequest) {
   const openaiKey = getOptionalEnv("OPENAI_API_KEY");
   const anthropicKey = getOptionalEnv("ANTHROPIC_API_KEY");
 
+  const { enrichActionInResponse } = await import("@/lib/copilot/enrich-action");
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const enrichSupabase = await createSupabaseServerClient();
+
   if (openaiKey) {
     const aiResponse = await handleOpenAI(
       openaiKey,
@@ -213,6 +217,11 @@ export async function POST(request: NextRequest) {
       liveOpsContext,
       articleSummaries,
       localResponse
+    );
+    const enriched = await enrichActionInResponse(
+      aiResponse,
+      enrichSupabase,
+      access.organizationId
     );
 
     await logAppEvent({
@@ -227,7 +236,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return jsonResponse({ response: aiResponse });
+    return jsonResponse({ response: enriched });
   }
 
   if (anthropicKey) {
@@ -242,6 +251,11 @@ export async function POST(request: NextRequest) {
       articleSummaries,
       localResponse
     );
+    const enriched = await enrichActionInResponse(
+      aiResponse,
+      enrichSupabase,
+      access.organizationId
+    );
 
     await logAppEvent({
       organizationId: access.organizationId,
@@ -255,7 +269,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return jsonResponse({ response: aiResponse });
+    return jsonResponse({ response: enriched });
   }
 
   await logAppEvent({
