@@ -44,8 +44,8 @@ export default async function ProductDetailEditorPage({
       )}
       {assetPending && (
         <div className="panel" style={{ background: "#fff4e5", border: "1px solid #f5a623", marginBottom: 16 }} role="alert">
-          <strong>Product created, but the first asset couldn&apos;t be added automatically.</strong>{" "}
-          Products with zero ready assets can&apos;t be booked. Add one in the Assets section below to enable bookings.
+          <strong>{m.dashboard.products.detail.assetPendingBanner}</strong>{" "}
+          {m.dashboard.products.detail.assetPendingBody}
         </div>
       )}
 

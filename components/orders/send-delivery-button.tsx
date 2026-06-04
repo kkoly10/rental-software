@@ -80,9 +80,8 @@ export function SendDeliveryButton({
         href="#assign-to-route"
         className="secondary-btn"
         style={{ fontSize: 13 }}
-        aria-label="Attach this order to a route before dispatching"
       >
-        Attach to a route first
+        {m.dashboard.orders.detail.attachToRouteFirstCta}
       </a>
     );
   }
