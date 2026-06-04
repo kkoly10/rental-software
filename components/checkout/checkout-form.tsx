@@ -28,6 +28,7 @@ export function CheckoutForm({
   minDate,
   maxDate,
   cancellationPolicy,
+  selectedMode,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -35,6 +36,11 @@ export function CheckoutForm({
   minDate?: string;
   maxDate?: string;
   cancellationPolicy?: string;
+  // Sprint 6.0 — wet/dry choice the customer made on the product
+  // detail page. Carried as a hidden form field through to the
+  // server action so it lands on order_items.selected_mode + drives
+  // the wet upcharge on the line total.
+  selectedMode?: "dry" | "wet";
 }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(
@@ -179,6 +185,9 @@ export function CheckoutForm({
       <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       {productSlug ? (
         <input type="hidden" name="product_slug" value={productSlug} />
+      ) : null}
+      {selectedMode ? (
+        <input type="hidden" name="selected_mode" value={selectedMode} />
       ) : null}
 
       <div className="grid grid-3">

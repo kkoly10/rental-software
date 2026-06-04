@@ -84,6 +84,7 @@ export async function createCheckoutOrder(
     startTime: String(formData.get("start_time") ?? ""),
     endTime: String(formData.get("end_time") ?? ""),
     productSlug: String(formData.get("product_slug") ?? ""),
+    selectedMode: String(formData.get("selected_mode") ?? ""),
     fulfillmentType: String(formData.get("fulfillment_type") ?? "delivery"),
     rentalEndDate: String(formData.get("rental_end_date") ?? ""),
     idempotencyKey: String(formData.get("idempotency_key") ?? ""),
@@ -136,8 +137,11 @@ export async function createCheckoutOrder(
     fulfillmentType,
     rentalEndDate,
     idempotencyKey: rawIdempotencyKey,
+    selectedMode: rawSelectedMode,
   } = parsed.data;
   const idempotencyKey = rawIdempotencyKey && rawIdempotencyKey.length > 0 ? rawIdempotencyKey : null;
+  const requestedMode: "dry" | "wet" | null =
+    rawSelectedMode === "dry" || rawSelectedMode === "wet" ? rawSelectedMode : null;
 
   try {
     const clientKey = await getActionClientKey();
@@ -287,11 +291,18 @@ export async function createCheckoutOrder(
   let productName = "Rental booking";
   let itemRentalDays: number | null = null;
   let itemRatePerDay: number | null = null;
+  // Sprint 6.0 — captured during the product lookup so the wet
+  // upcharge can be applied after the per-day pricing branch and
+  // the eventual order_items insert has a value for selected_mode.
+  let productSupportsModes: string[] = ["dry"];
+  let productWetUpchargeCents: number | null = null;
 
   if (productSlug) {
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, base_price, pricing_model")
+      .select(
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents",
+      )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .eq("is_active", true)
@@ -304,6 +315,17 @@ export async function createCheckoutOrder(
         typeof product.base_price === "number" ? Number(product.base_price) : 225;
       productId = product.id;
       productName = product.name ?? productSlug;
+      // Sprint 6.0 — capture mode/upcharge under the same lookup so
+      // the wet upcharge applies to whichever pricing branch
+      // (flat_day or per_day) the product uses, and the eventual
+      // order_items.selected_mode persistence has the value.
+      productSupportsModes = (Array.isArray(product.supports_modes)
+        ? product.supports_modes
+        : ["dry"]) as string[];
+      productWetUpchargeCents =
+        typeof product.wet_upcharge_cents === "number"
+          ? product.wet_upcharge_cents
+          : null;
 
       const pricingModel = product.pricing_model ?? "flat_day";
       if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate >= eventDate) {
@@ -343,6 +365,21 @@ export async function createCheckoutOrder(
         subtotal = ratePerDay;
       }
     }
+  }
+
+  // Sprint 6.0 — apply the wet upcharge after the day/flat pricing
+  // branch. The upcharge is a flat per-booking cleanup amortization
+  // (industry pattern, not per-day), so it gets added once to
+  // subtotal, never multiplied by rentalDays. Defensive: the helper
+  // ignores the upcharge if the product doesn't actually support
+  // wet, so a crafted ?mode=wet on a dry-only product can't bill the
+  // customer extra.
+  const effectiveMode: "dry" | "wet" | null =
+    requestedMode && productSupportsModes.includes(requestedMode)
+      ? requestedMode
+      : null;
+  if (effectiveMode === "wet" && (productWetUpchargeCents ?? 0) > 0) {
+    subtotal += (productWetUpchargeCents ?? 0) / 100;
   }
 
   if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
@@ -729,6 +766,12 @@ export async function createCheckoutOrder(
       item_name_snapshot: productName,
       rental_days: itemRentalDays,
       rate_per_day: itemRatePerDay,
+      // Sprint 6.0 — wet/dry choice the customer made on the
+      // product-detail page. NULL when the product is single-mode or
+      // the customer hit a non-mode-aware path; only ever 'dry'/'wet'
+      // because effectiveMode is reconciled against
+      // supports_modes above.
+      selected_mode: effectiveMode,
     });
 
     if (itemError) {

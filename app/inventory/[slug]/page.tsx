@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getPlaceholderImage } from "@/lib/utils/placeholders";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
+import { BookNowWithMode } from "@/components/public/book-now-with-mode";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
@@ -160,20 +161,13 @@ export default async function ProductDetailPage({
                 ))}
               </div>
 
-              <div className="price-row" style={{ marginTop: 20 }}>
-                <Link
-                  href={`/checkout?${checkoutParams.toString()}`}
-                  className="primary-btn"
-                >
-                  {m.inventoryDetail.bookNow}
-                </Link>
-                <Link
-                  href={`/inventory${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`}
-                  className="secondary-btn"
-                >
-                  {m.common.back}
-                </Link>
-              </div>
+              <BookNowWithMode
+                checkoutQuery={checkoutParams.toString()}
+                basePriceCents={product.basePriceCents ?? 0}
+                supportsModes={product.supportsModes ?? ["dry"]}
+                wetUpchargeCents={product.wetUpchargeCents ?? null}
+                backHref={`/inventory${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`}
+              />
             </aside>
           </div>
 

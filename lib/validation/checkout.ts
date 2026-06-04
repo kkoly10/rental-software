@@ -52,6 +52,17 @@ export const checkoutOrderSchema = z.object({
     .regex(/^[A-Za-z0-9_\-]+$/, { message: "Invalid idempotency key." })
     .optional()
     .default(""),
+  // Sprint 6.0 — wet/dry choice the customer made on the product
+  // detail page. Empty string normalises to undefined; invalid values
+  // are dropped silently so a crafted POST can't bill the customer
+  // extra. The action re-verifies against the product's
+  // supports_modes before applying any upcharge.
+  selectedMode: z
+    .string()
+    .trim()
+    .transform((v) => (v === "dry" || v === "wet" ? v : ""))
+    .optional()
+    .default(""),
 });
 
 export type CheckoutOrderInput = z.infer<typeof checkoutOrderSchema>;
