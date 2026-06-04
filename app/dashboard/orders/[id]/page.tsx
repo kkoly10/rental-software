@@ -192,7 +192,11 @@ export default async function OrderDetailPage({
 
           <div style={{ marginTop: 18 }}>
             <div className="kicker" style={{ marginBottom: 6 }}>{m.dashboard.orders.detail.recordPayment}</div>
-            <RecordPaymentForm orderId={id} />
+            <RecordPaymentForm
+              orderId={id}
+              balanceDue={order.balanceDue}
+              depositDue={order.depositDue ?? undefined}
+            />
           </div>
         </section>
 

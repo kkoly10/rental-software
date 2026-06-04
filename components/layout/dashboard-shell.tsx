@@ -89,6 +89,7 @@ export function DashboardShell({
   // new orgs (no businessType set) stuck on the skeleton forever.
   const [businessType, setBusinessType] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -139,7 +140,15 @@ export function DashboardShell({
       })
       .catch(() => {});
     fetch("/api/org-type", { signal: controller.signal })
-      .then(async (r) => (r.ok ? (await r.json() as { businessType?: string; organizationId?: string }) : null))
+      .then(async (r) =>
+        r.ok
+          ? ((await r.json()) as {
+              businessType?: string;
+              organizationId?: string;
+              organizationName?: string | null;
+            })
+          : null
+      )
       .then((data) => {
         // Always transition off the skeleton once the API responds —
         // even if businessType is empty/missing.  `getNavItemsForVertical`
@@ -148,6 +157,7 @@ export function DashboardShell({
         if (data) {
           setBusinessType(data.businessType ?? "");
           if (data.organizationId) setOrgId(data.organizationId);
+          if (data.organizationName) setOrgName(data.organizationName);
         }
       })
       .catch((err) => {
@@ -436,9 +446,26 @@ export function DashboardShell({
   return (
     <div className="sidebar-layout">
       <aside className="sidebar dashboard-sidebar-desktop">
-        <Link href="/dashboard" className="logo" style={{ color: "var(--primary)", marginBottom: 14, display: "block" }}>
+        <Link href="/dashboard" className="logo" style={{ color: "var(--primary)", marginBottom: orgName ? 4 : 14, display: "block" }}>
           Korent
         </Link>
+        {orgName && (
+          <div
+            className="dashboard-active-org"
+            title={orgName}
+            style={{
+              fontSize: 12,
+              color: "var(--text-soft)",
+              marginBottom: 14,
+              padding: "0 2px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {orgName}
+          </div>
+        )}
 
         {/* Search affordance — opens the existing Cmd-K palette so the
             feature stops being hidden behind a keyboard shortcut. */}
@@ -559,7 +586,22 @@ export function DashboardShell({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mobile-menu-header">
-              <span className="mobile-menu-title">{m.dashboard.shell.mobileMenu}</span>
+              <span className="mobile-menu-title">
+                {m.dashboard.shell.mobileMenu}
+                {orgName && (
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 400,
+                      color: "var(--text-soft)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {orgName}
+                  </span>
+                )}
+              </span>
               <button
                 type="button"
                 className="mobile-menu-close"

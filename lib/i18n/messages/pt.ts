@@ -1519,6 +1519,8 @@ export const pt: Messages = {
 
   forms: {
     recordPayment: {
+      balanceLabel: "Saldo em dívida",
+      depositRequiredLabel: "Depósito necessário",
       amountLabel: "Valor ($)",
       paymentTypeLabel: "Tipo de pagamento",
       paymentTypes: {
@@ -1904,6 +1906,11 @@ export const pt: Messages = {
         updating: "A atualizar...",
         done: "Concluído",
         updateFailed: "Falha ao atualizar o estado da paragem.",
+        confirmEnRoute: "Enviar ao cliente um SMS com o seu link de seguimento em tempo real?",
+        confirmCompleted: "Marcar como concluída e notificar o cliente de que a paragem está feita?",
+        confirmGeneric: "Atualizar esta paragem?",
+        confirm: "Confirmar",
+        cancel: "Cancelar",
       },
       signature: {
         title: "Assinatura do cliente",

@@ -1520,6 +1520,8 @@ const enValues = {
 
   forms: {
     recordPayment: {
+      balanceLabel: "Outstanding balance",
+      depositRequiredLabel: "Deposit required",
       amountLabel: "Amount ($)",
       paymentTypeLabel: "Payment type",
       paymentTypes: {
@@ -1905,6 +1907,11 @@ const enValues = {
         updating: "Updating...",
         done: "Done",
         updateFailed: "Failed to update stop status.",
+        confirmEnRoute: "Send the customer a text with your live tracking link?",
+        confirmCompleted: "Mark complete and notify the customer this stop is done?",
+        confirmGeneric: "Update this stop?",
+        confirm: "Confirm",
+        cancel: "Cancel",
       },
       signature: {
         title: "Customer signature",

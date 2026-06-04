@@ -1519,6 +1519,8 @@ export const fr: Messages = {
 
   forms: {
     recordPayment: {
+      balanceLabel: "Solde restant",
+      depositRequiredLabel: "Acompte requis",
       amountLabel: "Montant ($)",
       paymentTypeLabel: "Type de paiement",
       paymentTypes: {
@@ -1904,6 +1906,11 @@ export const fr: Messages = {
         updating: "Mise à jour...",
         done: "Terminé",
         updateFailed: "Échec de la mise à jour du statut de l’arrêt.",
+        confirmEnRoute: "Envoyer au client un SMS avec votre lien de suivi en temps réel ?",
+        confirmCompleted: "Marquer comme terminé et avertir le client que l’arrêt est fait ?",
+        confirmGeneric: "Mettre à jour cet arrêt ?",
+        confirm: "Confirmer",
+        cancel: "Annuler",
       },
       signature: {
         title: "Signature du client",
