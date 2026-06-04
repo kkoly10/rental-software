@@ -956,6 +956,10 @@ const enValues = {
       newBooking: "New booking",
       noBlocks: "No blocked dates in the next 30 days",
       blockHint: "Block dates to prevent bookings for maintenance, closures, or holidays.",
+      viewToggleLabel: "Calendar view",
+      viewEvents: "Events",
+      viewDeliveries: "Deliveries",
+      viewBoth: "Both",
     },
     website: {
       title: "Website",

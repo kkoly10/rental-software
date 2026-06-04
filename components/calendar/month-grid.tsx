@@ -218,6 +218,19 @@ export function MonthGrid({ year, month, events }: Props) {
                               >
                                 {ev.label}
                               </Link>
+                            ) : ev.type === "delivery" ? (
+                              <Link
+                                href={`/dashboard/deliveries/${ev.id.replace(
+                                  /^route:/,
+                                  ""
+                                )}`}
+                                style={{
+                                  color: "inherit",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                {ev.label}
+                              </Link>
                             ) : (
                               ev.label
                             )}

@@ -84,6 +84,13 @@ export default async function DeliveriesPage() {
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
                       <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
+                      {route.earliestStopTime && (
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {route.latestStopTime
+                            ? `${route.earliestStopTime} – ${route.latestStopTime}`
+                            : route.earliestStopTime}
+                        </div>
+                      )}
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
@@ -115,6 +122,13 @@ export default async function DeliveriesPage() {
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
                       <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
+                      {route.earliestStopTime && (
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {route.latestStopTime
+                            ? `${route.earliestStopTime} – ${route.latestStopTime}`
+                            : route.earliestStopTime}
+                        </div>
+                      )}
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}
@@ -146,6 +160,13 @@ export default async function DeliveriesPage() {
                       <strong>{route.name}</strong>
                       <div className="muted">{route.date}</div>
                       <div className="muted">{route.stops} stops{route.driverName ? ` · ${route.driverName}` : ""}</div>
+                      {route.earliestStopTime && (
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {route.latestStopTime
+                            ? `${route.earliestStopTime} – ${route.latestStopTime}`
+                            : route.earliestStopTime}
+                        </div>
+                      )}
                       <div className="stack-gap-xs">
                         <Link
                           href={`/dashboard/deliveries/${route.id}`}

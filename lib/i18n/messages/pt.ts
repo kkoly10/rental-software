@@ -955,6 +955,10 @@ export const pt: Messages = {
       newBooking: "Nova reserva",
       noBlocks: "Sem datas bloqueadas nos próximos 30 dias",
       blockHint: "Bloqueie datas para impedir reservas por manutenção, encerramentos ou feriados.",
+      viewToggleLabel: "Vista do calendário",
+      viewEvents: "Eventos",
+      viewDeliveries: "Entregas",
+      viewBoth: "Ambos",
     },
     website: {
       title: "Website",

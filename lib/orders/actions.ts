@@ -835,6 +835,27 @@ export async function updateOrderStatus(
         context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
       });
     }
+
+    // Decision 2.11 — also detach the order from any open route stops so
+    // the crew app doesn't show a stop for a cancelled order. Completed
+    // stops stay as an audit record of work already performed.
+    try {
+      const { releaseRouteStopsForCancelledOrder } = await import(
+        "@/lib/routes/actions"
+      );
+      await releaseRouteStopsForCancelledOrder(
+        ctx.organizationId,
+        parsed.data.orderId
+      );
+    } catch (err) {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: ctx.organizationId,
+        source: "orders.updateOrderStatus",
+        message: "Failed to release route stops for cancelled order",
+        context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
+      });
+    }
   }
 
   // Sprint 2 / 3.5 — auto-sync to accounting integrations when an

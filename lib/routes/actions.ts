@@ -422,3 +422,60 @@ export async function updateStopStatus(
   }
   return { ok: true, message: "Stop updated." };
 }
+
+/**
+ * Detach a cancelled order from any open route stops. Called from
+ * `updateOrderStatus` when an order transitions to `cancelled` (decision
+ * 2.11). Completed stops stay in place — they're an audit record of work
+ * the crew already did. This intentionally does *not* enforce a role
+ * check; it's an internal helper called from another action that already
+ * verified the operator's permission to cancel the order.
+ *
+ * Returns the number of stops removed plus the affected route IDs so the
+ * caller can revalidate the right delivery board pages.
+ */
+export async function releaseRouteStopsForCancelledOrder(
+  organizationId: string,
+  orderId: string
+): Promise<{ removedCount: number; affectedRouteIds: string[] }> {
+  if (!hasSupabaseEnv()) {
+    return { removedCount: 0, affectedRouteIds: [] };
+  }
+  const supabase = await createSupabaseServerClient();
+
+  // Find non-completed stops attached to this order. Scope by route's
+  // organization_id via the inner join so we never touch another org's
+  // routing data even if the caller has the wrong orderId.
+  const { data: openStops } = await supabase
+    .from("route_stops")
+    .select("id, route_id, stop_status, routes!inner(organization_id)")
+    .eq("order_id", orderId)
+    .eq("routes.organization_id", organizationId)
+    .not("stop_status", "in", "(completed,skipped)");
+
+  if (!openStops || openStops.length === 0) {
+    return { removedCount: 0, affectedRouteIds: [] };
+  }
+
+  const stopIds: string[] = openStops.map((s) => String(s.id));
+  const affectedRouteIds: string[] = Array.from(
+    new Set(openStops.map((s) => String(s.route_id)))
+  );
+
+  const { error: deleteError } = await supabase
+    .from("route_stops")
+    .delete()
+    .in("id", stopIds);
+
+  if (deleteError) {
+    return { removedCount: 0, affectedRouteIds: [] };
+  }
+
+  // Revalidate every affected route detail + the board itself.
+  for (const routeId of affectedRouteIds) {
+    revalidatePath(`/dashboard/deliveries/${routeId}`);
+  }
+  revalidatePath("/dashboard/deliveries");
+
+  return { removedCount: stopIds.length, affectedRouteIds };
+}

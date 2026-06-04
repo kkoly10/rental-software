@@ -1,6 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
+import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 import type { RouteSummary } from "@/lib/types";
 
 const fallbackRoutes: RouteSummary[] = [
@@ -29,7 +31,11 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
 
   let query = supabase
     .from("routes")
-    .select("id, name, route_date, route_status, route_stops(id), profiles(full_name)")
+    .select(
+      // Pull scheduled_window_start on each stop so the board can render an
+      // earliest/latest time range without an extra round-trip (decision 4.3).
+      "id, name, route_date, route_status, route_stops(id, scheduled_window_start), profiles(full_name)"
+    )
     .eq("organization_id", ctx.organizationId)
     .order("route_date", { ascending: false })
     .limit(50);
@@ -59,9 +65,36 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
     return [];
   }
 
+  const tz = await getOrgEventTimezone(ctx.organizationId);
+
   return data.map((route) => {
-    const stops = ((route as Record<string, unknown>).route_stops as { id: string }[] | null) ?? [];
+    const stops = ((route as Record<string, unknown>).route_stops as
+      | { id: string; scheduled_window_start?: string | null }[]
+      | null) ?? [];
     const driver = (route as Record<string, unknown>).profiles as { full_name?: string } | null;
+
+    // Earliest / latest scheduled time across the route. Filters out null
+    // and non-finite values so an unscheduled stop doesn't pull the range
+    // to "12:00 AM". Display-ready strings live on RouteSummary so the
+    // kanban card can render them without recomputing per render.
+    const scheduledTimestamps = stops
+      .map((s) => s.scheduled_window_start)
+      .filter((v): v is string => typeof v === "string" && v.length > 0)
+      .map((v) => ({ raw: v, ms: new Date(v).getTime() }))
+      .filter((v) => Number.isFinite(v.ms));
+    let earliestStopTime: string | undefined;
+    let latestStopTime: string | undefined;
+    if (scheduledTimestamps.length > 0) {
+      const sorted = [...scheduledTimestamps].sort((a, b) => a.ms - b.ms);
+      earliestStopTime = formatTimeInTimeZone(sorted[0].raw, tz);
+      const last = sorted[sorted.length - 1];
+      // Only render `latestStopTime` separately when it's distinct from the
+      // earliest — a single scheduled stop should show one time, not a range.
+      if (sorted.length > 1 && last.ms !== sorted[0].ms) {
+        latestStopTime = formatTimeInTimeZone(last.raw, tz);
+      }
+    }
+
     return {
       id: route.id,
       name: route.name ?? "Route",
@@ -71,6 +104,8 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
       status: route.route_status ?? "planned",
       stops: stops.length,
       driverName: driver?.full_name ?? undefined,
+      earliestStopTime,
+      latestStopTime,
     };
   });
 }

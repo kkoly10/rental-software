@@ -74,6 +74,14 @@ export type RouteSummary = {
   status: string;
   stops: number;
   driverName?: string;
+  /** Display-ready earliest scheduled time across all stops (e.g. "9:00 AM").
+      Surfaced on the delivery board so dispatchers can see when each route
+      kicks off without opening the detail page. Undefined when no stop on
+      the route has a `scheduled_window_start` set. */
+  earliestStopTime?: string;
+  /** Display-ready latest scheduled time. Same source / undefined rules as
+      `earliestStopTime`. */
+  latestStopTime?: string;
 };
 
 export type ServiceAreaSummary = {
