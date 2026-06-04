@@ -58,7 +58,7 @@ export default async function CheckoutPage({
   const selectedMode = mode === "wet" || mode === "dry" ? mode : undefined;
 
   const [pricing, policies, settings, { messages: m, t }] = await Promise.all([
-    getCheckoutPricing(product, zip, date),
+    getCheckoutPricing(product, zip, date, selectedMode),
     getBookingPolicies(),
     getOrganizationSettings(),
     getTranslator(),

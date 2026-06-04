@@ -2386,6 +2386,7 @@ const enValues = {
     basePrice: "Base price",
     adjustedSubtotal: "Adjusted subtotal",
     subtotal: "Subtotal",
+    wetUpcharge: "Wet mode upcharge",
     deliveryFee: "Delivery fee",
     deliveryTBD: "TBD",
     deliveryFree: "Free",

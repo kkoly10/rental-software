@@ -10,6 +10,11 @@ export type CheckoutPricingData = {
   basePrice: number;
   adjustments: { ruleName: string; amount: number; percentage: number }[];
   subtotal: number;
+  /** Sprint 6.0 — wet upcharge applied to the subtotal, surfaced so the
+   *  review summary can show it as its own line item. Always 0 when the
+   *  customer picked dry, the product doesn't support wet, or the
+   *  operator left the upcharge blank. */
+  wetUpcharge: number;
   deliveryFee: number | null;
   total: number | null;
   deposit: number | null;
@@ -18,7 +23,8 @@ export type CheckoutPricingData = {
 export async function getCheckoutPricing(
   productSlug?: string,
   zip?: string,
-  date?: string
+  date?: string,
+  selectedMode?: "dry" | "wet",
 ): Promise<CheckoutPricingData | null> {
   if (!productSlug) return null;
 
@@ -28,6 +34,7 @@ export async function getCheckoutPricing(
       basePrice: demoSubtotal,
       adjustments: [],
       subtotal: demoSubtotal,
+      wetUpcharge: 0,
       deliveryFee: null,
       total: null,
       deposit: null,
@@ -42,7 +49,7 @@ export async function getCheckoutPricing(
   const [{ data: product }, { data: org }] = await Promise.all([
     supabase
       .from("products")
-      .select("base_price")
+      .select("base_price, supports_modes, wet_upcharge_cents")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .is("deleted_at", null)
@@ -73,8 +80,24 @@ export async function getCheckoutPricing(
     }
   }
 
+  // Sprint 6.0 wet/dry upcharge — applied to the displayed subtotal so
+  // the customer sees the same number on review that we charge at
+  // submission. Mirrors the orphan-clear rule from the line-total
+  // helper (lib/pricing/inflatable-mode.ts): only fires when the
+  // customer picked wet AND the product genuinely supports wet AND the
+  // operator priced the upcharge. Previously this was applied at
+  // submission time only, so customers saw the dry price on the
+  // checkout summary and discovered the higher charge after submit.
+  const supportsModes = (product.supports_modes as string[] | null) ?? [];
+  const wetUpchargeCents = (product.wet_upcharge_cents as number | null) ?? 0;
+  const wetUpcharge =
+    selectedMode === "wet" && supportsModes.includes("wet") && wetUpchargeCents > 0
+      ? Number((wetUpchargeCents / 100).toFixed(2))
+      : 0;
+  subtotal = Number((subtotal + wetUpcharge).toFixed(2));
+
   if (!zip) {
-    return { basePrice, adjustments, subtotal, deliveryFee: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, deliveryFee: null, total: null, deposit: null };
   }
 
   const serviceArea = await resolveServiceAreaForAddress({
@@ -83,7 +106,7 @@ export async function getCheckoutPricing(
   });
 
   if (!serviceArea) {
-    return { basePrice, adjustments, subtotal, deliveryFee: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, deliveryFee: null, total: null, deposit: null };
   }
 
   const deliveryFee = serviceArea.deliveryFee;
@@ -95,5 +118,5 @@ export async function getCheckoutPricing(
     deposit = Math.min(policies.depositMinimum, total);
   }
 
-  return { basePrice, adjustments, subtotal, deliveryFee, total, deposit };
+  return { basePrice, adjustments, subtotal, wetUpcharge, deliveryFee, total, deposit };
 }

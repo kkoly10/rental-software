@@ -2385,6 +2385,7 @@ export const es: Messages = {
     basePrice: "Precio base",
     adjustedSubtotal: "Subtotal ajustado",
     subtotal: "Subtotal",
+    wetUpcharge: "Recargo modo mojado",
     deliveryFee: "Tarifa de entrega",
     deliveryTBD: "Por determinar",
     deliveryFree: "Gratis",
