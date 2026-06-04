@@ -71,6 +71,20 @@ export default async function OrderDetailPage({
       title={m.dashboard.orderDetail.title}
       description={m.dashboard.orderDetail.description}
     >
+      {order.missingEventDate && (
+        <div
+          className="badge warning"
+          role="alert"
+          style={{
+            padding: "12px 16px",
+            marginBottom: 12,
+            display: "block",
+            fontSize: 14,
+          }}
+        >
+          {m.dashboard.orders.missingEventDateBanner}
+        </div>
+      )}
       <div className="dashboard-grid">
         <section className="panel">
           <div className="section-header">

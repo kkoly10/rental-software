@@ -88,10 +88,18 @@ export default async function ProductsPage({
                         <strong>{product.name}</strong>
                         <div className="muted">{product.category}</div>
                       </div>
-                      <StatusBadge
-                        label={product.status}
-                        tone={product.tone as "default" | "success" | "warning" | "danger"}
-                      />
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {product.missingPrice && (
+                          <StatusBadge
+                            label={m.dashboard.products.missingPriceBadge}
+                            tone="warning"
+                          />
+                        )}
+                        <StatusBadge
+                          label={product.status}
+                          tone={product.tone as "default" | "success" | "warning" | "danger"}
+                        />
+                      </div>
                     </div>
                     <div className="price-row">
                       <span className="muted">{product.price}</span>

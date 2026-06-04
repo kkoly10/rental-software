@@ -60,12 +60,20 @@ export function RecordPaymentForm({
 
         <label className="order-card">
           <strong>{m.paymentTypeLabel}</strong>
-          <select name="payment_type" defaultValue="deposit" style={{ marginTop: 8, width: "100%" }}>
+          <select
+            name="payment_type"
+            defaultValue="deposit"
+            title={m.paymentTypeHint}
+            style={{ marginTop: 8, width: "100%" }}
+          >
             <option value="deposit">{m.paymentTypes.deposit}</option>
             <option value="balance">{m.paymentTypes.balance}</option>
             <option value="partial">{m.paymentTypes.partial}</option>
             <option value="refund">{m.paymentTypes.refund}</option>
           </select>
+          <span className="muted" style={{ fontSize: 12, marginTop: 6, display: "block" }}>
+            {m.paymentTypeHint}
+          </span>
         </label>
 
         <label className="order-card">

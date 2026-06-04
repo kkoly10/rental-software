@@ -299,7 +299,11 @@ export async function createCheckoutOrder(
     }
   }
 
-  let subtotal = 225;
+  // No magic default. If a productSlug is provided, the pricing branch below
+  // sets subtotal from the product's base_price (or rejects if unpriced —
+  // decision 2.9). Generic bookings without a slug start at zero; downstream
+  // payment logic will refuse a zero-total order.
+  let subtotal = 0;
   let productId: string | null = null;
   let productName = "Rental booking";
   let itemRentalDays: number | null = null;
@@ -324,8 +328,32 @@ export async function createCheckoutOrder(
       .maybeSingle();
 
     if (product) {
-      const ratePerDay =
-        typeof product.base_price === "number" ? Number(product.base_price) : 225;
+      // Decision 2.9 — refuse checkout when a product has no price set,
+      // instead of silently billing the magic $225 default. Matches the
+      // WooCommerce default ("empty price → no Add-to-Cart button"). The
+      // product itself stays browsable on the storefront so customers can
+      // still request a quote for unusual items.
+      const rawBasePrice = product.base_price;
+      const hasValidPrice =
+        typeof rawBasePrice === "number" && rawBasePrice > 0;
+      if (!hasValidPrice) {
+        await logAppEvent({
+          organizationId: orgId,
+          source: "checkout.website",
+          action: "missing_price_blocked",
+          status: "warning",
+          metadata: {
+            product_slug: productSlug,
+            product_id: product.id,
+          },
+        });
+        return {
+          ok: false,
+          message:
+            "Pricing isn't set for this item yet. Please contact us to confirm a quote before booking.",
+        };
+      }
+      const ratePerDay = Number(rawBasePrice);
       productId = product.id;
       productName = product.name ?? productSlug;
       // Sprint 6.0 — capture mode/upcharge under the same lookup so
@@ -400,6 +428,17 @@ export async function createCheckoutOrder(
       : 0;
   if (wetUpchargeApplied > 0) {
     subtotal += wetUpchargeApplied;
+  }
+
+  // Decision 2.9 — reject zero-total bookings instead of letting them through
+  // and surprising the operator with a $0 order. Hit when no productSlug was
+  // provided AND the wet upcharge path didn't fire.
+  if (subtotal <= 0) {
+    return {
+      ok: false,
+      message:
+        "We couldn't determine pricing for this booking. Please reopen the product page and try again.",
+    };
   }
 
   if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {

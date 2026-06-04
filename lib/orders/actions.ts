@@ -731,6 +731,13 @@ export async function updateOrderStatus(
   // Previously only the webhook could write the value; the operator UI
   // returned "Cannot move an order from X to refunded" for every
   // attempt.
+  // Decision 2.2 — the data layer stays permissive (crew apps need to write
+  // `delivered` directly from `confirmed` when a stop is completed without a
+  // dispatch step). The *dashboard* UI is expected to gate the skip behind a
+  // confirmation modal + reason field; if the dashboard ever exposes a "Mark
+  // delivered" affordance, route it through a wrapper that requires the
+  // reason. The audit-log warning below catches the skip when it happens so
+  // we have telemetry the moment the UI lands.
   const VALID_TRANSITIONS: Record<string, string[]> = {
     inquiry:          ["quote_sent", "awaiting_deposit", "confirmed", "cancelled", "refunded"],
     quote_sent:       ["awaiting_deposit", "confirmed", "cancelled", "refunded"],
@@ -762,6 +769,30 @@ export async function updateOrderStatus(
       ok: false,
       message: `Cannot move an order from "${currentOrder.order_status}" to "${parsed.data.newStatus}".`,
     };
+  }
+
+  // Decision 2.2 — log the dispatch-skip transition so we have audit
+  // history when it happens (crew completion bypassing out_for_delivery,
+  // or eventually the dashboard skip path once it has a UI). Doesn't
+  // block — that's by design.
+  const SKIPPED_DISPATCH_TRANSITIONS = new Set([
+    "confirmed:delivered",
+    "scheduled:delivered",
+  ]);
+  const transitionKey = `${currentOrder.order_status}:${parsed.data.newStatus}`;
+  if (SKIPPED_DISPATCH_TRANSITIONS.has(transitionKey)) {
+    const { logAppEvent } = await import("@/lib/observability/server");
+    await logAppEvent({
+      organizationId: ctx.organizationId,
+      source: "orders.updateOrderStatus",
+      action: "dispatch_skip",
+      status: "warning",
+      metadata: {
+        order_id: parsed.data.orderId,
+        from_status: currentOrder.order_status,
+        to_status: parsed.data.newStatus,
+      },
+    });
   }
 
   // #339 TOCTOU guard — only update if the row is still in the state we

@@ -75,6 +75,10 @@ function mapOrderRow(order: OrderRow): OrderSummary {
     status: formatStatus(status),
     tone: statusTone(status),
     eventDateRaw: order.event_date ?? undefined,
+    // True when no event_date is set; orders flagged this way are
+    // invisible to the calendar and route board until a date is added.
+    // Surfaced on the orders list and detail page.
+    missingEventDate: !order.event_date,
     postalCode: address?.postal_code ?? undefined,
   };
 }

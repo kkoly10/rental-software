@@ -64,11 +64,13 @@ export async function getGuidanceSnapshot(): Promise<GuidanceSnapshot> {
         .select("id, products!inner(organization_id)", { count: "exact", head: true })
         .eq("products.organization_id", ctx.organizationId)
         .is("deleted_at", null),
+      // Decision 3.6 — onboarding checklist counts any record, including
+      // drafts/inactive ones. Matches Shopify's "Add your first product"
+      // completion-on-creation pattern. Filter by deleted_at only.
       supabase
         .from("service_areas")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", ctx.organizationId)
-        .eq("is_active", true)
         .is("deleted_at", null),
       supabase
         .from("orders")

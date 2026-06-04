@@ -117,14 +117,22 @@ export async function recordPayment(
   }
 
   // Reject payment recordings against terminal-state orders. A
-  // refund on a cancelled order or any positive payment on a
-  // refunded / completed order doesn't make sense and would corrupt
-  // the financials view. Operators can reopen an order via status
-  // transition first if they need to.
-  if (order.order_status === "cancelled" || order.order_status === "refunded") {
+  // Decision 2.14 — refunds are a separate transaction posted against the
+  // payment, not a re-open of the order (ASC 606 + QuickBooks standard).
+  // A cancelled order should still accept refund payments because the
+  // customer's already-captured deposit needs to come back out. Forbid only
+  // positive payments on cancelled/refunded/completed orders.
+  if (order.order_status === "refunded") {
     return {
       ok: false,
-      message: `Cannot record payments on a ${order.order_status} order.`,
+      message: "Cannot record payments on a refunded order.",
+    };
+  }
+  if (order.order_status === "cancelled" && paymentType !== "refund") {
+    return {
+      ok: false,
+      message:
+        "Cannot record additional payments on a cancelled order. Only refunds are allowed.",
     };
   }
   if (order.order_status === "completed" && paymentType !== "refund") {
