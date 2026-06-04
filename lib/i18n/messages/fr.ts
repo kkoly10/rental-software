@@ -2047,6 +2047,8 @@ export const fr: Messages = {
           "Choisissez une tournée existante ci-dessous, ou créez-en une nouvelle pour cette date.",
         noRoutesBody:
           "Aucune tournée pour cette date. Créez-en une et cette commande en sera le premier arrêt.",
+        inProgressRoutesHint:
+          "Les tournées en cours pour cette date n'acceptent plus de nouveaux arrêts — créez une nouvelle tournée ou attendez la suivante.",
         attachCta: "Ajouter à cette tournée",
         attaching: "Ajout…",
         createRouteCta: "Créer une nouvelle tournée pour cette date",

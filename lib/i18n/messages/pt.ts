@@ -2047,6 +2047,8 @@ export const pt: Messages = {
           "Escolha uma rota existente abaixo ou crie uma nova para esta data.",
         noRoutesBody:
           "Não há rotas para esta data. Crie uma e esta encomenda será a sua primeira paragem.",
+        inProgressRoutesHint:
+          "As rotas em curso para esta data não aceitam novas paragens — crie uma nova rota ou aguarde a próxima.",
         attachCta: "Adicionar a esta rota",
         attaching: "A adicionar…",
         createRouteCta: "Criar uma nova rota para esta data",
