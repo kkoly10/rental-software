@@ -1,5 +1,6 @@
 import type {
   CopilotAction,
+  CopilotOrderStatus,
   CopilotPaymentMethod,
   CopilotPaymentType,
 } from "@/lib/copilot/actions";
@@ -13,6 +14,33 @@ const PAYMENT_METHODS: CopilotPaymentMethod[] = [
   "zelle",
   "other",
 ];
+
+const ORDER_STATUSES: CopilotOrderStatus[] = [
+  "quote_sent",
+  "awaiting_deposit",
+  "confirmed",
+  "scheduled",
+  "out_for_delivery",
+  "delivered",
+  "completed",
+];
+
+function parseOrderStatusAction(parsed: Record<string, unknown>): CopilotAction | null {
+  const params = parsed.params;
+  if (typeof params !== "object" || params === null) return null;
+  const p = params as Record<string, unknown>;
+  const orderId = typeof p.orderId === "string" ? p.orderId : "";
+  const newStatus = p.newStatus as CopilotOrderStatus;
+
+  if (!orderId) return null;
+  if (!ORDER_STATUSES.includes(newStatus)) return null;
+
+  return {
+    type: "update_order_status",
+    preview: typeof parsed.preview === "string" ? parsed.preview : "",
+    params: { orderId, newStatus },
+  };
+}
 
 function parsePaymentAction(parsed: Record<string, unknown>): CopilotAction | null {
   const params = parsed.params;
@@ -69,6 +97,8 @@ export function parseActionFromResponse(content: string): {
 
     if (parsed.type === "record_payment") {
       action = parsePaymentAction(parsed);
+    } else if (parsed.type === "update_order_status") {
+      action = parseOrderStatusAction(parsed);
     } else if (parsed.type && parsed.field && parsed.value) {
       action = {
         type: parsed.type as CopilotAction["type"],

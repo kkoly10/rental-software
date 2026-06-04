@@ -79,8 +79,8 @@ Live answers to "How much am I owed?", "What's on today/this week?", "What needs
 ### Tier 2 — Proactive daily briefing
 A "What needs my attention today?" roundup (and optional auto-greeting) synthesizing events, unpaid deposits on imminent events, unsigned docs, unread messages, and overdue maintenance. The data for this shipped in Phase 1; the proactive surfacing is the remaining work.
 
-### Tier 3 — Action-taking with confirmation — **STARTED (Phase 3: record payment)**
-Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-radius mutations. **Recording an incoming payment is shipped** (see below); send a quote / document for signature, advance order status, draft & send a customer reply, and log maintenance are the queued follow-ons. Each reuses the role gate, rate limit, audit log, and preview already built.
+### Tier 3 — Action-taking with confirmation — **IN PROGRESS (Phase 3)**
+Extend the proven `[ACTION]` + preview-confirm pattern to high-value, low-blast-radius mutations. **Shipped:** record an incoming payment; **advance order status** (`update_order_status`, non-destructive forward transitions only — `cancelled`/`refunded` stay manual; reuses `updateOrderStatus`'s state machine + TOCTOU). **Queued (recommended order):** generate/mark documents, send a quote, draft & send a customer reply. Each reuses the role gate, one-time acknowledgment, rate limit, audit log, and preview already built.
 
 ### Tier 4 — Drafting & communication
 Let the model draft customer replies, quote follow-ups, event reminders, and review requests — including WhatsApp/SMS copy (ties to the strategy docs' "WhatsApp is the highest-leverage net-new feature" bet). Operator approves before send.

@@ -2665,6 +2665,12 @@ const enValues = {
       agreeing: "Saving…",
       cancel: "Not now",
     },
+    orderStatus: {
+      title: "Update order status",
+      newStatus: "New status",
+      confirm: "Update Status",
+      updating: "Updating…",
+    },
   },
 
   trackingMap: {

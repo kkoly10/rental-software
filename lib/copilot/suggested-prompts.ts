@@ -24,6 +24,7 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
   ],
   "/dashboard/orders": [
     { label: "How do I create an order?", prompt: "Walk me through creating a manual order." },
+    { label: "Advance an order's status", prompt: "Help me move one of my open orders to its next status." },
     { label: "Order statuses explained", prompt: "Explain the different order statuses and what they mean." },
   ],
   "/dashboard/payments": [

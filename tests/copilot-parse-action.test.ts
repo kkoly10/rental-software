@@ -70,6 +70,32 @@ test("rejects a record_payment with a missing orderId", () => {
   assert.equal(action, null);
 });
 
+test("parses a valid update_order_status action", () => {
+  const raw = `Marking it delivered.\n[ACTION:{"type":"update_order_status","preview":"Mark #1042 as delivered","params":{"orderId":"${ORDER_ID}","newStatus":"delivered"}}]`;
+  const { text, action } = parseActionFromResponse(raw);
+  assert.equal(text, "Marking it delivered.");
+  assert.ok(action && action.type === "update_order_status");
+  if (action.type === "update_order_status") {
+    assert.equal(action.params.orderId, ORDER_ID);
+    assert.equal(action.params.newStatus, "delivered");
+  }
+});
+
+test("rejects update_order_status with a disallowed status (cancelled)", () => {
+  const raw = `[ACTION:{"type":"update_order_status","params":{"orderId":"${ORDER_ID}","newStatus":"cancelled"}}]`;
+  assert.equal(parseActionFromResponse(raw).action, null);
+});
+
+test("rejects update_order_status with an unknown status", () => {
+  const raw = `[ACTION:{"type":"update_order_status","params":{"orderId":"${ORDER_ID}","newStatus":"shipped"}}]`;
+  assert.equal(parseActionFromResponse(raw).action, null);
+});
+
+test("rejects update_order_status with a missing orderId", () => {
+  const raw = `[ACTION:{"type":"update_order_status","params":{"newStatus":"confirmed"}}]`;
+  assert.equal(parseActionFromResponse(raw).action, null);
+});
+
 test("malformed JSON in the action block is treated as plain text", () => {
   const raw = "Sure.\n[ACTION:{not valid json}]";
   const { text, action } = parseActionFromResponse(raw);

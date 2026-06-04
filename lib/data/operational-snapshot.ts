@@ -29,6 +29,16 @@ export type AttentionOrder = {
   link: string; // /dashboard/orders/{id}
 };
 
+// An open order the Copilot can target for an action (e.g. advancing status).
+// Carries the current status so the model can propose a valid next transition.
+export type ActionableOrder = {
+  id: string;
+  label: string; // "#1042 — Sarah Mitchell"
+  status: string; // current order_status
+  eventDate: string | null;
+  link: string;
+};
+
 export type OperationalSnapshot = {
   // Money
   outstandingBalance: number;
@@ -49,6 +59,10 @@ export type OperationalSnapshot = {
   // A few specific upcoming orders that still owe money, soonest first, each
   // with a deep-link — powers clickable "here's exactly what to chase" answers.
   attentionOrders: AttentionOrder[];
+
+  // Open orders the Copilot can act on (status changes, etc.), soonest event
+  // first, with their current status — so the model can target a real order.
+  actionableOrders: ActionableOrder[];
 
   // Formatting hints so the context layer renders money correctly
   currency: string;
@@ -71,6 +85,7 @@ const EMPTY: OperationalSnapshot = {
   unreadMessages: 0,
   openMaintenance: 0,
   attentionOrders: [],
+  actionableOrders: [],
   currency: "USD",
   locale: "en",
   available: false,
@@ -78,6 +93,8 @@ const EMPTY: OperationalSnapshot = {
 
 // How many specific balance-due orders to surface with deep-links.
 const ATTENTION_ORDERS_LIMIT = 5;
+// How many open orders to surface as action targets (status changes, etc.).
+const ACTIONABLE_ORDERS_LIMIT = 12;
 
 // Order statuses that are fully closed out and therefore can't owe money or
 // represent an upcoming event. Everything else (inquiry → delivered) is "open"
@@ -106,7 +123,7 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
   next7.setDate(next7.getDate() + 7);
   const next7Str = next7.toISOString().slice(0, 10);
 
-  const [ordersRes, paymentsRes, docsRes, unreadRes, maintenanceRes, attentionRes] =
+  const [ordersRes, paymentsRes, docsRes, unreadRes, maintenanceRes, attentionRes, actionableRes] =
     await Promise.all([
       // Open orders: drives outstanding balance + schedule + balance-due-soon.
       // Excludes only the closed-out statuses, matching analytics.ts.
@@ -175,6 +192,19 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
         .gt("balance_due_amount", 0)
         .order("event_date", { ascending: true })
         .limit(ATTENTION_ORDERS_LIMIT),
+
+      // Open orders the Copilot can target for actions (e.g. status changes),
+      // soonest event first, with their current status.
+      supabase
+        .from("orders")
+        .select(
+          "id, order_number, order_status, event_date, customers(first_name, last_name, deleted_at)"
+        )
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
+        .not("order_status", "in", CLOSED_STATUSES)
+        .order("event_date", { ascending: true, nullsFirst: false })
+        .limit(ACTIONABLE_ORDERS_LIMIT),
     ]);
 
   if (ordersRes.error)
@@ -187,8 +217,8 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
   const orderSummary = summarizeOpenOrders(ordersRes.data ?? [], today, next7Str);
   const paymentSummary = summarizeMonthPayments(paymentsRes.data ?? []);
 
-  const attentionOrders: AttentionOrder[] = (attentionRes.data ?? []).map((o) => {
-    const customer = (o as Record<string, unknown>).customers as
+  const orderLabel = (o: Record<string, unknown>): string => {
+    const customer = o.customers as
       | { first_name?: string | null; last_name?: string | null; deleted_at?: string | null }
       | null;
     const name =
@@ -196,15 +226,24 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
         ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
         : "";
     const orderRef = o.order_number ? `#${o.order_number}` : "Order";
-    return {
-      id: o.id,
-      label: name ? `${orderRef} — ${name}` : orderRef,
-      balance:
-        typeof o.balance_due_amount === "number" ? o.balance_due_amount : 0,
-      eventDate: o.event_date ?? null,
-      link: `/dashboard/orders/${o.id}`,
-    };
-  });
+    return name ? `${orderRef} — ${name}` : orderRef;
+  };
+
+  const attentionOrders: AttentionOrder[] = (attentionRes.data ?? []).map((o) => ({
+    id: o.id,
+    label: orderLabel(o as Record<string, unknown>),
+    balance: typeof o.balance_due_amount === "number" ? o.balance_due_amount : 0,
+    eventDate: o.event_date ?? null,
+    link: `/dashboard/orders/${o.id}`,
+  }));
+
+  const actionableOrders: ActionableOrder[] = (actionableRes.data ?? []).map((o) => ({
+    id: o.id,
+    label: orderLabel(o as Record<string, unknown>),
+    status: o.order_status ?? "inquiry",
+    eventDate: o.event_date ?? null,
+    link: `/dashboard/orders/${o.id}`,
+  }));
 
   return {
     outstandingBalance: orderSummary.outstandingBalance,
@@ -218,6 +257,7 @@ export async function getOperationalSnapshot(): Promise<OperationalSnapshot> {
     unreadMessages: unreadRes.count ?? 0,
     openMaintenance: maintenanceRes.count ?? 0,
     attentionOrders,
+    actionableOrders,
     currency,
     locale,
     available: true,
