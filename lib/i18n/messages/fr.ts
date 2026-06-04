@@ -1337,6 +1337,7 @@ export const fr: Messages = {
       eventDate: "Date de l’événement",
       deliveryTo: "Livraison à",
       subtotal: "Sous-total",
+      wetUpcharge: "Supplément mode mouillé",
       deliveryFee: "Frais de livraison",
       total: "Total",
       depositDueNow: "Acompte à régler",
