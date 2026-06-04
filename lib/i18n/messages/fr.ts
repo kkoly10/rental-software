@@ -2639,6 +2639,8 @@ export const fr: Messages = {
     dismiss: "Ignorer",
     openLauncher: "Ouvrir le copilote",
     closeLauncher: "Fermer le copilote",
+    copy: "Copier",
+    copied: "Copié",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "Q :",
     faqAnswerPrefix: "R :",

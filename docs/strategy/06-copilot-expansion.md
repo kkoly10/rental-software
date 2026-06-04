@@ -95,7 +95,7 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 1. **Phase 1 — read-only operational awareness.** ✅ *Shipped (see below).*
 2. **Phase 2 — conversation memory + deep-links.** ✅ *Shipped (see below).*
 3. **Phase 3 — action-taking** (record payment, advance status, generate documents, draft & send reply, send quote), each behind the confirm-then-apply guardrails. ✅ *All five shipped + live-verified.*
-4. **Phase 4 — proactive briefing + WhatsApp/SMS drafting.** 🚧 *Proactive daily briefing shipped; WhatsApp/SMS drafting queued.*
+4. **Phase 4 — proactive briefing + WhatsApp/SMS drafting.** ✅ *Both shipped.* (Proactive daily briefing; SMS/WhatsApp message **drafting** — the Copilot writes channel-appropriate copy with a one-click Copy button. Actually *sending* SMS/WhatsApp from the Copilot is deliberately out of scope for now — there's no high-level guarded send action to reuse, and free-text SMS needs opt-in/compliance review; that would be a separate guarded `send_sms`/`send_whatsapp` action.)
 
 ---
 

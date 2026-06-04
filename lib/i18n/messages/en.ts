@@ -2640,6 +2640,8 @@ const enValues = {
     dismiss: "Dismiss",
     openLauncher: "Open Copilot",
     closeLauncher: "Close Copilot",
+    copy: "Copy",
+    copied: "Copied",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "Q:",
     faqAnswerPrefix: "A:",
