@@ -577,6 +577,8 @@ export const pt: Messages = {
       kicker: "Plataforma de aluguer",
       mobileMenu: "Menu do painel",
       openNav: "Abrir navegação do painel",
+      demoModeBadge: "Modo demo",
+      demoModeBody: "O Supabase não está configurado para esta implementação. Os botões parecem funcionar mas nenhuma alteração é guardada.",
     },
     overview: {
       title: "Painel do operador",

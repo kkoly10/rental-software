@@ -1,9 +1,9 @@
 "use server";
 
 import { cache } from "react";
+import { cookies, headers } from "next/headers";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
 import { resolveOrgFromHostname, getAppDomain } from "@/lib/auth/resolve-org";
 
 export type OrgContext = {
@@ -11,6 +11,15 @@ export type OrgContext = {
   organizationId: string;
   businessType: string;
 };
+
+/**
+ * Name of the HttpOnly cookie that holds the user's currently-active org id.
+ * Decision 3.1 — the org switcher writes this cookie and `getOrgContext`
+ * honours it when the user has a matching active membership. Falls back to
+ * the oldest membership when no cookie is set or the cookie points to an
+ * org the user no longer belongs to.
+ */
+export const ACTIVE_ORG_COOKIE = "korent-active-org";
 
 /**
  * Resolves the current authenticated user's organization via organization_memberships.
@@ -31,23 +40,36 @@ const resolveOrgContext = cache(async (): Promise<OrgContext | null> => {
 
   if (!user) return null;
 
-  const { data: membership } = await supabase
+  // Load every active membership so we can honour the active-org cookie
+  // when the user has more than one. Limited so a runaway membership
+  // count can't drag the request — operators with >50 active orgs are
+  // not a real concern today.
+  const { data: memberships } = await supabase
     .from("organization_memberships")
-    .select("organization_id, organizations!inner(business_type)")
+    .select("organization_id, created_at, organizations!inner(business_type)")
     .eq("profile_id", user.id)
     .eq("status", "active")
     .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(50);
 
-  if (!membership) return null;
+  if (!memberships || memberships.length === 0) return null;
 
-  const orgs = membership.organizations as unknown as { business_type: string } | null;
+  let chosen = memberships[0];
+  if (memberships.length > 1) {
+    const cookieStore = await cookies();
+    const requested = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
+    if (requested) {
+      const match = memberships.find((m) => m.organization_id === requested);
+      if (match) chosen = match;
+    }
+  }
+
+  const orgs = chosen.organizations as unknown as { business_type: string } | null;
   const businessType = orgs?.business_type ?? "inflatable";
 
   return {
     userId: user.id,
-    organizationId: membership.organization_id,
+    organizationId: chosen.organization_id,
     businessType,
   };
 });

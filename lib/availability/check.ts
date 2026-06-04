@@ -51,34 +51,57 @@ export async function checkProductAvailability(options: {
 
   const now = new Date().toISOString();
 
-  const [{ count: assetCount }, { count: overlappingCount }] = await Promise.all([
-    supabase
-      .from("assets")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", options.organizationId)
-      .eq("product_id", options.productId)
-      .is("deleted_at", null)
-      .in("operational_status", BOOKABLE_ASSET_STATUSES as unknown as string[]),
-    // Count overlapping blocks, excluding any that have already expired
-    supabase
-      .from("availability_blocks")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", options.organizationId)
-      .eq("product_id", options.productId)
-      .lt("starts_at", window.endsAt)
-      .gt("ends_at", window.startsAt)
-      .or(`expires_at.is.null,expires_at.gt.${now}`),
-  ]);
+  // Fetch the bookable asset IDs (not just a count) so we can subtract any
+  // assets currently held by an open maintenance record. Decision 2.4 —
+  // assets with an open maintenance_record (status='open') are unavailable
+  // until the operator closes the record. Matches Booqable / EZRentOut
+  // "schedule downtime blocks availability" default.
+  const [{ data: bookableAssets }, { count: overlappingCount }] =
+    await Promise.all([
+      supabase
+        .from("assets")
+        .select("id")
+        .eq("organization_id", options.organizationId)
+        .eq("product_id", options.productId)
+        .is("deleted_at", null)
+        .in("operational_status", BOOKABLE_ASSET_STATUSES as unknown as string[]),
+      // Count overlapping blocks, excluding any that have already expired
+      supabase
+        .from("availability_blocks")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", options.organizationId)
+        .eq("product_id", options.productId)
+        .lt("starts_at", window.endsAt)
+        .gt("ends_at", window.startsAt)
+        .or(`expires_at.is.null,expires_at.gt.${now}`),
+    ]);
 
-  const assetCapacity = assetCount ?? 0;
+  let assetCapacity = bookableAssets?.length ?? 0;
+  if (assetCapacity > 0 && bookableAssets) {
+    const assetIds = bookableAssets.map((a) => String(a.id));
+    const { data: maintAssets } = await supabase
+      .from("maintenance_records")
+      .select("asset_id")
+      .eq("organization_id", options.organizationId)
+      .in("status", ["open", "in_progress"])
+      .in("asset_id", assetIds);
+    if (maintAssets && maintAssets.length > 0) {
+      const inMaintenance = new Set(
+        maintAssets.map((m) => String(m.asset_id))
+      );
+      assetCapacity = assetIds.filter((id) => !inMaintenance.has(id)).length;
+    }
+  }
   const reservedCount = overlappingCount ?? 0;
 
-  // A product with no asset records has no physical inventory — treat as unavailable.
+  // A product with no asset records has no physical inventory — treat as
+  // unavailable. Same applies when every asset is currently held by an open
+  // maintenance record (decision 2.4).
   if (assetCapacity === 0 || reservedCount >= assetCapacity) {
     return {
       available: false,
       reason: assetCapacity === 0
-        ? "This item is not currently available for booking."
+        ? "This item is currently under service and not available to book."
         : "This rental is already reserved for the selected date.",
       assetCapacity,
       reservedCount,

@@ -578,6 +578,8 @@ const enValues = {
       kicker: "Rental platform",
       mobileMenu: "Dashboard menu",
       openNav: "Open dashboard navigation",
+      demoModeBadge: "Demo mode",
+      demoModeBody: "Supabase isn't configured for this deployment. Buttons appear to work but no writes are persisted.",
     },
     overview: {
       title: "Operator Dashboard",

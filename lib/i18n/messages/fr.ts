@@ -577,6 +577,8 @@ export const fr: Messages = {
       kicker: "Plateforme de location",
       mobileMenu: "Menu du tableau de bord",
       openNav: "Ouvrir la navigation du tableau de bord",
+      demoModeBadge: "Mode démo",
+      demoModeBody: "Supabase n’est pas configuré pour ce déploiement. Les boutons semblent fonctionner mais aucune écriture n’est conservée.",
     },
     overview: {
       title: "Tableau de bord opérateur",

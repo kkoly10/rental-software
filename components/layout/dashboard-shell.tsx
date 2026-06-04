@@ -18,6 +18,8 @@ import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
 import { SubscriptionBanner } from "@/components/settings/subscription-banner";
 import { useI18n } from "@/lib/i18n/provider";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { OrgSwitcher } from "@/components/auth/org-switcher";
+import type { OrgChoice } from "@/lib/auth/switch-org";
 import { reportClientError } from "@/lib/observability/client";
 
 function isNavItemActive(pathname: string, href: string) {
@@ -90,6 +92,14 @@ export function DashboardShell({
   const [businessType, setBusinessType] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string | null>(null);
+  // Decision 3.1 — Multi-membership awareness. Empty when single-org;
+  // OrgSwitcher renders a static label in that case.
+  const [memberships, setMemberships] = useState<OrgChoice[]>([]);
+  // Decision 3.5 — Track whether the deployment is running without Supabase
+  // env vars so we can surface a persistent "Demo mode" banner. Every server
+  // action returns ok:true early when this is true; without the banner the
+  // operator can't tell that their writes are no-ops.
+  const [demoMode, setDemoMode] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -128,6 +138,15 @@ export function DashboardShell({
   }, [pathname]);
 
   useEffect(() => {
+    fetch("/api/demo-status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && typeof d.demoMode === "boolean") setDemoMode(d.demoMode);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     fetch("/api/storefront-url", { signal: controller.signal })
       .then(async (response) => {
@@ -146,6 +165,7 @@ export function DashboardShell({
               businessType?: string;
               organizationId?: string;
               organizationName?: string | null;
+              memberships?: OrgChoice[];
             })
           : null
       )
@@ -158,6 +178,7 @@ export function DashboardShell({
           setBusinessType(data.businessType ?? "");
           if (data.organizationId) setOrgId(data.organizationId);
           if (data.organizationName) setOrgName(data.organizationName);
+          if (Array.isArray(data.memberships)) setMemberships(data.memberships);
         }
       })
       .catch((err) => {
@@ -450,21 +471,10 @@ export function DashboardShell({
           Korent
         </Link>
         {orgName && (
-          <div
-            className="dashboard-active-org"
-            title={orgName}
-            style={{
-              fontSize: 12,
-              color: "var(--text-soft)",
-              marginBottom: 14,
-              padding: "0 2px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {orgName}
-          </div>
+          <OrgSwitcher
+            active={{ id: orgId, name: orgName }}
+            options={memberships}
+          />
         )}
 
         {/* Search affordance — opens the existing Cmd-K palette so the
@@ -552,6 +562,27 @@ export function DashboardShell({
           <NotificationCenter initialNotifications={notifications} />
         </div>
         <SubscriptionBanner status={subStatus} />
+        {demoMode && (
+          <div
+            role="status"
+            style={{
+              padding: "10px 16px",
+              marginBottom: 12,
+              borderRadius: 10,
+              background: "#fff4e5",
+              color: "#a86a08",
+              border: "1px solid #f6c280",
+              fontSize: 13,
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <strong>{m.dashboard.shell.demoModeBadge}</strong>
+            <span>{m.dashboard.shell.demoModeBody}</span>
+          </div>
+        )}
         <Breadcrumbs />
         {hideHeader ? (
           // Page renders its own headline (e.g. /dashboard's <DashboardGreeting>).

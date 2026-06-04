@@ -577,6 +577,8 @@ export const es: Messages = {
       kicker: "Plataforma de alquiler",
       mobileMenu: "Menú del panel",
       openNav: "Abrir navegación del panel",
+      demoModeBadge: "Modo demo",
+      demoModeBody: "Supabase no está configurado para este despliegue. Los botones parecen funcionar pero ningún cambio se guarda.",
     },
     overview: {
       title: "Panel del operador",
