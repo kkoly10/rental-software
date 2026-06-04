@@ -1189,6 +1189,8 @@ const enValues = {
     pickup: "Pickup",
     delivery: "Delivery",
     stops: "stops",
+    routeMap: "Route map",
+    openRouteInMaps: "Open route in Google Maps",
   },
 
   invite: {

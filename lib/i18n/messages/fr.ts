@@ -1188,6 +1188,8 @@ export const fr: Messages = {
     pickup: "Retrait",
     delivery: "Livraison",
     stops: "arrêts",
+    routeMap: "Carte de la tournée",
+    openRouteInMaps: "Ouvrir la tournée dans Google Maps",
   },
 
   invite: {

@@ -1188,6 +1188,8 @@ export const pt: Messages = {
     pickup: "Recolha",
     delivery: "Entrega",
     stops: "paragens",
+    routeMap: "Mapa da rota",
+    openRouteInMaps: "Abrir rota no Google Maps",
   },
 
   invite: {

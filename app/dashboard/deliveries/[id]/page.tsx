@@ -9,6 +9,7 @@ import { AddStopForm } from "@/components/deliveries/add-stop-form";
 import { OptimizeRouteButton } from "@/components/deliveries/optimize-route-button";
 import { getOrdersForRouteDate } from "@/lib/data/unrouted-orders";
 import { getTranslator } from "@/lib/i18n/server";
+import { buildGoogleMapsRouteUrl } from "@/lib/maps/google-maps-route-url";
 
 export default async function DeliveryDetailPage({
   params,
@@ -131,14 +132,8 @@ export default async function DeliveryDetailPage({
           </div>
 
           {(() => {
-            const addressedStops = route.stops
-              .filter((s) => s.address)
-              .sort((a, b) => a.sequence - b.sequence);
-            if (addressedStops.length === 0) return null;
-            const origin = encodeURIComponent(addressedStops[0].address!);
-            const destination = encodeURIComponent(addressedStops[addressedStops.length - 1].address!);
-            const mid = addressedStops.slice(1, -1).map((s) => encodeURIComponent(s.address!)).join("|");
-            const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}${mid ? `&waypoints=${mid}` : ""}`;
+            const mapsUrl = buildGoogleMapsRouteUrl(route.stops);
+            if (!mapsUrl) return null;
             return (
               <div style={{ marginTop: 16 }}>
                 <a
