@@ -5,21 +5,13 @@ import { cookies, headers } from "next/headers";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveOrgFromHostname, getAppDomain } from "@/lib/auth/resolve-org";
+import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-cookie";
 
 export type OrgContext = {
   userId: string;
   organizationId: string;
   businessType: string;
 };
-
-/**
- * Name of the HttpOnly cookie that holds the user's currently-active org id.
- * Decision 3.1 — the org switcher writes this cookie and `getOrgContext`
- * honours it when the user has a matching active membership. Falls back to
- * the oldest membership when no cookie is set or the cookie points to an
- * org the user no longer belongs to.
- */
-export const ACTIVE_ORG_COOKIE = "korent-active-org";
 
 /**
  * Resolves the current authenticated user's organization via organization_memberships.

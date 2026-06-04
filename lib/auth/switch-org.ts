@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-context";
+import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-cookie";
 
 export type SwitchOrgState = { ok: boolean; message: string };
 

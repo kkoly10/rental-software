@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isValidRole } from "@/lib/team/roles";
-import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-context";
+import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-cookie";
 
 export type AcceptInviteResult = {
   ok: boolean;
