@@ -125,10 +125,15 @@ export async function getOrdersForRouteDate(
   }
 
   // Fetch ALL orders for the date (no status filter) so we can classify
-  // why each one isn't currently a candidate.
+  // why each one isn't currently a candidate. Address lives on the
+  // joined customer_addresses row, NOT on orders directly — the old
+  // select referenced a non-existent orders.delivery_line1 column,
+  // which PostgREST silently returned as null, sending every
+  // confirmed-and-addressed order into the "no_address" bucket and
+  // emptying the Add Stop dropdown for every operator.
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, order_status, event_date, delivery_line1, customers(first_name, last_name), order_items(item_name_snapshot)")
+    .select("id, order_number, order_status, event_date, delivery_address_id, customers(first_name, last_name), customer_addresses!delivery_address_id(line1), order_items(item_name_snapshot)")
     .eq("organization_id", ctx.organizationId)
     .eq("event_date", routeDate)
     .is("deleted_at", null)
@@ -183,7 +188,10 @@ export async function getOrdersForRouteDate(
     }
 
     // 3) No delivery address — geocoding and routing both need a line1.
-    const hasAddress = !!(o as { delivery_line1?: string | null }).delivery_line1?.trim();
+    const address = (o as Record<string, unknown>).customer_addresses as
+      | { line1?: string | null }
+      | null;
+    const hasAddress = !!address?.line1?.trim();
     if (!hasAddress) {
       blocked.push({
         id: o.id,
