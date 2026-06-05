@@ -1,5 +1,24 @@
 # 05 — Vertical Roadmap & Demand Research
 
+> **⚠️ AMENDMENT — June 5, 2026**
+>
+> The original recommendation below (lock inflatables as #1, build vehicles & fleet as #2) has been **superseded** for the current sprint. The new direction is to expand *within* the party-rental umbrella instead of pivoting to a new industry:
+>
+> **Build 5 party sub-verticals using a capabilities-based architecture:**
+> 1. Tents & canopies
+> 2. Tables & chairs
+> 3. Dance floors & staging
+> 4. Photo booths
+> 5. Concessions
+>
+> Rationale: the existing inflatable customer base overwhelmingly also rents at least one of these five (verified via Goodshuffle Pro / TapGoods / Booqable "industries served" pages). Expanding within the party umbrella captures more of the same customer wallet without building a second domain model. Vehicles & fleet is **deferred indefinitely** — revisit only if a clear vehicle-rental customer demands it.
+>
+> **Authoritative doc for the new direction:** [`docs/architecture/multi-vertical-capabilities.md`](../architecture/multi-vertical-capabilities.md). That doc is the engineering source-of-truth for capabilities, schema migrations, phased plan, per-vertical gap analysis, and parked decisions (Tier C: linens / bar equipment / games / generators / restrooms / wedding decor / AV).
+>
+> The content below is preserved as historical context — it remains accurate as a *June-2026-pre-pivot snapshot* of the 12-vertical demand-vs-competition audit and is useful when re-evaluating deferred verticals.
+
+---
+
 **Date:** June 2026
 **Purpose:** Decide which rental verticals to ship in the Korent onboarding chooser, in what order, and with what build effort. Replaces the earlier blanket "primary vertical: party/event rental" decision with vertical-by-vertical readiness scoring and a US market-demand analysis.
 

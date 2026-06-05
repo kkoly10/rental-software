@@ -226,7 +226,7 @@ export const es: Messages = {
     hero: {
       kicker: "Software para alquileres de fiestas y eventos",
       headline: "Deja de responder llamadas de disponibilidad. Empieza a recibir reservas en línea.",
-      subhead: "Korent ofrece a tu negocio de alquiler una tienda en línea, disponibilidad en tiempo real, recordatorios automatizados y planificación de rutas — para que gestiones más eventos con menos caos.",
+      subhead: "Tienda en línea, disponibilidad en tiempo real, depósitos y planificación de rutas — para operadores que alquilan inflables, carpas, mesas y sillas, mantelería, photo booths y más.",
       ctaPrimary: "Empieza gratis — Sin tarjeta",
       demoLink: "o ver la tienda demo en vivo →",
     },
@@ -237,6 +237,25 @@ export const es: Messages = {
       "✓ Configuración en menos de 30 minutos",
       "✓ Pagos con tecnología de Stripe",
     ],
+    industries: {
+      kicker: "Hecho para estos alquileres",
+      title: "Tanto si alquilas…",
+      items: [
+        "Inflables",
+        "Carpas y toldos",
+        "Mesas y sillas",
+        "Mantelería",
+        "Pistas de baile y escenarios",
+        "Photo booths",
+        "Concesiones",
+        "Juegos y entretenimiento",
+        "Decoración de bodas",
+        "Equipos de bar",
+        "Baños portátiles",
+        "Generadores",
+      ],
+      footer: "…Korent gestiona tus reservas, pagos, depósitos y entregas.",
+    },
     pain: {
       kicker: "¿Te suena?",
       title: "Gestionar un negocio de alquiler es más difícil de lo que debería",
@@ -303,7 +322,7 @@ export const es: Messages = {
       deliveryRoutesBody: "Planifica rutas de entrega visualmente",
       onlineCheckout: "Pago en línea",
       onlineCheckoutBody: "Deja que los clientes reserven mientras duermes",
-      sampleProduct: "Castillo hinchable Rainbow Castle",
+      sampleProduct: "Carpa estructural 20×20",
       sampleDate: "Sáb 14 jun · 22554",
       deliveryFee: "Coste de entrega",
       depositPercent: "Depósito (25 %)",
@@ -324,8 +343,8 @@ export const es: Messages = {
       kicker: "Opiniones tempranas",
       title: "Lo que dicen los negocios de alquiler",
       items: [
-        { quote: "Redujimos a la mitad el tiempo de admin la primera semana. A los clientes les encanta comprobar la disponibilidad ellos mismos.", name: "Jamie R.", business: "Bounce & More Rentals", location: "Richmond, VA" },
-        { quote: "La configuración tomó menos de una hora. Mi equipo de entrega por fin tiene una ruta de verdad en vez de escribirme cada mañana.", name: "Marcus T.", business: "Party Perfect Inflatables", location: "Charlotte, NC" },
+        { quote: "Redujimos a la mitad el tiempo de admin la primera semana. A los clientes les encanta comprobar la disponibilidad ellos mismos.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
+        { quote: "La configuración tomó menos de una hora. Mi equipo de entrega por fin tiene una ruta de verdad en vez de escribirme cada mañana.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
         { quote: "Recibía llamadas toda la tarde. Ahora los clientes reservan en línea y me llega una notificación. No hemos tenido dobles reservas desde que cambiamos.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
@@ -372,7 +391,7 @@ export const es: Messages = {
     },
     inventoryBanner: {
       kicker: "Pensado para operaciones reales",
-      title: "Desde tu primer castillo hinchable hasta tu reserva número cien",
+      title: "Desde tu primera reserva hasta tu fin de semana número cien",
     },
     finalCta: {
       title: "¿Listo para recuperar tus tardes?",

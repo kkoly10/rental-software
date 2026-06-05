@@ -226,7 +226,7 @@ export const fr: Messages = {
     hero: {
       kicker: "Logiciel pour locations de fête et d’événements",
       headline: "Arrêtez de répondre aux appels de disponibilité. Commencez à prendre des réservations en ligne.",
-      subhead: "Korent offre à votre activité de location une vitrine en ligne, la disponibilité en temps réel, des rappels automatisés et la planification des tournées — pour faire plus d’événements avec moins de chaos.",
+      subhead: "Boutique en ligne, disponibilité en temps réel, acomptes et planification des tournées — conçu pour les loueurs de structures gonflables, tentes, tables et chaises, linge, photobooths, et plus.",
       ctaPrimary: "Essai gratuit — Aucune carte bancaire",
       demoLink: "ou voir la boutique de démonstration →",
     },
@@ -237,6 +237,25 @@ export const fr: Messages = {
       "✓ Installation en moins de 30 minutes",
       "✓ Paiements sécurisés par Stripe",
     ],
+    industries: {
+      kicker: "Conçu pour ces locations",
+      title: "Que vous louiez…",
+      items: [
+        "Structures gonflables",
+        "Tentes & chapiteaux",
+        "Tables & chaises",
+        "Linge de table",
+        "Pistes de danse & scènes",
+        "Photobooths",
+        "Concessions",
+        "Jeux & animations",
+        "Décor de mariage",
+        "Équipement de bar",
+        "Toilettes mobiles",
+        "Groupes électrogènes",
+      ],
+      footer: "…Korent gère vos réservations, paiements, acomptes et livraisons.",
+    },
     pain: {
       kicker: "Ça vous parle ?",
       title: "Gérer une activité de location ne devrait pas être aussi difficile",
@@ -303,7 +322,7 @@ export const fr: Messages = {
       deliveryRoutesBody: "Planifiez les tournées visuellement",
       onlineCheckout: "Paiement en ligne",
       onlineCheckoutBody: "Laissez les clients réserver pendant que vous dormez",
-      sampleProduct: "Château gonflable Rainbow Castle",
+      sampleProduct: "Tente structure 20×20",
       sampleDate: "Sam. 14 juin · 22554",
       deliveryFee: "Frais de livraison",
       depositPercent: "Acompte (25 %)",
@@ -324,8 +343,8 @@ export const fr: Messages = {
       kicker: "Retours des premiers opérateurs",
       title: "Ce que disent les entreprises de location",
       items: [
-        { quote: "Nous avons réduit de moitié le temps d’administration la première semaine. Les clients adorent vérifier la disponibilité eux-mêmes au lieu de nous appeler.", name: "Jamie R.", business: "Bounce & More Rentals", location: "Richmond, VA" },
-        { quote: "L’installation a pris moins d’une heure. Mon équipe de livraison a enfin un vrai itinéraire au lieu de m’envoyer des SMS chaque matin pour demander où aller.", name: "Marcus T.", business: "Party Perfect Inflatables", location: "Charlotte, NC" },
+        { quote: "Nous avons réduit de moitié le temps d’administration la première semaine. Les clients adorent vérifier la disponibilité eux-mêmes au lieu de nous appeler.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
+        { quote: "L’installation a pris moins d’une heure. Mon équipe de livraison a enfin un vrai itinéraire au lieu de m’envoyer des SMS chaque matin pour demander où aller.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
         { quote: "Je recevais des appels toute la soirée. Maintenant les clients réservent en ligne et je reçois une notification. Plus aucune double réservation depuis qu’on a changé.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
@@ -372,7 +391,7 @@ export const fr: Messages = {
     },
     inventoryBanner: {
       kicker: "Conçu pour les opérations réelles",
-      title: "De votre premier château gonflable à votre centième réservation",
+      title: "De votre première réservation à votre centième week-end",
     },
     finalCta: {
       title: "Prêt à récupérer vos soirées ?",

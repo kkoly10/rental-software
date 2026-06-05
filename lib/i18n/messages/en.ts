@@ -227,7 +227,7 @@ const enValues = {
     hero: {
       kicker: "Party & event rental software",
       headline: "Stop answering availability calls. Start taking bookings online.",
-      subhead: "Korent gives your rental business an online storefront, real-time availability, automated reminders, and delivery routing — so you can run more events with less chaos.",
+      subhead: "Online storefront, real-time availability, deposits, and delivery routing — built for operators renting inflatables, tents, tables & chairs, linens, photo booths, and more.",
       ctaPrimary: "Start Free — No Credit Card",
       demoLink: "or see the live demo storefront →",
     },
@@ -238,6 +238,25 @@ const enValues = {
       "✓ Setup in under 30 minutes",
       "✓ Payments powered by Stripe",
     ],
+    industries: {
+      kicker: "Built for these rentals",
+      title: "Whether you rent…",
+      items: [
+        "Inflatables",
+        "Tents & canopies",
+        "Tables & chairs",
+        "Linens",
+        "Dance floors & staging",
+        "Photo booths",
+        "Concessions",
+        "Games & amusements",
+        "Wedding decor",
+        "Bar equipment",
+        "Restrooms",
+        "Generators",
+      ],
+      footer: "…Korent runs your bookings, payments, deposits, and deliveries.",
+    },
     pain: {
       kicker: "Sound familiar?",
       title: "Running a rental business is harder than it should be",
@@ -304,7 +323,7 @@ const enValues = {
       deliveryRoutesBody: "Plan delivery routes visually",
       onlineCheckout: "Online Checkout",
       onlineCheckoutBody: "Let customers book while you sleep",
-      sampleProduct: "Rainbow Castle Bounce House",
+      sampleProduct: "20×20 Frame Tent",
       sampleDate: "Sat, Jun 14 · 22554",
       deliveryFee: "Delivery fee",
       depositPercent: "Deposit (25%)",
@@ -325,8 +344,8 @@ const enValues = {
       kicker: "Early operator feedback",
       title: "What rental businesses say",
       items: [
-        { quote: "We cut booking admin time in half in the first week. Customers love being able to check availability themselves instead of calling us.", name: "Jamie R.", business: "Bounce & More Rentals", location: "Richmond, VA" },
-        { quote: "Setting up took less than an hour. My delivery crew finally has a proper route instead of texting me every morning asking where to go first.", name: "Marcus T.", business: "Party Perfect Inflatables", location: "Charlotte, NC" },
+        { quote: "We cut booking admin time in half in the first week. Customers love being able to check availability themselves instead of calling us.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
+        { quote: "Setting up took less than an hour. My delivery crew finally has a proper route instead of texting me every morning asking where to go first.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
         { quote: "I used to get calls all evening. Now customers book online and I get a notification. I haven’t had a double-booking since we switched.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
@@ -373,7 +392,7 @@ const enValues = {
     },
     inventoryBanner: {
       kicker: "Built for real operations",
-      title: "From your first bounce house to your hundredth booking",
+      title: "From your first booking to your hundredth weekend",
     },
     finalCta: {
       title: "Ready to get your evenings back?",
