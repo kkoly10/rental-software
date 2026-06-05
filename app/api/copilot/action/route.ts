@@ -53,6 +53,10 @@ const paymentActionSchema = z.object({
       "other",
     ]),
     referenceNote: z.string().max(120).optional(),
+    // Client-generated per [ACTION:...] block so double-click / retry
+    // resolves to the same payments row. Optional for backwards
+    // compatibility with older clients.
+    idempotencyKey: z.string().uuid().optional(),
   }),
 });
 
