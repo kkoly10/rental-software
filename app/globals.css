@@ -5215,3 +5215,64 @@ textarea[aria-invalid="true"] {
 .page-hero__row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .page-hero__title { font-family: "Sora", sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.08; margin: 8px 0 6px; }
 .page-hero__sub { color: var(--text-soft); font-size: 15px; }
+/* ============================================================
+   Carnival v2 — Patch 3 additions
+   Branded auth (login / signup / reset) + order financial-summary card.
+   Appended after the Patch 1 craft-utilities layer. No existing rules modified.
+   ============================================================ */
+
+/* ── Branded auth ── */
+.auth-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 20px;
+  background:
+    radial-gradient(rgba(232, 89, 12, 0.06) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
+}
+.auth-card {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 36px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-card--wide { width: min(520px, 100%); }
+.auth-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+}
+.auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.auth-logo img { width: 34px; height: 34px; display: block; }
+.auth-logo b { font-family: "Sora", sans-serif; font-weight: 700; font-size: 20px; color: var(--text); }
+.auth-title { font-family: "Sora", sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 16px 0 6px; }
+.auth-sub { color: var(--text-soft); font-size: 14.5px; line-height: 1.55; }
+.auth-fields { display: grid; gap: 16px; margin-top: 22px; }
+.auth-field { display: grid; gap: 7px; }
+.auth-field > span { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.auth-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.auth-actions .primary-btn { flex: 1; justify-content: center; min-height: 46px; }
+.auth-alt { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.auth-notice { background: var(--success-bg); border: 1px solid color-mix(in srgb, var(--success) 22%, transparent); border-radius: var(--radius); padding: 12px 14px; margin-top: 16px; }
+.auth-notice strong { display: block; }
+.auth-terms { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; line-height: 1.5; color: var(--text-soft); }
+.auth-terms input { width: auto; min-height: 0; margin-top: 3px; flex-shrink: 0; }
+
+/* ── Order financial summary ── */
+.summary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.summary-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-size: 14.5px; }
+.summary-row + .summary-row { border-top: 1px solid var(--border); }
+.summary-row > span:first-child { color: var(--text-soft); }
+.summary-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+.summary-row--total { background: var(--bg-alt); }
+.summary-row--total > span:first-child { font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; }
+.summary-row--total .summary-val { font-family: "Sora", sans-serif; font-size: 20px; font-weight: 700; }
+.summary-row--balance .summary-val { color: var(--warning); }
+.summary-row--settled .summary-val { color: var(--success); }
