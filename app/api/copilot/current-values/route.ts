@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCopilotAccessContext } from "@/lib/security/copilot-access";
+import {
+  getCopilotAccessContext,
+  copilotRoleAllowed,
+  COPILOT_ACTION_ROLES,
+} from "@/lib/security/copilot-access";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -20,6 +24,15 @@ export async function GET() {
     return NextResponse.json(
       { error: "You must be signed in to use Copilot." },
       { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  // These values exist only to populate website content-edit previews, which
+  // are owner/admin-only. Gate the read the same way.
+  if (!copilotRoleAllowed(access.role, COPILOT_ACTION_ROLES)) {
+    return NextResponse.json(
+      { error: "Only owners and admins can modify organization settings." },
+      { status: 403, headers: { "Cache-Control": "no-store" } }
     );
   }
 

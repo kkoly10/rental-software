@@ -2048,6 +2048,8 @@ const enValues = {
           "Pick an existing route below, or create a new one for this date.",
         noRoutesBody:
           "No routes exist for this date yet. Create one and this order will be its first stop.",
+        inProgressRoutesHint:
+          "In-progress routes for this date can't accept new stops — create a new route or wait for the next one.",
         attachCta: "Attach to this route",
         attaching: "Attaching…",
         createRouteCta: "Create a new route for this date",
@@ -2384,6 +2386,8 @@ const enValues = {
     kicker: "Reservation summary",
     defaultTitle: "Your rental reservation",
     basePrice: "Base price",
+    multiDayLabel: "{days} days",
+    multiDayExpression: "${price} × {days}",
     adjustedSubtotal: "Adjusted subtotal",
     subtotal: "Subtotal",
     wetUpcharge: "Wet mode upcharge",
@@ -2640,6 +2644,8 @@ const enValues = {
     dismiss: "Dismiss",
     openLauncher: "Open Copilot",
     closeLauncher: "Close Copilot",
+    copy: "Copy",
+    copied: "Copied",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "Q:",
     faqAnswerPrefix: "A:",

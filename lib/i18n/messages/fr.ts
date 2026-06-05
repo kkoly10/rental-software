@@ -2047,6 +2047,8 @@ export const fr: Messages = {
           "Choisissez une tournée existante ci-dessous, ou créez-en une nouvelle pour cette date.",
         noRoutesBody:
           "Aucune tournée pour cette date. Créez-en une et cette commande en sera le premier arrêt.",
+        inProgressRoutesHint:
+          "Les tournées en cours pour cette date n'acceptent plus de nouveaux arrêts — créez une nouvelle tournée ou attendez la suivante.",
         attachCta: "Ajouter à cette tournée",
         attaching: "Ajout…",
         createRouteCta: "Créer une nouvelle tournée pour cette date",
@@ -2383,6 +2385,8 @@ export const fr: Messages = {
     kicker: "Résumé de la réservation",
     defaultTitle: "Votre réservation de location",
     basePrice: "Prix de base",
+    multiDayLabel: "{days} jours",
+    multiDayExpression: "${price} × {days}",
     adjustedSubtotal: "Sous-total ajusté",
     subtotal: "Sous-total",
     wetUpcharge: "Supplément mode eau",
@@ -2639,6 +2643,8 @@ export const fr: Messages = {
     dismiss: "Ignorer",
     openLauncher: "Ouvrir le copilote",
     closeLauncher: "Fermer le copilote",
+    copy: "Copier",
+    copied: "Copié",
     faqCount: "{currentCount} FAQ{currentPlural} → {newCount} FAQ{newPlural}",
     faqQuestionPrefix: "Q :",
     faqAnswerPrefix: "R :",

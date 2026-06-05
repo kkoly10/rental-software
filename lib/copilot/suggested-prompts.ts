@@ -53,6 +53,8 @@ const routePrompts: Record<string, SuggestedPrompt[]> = {
   ],
   "/dashboard/messages": [
     { label: "Draft a reply to a message", prompt: "Help me reply to one of my unread customer messages." },
+    { label: "Draft an SMS reminder", prompt: "Draft a short SMS reminder for customers with an event tomorrow." },
+    { label: "Write a WhatsApp confirmation", prompt: "Write a friendly WhatsApp booking confirmation message I can send a customer." },
     { label: "Any unread messages?", prompt: "Do I have any unread customer messages?" },
   ],
   "/dashboard/settings": [

@@ -4,13 +4,21 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isValidRole } from "@/lib/team/roles";
 import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-cookie";
 
 export type AcceptInviteResult = {
   ok: boolean;
   message: string;
   organizationName?: string;
+};
+
+type AcceptInviteRow = {
+  ok: boolean;
+  reason: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
+  role: string | null;
+  invited_email: string | null;
 };
 
 export async function acceptTeamInvite(token: string): Promise<AcceptInviteResult> {
@@ -25,106 +33,52 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
     return { ok: false, message: "Please sign in or create an account first, then click the invite link again." };
   }
 
-  const { data: invite } = await supabase
-    .from("team_invites")
-    .select("id, organization_id, invited_email, role, status, expires_at")
-    .eq("token", token)
-    .maybeSingle();
+  // The whole accept — validate (pending, unexpired, email matches the verified
+  // session), create the membership with the role AS STORED on the invite, and
+  // mark the invite accepted — happens atomically inside the
+  // accept_team_invite() SECURITY DEFINER RPC, under a row lock on the invite.
+  // The invitee isn't a member yet, so they can't read/write team_invites under
+  // RLS; the RPC is the only authorized path, and it never trusts a
+  // caller-supplied role.
+  const { data: rows, error } = await supabase.rpc("accept_team_invite", { p_token: token });
 
-  if (!invite) {
-    return { ok: false, message: "This invite link is invalid." };
+  if (error) {
+    console.error("[team] accept_team_invite RPC failed:", error.message);
+    return { ok: false, message: "Couldn't accept this invite. Please try again." };
   }
 
-  if (invite.status !== "pending") {
-    return { ok: false, message: `This invite has already been ${invite.status}.` };
+  const result = (Array.isArray(rows) ? rows[0] : rows) as AcceptInviteRow | null;
+
+  if (!result?.ok) {
+    switch (result?.reason) {
+      case "expired":
+        return { ok: false, message: "This invite has expired. Ask your team admin to send a new one." };
+      case "email_mismatch":
+        return {
+          ok: false,
+          message: `This invite was sent to ${result.invited_email ?? "a different address"}. Please sign in with that email address.`,
+        };
+      case "invalid_role":
+        return { ok: false, message: "This invite has an invalid role. Ask your team admin to send a new one." };
+      case "already_member":
+        return { ok: false, message: "You're already a member of this organization." };
+      default:
+        // "already_accepted" / "already_cancelled" / "already_declined"
+        if (result?.reason?.startsWith("already_")) {
+          return { ok: false, message: `This invite has already been ${result.reason.slice("already_".length)}.` };
+        }
+        return { ok: false, message: "This invite link is invalid." };
+    }
   }
 
-  if (new Date(invite.expires_at) < new Date()) {
-    return { ok: false, message: "This invite has expired. Ask your team admin to send a new one." };
-  }
-
-  // Verify email matches
-  if (user.email?.toLowerCase() !== invite.invited_email.toLowerCase()) {
-    return {
-      ok: false,
-      message: `This invite was sent to ${invite.invited_email}. Please sign in with that email address.`,
-    };
-  }
-
-  // Re-validate the stored role before writing it into a membership. The role
-  // was validated when the invite was created, but a corrupted row (or one
-  // written outside the team UI) could carry an unrecognized value that would
-  // silently bypass every permission check keyed on membership.role.
-  if (!invite.role || !isValidRole(String(invite.role))) {
-    return {
-      ok: false,
-      message: "This invite has an invalid role. Ask your team admin to send a new one.",
-    };
-  }
-
-  // Atomically claim the invite by transitioning status from pending→accepted.
-  // If another request already claimed it, this returns 0 rows and we bail out.
-  // This prevents concurrent double-accept without needing a DB transaction.
-  const { data: claimed } = await supabase
-    .from("team_invites")
-    .update({ status: "accepted", accepted_at: new Date().toISOString() })
-    .eq("id", invite.id)
-    .eq("status", "pending")
-    .select("id");
-
-  if (!claimed || claimed.length === 0) {
-    return { ok: false, message: "This invite has already been accepted." };
-  }
-
-  // Check if already a member (race on membership insert)
-  const { data: existing } = await supabase
-    .from("organization_memberships")
-    .select("id")
-    .eq("organization_id", invite.organization_id)
-    .eq("profile_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (existing) {
-    return { ok: false, message: "You're already a member of this organization." };
-  }
-
-  // Create membership
-  const { error: memberError } = await supabase
-    .from("organization_memberships")
-    .insert({
-      organization_id: invite.organization_id,
-      profile_id: user.id,
-      role: invite.role,
-      status: "active",
-    });
-
-  if (memberError) {
-    // Roll back the invite claim so it can be retried
-    await supabase
-      .from("team_invites")
-      .update({ status: "pending", accepted_at: null })
-      .eq("id", invite.id);
-    return { ok: false, message: memberError.message };
-  }
-
-  // Get org name for confirmation
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("name")
-    .eq("id", invite.organization_id)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  // Decision 3.3 — auto-switch to the newly-joined org so the operator's
-  // dashboard reflects what they just accepted (Notion / Linear / Slack
-  // pattern). Without this the success page shows "Welcome to {org}!" but
-  // the dashboard still renders the user's prior org.
+  // Decision 3.3 — auto-switch to the newly-joined org so the dashboard reflects
+  // what they just accepted. Cookie write failures aren't fatal (getOrgContext
+  // falls back to the oldest membership).
   try {
     const cookieStore = await cookies();
     cookieStore.set({
       name: ACTIVE_ORG_COOKIE,
-      value: invite.organization_id,
+      value: result.organization_id!,
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
@@ -132,8 +86,7 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
       maxAge: 60 * 60 * 24 * 365,
     });
   } catch {
-    // Cookie write failures aren't fatal — getOrgContext falls back to
-    // the oldest membership. Log silently rather than blocking the user.
+    // non-fatal
   }
 
   revalidatePath("/dashboard/settings/team");
@@ -141,7 +94,7 @@ export async function acceptTeamInvite(token: string): Promise<AcceptInviteResul
 
   return {
     ok: true,
-    message: `Welcome to ${org?.name ?? "the team"}! You now have ${invite.role} access.`,
-    organizationName: org?.name ?? undefined,
+    message: `Welcome to ${result.organization_name ?? "the team"}! You now have ${result.role} access.`,
+    organizationName: result.organization_name ?? undefined,
   };
 }

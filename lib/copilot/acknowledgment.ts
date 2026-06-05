@@ -39,9 +39,11 @@ export async function hasAcknowledgedCopilotActions(
     if (isMissingTable(error)) {
       return { acknowledged: true, provisioned: false };
     }
-    // Unknown/transient error: don't block the action on the gate (the
-    // human confirm + audit log remain the primary controls).
-    return { acknowledged: true, provisioned: true };
+    // Unknown/transient error: fail closed. The acknowledgment is a
+    // legal/audit control; treating a DB hiccup as "acknowledged" lets
+    // the gate bypass on any transient outage. The route surfaces the
+    // re-prompt and the operator retries.
+    return { acknowledged: false, provisioned: true };
   }
 
   return { acknowledged: Boolean(data), provisioned: true };
