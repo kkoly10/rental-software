@@ -32,6 +32,11 @@ import { perUnitPricing } from "../lib/capabilities/pricing/per-unit.ts";
 import { wetDryMode } from "../lib/capabilities/mode/wet-dry.ts";
 import { anchoringSetup } from "../lib/capabilities/setup/anchoring.ts";
 import { surfaceTypeSetup } from "../lib/capabilities/setup/surface-type.ts";
+import { setupWindowCapability } from "../lib/capabilities/setup/setup-window.ts";
+import { capacityCalculator } from "../lib/capabilities/display/capacity-calculator.ts";
+import { structuredSpecs } from "../lib/capabilities/display/structured-specs.ts";
+import { onsiteAttendant } from "../lib/capabilities/service/onsite-attendant.ts";
+import { minimumOrder } from "../lib/capabilities/order/minimum-order.ts";
 
 test("getCapability returns each registered capability by slug", () => {
   assert.equal(getCapability("pricing.flat-day"), flatDayPricing);
@@ -40,6 +45,11 @@ test("getCapability returns each registered capability by slug", () => {
   assert.equal(getCapability("mode.wet-dry"), wetDryMode);
   assert.equal(getCapability("setup.anchoring"), anchoringSetup);
   assert.equal(getCapability("setup.surface-type"), surfaceTypeSetup);
+  assert.equal(getCapability("setup.setup-window"), setupWindowCapability);
+  assert.equal(getCapability("display.capacity-calculator"), capacityCalculator);
+  assert.equal(getCapability("display.structured-specs"), structuredSpecs);
+  assert.equal(getCapability("service.onsite-attendant"), onsiteAttendant);
+  assert.equal(getCapability("order.minimum-order"), minimumOrder);
 });
 
 test("getCapability returns undefined for an unknown slug", () => {
@@ -56,6 +66,11 @@ test("listCapabilities exposes every registered capability exactly once", () => 
     "mode.wet-dry",
     "setup.anchoring",
     "setup.surface-type",
+    "setup.setup-window",
+    "display.capacity-calculator",
+    "display.structured-specs",
+    "service.onsite-attendant",
+    "order.minimum-order",
   ]) {
     assert.ok(slugs.includes(slug), `expected slug ${slug} in registry`);
   }
@@ -65,13 +80,25 @@ test("listCapabilitiesByGroup partitions the registry by group", () => {
   const pricing = listCapabilitiesByGroup("pricing").map((c) => c.slug);
   const mode = listCapabilitiesByGroup("mode").map((c) => c.slug);
   const setup = listCapabilitiesByGroup("setup").map((c) => c.slug);
+  const display = listCapabilitiesByGroup("display").map((c) => c.slug);
+  const service = listCapabilitiesByGroup("service").map((c) => c.slug);
+  const order = listCapabilitiesByGroup("order").map((c) => c.slug);
 
   assert.deepEqual(
     [...pricing].sort(),
     ["pricing.flat-day", "pricing.per-hour", "pricing.per-unit"],
   );
   assert.deepEqual([...mode].sort(), ["mode.wet-dry"]);
-  assert.deepEqual([...setup].sort(), ["setup.anchoring", "setup.surface-type"]);
+  assert.deepEqual(
+    [...setup].sort(),
+    ["setup.anchoring", "setup.setup-window", "setup.surface-type"],
+  );
+  assert.deepEqual(
+    [...display].sort(),
+    ["display.capacity-calculator", "display.structured-specs"],
+  );
+  assert.deepEqual([...service].sort(), ["service.onsite-attendant"]);
+  assert.deepEqual([...order].sort(), ["order.minimum-order"]);
 });
 
 test("validateCapabilitySlugs accepts an all-known list", () => {

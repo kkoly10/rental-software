@@ -5,6 +5,11 @@ import { perUnitPricing } from "./pricing/per-unit.ts";
 import { wetDryMode } from "./mode/wet-dry.ts";
 import { anchoringSetup } from "./setup/anchoring.ts";
 import { surfaceTypeSetup } from "./setup/surface-type.ts";
+import { setupWindowCapability } from "./setup/setup-window.ts";
+import { capacityCalculator } from "./display/capacity-calculator.ts";
+import { structuredSpecs } from "./display/structured-specs.ts";
+import { onsiteAttendant } from "./service/onsite-attendant.ts";
+import { minimumOrder } from "./order/minimum-order.ts";
 
 /**
  * Central registry of every capability the app knows about.
@@ -26,6 +31,11 @@ const all: readonly Capability[] = [
   wetDryMode,
   anchoringSetup,
   surfaceTypeSetup,
+  setupWindowCapability,
+  capacityCalculator,
+  structuredSpecs,
+  onsiteAttendant,
+  minimumOrder,
 ];
 
 const bySlug = new Map<string, Capability>(
