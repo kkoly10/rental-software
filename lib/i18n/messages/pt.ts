@@ -322,7 +322,7 @@ export const pt: Messages = {
       deliveryRoutesBody: "Planeie rotas visualmente",
       onlineCheckout: "Pagamento online",
       onlineCheckoutBody: "Deixe os clientes reservarem enquanto dorme",
-      sampleProduct: "Castelo insuflável Rainbow Castle",
+      sampleProduct: "Tenda estrutura 20×20",
       sampleDate: "Sáb, 14 jun · 22554",
       deliveryFee: "Taxa de entrega",
       depositPercent: "Depósito (25 %)",
@@ -343,8 +343,8 @@ export const pt: Messages = {
       kicker: "Opiniões iniciais de operadores",
       title: "O que dizem os negócios de aluguer",
       items: [
-        { quote: "Reduzimos o tempo de admin para metade na primeira semana. Os clientes adoram verificar a disponibilidade sozinhos.", name: "Jamie R.", business: "Bounce & More Rentals", location: "Richmond, VA" },
-        { quote: "A configuração demorou menos de uma hora. A minha equipa de entrega finalmente tem uma rota a sério em vez de me enviar mensagens todas as manhãs.", name: "Marcus T.", business: "Party Perfect Inflatables", location: "Charlotte, NC" },
+        { quote: "Reduzimos o tempo de admin para metade na primeira semana. Os clientes adoram verificar a disponibilidade sozinhos.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
+        { quote: "A configuração demorou menos de uma hora. A minha equipa de entrega finalmente tem uma rota a sério em vez de me enviar mensagens todas as manhãs.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
         { quote: "Recebia chamadas a noite toda. Agora os clientes reservam online e recebo uma notificação. Não tive reservas duplicadas desde a mudança.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
@@ -391,7 +391,7 @@ export const pt: Messages = {
     },
     inventoryBanner: {
       kicker: "Feito para operações reais",
-      title: "Do seu primeiro insuflável até à centésima reserva",
+      title: "Da sua primeira reserva ao seu centésimo fim de semana",
     },
     finalCta: {
       title: "Pronto para recuperar as suas noites?",

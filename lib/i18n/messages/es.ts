@@ -322,7 +322,7 @@ export const es: Messages = {
       deliveryRoutesBody: "Planifica rutas de entrega visualmente",
       onlineCheckout: "Pago en línea",
       onlineCheckoutBody: "Deja que los clientes reserven mientras duermes",
-      sampleProduct: "Castillo hinchable Rainbow Castle",
+      sampleProduct: "Carpa estructural 20×20",
       sampleDate: "Sáb 14 jun · 22554",
       deliveryFee: "Coste de entrega",
       depositPercent: "Depósito (25 %)",
@@ -343,8 +343,8 @@ export const es: Messages = {
       kicker: "Opiniones tempranas",
       title: "Lo que dicen los negocios de alquiler",
       items: [
-        { quote: "Redujimos a la mitad el tiempo de admin la primera semana. A los clientes les encanta comprobar la disponibilidad ellos mismos.", name: "Jamie R.", business: "Bounce & More Rentals", location: "Richmond, VA" },
-        { quote: "La configuración tomó menos de una hora. Mi equipo de entrega por fin tiene una ruta de verdad en vez de escribirme cada mañana.", name: "Marcus T.", business: "Party Perfect Inflatables", location: "Charlotte, NC" },
+        { quote: "Redujimos a la mitad el tiempo de admin la primera semana. A los clientes les encanta comprobar la disponibilidad ellos mismos.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
+        { quote: "La configuración tomó menos de una hora. Mi equipo de entrega por fin tiene una ruta de verdad en vez de escribirme cada mañana.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
         { quote: "Recibía llamadas toda la tarde. Ahora los clientes reservan en línea y me llega una notificación. No hemos tenido dobles reservas desde que cambiamos.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
@@ -391,7 +391,7 @@ export const es: Messages = {
     },
     inventoryBanner: {
       kicker: "Pensado para operaciones reales",
-      title: "Desde tu primer castillo hinchable hasta tu reserva número cien",
+      title: "Desde tu primera reserva hasta tu fin de semana número cien",
     },
     finalCta: {
       title: "¿Listo para recuperar tus tardes?",
