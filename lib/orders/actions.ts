@@ -949,7 +949,58 @@ export async function updateOrderStatus(
     };
   }
 
+  // Follow-up #3 — close the inquiry→confirmed reserve gap. createOrder
+  // reserves availability when a should-reserve status is the initial
+  // one; status updates did not, so an inquiry created without an event
+  // date, then edited to set one and Mark-Confirmed-d, would flip to
+  // "confirmed" with no availability block. Same product, same date, two
+  // confirmed orders. On reserve failure we roll the status back to the
+  // previous one so the operator sees the actual conflict rather than a
+  // silently broken booking.
+  if (
+    shouldReserveAvailability(parsed.data.newStatus) &&
+    !shouldReserveAvailability(currentOrder.order_status)
+  ) {
+    const { ensureAvailabilityForOrder } = await import("@/lib/availability/blocks");
+    const ensured = await ensureAvailabilityForOrder(ctx.organizationId, parsed.data.orderId);
+    if (!ensured.ok) {
+      await supabase
+        .from("orders")
+        .update({ order_status: currentOrder.order_status })
+        .eq("id", parsed.data.orderId)
+        .eq("organization_id", ctx.organizationId)
+        .eq("order_status", parsed.data.newStatus);
+      try {
+        const { logAppEvent } = await import("@/lib/observability/server");
+        await logAppEvent({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "orders.updateOrderStatus",
+          action: "reserve_failed_rollback",
+          status: "warning",
+          metadata: {
+            order_id: parsed.data.orderId,
+            from_status: currentOrder.order_status,
+            to_status: parsed.data.newStatus,
+            reason: ensured.message ?? null,
+          },
+        });
+      } catch { /* metric best-effort */ }
+      return {
+        ok: false,
+        message:
+          ensured.message ??
+          "Couldn't reserve this slot — another order already holds it. Status not changed.",
+      };
+    }
+  }
+
   // Release availability blocks when order is cancelled — awaited so inventory is freed immediately
+  // Follow-up #10 — track each cleanup so its failure can surface in the
+  // operator's return state instead of disappearing into the audit log.
+  // A cancel succeeds + the inventory/route detach silently fails =
+  // exactly the zombie-stops case Decision 2.11 was meant to solve.
+  const cleanupWarnings: string[] = [];
   if (parsed.data.newStatus === "cancelled") {
     try {
       const { releaseOrderAvailability } = await import("@/lib/availability/actions");
@@ -964,6 +1015,7 @@ export async function updateOrderStatus(
         message: "Failed to release availability for cancelled order",
         context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
       });
+      cleanupWarnings.push("availability hold not released — please review the calendar");
     }
 
     // Decision 2.11 — also detach the order from any open route stops so
@@ -985,6 +1037,7 @@ export async function updateOrderStatus(
         message: "Failed to release route stops for cancelled order",
         context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
       });
+      cleanupWarnings.push("route stops not detached — please review the route board");
     }
   }
 
@@ -1253,9 +1306,12 @@ export async function updateOrderStatus(
     }
   }
 
+  const warningSuffix =
+    cleanupWarnings.length > 0 ? ` Warning: ${cleanupWarnings.join("; ")}.` : "";
+
   return {
     ok: true,
-    message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}`,
+    message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}${warningSuffix}`,
   };
 }
 

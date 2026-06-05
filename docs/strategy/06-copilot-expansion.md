@@ -95,11 +95,17 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 1. **Phase 1 — read-only operational awareness.** ✅ *Shipped (see below).*
 2. **Phase 2 — conversation memory + deep-links.** ✅ *Shipped (see below).*
 3. **Phase 3 — action-taking** (record payment, advance status, generate documents, draft & send reply, send quote), each behind the confirm-then-apply guardrails. ✅ *All five shipped + live-verified.*
-4. **Phase 4 — proactive briefing + WhatsApp/SMS drafting.** 🚧 *Proactive daily briefing shipped; WhatsApp/SMS drafting queued.*
+4. **Phase 4 — proactive briefing + WhatsApp/SMS drafting.** ✅ *Both shipped.* (Proactive daily briefing; SMS/WhatsApp message **drafting** — the Copilot writes channel-appropriate copy with a one-click Copy button. Actually *sending* SMS/WhatsApp from the Copilot is deliberately out of scope for now — there's no high-level guarded send action to reuse, and free-text SMS needs opt-in/compliance review; that would be a separate guarded `send_sms`/`send_whatsapp` action.)
 
 ---
 
-## Phase 1 implementation (shipped)
+## Multilingual customer communication (shipped)
+
+Korent serves operators and customers in **English, French, Spanish, Portuguese**. The Copilot now communicates in the right language:
+- **Operator-facing:** responds in the operator's dashboard language (passed to the system prompt as `operatorLocale`).
+- **Customer-facing drafts:** every message the Copilot drafts for a customer — `send_reply` emails, SMS/WhatsApp copy — is written in that **customer's `preferred_locale`** (en/fr/es/pt). Each customer's preferred language is surfaced in the Copilot context (unread threads + actionable orders); the system prompt instructs the model to draft in it and tell the operator which language it used.
+
+**Known gap — RESOLVED:** the *templated* transactional emails (`lib/email/templates.ts` / `triggers.ts`) are now localized into all four languages via `lib/email/email-i18n.ts` and rendered in the **recipient customer's `preferred_locale`** (resolved inside each customer-facing trigger; money/dates formatted in that locale; `<html lang>` set accordingly). Operator-facing alerts stay English. So `send_quote` / `generate_documents` / `record_payment` (and order confirmation, status updates, reminders, follow-ups, refunds, deposit reminders) now email customers in their own language. *Minor follow-ons:* document-type names inside the "documents ready" sentence and the "Around <time>" delivery-window value are still English (built outside the templates).
 
 **Goal:** the Copilot can answer real operational questions from this operator's live data, with no new write capability.
 
@@ -161,3 +167,43 @@ Multi-turn conversation memory and deep-links to specific records (`/dashboard/o
 **Changes:** action types/union (`lib/copilot/actions.ts`); discriminated route schema + branched audit/revalidate (`app/api/copilot/action/route.ts`); extracted, hardened `parseActionFromResponse` (`lib/copilot/parse-action.ts`); payment preview + i18n in all four locales (`copilot-action-preview.tsx`, `messages/*`); `record_payment` protocol in the system prompt; order IDs exposed in the operational context; a "Record a payment" suggested prompt.
 
 **Verification:** `tsc --noEmit` clean; full unit suite green, including new `tests/copilot-parse-action.test.ts` (content + payment parsing, amount coercion, empty-note dropping, and rejection of bad method / non-positive amount / missing orderId / refund / malformed JSON).
+
+---
+
+## Launch-readiness hardening (2026-06-05)
+
+A full pre-launch review surfaced three gaps, now closed:
+
+- **Role-gated access (RBAC).** The chat/awareness surface previously let *any*
+  active member read org-wide financials (revenue, outstanding balances). It's
+  now gated by role via a dependency-free allow-list module
+  (`lib/security/copilot-roles.ts`, unit-tested in `tests/copilot-roles.test.ts`):
+  - **Chat + daily briefing** (`/api/copilot`, `/api/copilot/briefing`) →
+    `COPILOT_CHAT_ROLES` = owner/admin/**dispatcher**. Dispatchers run day-to-day
+    ops (record payments, send replies, deliveries) so they keep operational
+    awareness; **crew/viewer are excluded** from financial figures (403, or a
+    null briefing).
+  - **Actions + content-value reads** (`/api/copilot/action`,
+    `/api/copilot/current-values`, `/api/copilot/acknowledge` POST) →
+    `COPILOT_ACTION_ROLES` = owner/admin only (unchanged policy, now centralized).
+  - A test asserts action access is a strict subset of chat access.
+
+- **Multi-org resolution bug.** `getCopilotAccessContext` resolved the org as
+  "oldest active membership," ignoring the `ACTIVE_ORG_COOKIE` the org switcher
+  writes — so a user who had accepted an invite to a second org would have the
+  Copilot silently act on the wrong tenant (and the action route's role check
+  could disagree with the cookie-resolved org the delegated server actions
+  actually mutate). It now honours the cookie exactly like `getOrgContext`, and
+  returns the member's `role`. New signups are unaffected (a fresh signup has
+  exactly one owner membership, so oldest = only = correct); the bug only ever
+  affected multi-org users post-invite.
+
+- **Advisor: anon GRANT on the acknowledgment ledger.** `copilot_action_acknowledgments`
+  inherited the default `anon` table grant, exposing it in the GraphQL schema
+  (no actual row leak — RLS has no anon policy). `20260606_020000_copilot_ack_revoke_anon.sql`
+  revokes all grants from `anon`/`public` (authenticated keeps its own-row RLS).
+  Applied + verified on prod: only `authenticated` retains grants.
+
+**Still the one true blocker (unchanged):** an attorney should review the
+AI-assistance acknowledgment terms for the operator's jurisdiction before
+relying on them as legal protection. SMS/WhatsApp remains draft-only by design.

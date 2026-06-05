@@ -9,6 +9,10 @@ export type CheckoutPricing = {
    *  rolled into `subtotal`; surfaced separately so the summary can
    *  show it as its own line item. */
   wetUpcharge: number;
+  /** Number of rental days the subtotal was computed against. 1 for
+   *  single-day or flat_day; >1 indicates a per_day product spanning
+   *  multiple days. Surfaced so the summary can label "× N days". */
+  rentalDays: number;
   deliveryFee: number | null;
   total: number | null;
   deposit: number | null;
@@ -44,6 +48,18 @@ export async function CheckoutSummaryCard({
                 <div className="order-row">
                   <span className="muted">{m.checkoutSummary.basePrice}</span>
                   <span>${pricing.basePrice.toFixed(2)}</span>
+                </div>
+              )}
+              {pricing.rentalDays > 1 && (
+                <div className="order-row">
+                  <span className="muted" style={{ fontSize: 13 }}>
+                    {m.checkoutSummary.multiDayLabel.replace("{days}", String(pricing.rentalDays))}
+                  </span>
+                  <span style={{ fontSize: 13 }}>
+                    {m.checkoutSummary.multiDayExpression
+                      .replace("{price}", pricing.basePrice.toFixed(2))
+                      .replace("{days}", String(pricing.rentalDays))}
+                  </span>
                 </div>
               )}
               {hasAdjustments &&
