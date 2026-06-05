@@ -17,71 +17,66 @@ export default async function LoginPage({
     typeof params.redirect === "string" ? params.redirect : undefined;
 
   return (
-    <main className="page">
-      <div className="container" style={{ maxWidth: 560 }}>
-        <section className="panel">
-          <div className="section-header">
-            <div>
-              <div className="kicker">{m.auth.login.kicker}</div>
-              <h1 style={{ margin: "6px 0 8px" }}>{m.auth.login.title}</h1>
-              <div className="muted">
-                {m.auth.login.description}
-              </div>
+    <main className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/korent-icon.svg" alt="" />
+          <b>Korent</b>
+        </div>
+
+        <div className="eyebrow eyebrow--accent">{m.auth.login.kicker}</div>
+        <h1 className="auth-title">{m.auth.login.title}</h1>
+        <div className="auth-sub">{m.auth.login.description}</div>
+
+        {params.reset === "success" ? (
+          <div className="auth-notice">
+            <strong>{m.auth.login.passwordUpdated}</strong>
+            <div className="muted" style={{ marginTop: 6 }}>
+              {m.auth.login.passwordUpdatedHint}
             </div>
           </div>
+        ) : null}
 
-          {params.reset === "success" ? (
-            <div className="order-card" style={{ marginTop: 16 }}>
-              <strong>{m.auth.login.passwordUpdated}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>
-                {m.auth.login.passwordUpdatedHint}
-              </div>
+        {params.verified === "1" ? (
+          <div className="auth-notice">
+            <strong>{m.auth.login.emailVerified}</strong>
+            <div className="muted" style={{ marginTop: 6 }}>
+              {m.auth.login.emailVerifiedHint}
             </div>
-          ) : null}
-
-          {params.verified === "1" ? (
-            <div className="order-card" style={{ marginTop: 16 }}>
-              <strong>{m.auth.login.emailVerified}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>
-                {m.auth.login.emailVerifiedHint}
-              </div>
-            </div>
-          ) : null}
-
-          {params.message ? (
-            <div className="order-card" style={{ marginTop: 16 }}>
-              <strong>{m.auth.login.notice}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>
-                {params.message}
-              </div>
-            </div>
-          ) : null}
-
-          <LoginForm
-            redirectTo={redirectTo}
-            labels={{
-              email: m.auth.form.email,
-              emailPlaceholder: m.auth.form.emailPlaceholder,
-              password: m.auth.form.password,
-              passwordPlaceholder: m.auth.form.passwordPlaceholder,
-              signIn: m.auth.form.signIn,
-              signingIn: m.auth.form.signingIn,
-              forgotPasswordLink: m.auth.form.forgotPasswordLink,
-            }}
-          />
-
-          <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/signup" className="secondary-btn">
-              {m.auth.login.createAccount}
-            </Link>
-            <Link href="/forgot-password" className="ghost-btn">
-              {m.auth.login.forgotPassword}
-            </Link>
-            <Link href="/" className="ghost-btn">
-              {m.common.backToHome}
-            </Link>
           </div>
-        </section>
+        ) : null}
+
+        {params.message ? (
+          <div className="auth-notice">
+            <strong>{m.auth.login.notice}</strong>
+            <div className="muted" style={{ marginTop: 6 }}>
+              {params.message}
+            </div>
+          </div>
+        ) : null}
+
+        <LoginForm
+          redirectTo={redirectTo}
+          labels={{
+            email: m.auth.form.email,
+            emailPlaceholder: m.auth.form.emailPlaceholder,
+            password: m.auth.form.password,
+            passwordPlaceholder: m.auth.form.passwordPlaceholder,
+            signIn: m.auth.form.signIn,
+            signingIn: m.auth.form.signingIn,
+            forgotPasswordLink: m.auth.form.forgotPasswordLink,
+          }}
+        />
+
+        <div className="auth-alt">
+          <Link href="/signup" className="secondary-btn">
+            {m.auth.login.createAccount}
+          </Link>
+          <Link href="/" className="ghost-btn">
+            {m.common.backToHome}
+          </Link>
+        </div>
       </div>
     </main>
   );
