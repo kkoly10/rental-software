@@ -72,11 +72,11 @@ export function LoginForm({
 
   return (
     <>
-      <form action={formAction} className="list" style={{ marginTop: 16 }}>
+      <form action={formAction} className="auth-fields">
         <input type="hidden" name="redirect" value={redirectTo ?? "/dashboard"} />
 
-        <label className="order-card">
-          <strong>{l.email}</strong>
+        <label className="auth-field">
+          <span>{l.email}</span>
           <input
             name="email"
             type="email"
@@ -84,24 +84,22 @@ export function LoginForm({
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ marginTop: 10, width: "100%" }}
           />
         </label>
 
-        <label className="order-card">
-          <strong>{l.password}</strong>
+        <label className="auth-field">
+          <span>{l.password}</span>
           <input
             name="password"
             type="password"
             placeholder={l.passwordPlaceholder}
             autoComplete="current-password"
-            style={{ marginTop: 10, width: "100%" }}
           />
         </label>
 
         {state.message ? <div role="alert" aria-live="assertive" className="muted">{state.message}</div> : null}
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="auth-actions">
           <button className="primary-btn" type="submit" disabled={pending}>
             {pending ? l.signingIn : l.signIn}
           </button>
