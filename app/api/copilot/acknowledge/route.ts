@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
-import { getCopilotAccessContext } from "@/lib/security/copilot-access";
+import {
+  getCopilotAccessContext,
+  copilotRoleAllowed,
+  COPILOT_ACTION_ROLES,
+} from "@/lib/security/copilot-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getTrustedClientIp } from "@/lib/security/request-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -61,6 +65,14 @@ export async function POST(request: NextRequest) {
     return jsonResponse(
       { error: "You must be signed in to use Copilot." },
       { status: 401 }
+    );
+  }
+
+  // Acknowledgment is only meaningful for roles that can take actions.
+  if (!copilotRoleAllowed(access.role, COPILOT_ACTION_ROLES)) {
+    return jsonResponse(
+      { error: "Only owners and admins can modify organization settings." },
+      { status: 403 }
     );
   }
 

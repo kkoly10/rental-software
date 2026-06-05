@@ -8,6 +8,7 @@ import type {
   CopilotOrderStatusAction,
   CopilotGenerateDocumentsAction,
   CopilotSendReplyAction,
+  CopilotSendQuoteAction,
 } from "@/lib/copilot/actions";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Messages } from "@/lib/i18n/dictionaries";
@@ -123,6 +124,15 @@ export function CopilotActionPreview({
   if (action.type === "send_reply") {
     return (
       <SendReplyActionPreview
+        action={action}
+        onApply={onApply}
+        onDismiss={onDismiss}
+      />
+    );
+  }
+  if (action.type === "send_quote") {
+    return (
+      <SendQuoteActionPreview
         action={action}
         onApply={onApply}
         onDismiss={onDismiss}
@@ -651,6 +661,96 @@ function SendReplyActionPreview({
           disabled={applying}
         >
           {applying ? sr.sending : sr.confirm}
+        </button>
+        <button
+          className="ghost-btn copilot-action-dismiss-btn"
+          onClick={onDismiss}
+          disabled={applying}
+        >
+          {m.copilot.dismiss}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SendQuoteActionPreview({
+  action,
+  onApply,
+  onDismiss,
+}: {
+  action: CopilotSendQuoteAction;
+  onApply: (action: CopilotAction) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  const { messages: m } = useI18n();
+  const sq = m.copilot.sendQuote;
+  const [applying, setApplying] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(
+    null
+  );
+
+  async function handleApply() {
+    setApplying(true);
+    try {
+      await onApply(action);
+      setResult({ ok: true, message: m.copilot.appliedSuccess });
+    } catch (error) {
+      setResult({
+        ok: false,
+        message: error instanceof Error ? error.message : m.copilot.failedToApply,
+      });
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <div
+        className={
+          result.ok
+            ? "copilot-action-preview copilot-action-success"
+            : "copilot-action-preview copilot-action-error"
+        }
+      >
+        <div className="copilot-action-field-label">
+          {result.ok ? m.copilot.appliedLabel : m.copilot.errorLabel}
+        </div>
+        <div style={{ fontSize: 13 }}>{result.message}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="copilot-action-preview">
+      <div className="copilot-action-field-label">{sq.title}</div>
+      {action.preview && (
+        <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 6 }}>
+          {action.preview}
+        </div>
+      )}
+      <div style={{ fontSize: 13, display: "grid", gap: 4, marginBottom: 8 }}>
+        <div>
+          <strong>{m.copilot.recordPayment.order}:</strong>{" "}
+          <a
+            href={`/dashboard/orders/${action.params.orderId}`}
+            style={{ color: "var(--primary)" }}
+          >
+            {m.copilot.recordPayment.viewOrder}
+          </a>
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: "var(--text-soft)", marginBottom: 8 }}>
+        {sq.body}
+      </div>
+      <div className="copilot-action-buttons">
+        <button
+          className="primary-btn copilot-action-apply-btn"
+          onClick={handleApply}
+          disabled={applying}
+        >
+          {applying ? sq.sending : sq.confirm}
         </button>
         <button
           className="ghost-btn copilot-action-dismiss-btn"

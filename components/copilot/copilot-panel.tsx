@@ -89,8 +89,26 @@ export function CopilotPanel({
         // Ignore — leave ack null so we never block; the server re-checks.
       }
     }
+    async function fetchBriefing() {
+      // Proactively seed the daily briefing as the first assistant message so
+      // the operator sees what needs attention the moment they open Copilot.
+      try {
+        const res = await fetch("/api/copilot/briefing");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && typeof data?.briefing === "string" && data.briefing.trim()) {
+            setMessages((prev) =>
+              prev.length === 0 ? [{ role: "assistant", content: data.briefing }] : prev
+            );
+          }
+        }
+      } catch {
+        // Ignore — no briefing, just the normal empty state.
+      }
+    }
     fetchCurrentValues();
     fetchAckStatus();
+    fetchBriefing();
     return () => { cancelled = true; };
   }, []);
 
@@ -266,7 +284,7 @@ export function CopilotPanel({
         ))
       )}
 
-      {messages.length === 0 && (
+      {!messages.some((msg) => msg.role === "user") && (
         <CopilotSuggestedPrompts prompts={prompts} onSelect={sendMessage} />
       )}
 

@@ -93,6 +93,14 @@ export type CopilotGenerateDocumentsAction = {
   params: { orderId: string };
 };
 
+// Operational action: send a quote for an inquiry/quote_sent order (emails the
+// customer and moves the order to quote_sent). Delegates to sendQuote.
+export type CopilotSendQuoteAction = {
+  type: "send_quote";
+  preview: string;
+  params: { orderId: string };
+};
+
 // Operational action: send a drafted reply to a customer message. The most
 // outward-facing action — it sends a real email. Delegates to sendReply.
 export type CopilotSendReplyParams = {
@@ -114,7 +122,8 @@ export type CopilotAction =
   | CopilotPaymentAction
   | CopilotOrderStatusAction
   | CopilotGenerateDocumentsAction
-  | CopilotSendReplyAction;
+  | CopilotSendReplyAction
+  | CopilotSendQuoteAction;
 
 const ALLOWED_SETTINGS_FIELDS: Record<string, string> = {
   update_hero: "hero_message",
@@ -196,6 +205,16 @@ async function executeSendReplyAction(
   return { ok: result.ok, message: result.message };
 }
 
+async function executeSendQuoteAction(
+  action: CopilotSendQuoteAction
+): Promise<{ ok: boolean; message: string }> {
+  // Reuse sendQuote: role check, status guard (inquiry/quote_sent), the
+  // quote_sent transition, and the quote email all live there.
+  const { sendQuote } = await import("@/lib/quotes/actions");
+  const result = await sendQuote(action.params.orderId);
+  return { ok: result.ok, message: result.message };
+}
+
 export async function executeCopilotAction(
   action: CopilotAction
 ): Promise<{ ok: boolean; message: string }> {
@@ -210,6 +229,9 @@ export async function executeCopilotAction(
   }
   if (action.type === "send_reply") {
     return executeSendReplyAction(action);
+  }
+  if (action.type === "send_quote") {
+    return executeSendQuoteAction(action);
   }
 
   if (!hasSupabaseEnv()) {
