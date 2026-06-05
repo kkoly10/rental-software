@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { EntityRow, AvatarChip } from "@/components/ui/entity-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { getCustomersPage } from "@/lib/data/customers";
 import { ListSearchForm } from "@/components/dashboard/list-search-form";
@@ -43,9 +43,11 @@ export default async function CustomersPage({
 
         {customersPage.items.length === 0 ? (
           customersPage.query ? (
-            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>{m.dashboard.customers.noCustomersFound}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
+            <div className="entity-row" style={{ justifyContent: "center", padding: 32 }}>
+              <div style={{ textAlign: "center" }}>
+                <strong>{m.dashboard.customers.noCustomersFound}</strong>
+                <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
+              </div>
             </div>
           ) : (
             <EmptyState
@@ -60,22 +62,28 @@ export default async function CustomersPage({
           <>
             <div className="list">
               {customersPage.items.map((customer) => (
-                <Link
+                <EntityRow
                   key={customer.id}
                   href={`/dashboard/customers/${customer.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <article className="order-card">
-                    <div className="order-row">
-                      <strong>{customer.name}</strong>
-                      <span className="muted">{customer.latestDate}</span>
-                    </div>
-                    <div className="muted">
-                      {customer.email || "No email"} · {customer.phone || "No phone"}
-                    </div>
-                    <div className="muted">{m.dashboard.customers.latestLabel}: {customer.latestBooking}</div>
-                  </article>
-                </Link>
+                  leading={<AvatarChip name={customer.name} />}
+                  title={customer.name}
+                  meta={
+                    <>
+                      <span style={{ display: "block" }}>
+                        {customer.email || "No email"} ·{" "}
+                        <span className="tnum">{customer.phone || "No phone"}</span>
+                      </span>
+                      <span style={{ display: "block", marginTop: 2 }}>
+                        {m.dashboard.customers.latestLabel}: {customer.latestBooking}
+                      </span>
+                    </>
+                  }
+                  trailing={
+                    <span className="muted" style={{ whiteSpace: "nowrap" }}>
+                      {customer.latestDate}
+                    </span>
+                  }
+                />
               ))}
             </div>
 
