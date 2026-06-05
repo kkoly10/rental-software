@@ -11,6 +11,24 @@ import {
 import { escapeIlike } from "@/lib/listing/ilike-escape";
 import type { OrderSummary } from "@/lib/types";
 
+// Maps each Orders-tab filter chip to the raw order_status values it covers.
+// The ~10 real statuses collapse into the 4 operator-facing groups the
+// dashboard shows; "all" is the unfiltered set.
+export const ORDER_STATUS_FILTERS = {
+  inquiry: ["inquiry", "quote_sent"],
+  confirmed: ["confirmed", "awaiting_deposit", "scheduled"],
+  out_for_delivery: ["out_for_delivery", "delivered"],
+  completed: ["completed"],
+} as const;
+export type OrderStatusFilter = keyof typeof ORDER_STATUS_FILTERS;
+
+function resolveStatusFilter(status?: string | null): readonly string[] | null {
+  if (status && status in ORDER_STATUS_FILTERS) {
+    return ORDER_STATUS_FILTERS[status as OrderStatusFilter];
+  }
+  return null;
+}
+
 function formatStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -104,8 +122,10 @@ export async function getOrdersPage(options?: {
   page?: string | number | null;
   query?: string | null;
   pageSize?: number;
+  status?: string | null;
 }): Promise<PaginatedResult<OrderSummary>> {
   const query = normalizeQuery(options?.query);
+  const statusFilter = resolveStatusFilter(options?.status);
 
   if (!hasSupabaseEnv()) {
     const filtered = mockOrders.filter((order) =>
@@ -134,11 +154,15 @@ export async function getOrdersPage(options?: {
     const currentPage = normalizePage(options?.page);
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize - 1;
-    const { data, error, count } = await supabase
+    let listQuery = supabase
       .from("orders")
       .select(selectFields, { count: "exact" })
       .eq("organization_id", ctx.organizationId)
-      .is("deleted_at", null)
+      .is("deleted_at", null);
+    if (statusFilter) {
+      listQuery = listQuery.in("order_status", [...statusFilter]);
+    }
+    const { data, error, count } = await listQuery
       .order("created_at", { ascending: false })
       .range(start, end);
 
@@ -197,12 +221,16 @@ export async function getOrdersPage(options?: {
     orFilter += `,customer_id.in.(${matchedIds.join(",")})`;
   }
 
-  const { data, error, count } = await supabase
+  let searchQuery = supabase
     .from("orders")
     .select(selectFields, { count: "exact" })
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
-    .or(orFilter)
+    .or(orFilter);
+  if (statusFilter) {
+    searchQuery = searchQuery.in("order_status", [...statusFilter]);
+  }
+  const { data, error, count } = await searchQuery
     .order("created_at", { ascending: false })
     .range(start, end);
 
@@ -228,4 +256,49 @@ export async function getOrdersPage(options?: {
 export async function getOrders(): Promise<OrderSummary[]> {
   const result = await getOrdersPage();
   return result.items;
+}
+
+export type OrderStatusCounts = {
+  all: number;
+  inquiry: number;
+  confirmed: number;
+  out_for_delivery: number;
+  completed: number;
+};
+
+/**
+ * Per-chip counts for the Orders-tab filter row. One small COUNT(*) per group
+ * (head-only, no rows), run in parallel. Returns zeros when not configured.
+ */
+export async function getOrderStatusCounts(): Promise<OrderStatusCounts> {
+  const empty: OrderStatusCounts = { all: 0, inquiry: 0, confirmed: 0, out_for_delivery: 0, completed: 0 };
+  if (!hasSupabaseEnv()) {
+    return { ...empty, all: mockOrders.length };
+  }
+  const ctx = await getOrgContext();
+  if (!ctx) return empty;
+
+  const supabase = await createSupabaseServerClient();
+  const base = () =>
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .is("deleted_at", null);
+
+  const [all, inquiry, confirmed, outForDelivery, completed] = await Promise.all([
+    base(),
+    base().in("order_status", [...ORDER_STATUS_FILTERS.inquiry]),
+    base().in("order_status", [...ORDER_STATUS_FILTERS.confirmed]),
+    base().in("order_status", [...ORDER_STATUS_FILTERS.out_for_delivery]),
+    base().in("order_status", [...ORDER_STATUS_FILTERS.completed]),
+  ]);
+
+  return {
+    all: all.count ?? 0,
+    inquiry: inquiry.count ?? 0,
+    confirmed: confirmed.count ?? 0,
+    out_for_delivery: outForDelivery.count ?? 0,
+    completed: completed.count ?? 0,
+  };
 }
