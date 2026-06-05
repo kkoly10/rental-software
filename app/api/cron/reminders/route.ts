@@ -10,6 +10,8 @@ import {
   postEventFollowUpEmail,
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
+import { resolveEmailLocale, emailCopy } from "@/lib/email/email-i18n";
+import { formatEventDate as formatEventDateIntl } from "@/lib/i18n/format-helpers";
 import {
   todayUtc,
   tomorrowUtc,
@@ -50,6 +52,17 @@ function formatDate(dateStr: string): string {
 
 function formatMoney(amount: number): string {
   return `$${amount.toFixed(2)}`;
+}
+
+// Localized event-date formatter for customer-facing emails. Operator-facing
+// digests keep the English `formatDate` above.
+function formatDateLocalized(dateStr: string, locale: string): string {
+  return formatEventDateIntl(dateStr, locale, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 // ─── Org branding / settings helpers ───────────────────────────────────────
@@ -148,7 +161,7 @@ async function sendDayBeforeReminders(
   const { data: orders } = await supabase
     .from("orders")
     .select(
-      "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone, sms_opt_in), order_items(item_name_snapshot)"
+      "id, organization_id, order_number, event_date, notes, customer_id, customers(first_name, email, phone, sms_opt_in, preferred_locale), order_items(item_name_snapshot)"
     )
     .eq("event_date", tomorrow)
     .is("deleted_at", null)
@@ -211,9 +224,12 @@ async function sendDayBeforeReminders(
       email: string | null;
       phone: string | null;
       sms_opt_in: boolean | null;
+      preferred_locale: string | null;
     } | null;
 
     if (!customer?.email) continue;
+
+    const customerLocale = resolveEmailLocale(customer.preferred_locale);
 
     const items = order.order_items as unknown as { item_name_snapshot: string }[] | null;
     const productName = items?.[0]?.item_name_snapshot ?? "Rental booking";
@@ -229,7 +245,7 @@ async function sendDayBeforeReminders(
         const endTime = formatTimeInTimeZone(stop.end, branding.eventTimezone);
         deliveryTime = `${startTime} – ${endTime}`;
       } else {
-        deliveryTime = `Around ${startTime}`;
+        deliveryTime = emailCopy(customerLocale).aroundTime(startTime);
       }
     }
 
@@ -248,16 +264,17 @@ async function sendDayBeforeReminders(
       const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
-        subject: `Reminder: Your rental from ${branding.businessName} is tomorrow!`,
+        subject: emailCopy(customerLocale).subjects.eventReminder(branding.businessName),
         html: eventReminderEmail({
           businessName: branding.businessName,
           customerFirstName: customer.first_name ?? "there",
           orderNumber: order.order_number,
           productName,
-          eventDate: formatDate(order.event_date),
+          eventDate: formatDateLocalized(order.event_date, customerLocale),
           deliveryTime,
           deliveryAddress: addressMap.get(order.id),
           supportEmail: branding.supportEmail,
+          locale: customerLocale,
         }),
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
@@ -437,7 +454,7 @@ async function sendPostEventFollowUps(
   const { data: orders } = await supabase
     .from("orders")
     .select(
-      "id, organization_id, order_number, event_date, customer_id, customers(first_name, email), order_items(item_name_snapshot)"
+      "id, organization_id, order_number, event_date, customer_id, customers(first_name, email, preferred_locale), order_items(item_name_snapshot)"
     )
     .eq("event_date", twoDaysAgo)
     .is("deleted_at", null)
@@ -457,9 +474,12 @@ async function sendPostEventFollowUps(
     const customer = order.customers as unknown as {
       first_name: string | null;
       email: string | null;
+      preferred_locale: string | null;
     } | null;
 
     if (!customer?.email) continue;
+
+    const customerLocale = resolveEmailLocale(customer.preferred_locale);
 
     const items = order.order_items as unknown as { item_name_snapshot: string }[] | null;
     const productName = items?.[0]?.item_name_snapshot ?? "Rental booking";
@@ -482,16 +502,17 @@ async function sendPostEventFollowUps(
       const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
-        subject: `How was your event? — ${branding.businessName}`,
+        subject: emailCopy(customerLocale).subjects.postEventFollowUp(branding.businessName),
         html: postEventFollowUpEmail({
           businessName: branding.businessName,
           customerFirstName: customer.first_name ?? "there",
           orderNumber: order.order_number,
           productName,
-          eventDate: formatDate(order.event_date),
+          eventDate: formatDateLocalized(order.event_date, customerLocale),
           reviewUrl: branding.googleReviewUrl,
           storefrontUrl,
           supportEmail: branding.supportEmail,
+          locale: customerLocale,
         }),
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,

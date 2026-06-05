@@ -5,16 +5,11 @@ import {
 } from "@/lib/supabase/admin";
 import { getOptionalEnv } from "@/lib/env";
 import { getResend, hasResendEnv } from "@/lib/email/client";
+import { verifyCronSecret } from "@/lib/security/cron-auth";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { OUTBOX_MAX_ATTEMPTS, nextBackoffSeconds } from "@/lib/email/outbox";
 
 export const maxDuration = 60;
-
-function verifyCronSecret(req: NextRequest): boolean {
-  const expected = getOptionalEnv("CRON_SECRET");
-  if (!expected) return false;
-  return req.headers.get("authorization") === `Bearer ${expected}`;
-}
 
 const BATCH = 25;
 

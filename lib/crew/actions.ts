@@ -52,7 +52,7 @@ export async function updateStopStatus(
   }
 
   const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
-    | { ok: boolean; reason: string | null; route_id: string | null; order_id: string | null; stop_type: string | null }
+    | { ok: boolean; reason: string | null; route_id: string | null; order_id: string | null; stop_type: string | null; flipped_to_delivered: boolean | null }
     | null;
 
   if (!result?.ok) {
@@ -93,23 +93,12 @@ export async function updateStopStatus(
         .in("route_status", ["planned", "in_progress"]);
     }
 
-    // Sync order status when a delivery stop (not pickup) is completed.
-    // Direct DB update rather than updateOrderStatus() to avoid operator-session
-    // auth checks and rate limiting; org isolation is already enforced above via
-    // the routes!inner join check.
+    // Sync order status when a delivery stop is completed. The flip to
+    // "delivered" now happens inside crew_update_stop_status() (same condition,
+    // same atomicity), so crew need no direct write access to `orders` — the
+    // table's RLS write policy excludes crew. We just read back the flag.
     const stopOrderId = stop.order_id as string | null;
-    let didFlipToDelivered = false;
-    if (stopOrderId && stop.stop_type === "delivery") {
-      const { data: flipped } = await supabase
-        .from("orders")
-        .update({ order_status: "delivered" })
-        .eq("id", stopOrderId)
-        .eq("organization_id", ctx.organizationId)
-        .is("deleted_at", null)
-        .in("order_status", ["confirmed", "scheduled", "out_for_delivery"])
-        .select("id");
-      didFlipToDelivered = !!(flipped && flipped.length > 0);
-    }
+    const didFlipToDelivered = !!result.flipped_to_delivered;
 
     // #340 The operator flow (updateOrderStatus) fires triggerOrderStatusEmail
     // and the delivery SMS on "delivered" — the crew flow used to skip both
