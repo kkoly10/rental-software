@@ -418,7 +418,11 @@ export function documentsReadyEmail(data: DocumentsReadyData): string {
   const t = emailCopy(data.locale);
   const c = t.documentsReady;
   const docList = data.documentTypes
-    .map((dt) => dt.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase()))
+    .map(
+      (dt) =>
+        (c.typeNames as Record<string, string>)[dt] ??
+        dt.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())
+    )
     .join(c.listAnd);
   const plural = data.documentTypes.length > 1;
 

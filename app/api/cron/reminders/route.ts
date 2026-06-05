@@ -245,7 +245,7 @@ async function sendDayBeforeReminders(
         const endTime = formatTimeInTimeZone(stop.end, branding.eventTimezone);
         deliveryTime = `${startTime} – ${endTime}`;
       } else {
-        deliveryTime = `Around ${startTime}`;
+        deliveryTime = emailCopy(customerLocale).aroundTime(startTime);
       }
     }
 
