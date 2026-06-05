@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EntityRow, DateChip, RowFigure, toneColor } from "@/components/ui/entity-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { getOrdersPage } from "@/lib/data/orders";
 import { getGuidanceState } from "@/lib/guidance/actions";
@@ -66,9 +67,11 @@ export default async function OrdersPage({
 
         {ordersPage.items.length === 0 ? (
           ordersPage.query ? (
-            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>{m.dashboard.orders.noOrdersFound}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
+            <div className="entity-row" style={{ justifyContent: "center", padding: 32 }}>
+              <div style={{ textAlign: "center" }}>
+                <strong>{m.dashboard.orders.noOrdersFound}</strong>
+                <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
+              </div>
             </div>
           ) : (
             <EmptyState
@@ -83,48 +86,34 @@ export default async function OrdersPage({
           <>
             <div className="list">
               {ordersPage.items.map((order) => (
-                <Link
+                <EntityRow
                   key={order.id}
                   href={`/dashboard/orders/${order.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <article className="order-card">
-                    <div className="order-row">
-                      <div>
-                        <strong>{order.customer}</strong>
-                        <div className="muted">{order.item}</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                        {order.missingEventDate && (
-                          <StatusBadge
-                            label={m.dashboard.orders.missingEventDateBadge}
-                            tone="warning"
-                          />
-                        )}
-                        <StatusBadge
-                          label={order.status}
-                          tone={order.tone as "default" | "success" | "warning" | "danger"}
-                        />
-                      </div>
-                    </div>
-                    <div className="price-row">
-                      <span className="muted">
+                  accent={toneColor[order.tone]}
+                  leading={<DateChip iso={order.eventDateRaw} />}
+                  title={order.customer}
+                  meta={
+                    <>
+                      <span style={{ display: "block" }}>{order.item}</span>
+                      <span className="tnum" style={{ display: "block", marginTop: 2 }}>
                         {order.date}
-                        {order.eventDateRaw && order.postalCode && (
-                          <>
-                            {" "}
-                            <WeatherBadge
-                              eventDate={order.eventDateRaw}
-                              zipCode={order.postalCode}
-                              compact
-                            />
-                          </>
-                        )}
+                        {order.postalCode ? ` · ${order.postalCode}` : ""}
                       </span>
-                      <strong>{order.total}</strong>
-                    </div>
-                  </article>
-                </Link>
+                    </>
+                  }
+                  trailing={
+                    <>
+                      {order.eventDateRaw && order.postalCode && (
+                        <WeatherBadge eventDate={order.eventDateRaw} zipCode={order.postalCode} compact />
+                      )}
+                      <StatusBadge
+                        label={order.status}
+                        tone={order.tone as "default" | "success" | "warning" | "danger"}
+                      />
+                      <RowFigure>{order.total}</RowFigure>
+                    </>
+                  }
+                />
               ))}
             </div>
 

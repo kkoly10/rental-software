@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EntityRow, IconChip, RowFigure } from "@/components/ui/entity-row";
 import { getPaymentsPage } from "@/lib/data/payments";
 import { getOrders } from "@/lib/data/orders";
 import { RecordPaymentForm } from "@/components/payments/record-payment-form";
@@ -13,6 +14,15 @@ import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportPayments } from "@/lib/export/csv";
 import { exportQuickBooksInvoicesCsv } from "@/lib/integrations/quickbooks/csv-export";
 import { getTranslator } from "@/lib/i18n/server";
+
+function DollarIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v20" />
+      <path d="M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.8 7 6.8s2 2.7 5 3.2 5 1.2 5 3.2-2.2 3.3-5 3.3-5-1.1-5-3" />
+    </svg>
+  );
+}
 
 export default async function PaymentsPage({
   searchParams,
@@ -64,43 +74,57 @@ export default async function PaymentsPage({
           />
 
           {paymentsPage.items.length === 0 ? (
-            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>{m.dashboard.payments.noPaymentsFound}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>
-                {paymentsPage.query
-                  ? m.common.tryDifferentSearch
-                  : m.dashboard.payments.recordPaymentBody}
+            <div className="entity-row" style={{ justifyContent: "center", padding: 32 }}>
+              <div style={{ textAlign: "center" }}>
+                <strong>{m.dashboard.payments.noPaymentsFound}</strong>
+                <div className="muted" style={{ marginTop: 8 }}>
+                  {paymentsPage.query
+                    ? m.common.tryDifferentSearch
+                    : m.dashboard.payments.recordPaymentBody}
+                </div>
               </div>
             </div>
           ) : (
             <>
               <div className="list">
                 {paymentsPage.items.map((payment) => (
-                  <article key={payment.id} className="order-card">
-                    <div className="order-row">
-                      <div>
-                        <strong>{payment.customer}</strong>
-                        <div className="muted">
-                          {payment.item} · {payment.date}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <strong>{payment.label}</strong>
-                        <div style={{ marginTop: 4 }}>
-                          <StatusBadge
-                            label={payment.status}
-                            tone={
-                              payment.status === "paid"
-                                ? "success"
-                                : payment.status === "failed"
-                                ? "danger"
-                                : "warning"
-                            }
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </article>
+                  <EntityRow
+                    key={payment.id}
+                    leading={
+                      <IconChip
+                        color={
+                          payment.status === "paid"
+                            ? "var(--success)"
+                            : payment.status === "failed"
+                            ? "var(--danger)"
+                            : "var(--warning)"
+                        }
+                      >
+                        <DollarIcon />
+                      </IconChip>
+                    }
+                    title={payment.customer}
+                    meta={
+                      <span className="tnum">
+                        {payment.item} · {payment.date}
+                      </span>
+                    }
+                    trailing={
+                      <>
+                        <RowFigure>{payment.label}</RowFigure>
+                        <StatusBadge
+                          label={payment.status}
+                          tone={
+                            payment.status === "paid"
+                              ? "success"
+                              : payment.status === "failed"
+                              ? "danger"
+                              : "warning"
+                          }
+                        />
+                      </>
+                    }
+                  />
                 ))}
               </div>
 

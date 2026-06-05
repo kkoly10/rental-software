@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EntityRow, IconChip, RowFigure } from "@/components/ui/entity-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { getProductsPage } from "@/lib/data/products";
 import { getGuidanceState } from "@/lib/guidance/actions";
@@ -10,6 +11,17 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { CsvImportButton } from "@/components/products/csv-import-button";
 import { getTranslator } from "@/lib/i18n/server";
+
+// Inline line-icon for the product leading chip (no new asset/dependency).
+function BoxIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8l-9-5-9 5 9 5 9-5z" />
+      <path d="M3 8v8l9 5 9-5V8" />
+      <path d="M12 13v8" />
+    </svg>
+  );
+}
 
 export default async function ProductsPage({
   searchParams,
@@ -60,9 +72,11 @@ export default async function ProductsPage({
 
         {productsPage.items.length === 0 ? (
           productsPage.query ? (
-            <div className="order-card" style={{ textAlign: "center", padding: 32 }}>
-              <strong>{m.dashboard.products.noProductsFound}</strong>
-              <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
+            <div className="entity-row" style={{ justifyContent: "center", padding: 32 }}>
+              <div style={{ textAlign: "center" }}>
+                <strong>{m.dashboard.products.noProductsFound}</strong>
+                <div className="muted" style={{ marginTop: 8 }}>{m.common.tryDifferentSearch}</div>
+              </div>
             </div>
           ) : (
             <EmptyState
@@ -77,41 +91,22 @@ export default async function ProductsPage({
           <>
             <div className="list">
               {productsPage.items.map((product) => (
-                <Link
+                <EntityRow
                   key={product.id}
                   href={`/dashboard/products/${product.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <article className="order-card">
-                    <div className="order-row">
-                      <div>
-                        <strong>{product.name}</strong>
-                        <div className="muted">{product.category}</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                        {product.missingPrice && (
-                          <StatusBadge
-                            label={m.dashboard.products.missingPriceBadge}
-                            tone="warning"
-                          />
-                        )}
-                        {product.hasOpenMaintenance && (
-                          <StatusBadge
-                            label={m.dashboard.products.openMaintenanceBadge}
-                            tone="warning"
-                          />
-                        )}
-                        <StatusBadge
-                          label={product.status}
-                          tone={product.tone as "default" | "success" | "warning" | "danger"}
-                        />
-                      </div>
-                    </div>
-                    <div className="price-row">
-                      <span className="muted">{product.price}</span>
-                    </div>
-                  </article>
-                </Link>
+                  leading={<IconChip><BoxIcon /></IconChip>}
+                  title={product.name}
+                  meta={product.category}
+                  trailing={
+                    <>
+                      <StatusBadge
+                        label={product.status}
+                        tone={product.tone as "default" | "success" | "warning" | "danger"}
+                      />
+                      <RowFigure>{product.price}</RowFigure>
+                    </>
+                  }
+                />
               ))}
             </div>
 
