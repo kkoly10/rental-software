@@ -125,6 +125,57 @@ export async function SaasLanding() {
           </div>
         </section>
 
+        {/* ── Industries strip (noob recognition) ────────────────── */}
+        <section
+          style={{
+            padding: "44px 24px 24px",
+            maxWidth: 1100,
+            margin: "0 auto",
+            textAlign: "center",
+          }}
+        >
+          <div className="kicker">{s.industries.kicker}</div>
+          <h3
+            style={{
+              margin: "8px 0 20px",
+              fontSize: "1.1rem",
+              color: "var(--text-muted, #6b7280)",
+              fontWeight: 600,
+            }}
+          >
+            {s.industries.title}
+          </h3>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: 8,
+              marginBottom: 18,
+            }}
+          >
+            {s.industries.items.map((item) => (
+              <span
+                key={item}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border, #e5e7eb)",
+                  fontSize: "0.85rem",
+                  fontWeight: 500,
+                  background: "#fff",
+                  color: "var(--text, #111827)",
+                }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+          <p className="muted" style={{ fontSize: "0.92rem", margin: 0 }}>
+            {s.industries.footer}
+          </p>
+        </section>
+
         {/* ── Pain section ───────────────────────────────────────── */}
         <section
           id="pain"
