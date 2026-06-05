@@ -2383,6 +2383,8 @@ export const pt: Messages = {
     kicker: "Resumo da reserva",
     defaultTitle: "A sua reserva de aluguer",
     basePrice: "Preço base",
+    multiDayLabel: "{days} dias",
+    multiDayExpression: "${price} × {days}",
     adjustedSubtotal: "Subtotal ajustado",
     subtotal: "Subtotal",
     wetUpcharge: "Suplemento modo molhado",

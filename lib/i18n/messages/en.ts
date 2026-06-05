@@ -2384,6 +2384,8 @@ const enValues = {
     kicker: "Reservation summary",
     defaultTitle: "Your rental reservation",
     basePrice: "Base price",
+    multiDayLabel: "{days} days",
+    multiDayExpression: "${price} × {days}",
     adjustedSubtotal: "Adjusted subtotal",
     subtotal: "Subtotal",
     wetUpcharge: "Wet mode upcharge",
