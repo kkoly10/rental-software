@@ -28,6 +28,7 @@ import {
 
 import { flatDayPricing } from "../lib/capabilities/pricing/flat-day.ts";
 import { perHourPricing } from "../lib/capabilities/pricing/per-hour.ts";
+import { perUnitPricing } from "../lib/capabilities/pricing/per-unit.ts";
 import { wetDryMode } from "../lib/capabilities/mode/wet-dry.ts";
 import { anchoringSetup } from "../lib/capabilities/setup/anchoring.ts";
 import { surfaceTypeSetup } from "../lib/capabilities/setup/surface-type.ts";
@@ -35,6 +36,7 @@ import { surfaceTypeSetup } from "../lib/capabilities/setup/surface-type.ts";
 test("getCapability returns each registered capability by slug", () => {
   assert.equal(getCapability("pricing.flat-day"), flatDayPricing);
   assert.equal(getCapability("pricing.per-hour"), perHourPricing);
+  assert.equal(getCapability("pricing.per-unit"), perUnitPricing);
   assert.equal(getCapability("mode.wet-dry"), wetDryMode);
   assert.equal(getCapability("setup.anchoring"), anchoringSetup);
   assert.equal(getCapability("setup.surface-type"), surfaceTypeSetup);
@@ -50,6 +52,7 @@ test("listCapabilities exposes every registered capability exactly once", () => 
   for (const slug of [
     "pricing.flat-day",
     "pricing.per-hour",
+    "pricing.per-unit",
     "mode.wet-dry",
     "setup.anchoring",
     "setup.surface-type",
@@ -63,7 +66,10 @@ test("listCapabilitiesByGroup partitions the registry by group", () => {
   const mode = listCapabilitiesByGroup("mode").map((c) => c.slug);
   const setup = listCapabilitiesByGroup("setup").map((c) => c.slug);
 
-  assert.deepEqual([...pricing].sort(), ["pricing.flat-day", "pricing.per-hour"]);
+  assert.deepEqual(
+    [...pricing].sort(),
+    ["pricing.flat-day", "pricing.per-hour", "pricing.per-unit"],
+  );
   assert.deepEqual([...mode].sort(), ["mode.wet-dry"]);
   assert.deepEqual([...setup].sort(), ["setup.anchoring", "setup.surface-type"]);
 });
