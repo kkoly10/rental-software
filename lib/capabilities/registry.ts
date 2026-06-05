@@ -1,5 +1,6 @@
 import type { Capability, CapabilityGroup } from "./types.ts";
 import { flatDayPricing } from "./pricing/flat-day.ts";
+import { perHourPricing } from "./pricing/per-hour.ts";
 import { wetDryMode } from "./mode/wet-dry.ts";
 import { anchoringSetup } from "./setup/anchoring.ts";
 import { surfaceTypeSetup } from "./setup/surface-type.ts";
@@ -19,6 +20,7 @@ import { surfaceTypeSetup } from "./setup/surface-type.ts";
 
 const all: readonly Capability[] = [
   flatDayPricing,
+  perHourPricing,
   wetDryMode,
   anchoringSetup,
   surfaceTypeSetup,

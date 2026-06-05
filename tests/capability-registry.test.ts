@@ -27,12 +27,14 @@ import {
 } from "../lib/verticals/registry.ts";
 
 import { flatDayPricing } from "../lib/capabilities/pricing/flat-day.ts";
+import { perHourPricing } from "../lib/capabilities/pricing/per-hour.ts";
 import { wetDryMode } from "../lib/capabilities/mode/wet-dry.ts";
 import { anchoringSetup } from "../lib/capabilities/setup/anchoring.ts";
 import { surfaceTypeSetup } from "../lib/capabilities/setup/surface-type.ts";
 
 test("getCapability returns each registered capability by slug", () => {
   assert.equal(getCapability("pricing.flat-day"), flatDayPricing);
+  assert.equal(getCapability("pricing.per-hour"), perHourPricing);
   assert.equal(getCapability("mode.wet-dry"), wetDryMode);
   assert.equal(getCapability("setup.anchoring"), anchoringSetup);
   assert.equal(getCapability("setup.surface-type"), surfaceTypeSetup);
@@ -45,7 +47,13 @@ test("getCapability returns undefined for an unknown slug", () => {
 test("listCapabilities exposes every registered capability exactly once", () => {
   const slugs = listCapabilities().map((c) => c.slug);
   assert.equal(slugs.length, new Set(slugs).size, "slugs must be unique");
-  for (const slug of ["pricing.flat-day", "mode.wet-dry", "setup.anchoring", "setup.surface-type"]) {
+  for (const slug of [
+    "pricing.flat-day",
+    "pricing.per-hour",
+    "mode.wet-dry",
+    "setup.anchoring",
+    "setup.surface-type",
+  ]) {
     assert.ok(slugs.includes(slug), `expected slug ${slug} in registry`);
   }
 });
@@ -55,7 +63,7 @@ test("listCapabilitiesByGroup partitions the registry by group", () => {
   const mode = listCapabilitiesByGroup("mode").map((c) => c.slug);
   const setup = listCapabilitiesByGroup("setup").map((c) => c.slug);
 
-  assert.deepEqual([...pricing].sort(), ["pricing.flat-day"]);
+  assert.deepEqual([...pricing].sort(), ["pricing.flat-day", "pricing.per-hour"]);
   assert.deepEqual([...mode].sort(), ["mode.wet-dry"]);
   assert.deepEqual([...setup].sort(), ["setup.anchoring", "setup.surface-type"]);
 });
