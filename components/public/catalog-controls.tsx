@@ -21,9 +21,13 @@ type SortKey = "default" | "price-asc" | "price-desc" | "name-asc";
  * client filter is instant.
  */
 function parsePrice(formatted: string): number {
-  const match = formatted.match(/(\d+(?:\.\d+)?)/);
+  // "$1,250.00" → 1250.00 — strip currency symbols + thousands separators
+  // before regexing out the digits so prices over $999 sort correctly.
+  // Falls back to +Infinity (sorts last) when no parseable number found.
+  const cleaned = formatted.replace(/[^\d.,-]/g, "").replace(/,/g, "");
+  const match = cleaned.match(/-?\d+(?:\.\d+)?/);
   if (!match) return Number.POSITIVE_INFINITY;
-  return parseFloat(match[1]);
+  return parseFloat(match[0]);
 }
 
 export function CatalogControls({
