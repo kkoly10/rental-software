@@ -17,4 +17,8 @@ export const recordPaymentSchema = z.object({
   referenceNote: optionalText("Reference note", 120),
   paidAt: optionalDateSchema,
   source: paymentSourceSchema.default("dashboard"),
+  // Optional dedupe key — Copilot generates a UUID per action block so a
+  // double-click or HTTP retry resolves to the same payment row instead
+  // of two. Manual dashboard entry leaves it unset (null on the row).
+  idempotencyKey: z.string().uuid().optional(),
 });

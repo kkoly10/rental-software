@@ -3,7 +3,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
-import { CatalogGrid } from "@/components/public/catalog-grid";
+import { CatalogControls } from "@/components/public/catalog-controls";
 import { CatalogFilterForm } from "@/components/public/catalog-filter-form";
 import { getCatalogList } from "@/lib/data/catalog-list";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
@@ -192,7 +192,7 @@ export default async function InventoryPage({
             </div>
 
             {sortedProducts.length > 0 ? (
-              <CatalogGrid products={sortedProducts} date={params.date} zip={params.zip} />
+              <CatalogControls products={sortedProducts} date={params.date} zip={params.zip} />
             ) : (
               <div className="panel storefront-empty-state">
                 <div className="kicker">{m.inventory.noMatchesKicker}</div>

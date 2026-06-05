@@ -37,6 +37,15 @@ export type CopilotPaymentParams = {
   paymentType: CopilotPaymentType;
   paymentMethod: CopilotPaymentMethod;
   referenceNote?: string;
+  // Generated client-side once per ACTION block; the server passes it
+  // to record_manual_payment so retries land on the same payment row.
+  idempotencyKey?: string;
+  // Server-injected (chat route) so the preview can render the real
+  // order_number + customer name instead of relying on the model's
+  // preview string. Cross-checks the orderId against actual data
+  // before the operator confirms.
+  orderNumber?: string;
+  customerName?: string;
 };
 
 // Operational action (Phase 3): record a manual payment against an order.
@@ -62,6 +71,10 @@ export type CopilotOrderStatus =
 export type CopilotOrderStatusParams = {
   orderId: string;
   newStatus: CopilotOrderStatus;
+  // Server-injected (chat route) so the preview can label the order
+  // by number + customer rather than relying on the model.
+  orderNumber?: string;
+  customerName?: string;
 };
 
 // Operational action: advance an order to a new status. Delegates to the
@@ -145,6 +158,9 @@ async function executePaymentAction(
     buildCopilotPaymentReferenceNote(action.params.referenceNote)
   );
   formData.set("source", "copilot");
+  if (action.params.idempotencyKey) {
+    formData.set("idempotency_key", action.params.idempotencyKey);
+  }
 
   const result = await recordPayment({ ok: false, message: "" }, formData);
   return { ok: result.ok, message: result.message };
