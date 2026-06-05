@@ -388,9 +388,9 @@ export const pt: Messages = {
 
   auth: {
     login: {
-      kicker: "Acesso à conta",
-      title: "Entrar",
-      description: "Entre para gerir reservas, entregas e inventário.",
+      kicker: "Bem-vindo de volta",
+      title: "Inicie sessão no Korent",
+      description: "Faça a gestão de reservas, entregas e pagamentos num só lugar.",
       passwordUpdated: "Palavra-passe atualizada",
       passwordUpdatedHint: "Entre com a sua nova palavra-passe.",
       emailVerified: "E-mail verificado",

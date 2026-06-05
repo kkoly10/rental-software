@@ -389,9 +389,9 @@ const enValues = {
 
   auth: {
     login: {
-      kicker: "Account access",
-      title: "Login",
-      description: "Sign in to manage bookings, deliveries, and inventory.",
+      kicker: "Welcome back",
+      title: "Sign in to Korent",
+      description: "Manage bookings, deliveries, and payments from one place.",
       passwordUpdated: "Password updated",
       passwordUpdatedHint: "Sign in with your new password.",
       emailVerified: "Email verified",
