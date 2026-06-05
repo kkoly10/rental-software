@@ -5202,6 +5202,19 @@ textarea[aria-invalid="true"] {
 }
 /* ===== end Carnival v2 craft utilities ===== */
 
+/* ── Page hero (list-tab / command-center headers) ── */
+.page-hero {
+  background:
+    radial-gradient(rgba(232, 89, 12, 0.05) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  margin-bottom: 16px;
+}
+.page-hero__row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-hero__title { font-family: "Sora", sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.08; margin: 8px 0 6px; }
+.page-hero__sub { color: var(--text-soft); font-size: 15px; }
 /* ============================================================
    Carnival v2 — Patch 3 additions
    Branded auth (login / signup / reset) + order financial-summary card.
