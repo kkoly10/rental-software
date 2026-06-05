@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { renderSafeRichText } from "@/lib/rendering/safe-rich-text";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -41,9 +41,37 @@ export function CopilotMessageList({ messages }: { messages: CopilotMessage[] })
           <div className="copilot-msg-content">
             {renderSafeRichText(msg.content)}
           </div>
+          {msg.role === "assistant" && <CopyButton text={msg.content} />}
         </div>
       ))}
       <div ref={bottomRef} />
     </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const { messages: m } = useI18n();
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard unavailable (insecure context / permissions) — no-op.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="ghost-btn copilot-msg-copy"
+      aria-label={m.copilot.copy}
+      style={{ fontSize: 11, padding: "2px 6px", marginTop: 4, opacity: 0.75 }}
+    >
+      {copied ? m.copilot.copied : m.copilot.copy}
+    </button>
   );
 }
