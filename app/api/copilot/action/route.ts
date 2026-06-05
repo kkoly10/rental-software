@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
-import { getCopilotAccessContext } from "@/lib/security/copilot-access";
+import {
+  getCopilotAccessContext,
+  copilotRoleAllowed,
+  COPILOT_ACTION_ROLES,
+} from "@/lib/security/copilot-access";
 import { executeCopilotAction, type CopilotAction } from "@/lib/copilot/actions";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { revalidatePath } from "next/cache";
@@ -138,18 +142,16 @@ export async function POST(request: NextRequest) {
   const clientIp = getTrustedClientIp(request.headers);
   const userAgent = request.headers.get("user-agent")?.slice(0, 256) ?? null;
 
-  // Copilot actions mutate organization settings — restrict to owners and admins
-  const copilotSupabase = await createSupabaseServerClient();
-  const { data: copilotMembership } = await copilotSupabase
-    .from("organization_memberships")
-    .select("role")
-    .eq("organization_id", access.organizationId)
-    .eq("profile_id", access.userId)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!["owner", "admin"].includes(copilotMembership?.role ?? "")) {
+  // Copilot actions mutate org-wide settings and records — restrict to owners
+  // and admins. access.role is resolved against the active-org cookie, the same
+  // org the delegated server actions (recordPayment, updateOrderStatus, …)
+  // operate on, so the gate and the execution can't disagree on tenant.
+  if (!copilotRoleAllowed(access.role, COPILOT_ACTION_ROLES)) {
     return jsonResponse({ error: "Only owners and admins can modify organization settings." }, { status: 403 });
   }
+
+  // Used below for the one-time acknowledgment lookup/gate.
+  const copilotSupabase = await createSupabaseServerClient();
 
   // Rate limiting: 30 per 15 min per user
   let allowed: boolean;
