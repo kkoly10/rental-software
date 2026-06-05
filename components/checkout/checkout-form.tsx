@@ -48,8 +48,64 @@ export function CheckoutForm({
     createCheckoutOrder,
     initialState
   );
-  const [selectedDate, setSelectedDate] = useState(initialDate ?? "");
-  const [enteredZip, setEnteredZip] = useState(initialZip ?? "");
+  // Sticky values for the form. Inputs are controlled (value + onChange)
+  // because React 19's <form action={...}> reset semantics for
+  // useActionState aren't reliable across browsers + Next.js's server-
+  // action path — uncontrolled defaultValue alone left fields blank
+  // after a failed submit in production. Controlled state guarantees
+  // each value sticks even when the action returns an error.
+  //
+  // First render seeds from state.submittedValues (if the previous
+  // submit echoed back) then from the URL params (initialDate /
+  // initialZip from the product detail page). On subsequent action
+  // returns, a useEffect re-syncs the locals to whatever the server
+  // just echoed, so a typed value never disappears.
+  const sv = state.submittedValues;
+  const [firstName, setFirstName] = useState(sv?.firstName ?? "");
+  const [lastName, setLastName] = useState(sv?.lastName ?? "");
+  const [phone, setPhone] = useState(sv?.phone ?? "");
+  const [email, setEmail] = useState(sv?.email ?? "");
+  const [selectedDate, setSelectedDate] = useState(sv?.eventDate ?? initialDate ?? "");
+  const [startTime, setStartTime] = useState(sv?.startTime ?? "");
+  const [endTime, setEndTime] = useState(sv?.endTime ?? "");
+  const [line1, setLine1] = useState(sv?.line1 ?? "");
+  const [line2, setLine2] = useState(sv?.line2 ?? "");
+  const [city, setCity] = useState(sv?.city ?? "");
+  const [stateField, setStateField] = useState(sv?.state ?? "");
+  const [enteredZip, setEnteredZip] = useState(sv?.postalCode ?? initialZip ?? "");
+
+  // Checkboxes also need to be controlled — same reset hazard as the
+  // text inputs. The terms_accepted box is the one that actually
+  // matters: without controlled state the customer would unwittingly
+  // submit again with terms unchecked and get a second error, which
+  // is both annoying and lets them blow through the agreement gate
+  // unintentionally. sms_opt_in is also controlled so the customer's
+  // marketing-consent choice doesn't silently flip back to false after
+  // a failed submit.
+  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Re-hydrate the local state whenever the server action returns a
+  // fresh submittedValues payload — covers the case where React's
+  // form reset wiped the DOM inputs before our state had a chance to
+  // catch up. The dep is on the identity of submittedValues so an
+  // unchanged state (e.g. re-render unrelated to a submit) is a no-op.
+  useEffect(() => {
+    if (!state.submittedValues) return;
+    const v = state.submittedValues;
+    if (v.firstName !== undefined) setFirstName(v.firstName);
+    if (v.lastName !== undefined) setLastName(v.lastName);
+    if (v.phone !== undefined) setPhone(v.phone);
+    if (v.email !== undefined) setEmail(v.email);
+    if (v.eventDate !== undefined) setSelectedDate(v.eventDate);
+    if (v.startTime !== undefined) setStartTime(v.startTime);
+    if (v.endTime !== undefined) setEndTime(v.endTime);
+    if (v.line1 !== undefined) setLine1(v.line1);
+    if (v.line2 !== undefined) setLine2(v.line2);
+    if (v.city !== undefined) setCity(v.city);
+    if (v.state !== undefined) setStateField(v.state);
+    if (v.postalCode !== undefined) setEnteredZip(v.postalCode);
+  }, [state.submittedValues]);
 
   // Decision 4.10 — refresh the server-rendered summary card when the
   // customer changes the ZIP. We push a new ?zip= into the URL so
@@ -237,6 +293,8 @@ export function CheckoutForm({
           <input
             name="first_name"
             type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
             autoComplete="given-name"
             placeholder={m.checkout.form.firstName}
             required
@@ -252,6 +310,8 @@ export function CheckoutForm({
           <input
             name="last_name"
             type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             autoComplete="family-name"
             placeholder={m.checkout.form.lastName}
             required
@@ -267,6 +327,8 @@ export function CheckoutForm({
           <input
             name="phone"
             type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel"
             placeholder="(540) 555-0100"
             aria-invalid={!!errors.phone || undefined}
@@ -284,6 +346,8 @@ export function CheckoutForm({
           name="sms_opt_in"
           type="checkbox"
           value="true"
+          checked={smsOptIn}
+          onChange={(e) => setSmsOptIn(e.target.checked)}
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text-soft)" }}>
@@ -296,6 +360,8 @@ export function CheckoutForm({
         <input
           name="email"
           type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           placeholder={m.checkout.form.emailPlaceholder}
           required
@@ -312,7 +378,7 @@ export function CheckoutForm({
           name="event_date"
           type="date"
           required
-          defaultValue={initialDate}
+          value={selectedDate}
           min={minDate}
           max={maxDate}
           onChange={(e) => setSelectedDate(e.target.value)}
@@ -334,6 +400,8 @@ export function CheckoutForm({
           <input
             name="start_time"
             type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -343,6 +411,8 @@ export function CheckoutForm({
           <input
             name="end_time"
             type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -353,6 +423,7 @@ export function CheckoutForm({
         <input
           name="line1"
           type="text"
+            defaultValue={sv?.line1 ?? ""}
           autoComplete="street-address"
           placeholder={m.checkout.form.streetAddress}
           required
@@ -364,6 +435,7 @@ export function CheckoutForm({
         <input
           name="line2"
           type="text"
+            defaultValue={sv?.line2 ?? ""}
           autoComplete="address-line2"
           placeholder={m.checkout.form.line2Placeholder}
           style={{ marginTop: 8, width: "100%" }}
@@ -376,6 +448,8 @@ export function CheckoutForm({
           <input
             name="city"
             type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
             autoComplete="address-level2"
             placeholder={m.checkout.form.cityPlaceholder}
             required
@@ -391,6 +465,8 @@ export function CheckoutForm({
           <input
             name="state"
             type="text"
+            value={stateField}
+            onChange={(e) => setStateField(e.target.value)}
             autoComplete="address-level1"
             placeholder={m.checkout.form.statePlaceholder}
             required
@@ -409,7 +485,7 @@ export function CheckoutForm({
             autoComplete="postal-code"
             placeholder={m.checkout.form.zipPlaceholder}
             required
-            defaultValue={initialZip}
+            value={enteredZip}
             onChange={(e) => setEnteredZip(e.target.value)}
             aria-invalid={!!errors.postalCode || undefined}
             aria-describedby={errors.postalCode ? "err-postal-code" : undefined}
@@ -427,6 +503,8 @@ export function CheckoutForm({
           type="checkbox"
           required
           value="true"
+          checked={termsAccepted}
+          onChange={(e) => setTermsAccepted(e.target.checked)}
           style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
         />
         <span style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text-soft)" }}>

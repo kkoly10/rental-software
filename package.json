@@ -9,7 +9,8 @@
     "lint": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/**/*.test.ts",
     "test:smoke": "playwright test",
-    "test:smoke:report": "playwright show-report"
+    "test:smoke:report": "playwright show-report",
+    "test:rbac": "playwright test --config playwright.rbac.config.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.52.0",

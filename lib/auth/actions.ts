@@ -24,8 +24,17 @@ export type AuthActionState = {
   // instead of leaving the user stuck with no self-serve recovery.
   needsVerification?: boolean;
   /** Echo back the email the user submitted so the resend-button can call
-      the resend action without making the user re-type it. */
+      the resend action without making the user re-type it. Also reused by
+      the login + signup forms to keep the email field pre-populated after
+      a failed submit (React 19's form-action reset would otherwise wipe
+      the value and force the user to retype). */
   email?: string;
+  /** Signup-side fields preserved on error returns from
+      signUpWithPassword so the form stays populated on a failed
+      submission. Password is intentionally NOT echoed (security); terms
+      acceptance is NOT echoed (force a fresh acknowledgment on retry). */
+  fullName?: string;
+  phone?: string;
 };
 
 function getValidationMessage(error: ZodError) {
@@ -95,22 +104,29 @@ export async function signInWithPassword(
   _prevState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  // Capture the email up front so every error path can echo it back
+  // and the login form preserves it. Otherwise a wrong-password error
+  // clears the email field and the user has to retype before trying
+  // again — UX dig pass 5 caught this on the live login page.
+  const submittedEmail = String(formData.get("email") ?? "");
+
   if (!hasSupabaseEnv()) {
     return {
       ok: false,
       message:
         "Supabase environment variables are missing. Add them to .env.local to enable auth.",
+      email: submittedEmail,
     };
   }
 
   const parsed = signInSchema.safeParse({
-    email: String(formData.get("email") ?? ""),
+    email: submittedEmail,
     password: String(formData.get("password") ?? ""),
     redirect: String(formData.get("redirect") ?? "/dashboard"),
   });
 
   if (!parsed.success) {
-    return { ok: false, message: getValidationMessage(parsed.error) };
+    return { ok: false, message: getValidationMessage(parsed.error), email: submittedEmail };
   }
 
   try {
@@ -126,7 +142,7 @@ export async function signInWithPassword(
         status: "warning",
       });
 
-      return rateLimitFailure;
+      return { ...rateLimitFailure, email: submittedEmail };
     }
   } catch (error) {
     await logAppError({
@@ -139,6 +155,7 @@ export async function signInWithPassword(
     return {
       ok: false,
       message: "Unable to process sign-in right now. Please try again shortly.",
+      email: submittedEmail,
     };
   }
 
@@ -158,7 +175,7 @@ export async function signInWithPassword(
       metadata: { reason: error.message },
     });
 
-    return { ok: false, message: error.message };
+    return { ok: false, message: error.message, email: submittedEmail };
   }
 
   const {
@@ -174,6 +191,7 @@ export async function signInWithPassword(
     return {
       ok: false,
       message: "Unable to load your account after sign-in. Please try again.",
+      email: submittedEmail,
     };
   }
 
@@ -222,24 +240,38 @@ export async function signUpWithPassword(
   _prevState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  // Capture the text-input values up front so every error return can
+  // echo them back. Same React 19 form-reset pattern that bit the
+  // login + checkout + new-order forms — without this echo, a single
+  // validation failure wipes name/phone/email and the user starts over.
+  const submittedEmail = String(formData.get("email") ?? "");
+  const submittedFullName = String(formData.get("full_name") ?? "");
+  const submittedPhone = String(formData.get("phone") ?? "");
+  const stickyEcho = {
+    email: submittedEmail,
+    fullName: submittedFullName,
+    phone: submittedPhone,
+  };
+
   if (!hasSupabaseEnv()) {
     return {
       ok: false,
       message:
         "Supabase environment variables are missing. Add them to .env.local to enable auth.",
+      ...stickyEcho,
     };
   }
 
   const parsed = signUpSchema.safeParse({
-    email: String(formData.get("email") ?? ""),
+    email: submittedEmail,
     password: String(formData.get("password") ?? ""),
-    fullName: String(formData.get("full_name") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
+    fullName: submittedFullName,
+    phone: submittedPhone,
     termsAccepted: String(formData.get("terms_accepted") ?? ""),
   });
 
   if (!parsed.success) {
-    return { ok: false, message: getValidationMessage(parsed.error) };
+    return { ok: false, message: getValidationMessage(parsed.error), ...stickyEcho };
   }
 
   try {
@@ -255,7 +287,7 @@ export async function signUpWithPassword(
         status: "warning",
       });
 
-      return rateLimitFailure;
+      return { ...rateLimitFailure, ...stickyEcho };
     }
   } catch (error) {
     await logAppError({
@@ -268,6 +300,7 @@ export async function signUpWithPassword(
     return {
       ok: false,
       message: "Unable to process signup right now. Please try again shortly.",
+      ...stickyEcho,
     };
   }
 
@@ -295,7 +328,7 @@ export async function signUpWithPassword(
       metadata: { reason: error.message },
     });
 
-    return { ok: false, message: error.message };
+    return { ok: false, message: error.message, ...stickyEcho };
   }
 
   await logAppEvent({

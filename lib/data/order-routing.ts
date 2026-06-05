@@ -27,8 +27,15 @@ export type OrderRoutingState =
   | {
       kind: "eligible";
       eventDateRaw: string;
-      /** Routes on the same date as the order, that the order isn't on. */
+      /** Routes on the same date as the order, that the order isn't on.
+       *  Restricted to `route_status = 'planned'` so the UI never lists
+       *  a route the crew app may have already loaded and the
+       *  `add_stop_to_route` RPC would reject. */
       candidateRoutes: Array<{ id: string; name: string; routeStatus: string; stopCount: number }>;
+      /** True when there are non-planned routes on the date (in_progress
+       *  / completed). Surfaced as a hint so the operator knows why
+       *  there are no candidates even though routes exist. */
+      hasNonPlannedRoutes: boolean;
     };
 
 /**
@@ -114,14 +121,18 @@ export async function getOrderRoutingState(
     }
   }
 
-  // Eligible — list routes for that date. We also report each route's
-  // current stopCount so the card can hint at how loaded each one is.
-  // Filter out completed routes — they can't accept new stops. The
-  // routes table uses `route_status` (not `status`) and has no
-  // soft-delete column; the old query referenced both, errored at
-  // PostgREST, and returned an empty candidate list — meaning the
-  // AssignToRouteCard always told operators "no routes for this date"
-  // even when one existed.
+  // Eligible — list planned routes for that date. We also report each
+  // route's current stopCount so the card can hint at how loaded each
+  // one is.
+  //
+  // Follow-up #8: previously this used `neq("route_status",
+  // "completed")` so the card listed `in_progress` routes too — but
+  // `auto-attach.ts` restricts to `planned` only, and the
+  // `add_stop_to_route` RPC + the crew app's loaded-stop list both
+  // assume the route is still planned. Operators could attach to a
+  // mid-run route here only to see the stop silently miss the
+  // dispatch. Now matches auto-attach: candidates are planned only,
+  // with a flag so the card can hint at non-planned routes that exist.
   const { data: routes } = await supabase
     .from("routes")
     .select("id, name, route_status, route_stops(id)")
@@ -130,17 +141,28 @@ export async function getOrderRoutingState(
     .neq("route_status", "completed")
     .order("created_at", { ascending: true });
 
-  const candidateRoutes = (routes ?? []).map((r) => {
-    const stops = (r as Record<string, unknown>).route_stops as
-      | { id: string }[]
-      | null;
-    return {
-      id: r.id as string,
-      name: (r.name as string) ?? "",
-      routeStatus: (r.route_status as string) ?? "planned",
-      stopCount: stops?.length ?? 0,
-    };
-  });
+  const allRoutes = routes ?? [];
+  const candidateRoutes = allRoutes
+    .filter((r) => (r as { route_status?: string }).route_status === "planned")
+    .map((r) => {
+      const stops = (r as Record<string, unknown>).route_stops as
+        | { id: string }[]
+        | null;
+      return {
+        id: r.id as string,
+        name: (r.name as string) ?? "",
+        routeStatus: (r.route_status as string) ?? "planned",
+        stopCount: stops?.length ?? 0,
+      };
+    });
+  const hasNonPlannedRoutes = allRoutes.some(
+    (r) => (r as { route_status?: string }).route_status !== "planned"
+  );
 
-  return { kind: "eligible", eventDateRaw: eventDate, candidateRoutes };
+  return {
+    kind: "eligible",
+    eventDateRaw: eventDate,
+    candidateRoutes,
+    hasNonPlannedRoutes,
+  };
 }

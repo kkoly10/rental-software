@@ -82,3 +82,69 @@ export async function attachOrderIdToAvailabilityBlock(blockId: string, orderId:
     .eq("id", blockId)
     .is("source_order_id", null);
 }
+
+/**
+ * Post-launch follow-up #3: createOrder reserves availability when the
+ * order is created in a should-reserve status, but updateOrderStatus
+ * did not — so an inquiry created without an event_date, then later
+ * given a date and Mark Confirmed-d via the order detail page, would
+ * flip to "confirmed" with NO availability block. The same product
+ * could then be confirmed for the same date by a second order.
+ *
+ * This helper closes that path. Called from updateOrderStatus when the
+ * transition is into a should-reserve status. Idempotent: skips when
+ * a block already exists for the order, or when there's no
+ * product/event_date to reserve against.
+ */
+export async function ensureAvailabilityForOrder(
+  organizationId: string,
+  orderId: string
+): Promise<{
+  ok: boolean;
+  reason: "no_data" | "already_reserved" | "reserved" | "failed";
+  message?: string;
+}> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: existing } = await supabase
+    .from("availability_blocks")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("source_order_id", orderId)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { ok: true, reason: "already_reserved" };
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, event_date, start_time, end_time, rental_end_date")
+    .eq("id", orderId)
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!order?.event_date) return { ok: true, reason: "no_data" };
+
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("product_id, line_type")
+    .eq("order_id", orderId)
+    .eq("line_type", "rental")
+    .limit(1);
+  const productId = items?.[0]?.product_id ?? null;
+  if (!productId) return { ok: true, reason: "no_data" };
+
+  const reserveResult = await reserveProductAvailabilityBlock({
+    organizationId,
+    productId,
+    orderId,
+    eventDate: order.event_date,
+    startTime: order.start_time,
+    endTime: order.end_time,
+    rentalEndDate: order.rental_end_date,
+    source: "dashboard",
+  });
+  if (!reserveResult.ok) {
+    return { ok: false, reason: "failed", message: reserveResult.message };
+  }
+  return { ok: true, reason: "reserved" };
+}

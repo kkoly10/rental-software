@@ -120,20 +120,55 @@ export async function getCalendarEvents(
   }
 
   if (blocksResult.data) {
+    // Follow-up #16 — multi-day blocks used to render a single marker
+    // pinned to the first day of the visible month, so a block that
+    // covered Apr 28 → May 5 viewed in May only showed a "hold" pip on
+    // May 1. Operators saw 1 day blocked when 5 were. Now we expand
+    // the block into per-day markers across [starts_at, ends_at),
+    // clamped to the visible month, and capped at the month's day
+    // count (so a year-long block doesn't render 365 markers — the
+    // cap is naturally the month length since we only render days the
+    // user can see).
+    const monthEndExclusive = endDate; // YYYY-MM-01 of the next month
     for (const b of blocksResult.data) {
       const product = (b as Record<string, unknown>).products as
         | { name?: string | null }
         | null;
-      // If the block started before this calendar period, pin it to the first day of the period
+      const label = `${product?.name ?? "Product"} — ${b.reason ?? b.block_type ?? "Hold"}`;
       const blockStartDate = b.starts_at ? b.starts_at.slice(0, 10) : "";
-      const displayDate = blockStartDate < startDate ? startDate : blockStartDate;
-      events.push({
-        id: b.id,
-        date: displayDate,
-        label: `${product?.name ?? "Product"} — ${b.reason ?? b.block_type ?? "Hold"}`,
-        type: "block",
-        tone: "danger",
-      });
+      // ends_at on availability_blocks is exclusive — a block for
+      // "Apr 28 only" stores ends_at = Apr 29 00:00. The minus-one
+      // gives us the last *day* the block actually occupies.
+      const blockEndExclusive = b.ends_at ? b.ends_at.slice(0, 10) : "";
+      if (!blockStartDate || !blockEndExclusive) continue;
+
+      const spanStart = blockStartDate < startDate ? startDate : blockStartDate;
+      const spanEnd =
+        blockEndExclusive > monthEndExclusive ? monthEndExclusive : blockEndExclusive;
+      if (spanStart >= spanEnd) {
+        // The block ends at midnight of spanStart — still surface a
+        // single pip on that day so a same-day block doesn't vanish.
+        events.push({ id: b.id, date: spanStart, label, type: "block", tone: "danger" });
+        continue;
+      }
+
+      // Walk day-by-day. Anchored in UTC so the iteration doesn't drift
+      // on DST boundaries.
+      const cursor = new Date(spanStart + "T00:00:00Z");
+      const stop = new Date(spanEnd + "T00:00:00Z");
+      let dayIndex = 0;
+      while (cursor < stop && dayIndex < 31) {
+        const isoDay = cursor.toISOString().slice(0, 10);
+        events.push({
+          id: `${b.id}:${isoDay}`,
+          date: isoDay,
+          label,
+          type: "block",
+          tone: "danger",
+        });
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+        dayIndex += 1;
+      }
     }
   }
 
