@@ -135,9 +135,87 @@ test("rejects send_reply with an invalid email", () => {
   assert.equal(parseActionFromResponse(raw).action, null);
 });
 
+test("parses a valid send_quote action", () => {
+  const raw = `Sending the quote.\n[ACTION:{"type":"send_quote","preview":"Send quote for #1042","params":{"orderId":"${ORDER_ID}"}}]`;
+  const { text, action } = parseActionFromResponse(raw);
+  assert.equal(text, "Sending the quote.");
+  assert.ok(action && action.type === "send_quote");
+  if (action.type === "send_quote") {
+    assert.equal(action.params.orderId, ORDER_ID);
+  }
+});
+
+test("rejects send_quote with a missing orderId", () => {
+  assert.equal(parseActionFromResponse(`[ACTION:{"type":"send_quote","params":{}}]`).action, null);
+});
+
 test("malformed JSON in the action block is treated as plain text", () => {
   const raw = "Sure.\n[ACTION:{not valid json}]";
   const { text, action } = parseActionFromResponse(raw);
   assert.equal(action, null);
   assert.ok(text.includes("[ACTION:"));
+});
+
+test("payment action sanitizes referenceNote control chars and quotes", () => {
+  const noisy = "check #" + String.fromCharCode(9) + "AB\n123\"|extra";
+  const raw =
+    `Logging it.\n[ACTION:{"type":"record_payment","preview":"x","params":{` +
+    `"orderId":"${ORDER_ID}","amount":200,"paymentType":"balance",` +
+    `"paymentMethod":"cash","referenceNote":${JSON.stringify(noisy)}}}]`;
+  const { action } = parseActionFromResponse(raw);
+  assert.ok(action && action.type === "record_payment");
+  if (action.type === "record_payment") {
+    assert.equal(action.params.referenceNote, "check # AB 123extra");
+  }
+});
+
+test("payment action preserves valid idempotencyKey", () => {
+  const key = "11111111-2222-4333-8444-555555555555";
+  const raw =
+    `[ACTION:{"type":"record_payment","preview":"x","params":{` +
+    `"orderId":"${ORDER_ID}","amount":50,"paymentType":"partial",` +
+    `"paymentMethod":"venmo","idempotencyKey":"${key}"}}]`;
+  const { action } = parseActionFromResponse(raw);
+  assert.ok(action && action.type === "record_payment");
+  if (action.type === "record_payment") {
+    assert.equal(action.params.idempotencyKey, key);
+  }
+});
+
+test("payment action drops malformed idempotencyKey", () => {
+  const raw =
+    `[ACTION:{"type":"record_payment","preview":"x","params":{` +
+    `"orderId":"${ORDER_ID}","amount":50,"paymentType":"partial",` +
+    `"paymentMethod":"venmo","idempotencyKey":"not-a-uuid"}}]`;
+  const { action } = parseActionFromResponse(raw);
+  assert.ok(action && action.type === "record_payment");
+  if (action.type === "record_payment") {
+    assert.equal(action.params.idempotencyKey, undefined);
+  }
+});
+
+test("payment action preserves server-injected orderNumber/customerName", () => {
+  const raw =
+    `[ACTION:{"type":"record_payment","preview":"x","params":{` +
+    `"orderId":"${ORDER_ID}","amount":100,"paymentType":"balance",` +
+    `"paymentMethod":"cash","orderNumber":"1042","customerName":"Sarah Mitchell"}}]`;
+  const { action } = parseActionFromResponse(raw);
+  assert.ok(action && action.type === "record_payment");
+  if (action.type === "record_payment") {
+    assert.equal(action.params.orderNumber, "1042");
+    assert.equal(action.params.customerName, "Sarah Mitchell");
+  }
+});
+
+test("update_order_status forwards server-injected label fields", () => {
+  const raw =
+    `[ACTION:{"type":"update_order_status","preview":"x","params":{` +
+    `"orderId":"${ORDER_ID}","newStatus":"delivered",` +
+    `"orderNumber":"1042","customerName":"Sarah Mitchell"}}]`;
+  const { action } = parseActionFromResponse(raw);
+  assert.ok(action && action.type === "update_order_status");
+  if (action.type === "update_order_status") {
+    assert.equal(action.params.orderNumber, "1042");
+    assert.equal(action.params.customerName, "Sarah Mitchell");
+  }
 });

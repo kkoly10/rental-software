@@ -11,6 +11,7 @@ import {
   operatorActivityAlertEmail,
   type OperatorActivityEvent,
 } from "./templates";
+import { resolveEmailLocale, emailCopy, type EmailLocale } from "./email-i18n";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
 import { sanitizeHeaderValue, strictParseEmail } from "@/lib/security/header-safe";
@@ -43,6 +44,60 @@ function makeFormatters(currency: string, locale: string) {
         year: "numeric",
       }),
   };
+}
+
+type SupabaseLike = {
+  from: (table: string) => {
+    select: (cols: string) => {
+      eq: (col: string, val: string) => {
+        eq: (col: string, val: string) => {
+          is: (col: string, val: null) => {
+            maybeSingle: () => Promise<{ data: { preferred_locale?: string | null } | null }>;
+          };
+        };
+      };
+    };
+  };
+};
+
+/**
+ * Resolve a customer's preferred email locale by customer id, scoped to the
+ * org. Falls back to "en" for unknown customers or unsupported locale values.
+ */
+async function resolveCustomerLocaleById(
+  supabase: SupabaseLike,
+  organizationId: string,
+  customerId: string
+): Promise<EmailLocale> {
+  const { data } = await supabase
+    .from("customers")
+    .select("preferred_locale")
+    .eq("id", customerId)
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  return resolveEmailLocale(data?.preferred_locale ?? null);
+}
+
+/**
+ * Resolve a customer's preferred email locale by email address, scoped to the
+ * org. Used by triggers that only have the recipient's email on hand.
+ * Falls back to "en".
+ */
+async function resolveCustomerLocaleByEmail(
+  supabase: SupabaseLike,
+  organizationId: string,
+  customerEmail: string
+): Promise<EmailLocale> {
+  if (!customerEmail) return "en";
+  const { data } = await supabase
+    .from("customers")
+    .select("preferred_locale")
+    .eq("email", customerEmail)
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  return resolveEmailLocale(data?.preferred_locale ?? null);
 }
 
 type OrgBranding = {
@@ -141,6 +196,15 @@ export async function triggerOrderConfirmationEmail(params: {
 
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const supabase = await createSupabaseServerClient();
+
+  // Customer-facing email is rendered in the recipient's preferred locale.
+  const customerLocale = await resolveCustomerLocaleByEmail(
+    supabase as unknown as SupabaseLike,
+    params.organizationId,
+    params.customerEmail
+  );
+  const cfmt = makeFormatters(branding.currency, customerLocale);
+
   const { data: order } = await supabase
     .from("orders")
     .select("id")
@@ -160,20 +224,21 @@ export async function triggerOrderConfirmationEmail(params: {
   await sendEmail({
     to: params.customerEmail,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Booking #${params.orderNumber} received — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.orderConfirmation(params.orderNumber, branding.businessName)),
     html: orderConfirmationEmail({
       businessName: branding.businessName,
       customerFirstName: params.customerFirstName,
       orderNumber: params.orderNumber,
       productName: params.productName,
-      eventDate: fmt.date(params.eventDate),
-      subtotal: fmt.money(params.subtotal),
-      deliveryFee: fmt.money(params.deliveryFee),
-      total: fmt.money(params.total),
-      depositDue: fmt.money(params.depositDue),
+      eventDate: cfmt.date(params.eventDate),
+      subtotal: cfmt.money(params.subtotal),
+      deliveryFee: cfmt.money(params.deliveryFee),
+      total: cfmt.money(params.total),
+      depositDue: cfmt.money(params.depositDue),
       supportEmail: branding.supportEmail,
       siteUrl: branding.siteUrl,
       portalUrl,
+      locale: customerLocale,
     }),
     replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),
@@ -275,17 +340,27 @@ export async function triggerPaymentReceivedEmail(params: {
   const branding = await getOrgBranding(params.organizationId);
   const fmt = makeFormatters(branding.currency, branding.locale);
 
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  const customerLocale = await resolveCustomerLocaleByEmail(
+    supabase as unknown as SupabaseLike,
+    params.organizationId,
+    params.customerEmail
+  );
+  const cfmt = makeFormatters(branding.currency, customerLocale);
+
   if (params.paymentType === "refund") {
     await sendEmail({
       to: params.customerEmail,
       from: branding.fromAddress,
-      subject: sanitizeHeaderValue(`Refund processed for order #${params.orderNumber} — ${branding.businessName}`),
+      subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.refundProcessed(params.orderNumber, branding.businessName)),
       html: refundProcessedEmail({
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
         orderNumber: params.orderNumber,
-        amount: fmt.money(params.amount),
+        amount: cfmt.money(params.amount),
         supportEmail: branding.supportEmail,
+        locale: customerLocale,
       }),
       replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),
@@ -295,16 +370,18 @@ export async function triggerPaymentReceivedEmail(params: {
     await sendEmail({
       to: params.customerEmail,
       from: branding.fromAddress,
-      subject: sanitizeHeaderValue(`Payment received for order #${params.orderNumber} — ${branding.businessName}`),
+      subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.paymentReceived(params.orderNumber, branding.businessName)),
       html: paymentReceivedEmail({
         businessName: branding.businessName,
         customerFirstName: params.customerFirstName,
         orderNumber: params.orderNumber,
-        amount: fmt.money(params.amount),
+        amount: cfmt.money(params.amount),
         paymentType: params.paymentType,
         paymentMethod: params.paymentMethod.replace(/_/g, " "),
-        newBalance: fmt.money(params.newBalance),
+        newBalance: cfmt.money(params.newBalance),
         supportEmail: branding.supportEmail,
+        locale: customerLocale,
+        fullyPaid: params.newBalance <= 0,
       }),
       replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),
@@ -360,7 +437,7 @@ export async function triggerOrderStatusEmail(params: {
 
   const { data: customer } = await supabase
     .from("customers")
-    .select("first_name, email")
+    .select("first_name, email, preferred_locale")
     .eq("id", order.customer_id)
     .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
@@ -369,7 +446,10 @@ export async function triggerOrderStatusEmail(params: {
   if (!customer?.email) return;
 
   const branding = await getOrgBranding(params.organizationId);
-  const fmt = makeFormatters(branding.currency, branding.locale);
+  const customerLocale = resolveEmailLocale(
+    (customer as { preferred_locale?: string | null }).preferred_locale ?? null
+  );
+  const fmt = makeFormatters(branding.currency, customerLocale);
 
   // Fetch delivery details for scheduled / out_for_delivery statuses
   let deliveryTimeWindow: string | undefined;
@@ -398,7 +478,7 @@ export async function triggerOrderStatusEmail(params: {
         if (windowStart && windowEnd) {
           deliveryTimeWindow = `${windowStart} – ${windowEnd}`;
         } else if (windowStart) {
-          deliveryTimeWindow = `Around ${windowStart}`;
+          deliveryTimeWindow = emailCopy(customerLocale).aroundTime(windowStart);
         }
 
         const route = (stop as Record<string, unknown>).routes as {
@@ -427,7 +507,13 @@ export async function triggerOrderStatusEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Order #${order.order_number} — ${params.newStatus.replace(/_/g, " ")} — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(
+      (() => {
+        const sc = emailCopy(customerLocale).orderStatus;
+        const statusText = sc.statuses[params.newStatus as keyof typeof sc.statuses]?.heading ?? sc.fallbackHeading;
+        return emailCopy(customerLocale).subjects.orderStatus(order.order_number, branding.businessName, statusText);
+      })()
+    ),
     html: orderStatusUpdateEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -438,6 +524,7 @@ export async function triggerOrderStatusEmail(params: {
       deliveryTimeWindow,
       crewName,
       portalUrl,
+      locale: customerLocale,
     }),
     replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),
@@ -461,7 +548,7 @@ export async function triggerDocumentsReadyEmail(params: {
   const [{ data: customer }, { data: order }] = await Promise.all([
     supabase
       .from("customers")
-      .select("first_name, email")
+      .select("first_name, email, preferred_locale")
       .eq("id", params.customerId)
       .eq("organization_id", params.organizationId)
       .is("deleted_at", null)
@@ -478,6 +565,9 @@ export async function triggerDocumentsReadyEmail(params: {
   if (!customer?.email || !order) return;
 
   const branding = await getOrgBranding(params.organizationId);
+  const customerLocale = resolveEmailLocale(
+    (customer as { preferred_locale?: string | null }).preferred_locale ?? null
+  );
 
   // Issue a portal token so the customer can navigate directly to sign documents
   let portalUrl: string | undefined;
@@ -492,7 +582,7 @@ export async function triggerDocumentsReadyEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Documents ready for order #${order.order_number} — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.documentsReady(order.order_number, branding.businessName)),
     html: documentsReadyEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -500,6 +590,7 @@ export async function triggerDocumentsReadyEmail(params: {
       documentTypes: params.documentTypes,
       supportEmail: branding.supportEmail,
       portalUrl,
+      locale: customerLocale,
     }),
     replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),
@@ -523,7 +614,7 @@ export async function triggerQuoteSentEmail(params: {
   const [{ data: customer }, { data: order }] = await Promise.all([
     supabase
       .from("customers")
-      .select("first_name, email")
+      .select("first_name, email, preferred_locale")
       .eq("id", params.customerId)
       .eq("organization_id", params.organizationId)
       .is("deleted_at", null)
@@ -540,7 +631,10 @@ export async function triggerQuoteSentEmail(params: {
   if (!customer?.email || !order) return;
 
   const branding = await getOrgBranding(params.organizationId);
-  const fmt = makeFormatters(branding.currency, branding.locale);
+  const customerLocale = resolveEmailLocale(
+    (customer as { preferred_locale?: string | null }).preferred_locale ?? null
+  );
+  const fmt = makeFormatters(branding.currency, customerLocale);
 
   const portalToken = await import("@/lib/portal/access-token").then(({ issuePortalAccessToken }) =>
     issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(() => null)
@@ -554,7 +648,7 @@ export async function triggerQuoteSentEmail(params: {
   await sendEmail({
     to: customer.email,
     from: branding.fromAddress,
-    subject: sanitizeHeaderValue(`Your quote for order #${params.orderNumber} — ${branding.businessName}`),
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.quoteSent(params.orderNumber, branding.businessName)),
     html: quoteSentEmail({
       businessName: branding.businessName,
       customerFirstName: customer.first_name ?? "there",
@@ -564,6 +658,7 @@ export async function triggerQuoteSentEmail(params: {
       depositRequired: fmt.money(Number(order.deposit_due_amount ?? 0)),
       portalUrl,
       supportEmail: branding.supportEmail,
+      locale: customerLocale,
     }),
     replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),
@@ -600,10 +695,16 @@ export async function triggerDepositReminderEmail(params: {
   if (!params.customerEmail) return false;
 
   const branding = await getOrgBranding(params.organizationId);
-  const fmt = makeFormatters(branding.currency, branding.locale);
 
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const supabase = await createSupabaseServerClient();
+  const customerLocale = await resolveCustomerLocaleByEmail(
+    supabase as unknown as SupabaseLike,
+    params.organizationId,
+    params.customerEmail
+  );
+  const fmt = makeFormatters(branding.currency, customerLocale);
+
   const portalToken = await issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(
     () => null
   );
@@ -614,7 +715,7 @@ export async function triggerDepositReminderEmail(params: {
   return sendEmail({
     to: params.customerEmail,
     from: branding.fromAddress,
-    subject: `Deposit reminder — order #${params.orderNumber} — ${branding.businessName}`,
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.depositReminder(params.orderNumber, branding.businessName)),
     html: depositReminderEmail({
       businessName: branding.businessName,
       customerFirstName: params.customerFirstName,
@@ -624,6 +725,7 @@ export async function triggerDepositReminderEmail(params: {
       depositDue: fmt.money(params.depositDue),
       portalUrl,
       supportEmail: branding.supportEmail,
+      locale: customerLocale,
     }),
     replyTo: branding.supportEmail ?? undefined,
     headers: customerHeaders(branding.supportEmail),

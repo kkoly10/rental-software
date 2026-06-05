@@ -4,6 +4,17 @@ import type { GuidanceSnapshot } from "@/lib/data/guidance-snapshot";
 import type { OperationalSnapshot } from "@/lib/data/operational-snapshot";
 import { formatMoney } from "@/lib/i18n/format-helpers";
 
+const LOCALE_NAMES: Record<string, string> = {
+  en: "English",
+  fr: "French",
+  es: "Spanish",
+  pt: "Portuguese",
+};
+
+function localeName(code: string): string {
+  return LOCALE_NAMES[code] ?? "English";
+}
+
 export function getPageHelpContext(route: string): string {
   const help = pageHelpMap[route];
   if (!help) return "No specific help available for this page.";
@@ -64,7 +75,7 @@ export function getOperationalContext(snapshot: OperationalSnapshot): string {
     );
     for (const o of snapshot.actionableOrders) {
       lines.push(
-        `- [${o.label}](${o.link}) — status: ${o.status}${o.eventDate ? `, event ${o.eventDate}` : ""} (orderId: ${o.id})`
+        `- [${o.label}](${o.link}) — status: ${o.status}${o.eventDate ? `, event ${o.eventDate}` : ""}, customer language: ${localeName(o.customerLocale)} (orderId: ${o.id})`
       );
     }
   }
@@ -72,11 +83,11 @@ export function getOperationalContext(snapshot: OperationalSnapshot): string {
   if (snapshot.unreadThreads.length > 0) {
     lines.push(
       "",
-      "Unread customer messages you can draft a reply to (use the customerEmail/customerId/orderId/orderNumber to send a reply via a send_reply ACTION block; draft a reply grounded in the message text):"
+      "Unread customer messages you can draft a reply to (use the customerEmail/customerId/orderId/orderNumber to send a reply via a send_reply ACTION block; draft the reply grounded in the message text AND written in the customer's preferred language shown below):"
     );
     for (const t of snapshot.unreadThreads) {
       lines.push(
-        `- From ${t.customerName} (customerEmail: ${t.customerEmail ?? "unknown"}${t.customerId ? `, customerId: ${t.customerId}` : ""}${t.orderNumber ? `, order #${t.orderNumber}` : ""}${t.orderId ? `, orderId: ${t.orderId}` : ""}): "${t.snippet}"`
+        `- From ${t.customerName} [prefers ${localeName(t.customerLocale)}] (customerEmail: ${t.customerEmail ?? "unknown"}${t.customerId ? `, customerId: ${t.customerId}` : ""}${t.orderNumber ? `, order #${t.orderNumber}` : ""}${t.orderId ? `, orderId: ${t.orderId}` : ""}): "${t.snippet}"`
       );
     }
   }

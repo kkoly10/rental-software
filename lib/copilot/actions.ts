@@ -37,6 +37,15 @@ export type CopilotPaymentParams = {
   paymentType: CopilotPaymentType;
   paymentMethod: CopilotPaymentMethod;
   referenceNote?: string;
+  // Generated client-side once per ACTION block; the server passes it
+  // to record_manual_payment so retries land on the same payment row.
+  idempotencyKey?: string;
+  // Server-injected (chat route) so the preview can render the real
+  // order_number + customer name instead of relying on the model's
+  // preview string. Cross-checks the orderId against actual data
+  // before the operator confirms.
+  orderNumber?: string;
+  customerName?: string;
 };
 
 // Operational action (Phase 3): record a manual payment against an order.
@@ -62,6 +71,10 @@ export type CopilotOrderStatus =
 export type CopilotOrderStatusParams = {
   orderId: string;
   newStatus: CopilotOrderStatus;
+  // Server-injected (chat route) so the preview can label the order
+  // by number + customer rather than relying on the model.
+  orderNumber?: string;
+  customerName?: string;
 };
 
 // Operational action: advance an order to a new status. Delegates to the
@@ -76,6 +89,14 @@ export type CopilotOrderStatusAction = {
 // order (and email the customer to sign). Delegates to createDocumentsForOrder.
 export type CopilotGenerateDocumentsAction = {
   type: "generate_documents";
+  preview: string;
+  params: { orderId: string };
+};
+
+// Operational action: send a quote for an inquiry/quote_sent order (emails the
+// customer and moves the order to quote_sent). Delegates to sendQuote.
+export type CopilotSendQuoteAction = {
+  type: "send_quote";
   preview: string;
   params: { orderId: string };
 };
@@ -101,7 +122,8 @@ export type CopilotAction =
   | CopilotPaymentAction
   | CopilotOrderStatusAction
   | CopilotGenerateDocumentsAction
-  | CopilotSendReplyAction;
+  | CopilotSendReplyAction
+  | CopilotSendQuoteAction;
 
 const ALLOWED_SETTINGS_FIELDS: Record<string, string> = {
   update_hero: "hero_message",
@@ -136,6 +158,9 @@ async function executePaymentAction(
     buildCopilotPaymentReferenceNote(action.params.referenceNote)
   );
   formData.set("source", "copilot");
+  if (action.params.idempotencyKey) {
+    formData.set("idempotency_key", action.params.idempotencyKey);
+  }
 
   const result = await recordPayment({ ok: false, message: "" }, formData);
   return { ok: result.ok, message: result.message };
@@ -180,6 +205,16 @@ async function executeSendReplyAction(
   return { ok: result.ok, message: result.message };
 }
 
+async function executeSendQuoteAction(
+  action: CopilotSendQuoteAction
+): Promise<{ ok: boolean; message: string }> {
+  // Reuse sendQuote: role check, status guard (inquiry/quote_sent), the
+  // quote_sent transition, and the quote email all live there.
+  const { sendQuote } = await import("@/lib/quotes/actions");
+  const result = await sendQuote(action.params.orderId);
+  return { ok: result.ok, message: result.message };
+}
+
 export async function executeCopilotAction(
   action: CopilotAction
 ): Promise<{ ok: boolean; message: string }> {
@@ -194,6 +229,9 @@ export async function executeCopilotAction(
   }
   if (action.type === "send_reply") {
     return executeSendReplyAction(action);
+  }
+  if (action.type === "send_quote") {
+    return executeSendQuoteAction(action);
   }
 
   if (!hasSupabaseEnv()) {

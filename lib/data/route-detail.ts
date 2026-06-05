@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, hasSupabaseServiceRoleEnv } from "@/lib/supabase/admin";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { geocodeZipServer } from "@/lib/maps/geocode-server";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
@@ -422,13 +423,21 @@ export async function getRouteDetailEnhanced(
   // Lazily geocode addresses that lack coordinates, then cache the result back.
   // Run in parallel — sequential geocoding blocks render by ~1s per stop.
   if (toGeocode.length > 0) {
+    // The geocode result is a system-derived cache value (lat/lng from a ZIP),
+    // not a user-authored address edit, so write it with the service-role
+    // client. This keeps the customer_addresses write RLS scoped to
+    // owner/admin/dispatcher while still letting any member's route view
+    // populate the cache (e.g. crew viewing their stops).
+    const geocodeWriter = hasSupabaseServiceRoleEnv()
+      ? createSupabaseAdminClient()
+      : supabase;
     await Promise.all(
       toGeocode.map(async (item) => {
         const coords = await geocodeZipServer(item.postalCode);
         if (coords) {
           enhancedStops[item.stopIndex].lat = coords.lat;
           enhancedStops[item.stopIndex].lng = coords.lng;
-          await supabase
+          await geocodeWriter
             .from("customer_addresses")
             .update({ latitude: coords.lat, longitude: coords.lng })
             .eq("id", item.addressId);

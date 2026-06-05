@@ -25,6 +25,7 @@ export async function recordPayment(
   _prevState: PaymentActionState,
   formData: FormData
 ): Promise<PaymentActionState> {
+  const rawIdempotencyKey = String(formData.get("idempotency_key") ?? "");
   const parsed = recordPaymentSchema.safeParse({
     orderId: String(formData.get("order_id") ?? ""),
     amount: String(formData.get("amount") ?? ""),
@@ -33,6 +34,7 @@ export async function recordPayment(
     referenceNote: String(formData.get("reference_note") ?? ""),
     paidAt: String(formData.get("paid_at") ?? ""),
     source: String(formData.get("source") ?? "dashboard"),
+    ...(rawIdempotencyKey ? { idempotencyKey: rawIdempotencyKey } : {}),
   });
 
   if (!parsed.success) {
@@ -42,7 +44,7 @@ export async function recordPayment(
     };
   }
 
-  const { orderId, amount, paymentType, paymentMethod, referenceNote, paidAt, source } =
+  const { orderId, amount, paymentType, paymentMethod, referenceNote, paidAt, source, idempotencyKey } =
     parsed.data;
 
   if (!hasSupabaseEnv()) {
@@ -151,13 +153,14 @@ export async function recordPayment(
   // The function uses SELECT FOR UPDATE on the order row to prevent concurrent
   // payments from both passing the balance check before either is committed.
   const { data: rpcResult, error: rpcError } = await supabase.rpc("record_manual_payment", {
-    p_order_id:       orderId,
-    p_org_id:         ctx.organizationId,
-    p_amount:         amount,
-    p_payment_type:   paymentType,
-    p_payment_method: paymentMethod,
-    p_reference_note: referenceNote ?? null,
-    p_paid_at:        toPaidAtIso(paidAt),
+    p_order_id:        orderId,
+    p_org_id:          ctx.organizationId,
+    p_amount:          amount,
+    p_payment_type:    paymentType,
+    p_payment_method:  paymentMethod,
+    p_reference_note:  referenceNote ?? null,
+    p_paid_at:         toPaidAtIso(paidAt),
+    p_idempotency_key: idempotencyKey ?? null,
   });
 
   if (rpcError) {
@@ -165,9 +168,32 @@ export async function recordPayment(
     return { ok: false, message: "Couldn't record the payment. Please try again." };
   }
 
-  const result = rpcResult as { ok: boolean; message?: string; new_balance?: number; net_paid?: number } | null;
+  const result = rpcResult as {
+    ok: boolean;
+    message?: string;
+    new_balance?: number;
+    net_paid?: number;
+    duplicate?: boolean;
+  } | null;
   if (!result?.ok) {
     return { ok: false, message: result?.message ?? "Failed to record payment." };
+  }
+
+  // Idempotency hit: a row with this (order, key) already existed.
+  // Surface as success so the operator's UI settles, but log a metric
+  // event so we can track recurrence post-PR1.
+  if (result.duplicate) {
+    try {
+      const { logAppEvent } = await import("@/lib/observability/server");
+      await logAppEvent({
+        organizationId: ctx.organizationId,
+        userId: ctx.userId,
+        source: "payments.record_manual",
+        action: "idempotency_hit",
+        status: "info",
+        metadata: { orderId, source, amount },
+      });
+    } catch { /* metric is best-effort */ }
   }
 
   const newBalance = result.new_balance ?? 0;
