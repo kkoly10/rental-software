@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   signInWithPassword,
   resendVerificationEmail,
@@ -55,6 +55,21 @@ export function LoginForm({
     resendInitial
   );
 
+  // Email input is controlled so a wrong-password error doesn't wipe
+  // it. signInWithPassword echoes back state.email on every error
+  // return, and a useEffect syncs that into local state when a new
+  // result arrives. Without this, React 19's <form action> reset
+  // semantics reset the email DOM input on every submit, forcing
+  // the user to retype their address before each retry — a real bug
+  // UX dig pass 5 captured against production.
+  const [email, setEmail] = useState(state.email ?? "");
+  useEffect(() => {
+    if (typeof state.email === "string" && state.email !== email) {
+      setEmail(state.email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.email]);
+
   return (
     <>
       <form action={formAction} className="list" style={{ marginTop: 16 }}>
@@ -67,6 +82,8 @@ export function LoginForm({
             type="email"
             placeholder={l.emailPlaceholder}
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>

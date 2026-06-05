@@ -45,12 +45,12 @@ export async function generateMetadata({
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ product?: string; date?: string; zip?: string; mode?: string }>;
+  searchParams: Promise<{ product?: string; date?: string; zip?: string; mode?: string; rentalEnd?: string }>;
 }) {
   await requirePublicOrg();
   const isDemo = await isCurrentTenantDemo();
 
-  const { product, date, zip, mode } = await searchParams;
+  const { product, date, zip, mode, rentalEnd } = await searchParams;
   const productName = formatProductName(product);
   // Sprint 6.0 — passed in from the product-detail Book Now CTA when
   // the customer picked wet/dry. The action validates against the
@@ -58,7 +58,7 @@ export default async function CheckoutPage({
   const selectedMode = mode === "wet" || mode === "dry" ? mode : undefined;
 
   const [pricing, policies, settings, { messages: m, t }] = await Promise.all([
-    getCheckoutPricing(product, zip, date, selectedMode),
+    getCheckoutPricing(product, zip, date, selectedMode, rentalEnd),
     getBookingPolicies(),
     getOrganizationSettings(),
     getTranslator(),

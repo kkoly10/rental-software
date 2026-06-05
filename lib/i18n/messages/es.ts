@@ -2047,6 +2047,8 @@ export const es: Messages = {
           "Elige una ruta existente abajo, o crea una nueva para esta fecha.",
         noRoutesBody:
           "No hay rutas para esta fecha. Crea una y este pedido será su primera parada.",
+        inProgressRoutesHint:
+          "Las rutas en curso para esta fecha no admiten nuevas paradas: crea una nueva ruta o espera la siguiente.",
         attachCta: "Añadir a esta ruta",
         attaching: "Añadiendo…",
         createRouteCta: "Crear una ruta nueva para esta fecha",
@@ -2383,6 +2385,8 @@ export const es: Messages = {
     kicker: "Resumen de la reserva",
     defaultTitle: "Tu reserva de alquiler",
     basePrice: "Precio base",
+    multiDayLabel: "{days} días",
+    multiDayExpression: "${price} × {days}",
     adjustedSubtotal: "Subtotal ajustado",
     subtotal: "Subtotal",
     wetUpcharge: "Recargo modo mojado",

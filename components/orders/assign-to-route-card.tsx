@@ -53,7 +53,7 @@ export function AssignToRouteCard({
   }
 
   // ─── Eligible — show routes for this date or a create-route CTA ───
-  const { eventDateRaw, candidateRoutes } = state;
+  const { eventDateRaw, candidateRoutes, hasNonPlannedRoutes } = state;
   const noRoutesYet = candidateRoutes.length === 0;
 
   return (
@@ -64,6 +64,14 @@ export function AssignToRouteCard({
       <div className="assign-route-card-body">
         {noRoutesYet ? t.noRoutesBody : t.pickRouteBody}
       </div>
+      {hasNonPlannedRoutes && (
+        <div
+          className="assign-route-card-body"
+          style={{ fontStyle: "italic", opacity: 0.85, marginTop: 4 }}
+        >
+          {t.inProgressRoutesHint}
+        </div>
+      )}
 
       {!noRoutesYet && (
         <ul className="assign-route-list">

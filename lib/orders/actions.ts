@@ -17,9 +17,71 @@ import { checkProductAvailability } from "@/lib/availability/check";
 import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { checkPlanLimit } from "@/lib/stripe/gate";
 
+export type OrderFieldErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  eventDate?: string;
+  startTime?: string;
+  endTime?: string;
+  productId?: string;
+  subtotal?: string;
+  deliveryFee?: string;
+  depositAmount?: string;
+  deliveryLine1?: string;
+  deliveryCity?: string;
+  deliveryState?: string;
+  deliveryZip?: string;
+};
+
 export type OrderActionState = {
   ok: boolean;
   message: string;
+  /**
+   * Per-field validation messages so the operator new-order form can
+   * highlight the offending input(s) inline instead of relying on the
+   * HTML5 :invalid border alone. Without this the operator stares at
+   * 20 fields, sees one toast at the top, and has to figure out which
+   * one needs fixing.
+   */
+  fieldErrors?: OrderFieldErrors;
+  /**
+   * What the operator just submitted, echoed back so the new-order
+   * form can hydrate its controlled inputs on error. React 19 +
+   * Next.js server-action round-trips don't reliably preserve
+   * uncontrolled input values across submit; mirroring the checkout
+   * pattern (controlled inputs seeded from submittedValues) avoids
+   * the conversion-killer where 20 typed fields disappear on a
+   * single validation miss.
+   */
+  submittedValues?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    eventDate?: string;
+    startTime?: string;
+    endTime?: string;
+    orderStatus?: string;
+    productId?: string;
+    serviceAreaId?: string;
+    subtotal?: string;
+    deliveryFee?: string;
+    depositAmount?: string;
+    notes?: string;
+    deliveryLine1?: string;
+    deliveryLine2?: string;
+    deliveryCity?: string;
+    deliveryState?: string;
+    deliveryZip?: string;
+    deliverySurfaceType?: string;
+    deliveryGateCode?: string;
+    deliveryContactName?: string;
+    deliveryContactPhone?: string;
+    deliverySetupNotes?: string;
+    rentalEndDate?: string;
+  };
 };
 
 function shouldReserveAvailability(status: string) {
@@ -37,6 +99,46 @@ export async function createOrder(
   _prevState: OrderActionState,
   formData: FormData
 ): Promise<OrderActionState> {
+  // Capture what the operator typed before validation runs, so every
+  // failure path can echo it back and the form preserves the values.
+  const submittedValues = {
+    firstName: String(formData.get("first_name") ?? ""),
+    lastName: String(formData.get("last_name") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    eventDate: String(formData.get("event_date") ?? ""),
+    startTime: String(formData.get("start_time") ?? ""),
+    endTime: String(formData.get("end_time") ?? ""),
+    orderStatus: String(formData.get("order_status") ?? ""),
+    productId: String(formData.get("product_id") ?? ""),
+    serviceAreaId: String(formData.get("service_area_id") ?? ""),
+    subtotal: String(formData.get("subtotal") ?? ""),
+    deliveryFee: String(formData.get("delivery_fee") ?? ""),
+    depositAmount: String(formData.get("deposit_amount") ?? ""),
+    notes: String(formData.get("notes") ?? ""),
+    deliveryLine1: String(formData.get("delivery_line1") ?? ""),
+    deliveryLine2: String(formData.get("delivery_line2") ?? ""),
+    deliveryCity: String(formData.get("delivery_city") ?? ""),
+    deliveryState: String(formData.get("delivery_state") ?? ""),
+    deliveryZip: String(formData.get("delivery_zip") ?? ""),
+    deliverySurfaceType: String(formData.get("delivery_surface_type") ?? ""),
+    deliveryGateCode: String(formData.get("delivery_gate_code") ?? ""),
+    deliveryContactName: String(formData.get("delivery_contact_name") ?? ""),
+    deliveryContactPhone: String(formData.get("delivery_contact_phone") ?? ""),
+    deliverySetupNotes: String(formData.get("delivery_setup_notes") ?? ""),
+    rentalEndDate: String(formData.get("rental_end_date") ?? ""),
+  };
+
+  // Closure helper that splats submittedValues into every error
+  // return — without this the form clears on each failed submit.
+  const fail = (
+    extra: Omit<OrderActionState, "ok" | "submittedValues"> & { message: string },
+  ): OrderActionState => ({
+    ok: false,
+    ...extra,
+    submittedValues,
+  });
+
   const parsed = createOrderSchema.safeParse({
     firstName: String(formData.get("first_name") ?? ""),
     lastName: String(formData.get("last_name") ?? ""),
@@ -68,11 +170,40 @@ export async function createOrder(
   });
 
   if (!parsed.success) {
-    return {
-      ok: false,
+    const fieldErrors: OrderFieldErrors = {};
+    // Map zod issue paths (e.g. "firstName") to the keys consumed by
+    // the form. Keys are intentionally the same shape as the schema
+    // so the mapping is a no-op identity; spelled out so a future
+    // schema rename doesn't silently drop the inline message.
+    const fieldMap: Record<string, keyof OrderFieldErrors> = {
+      firstName: "firstName",
+      lastName: "lastName",
+      email: "email",
+      phone: "phone",
+      eventDate: "eventDate",
+      startTime: "startTime",
+      endTime: "endTime",
+      productId: "productId",
+      subtotal: "subtotal",
+      deliveryFee: "deliveryFee",
+      depositAmount: "depositAmount",
+      deliveryLine1: "deliveryLine1",
+      deliveryCity: "deliveryCity",
+      deliveryState: "deliveryState",
+      deliveryZip: "deliveryZip",
+    };
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string" && key in fieldMap) {
+        const mapped = fieldMap[key];
+        if (!fieldErrors[mapped]) fieldErrors[mapped] = issue.message;
+      }
+    }
+    return fail({
       message:
         parsed.error.issues[0]?.message ?? "Please review the order details.",
-    };
+      fieldErrors,
+    });
   }
 
   if (!hasSupabaseEnv()) {
@@ -85,10 +216,9 @@ export async function createOrder(
 
   const ctx = await getOrgContext();
   if (!ctx) {
-    return {
-      ok: false,
+    return fail({
       message: "You must be signed in with an organization to create orders.",
-    };
+    });
   }
 
   try {
@@ -109,16 +239,14 @@ export async function createOrder(
     ]);
 
     if (!userLimit.allowed || !clientLimit.allowed) {
-      return {
-        ok: false,
-        message: "Too many order creation attempts. Please wait and try again.",
-      };
+      return fail({
+      message: "Too many order creation attempts. Please wait and try again.",
+      });
     }
   } catch {
-    return {
-      ok: false,
+    return fail({
       message: "Unable to create orders right now. Please try again shortly.",
-    };
+    });
   }
 
   const {
@@ -188,7 +316,8 @@ export async function createOrder(
     .eq("status", "active")
     .maybeSingle();
   if (!["owner", "admin", "dispatcher"].includes(createMembership?.role ?? "")) {
-    return { ok: false, message: "You don't have permission to create orders." };
+    return fail({
+      message: "You don't have permission to create orders." });
   }
 
   // Plan limit: count orders created this calendar month against the cap.
@@ -207,7 +336,8 @@ export async function createOrder(
 
   const orderGate = await checkPlanLimit("ordersPerMonth", monthOrderCount ?? 0);
   if (!orderGate.allowed) {
-    return { ok: false, message: orderGate.reason ?? "Monthly order limit reached." };
+    return fail({
+      message: orderGate.reason ?? "Monthly order limit reached." });
   }
 
   let resolvedSubtotal = subtotal;
@@ -225,10 +355,9 @@ export async function createOrder(
       .maybeSingle();
 
     if (productError || !product) {
-      return {
-        ok: false,
-        message: "Selected product could not be found.",
-      };
+      return fail({
+      message: "Selected product could not be found.",
+      });
     }
 
     productNameSnapshot = product.name ?? productNameSnapshot;
@@ -249,12 +378,11 @@ export async function createOrder(
       });
 
       if (!availability.available) {
-        return {
-          ok: false,
-          message:
+        return fail({
+      message:
             availability.reason ??
             "This rental is not available for the selected date.",
-        };
+        });
       }
     }
   }
@@ -269,10 +397,9 @@ export async function createOrder(
       .maybeSingle();
 
     if (serviceAreaError || !serviceArea) {
-      return {
-        ok: false,
-        message: "Selected service area could not be found.",
-      };
+      return fail({
+      message: "Selected service area could not be found.",
+      });
     }
 
     resolvedDeliveryFee =
@@ -286,12 +413,11 @@ export async function createOrder(
         : 0;
 
     if (resolvedSubtotal < minimumOrderAmount) {
-      return {
-        ok: false,
-        message: `This service area requires a minimum order of $${minimumOrderAmount.toFixed(
+      return fail({
+      message: `This service area requires a minimum order of $${minimumOrderAmount.toFixed(
           2
         )}.`,
-      };
+      });
     }
 
     resolvedNotes = [resolvedNotes, `Service area: ${serviceArea.label ?? "Service Area"}`]
@@ -337,7 +463,8 @@ export async function createOrder(
 
       if (updateCustomerError) {
         console.error("[orders] update customer failed:", updateCustomerError.message);
-        return { ok: false, message: "Couldn't update the customer record." };
+        return fail({
+      message: "Couldn't update the customer record." });
       }
     } else {
       const { data: newCust, error: custErr } = await supabase
@@ -369,12 +496,14 @@ export async function createOrder(
           .maybeSingle();
         if (!raced) {
           console.error("[orders] customer insert 23505 but re-select missing:", custErr.message);
-          return { ok: false, message: "Failed to create customer." };
+          return fail({
+      message: "Failed to create customer." });
         }
         customerId = raced.id;
       } else if (custErr || !newCust) {
         if (custErr) console.error("[orders] create customer failed:", custErr.message);
-        return { ok: false, message: "Failed to create customer." };
+        return fail({
+      message: "Failed to create customer." });
       } else {
         customerId = newCust.id;
       }
@@ -396,7 +525,8 @@ export async function createOrder(
 
     if (custErr || !newCust) {
       if (custErr) console.error("[orders] create customer failed:", custErr.message);
-      return { ok: false, message: "Failed to create customer." };
+      return fail({
+      message: "Failed to create customer." });
     }
 
     customerId = newCust.id;
@@ -408,10 +538,9 @@ export async function createOrder(
   // flows assume can't happen — silently storing a negative balance
   // corrupts every downstream calculation that reads it.
   if (depositAmount > total + 0.005) {
-    return {
-      ok: false,
+    return fail({
       message: "Deposit amount cannot exceed the order total.",
-    };
+    });
   }
   const balance = Number((total - depositAmount).toFixed(2));
   const orderNumber = createOrderNumber();
@@ -505,7 +634,8 @@ export async function createOrder(
   if (orderError || !createdOrder) {
     if (orderError) console.error("[orders] create order failed:", orderError.message);
     await rollbackAddress();
-    return { ok: false, message: "Unable to create order." };
+    return fail({
+      message: "Unable to create order." });
   }
 
   if (productId) {
@@ -523,7 +653,8 @@ export async function createOrder(
       console.error("[orders] create order item failed:", itemError.message);
       await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
-      return { ok: false, message: "Unable to add items to the order." };
+      return fail({
+      message: "Unable to add items to the order." });
     }
   }
 
@@ -541,12 +672,11 @@ export async function createOrder(
     if (!reserveResult.ok) {
       await supabase.from("orders").delete().eq("id", createdOrder.id).eq("organization_id", ctx.organizationId);
       await rollbackAddress();
-      return {
-        ok: false,
-        message:
+      return fail({
+      message:
           reserveResult.message ??
           "Unable to reserve availability for the selected date.",
-      };
+      });
     }
   }
 
@@ -819,7 +949,58 @@ export async function updateOrderStatus(
     };
   }
 
+  // Follow-up #3 — close the inquiry→confirmed reserve gap. createOrder
+  // reserves availability when a should-reserve status is the initial
+  // one; status updates did not, so an inquiry created without an event
+  // date, then edited to set one and Mark-Confirmed-d, would flip to
+  // "confirmed" with no availability block. Same product, same date, two
+  // confirmed orders. On reserve failure we roll the status back to the
+  // previous one so the operator sees the actual conflict rather than a
+  // silently broken booking.
+  if (
+    shouldReserveAvailability(parsed.data.newStatus) &&
+    !shouldReserveAvailability(currentOrder.order_status)
+  ) {
+    const { ensureAvailabilityForOrder } = await import("@/lib/availability/blocks");
+    const ensured = await ensureAvailabilityForOrder(ctx.organizationId, parsed.data.orderId);
+    if (!ensured.ok) {
+      await supabase
+        .from("orders")
+        .update({ order_status: currentOrder.order_status })
+        .eq("id", parsed.data.orderId)
+        .eq("organization_id", ctx.organizationId)
+        .eq("order_status", parsed.data.newStatus);
+      try {
+        const { logAppEvent } = await import("@/lib/observability/server");
+        await logAppEvent({
+          organizationId: ctx.organizationId,
+          userId: ctx.userId,
+          source: "orders.updateOrderStatus",
+          action: "reserve_failed_rollback",
+          status: "warning",
+          metadata: {
+            order_id: parsed.data.orderId,
+            from_status: currentOrder.order_status,
+            to_status: parsed.data.newStatus,
+            reason: ensured.message ?? null,
+          },
+        });
+      } catch { /* metric best-effort */ }
+      return {
+        ok: false,
+        message:
+          ensured.message ??
+          "Couldn't reserve this slot — another order already holds it. Status not changed.",
+      };
+    }
+  }
+
   // Release availability blocks when order is cancelled — awaited so inventory is freed immediately
+  // Follow-up #10 — track each cleanup so its failure can surface in the
+  // operator's return state instead of disappearing into the audit log.
+  // A cancel succeeds + the inventory/route detach silently fails =
+  // exactly the zombie-stops case Decision 2.11 was meant to solve.
+  const cleanupWarnings: string[] = [];
   if (parsed.data.newStatus === "cancelled") {
     try {
       const { releaseOrderAvailability } = await import("@/lib/availability/actions");
@@ -834,6 +1015,7 @@ export async function updateOrderStatus(
         message: "Failed to release availability for cancelled order",
         context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
       });
+      cleanupWarnings.push("availability hold not released — please review the calendar");
     }
 
     // Decision 2.11 — also detach the order from any open route stops so
@@ -855,6 +1037,7 @@ export async function updateOrderStatus(
         message: "Failed to release route stops for cancelled order",
         context: { orderId: parsed.data.orderId, reason: err instanceof Error ? err.message : String(err) },
       });
+      cleanupWarnings.push("route stops not detached — please review the route board");
     }
   }
 
@@ -1123,9 +1306,12 @@ export async function updateOrderStatus(
     }
   }
 
+  const warningSuffix =
+    cleanupWarnings.length > 0 ? ` Warning: ${cleanupWarnings.join("; ")}.` : "";
+
   return {
     ok: true,
-    message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}`,
+    message: `Order status updated to ${parsed.data.newStatus}.${autoAttachSuffix}${warningSuffix}`,
   };
 }
 

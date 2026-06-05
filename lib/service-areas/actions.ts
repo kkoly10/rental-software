@@ -48,6 +48,47 @@ function buildPostalCodes(primaryPostalCode: string, postalCodesInput: string[])
   return Array.from(new Set(all));
 }
 
+/**
+ * Look for any ACTIVE service area in this org that already covers one
+ * of the postal codes the operator is trying to add. Returns the
+ * conflicting area's label + the overlapping ZIPs so the action can
+ * tell the operator exactly why we won't save — instead of letting the
+ * insert succeed and confuse storefront coverage resolution down the
+ * line. Excludes a specific id when called from updateServiceArea so an
+ * edit that doesn't change the ZIPs doesn't trip over itself.
+ */
+async function findOverlappingArea(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  postalCodes: string[],
+  excludeId?: string,
+): Promise<{ label: string; overlap: string[] } | null> {
+  if (postalCodes.length === 0) return null;
+  const { data: areas } = await supabase
+    .from("service_areas")
+    .select("id, label, zip_code, postal_codes")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .is("deleted_at", null);
+  if (!areas) return null;
+  const requested = new Set(postalCodes.map((p) => p.trim()).filter(Boolean));
+  for (const a of areas) {
+    if (excludeId && a.id === excludeId) continue;
+    const existing: string[] = [];
+    if (typeof a.zip_code === "string" && a.zip_code) existing.push(a.zip_code);
+    if (Array.isArray(a.postal_codes)) {
+      for (const p of a.postal_codes) {
+        if (typeof p === "string" && p) existing.push(p);
+      }
+    }
+    const overlap = existing.filter((p) => requested.has(p));
+    if (overlap.length > 0) {
+      return { label: (a.label as string) ?? "Existing area", overlap: Array.from(new Set(overlap)) };
+    }
+  }
+  return null;
+}
+
 export async function createServiceArea(
   _prevState: ServiceAreaActionState = initialState,
   formData: FormData
@@ -114,6 +155,23 @@ export async function createServiceArea(
     parsed.data.primaryPostalCode,
     parsed.data.postalCodesInput
   );
+
+  // Stop the operator from creating two areas that both claim the same
+  // ZIP. The storefront's coverage lookup ties-breaks by `updated_at` if
+  // there are duplicates and logs a warning, but the right time to
+  // catch this is at save-time so the operator can fix it instead of
+  // shipping customers a silently-resolved fee.
+  const conflict = await findOverlappingArea(
+    supabase,
+    ctx.organizationId,
+    postalCodes,
+  );
+  if (conflict) {
+    return {
+      ok: false,
+      message: `ZIP ${conflict.overlap.join(", ")} is already covered by "${conflict.label}". Move it there or remove it from this new area before saving.`,
+    };
+  }
 
   const { error } = await supabase.from("service_areas").insert({
     organization_id: ctx.organizationId,
@@ -208,6 +266,22 @@ export async function updateServiceArea(
     parsed.data.primaryPostalCode,
     parsed.data.postalCodesInput
   );
+
+  // Same overlap guard as create — but exclude the area we're editing
+  // so a no-op save (or a rename without ZIP changes) doesn't flag its
+  // own ZIPs as duplicates.
+  const conflict = await findOverlappingArea(
+    supabase,
+    ctx.organizationId,
+    postalCodes,
+    parsed.data.serviceAreaId,
+  );
+  if (conflict) {
+    return {
+      ok: false,
+      message: `ZIP ${conflict.overlap.join(", ")} is already covered by "${conflict.label}". Move it there or remove it from this area before saving.`,
+    };
+  }
 
   const { error } = await supabase
     .from("service_areas")

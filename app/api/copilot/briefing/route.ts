@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCopilotAccessContext } from "@/lib/security/copilot-access";
+import {
+  getCopilotAccessContext,
+  copilotRoleAllowed,
+  COPILOT_CHAT_ROLES,
+} from "@/lib/security/copilot-access";
 import { getOperationalSnapshot } from "@/lib/data/operational-snapshot";
 import { buildDailyBriefing } from "@/lib/copilot/briefing";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -21,6 +25,12 @@ export async function GET() {
       { error: "You must be signed in to use Copilot." },
       { status: 401 }
     );
+  }
+
+  // Same operational-awareness gate as the chat route — the briefing surfaces
+  // balances/revenue/attention items, so crew/viewer get a null briefing.
+  if (!copilotRoleAllowed(access.role, COPILOT_CHAT_ROLES)) {
+    return jsonResponse({ briefing: null });
   }
 
   try {
