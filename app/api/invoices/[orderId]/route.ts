@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getActiveMemberRole, FINANCIAL_DOC_ROLES } from "@/lib/auth/member-role";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -44,6 +45,12 @@ export async function GET(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // Financials + customer PII — restrict to operational roles (crew/viewer out).
+  const role = await getActiveMemberRole(supabase, ctx.organizationId, ctx.userId);
+  if (!role || !FINANCIAL_DOC_ROLES.includes(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // Fetch order with customer, items, and org details in parallel
   const [
