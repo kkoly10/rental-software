@@ -167,3 +167,43 @@ Korent serves operators and customers in **English, French, Spanish, Portuguese*
 **Changes:** action types/union (`lib/copilot/actions.ts`); discriminated route schema + branched audit/revalidate (`app/api/copilot/action/route.ts`); extracted, hardened `parseActionFromResponse` (`lib/copilot/parse-action.ts`); payment preview + i18n in all four locales (`copilot-action-preview.tsx`, `messages/*`); `record_payment` protocol in the system prompt; order IDs exposed in the operational context; a "Record a payment" suggested prompt.
 
 **Verification:** `tsc --noEmit` clean; full unit suite green, including new `tests/copilot-parse-action.test.ts` (content + payment parsing, amount coercion, empty-note dropping, and rejection of bad method / non-positive amount / missing orderId / refund / malformed JSON).
+
+---
+
+## Launch-readiness hardening (2026-06-05)
+
+A full pre-launch review surfaced three gaps, now closed:
+
+- **Role-gated access (RBAC).** The chat/awareness surface previously let *any*
+  active member read org-wide financials (revenue, outstanding balances). It's
+  now gated by role via a dependency-free allow-list module
+  (`lib/security/copilot-roles.ts`, unit-tested in `tests/copilot-roles.test.ts`):
+  - **Chat + daily briefing** (`/api/copilot`, `/api/copilot/briefing`) →
+    `COPILOT_CHAT_ROLES` = owner/admin/**dispatcher**. Dispatchers run day-to-day
+    ops (record payments, send replies, deliveries) so they keep operational
+    awareness; **crew/viewer are excluded** from financial figures (403, or a
+    null briefing).
+  - **Actions + content-value reads** (`/api/copilot/action`,
+    `/api/copilot/current-values`, `/api/copilot/acknowledge` POST) →
+    `COPILOT_ACTION_ROLES` = owner/admin only (unchanged policy, now centralized).
+  - A test asserts action access is a strict subset of chat access.
+
+- **Multi-org resolution bug.** `getCopilotAccessContext` resolved the org as
+  "oldest active membership," ignoring the `ACTIVE_ORG_COOKIE` the org switcher
+  writes — so a user who had accepted an invite to a second org would have the
+  Copilot silently act on the wrong tenant (and the action route's role check
+  could disagree with the cookie-resolved org the delegated server actions
+  actually mutate). It now honours the cookie exactly like `getOrgContext`, and
+  returns the member's `role`. New signups are unaffected (a fresh signup has
+  exactly one owner membership, so oldest = only = correct); the bug only ever
+  affected multi-org users post-invite.
+
+- **Advisor: anon GRANT on the acknowledgment ledger.** `copilot_action_acknowledgments`
+  inherited the default `anon` table grant, exposing it in the GraphQL schema
+  (no actual row leak — RLS has no anon policy). `20260606_020000_copilot_ack_revoke_anon.sql`
+  revokes all grants from `anon`/`public` (authenticated keeps its own-row RLS).
+  Applied + verified on prod: only `authenticated` retains grants.
+
+**Still the one true blocker (unchanged):** an attorney should review the
+AI-assistance acknowledgment terms for the operator's jurisdiction before
+relying on them as legal protection. SMS/WhatsApp remains draft-only by design.

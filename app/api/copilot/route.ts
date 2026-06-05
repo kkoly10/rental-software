@@ -24,7 +24,11 @@ import {
 } from "@/lib/validation/copilot";
 import { buildConversationMessages } from "@/lib/copilot/conversation";
 import { isAllowedRequestOrigin } from "@/lib/security/request-origin";
-import { getCopilotAccessContext } from "@/lib/security/copilot-access";
+import {
+  getCopilotAccessContext,
+  copilotRoleAllowed,
+  COPILOT_CHAT_ROLES,
+} from "@/lib/security/copilot-access";
 import { getRequestClientKey } from "@/lib/security/request-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
@@ -93,6 +97,25 @@ export async function POST(request: NextRequest) {
     return jsonResponse(
       { error: "You must be signed in to use Copilot." },
       { status: 401 }
+    );
+  }
+
+  // Operational awareness (balances, revenue, schedule, messages) is limited to
+  // roles that run operations. Crew/viewer have no need for financial figures.
+  if (!copilotRoleAllowed(access.role, COPILOT_CHAT_ROLES)) {
+    await logAppEvent({
+      organizationId: access.organizationId,
+      userId: access.userId,
+      source: "copilot.route",
+      action: "access_denied",
+      status: "warning",
+      route: request.nextUrl.pathname,
+      metadata: { role: access.role },
+    });
+
+    return jsonResponse(
+      { error: "Your role doesn't have access to Copilot." },
+      { status: 403 }
     );
   }
 
