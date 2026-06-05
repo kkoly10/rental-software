@@ -95,22 +95,29 @@ export async function signInWithPassword(
   _prevState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  // Capture the email up front so every error path can echo it back
+  // and the login form preserves it. Otherwise a wrong-password error
+  // clears the email field and the user has to retype before trying
+  // again — UX dig pass 5 caught this on the live login page.
+  const submittedEmail = String(formData.get("email") ?? "");
+
   if (!hasSupabaseEnv()) {
     return {
       ok: false,
       message:
         "Supabase environment variables are missing. Add them to .env.local to enable auth.",
+      email: submittedEmail,
     };
   }
 
   const parsed = signInSchema.safeParse({
-    email: String(formData.get("email") ?? ""),
+    email: submittedEmail,
     password: String(formData.get("password") ?? ""),
     redirect: String(formData.get("redirect") ?? "/dashboard"),
   });
 
   if (!parsed.success) {
-    return { ok: false, message: getValidationMessage(parsed.error) };
+    return { ok: false, message: getValidationMessage(parsed.error), email: submittedEmail };
   }
 
   try {
@@ -126,7 +133,7 @@ export async function signInWithPassword(
         status: "warning",
       });
 
-      return rateLimitFailure;
+      return { ...rateLimitFailure, email: submittedEmail };
     }
   } catch (error) {
     await logAppError({
@@ -139,6 +146,7 @@ export async function signInWithPassword(
     return {
       ok: false,
       message: "Unable to process sign-in right now. Please try again shortly.",
+      email: submittedEmail,
     };
   }
 
@@ -158,7 +166,7 @@ export async function signInWithPassword(
       metadata: { reason: error.message },
     });
 
-    return { ok: false, message: error.message };
+    return { ok: false, message: error.message, email: submittedEmail };
   }
 
   const {
@@ -174,6 +182,7 @@ export async function signInWithPassword(
     return {
       ok: false,
       message: "Unable to load your account after sign-in. Please try again.",
+      email: submittedEmail,
     };
   }
 
