@@ -19,7 +19,7 @@ Korent is expanding from one mature vertical (inflatables) to **five party-renta
 
 To do this without copy-pasting inflatable-shaped code into 5 sibling modules, we are adopting a **capability-based architecture**: small composable behaviors (pricing models, setup logistics, display helpers) that verticals declare as a list. Verticals become thin configurations that pick from the capability buffet.
 
-The current code's inflatable-specific surface (wet/dry, anchoring) is already capability-shaped — it just lives in scattered files. Phase 0 extracts it into the capability pattern with zero behavior change. Phase 1+ adds the new capabilities that unlock photo booths and concessions. Phase 2 ships marketing pages and configs for the 5 verticals.
+The current code's inflatable-specific surface (wet/dry, anchoring) is already capability-shaped — it just lives in scattered files. Phase 0 extracts it into the capability pattern with zero behavior change. Phase 1 adds **9 new capabilities** (per-hour pricing, per-unit pricing, setup window, capacity calculator, structured specs, onsite attendant, minimum order, add-ons, variant gallery) — every one required to ship the 5 verticals at **true 10/10 fit**. Phase 2 ships marketing pages and configs for the 5 verticals.
 
 **Parked for later (Tier C+):** linens, bar equipment, games & amusements, generators, restrooms, wedding decor. These are valid verticals; we're sequencing them after the first five ship.
 
@@ -175,9 +175,9 @@ Default: when a product is created under a category, the product inherits the ca
 | Operator arrives 2–4 hours before event | `setup.setup-window` *(NEW)* |
 | Display "fits 100 guests" / "20×20 = 400 sq ft" | `display.capacity-calculator` *(NEW)* |
 | Dimensions, peak height, side wall count | `display.structured-specs` *(NEW)* |
+| Sidewalls / lighting / heating / flooring as checkbox add-ons | `composition.add-ons` *(NEW)* |
 
 **Out of scope for v1 (defer):**
-- Component/kit composition (tents = parent + sidewalls + lighting as children). Workaround: list each size+config as a separate SKU. Revisit in Phase B.
 - Site survey workflow. Workaround: operator handles via order notes.
 - Permit tracking. Workaround: operator handles via document upload (already supported).
 
@@ -193,10 +193,11 @@ Default: when a product is created under a category, the product inherits the ca
 | Per-unit pricing ($5–7/chair × qty) | `pricing.per-unit` *(NEW)* |
 | Order minimum ($600 typical) | `order.minimum-order` *(NEW)* |
 | Style / color filter on storefront (chiavari gold/silver/clear, banquet round/rectangular) | `display.structured-specs` *(NEW)* |
+| Optional setup-service surcharge ($1/chair to arrange) | `composition.add-ons` *(NEW)* |
 | Delivery + next-day pickup included | `pricing.flat-day` *(existing)* |
 
 **Out of scope for v1 (defer):**
-- Optional setup-service surcharge ("we'll arrange the chairs for $1/chair"). Workaround: list as separate product or include in price. Revisit when add-on capability lands (Phase B).
+- (none — all v1 needs covered by capabilities above)
 
 **Sources:**
 - chiavarichairrentals.org pricing ($4.95/chair nationwide, $600 minimum)
@@ -225,12 +226,12 @@ Default: when a product is created under a category, the product inherits the ca
 | Idle-hour rate (booth present but inactive — half rate) | `pricing.per-hour` *(NEW — config option)* |
 | Operator arrives ~60 min before event | `setup.setup-window` *(NEW)* |
 | Onsite attendant included (or surcharge) | `service.onsite-attendant` *(NEW)* |
-| Backdrop catalog (visual picker) | `display.structured-specs` *(NEW — variant picker via attributes; full visual picker deferred)* |
+| **Backdrop catalog with visual picker** (clickable thumbnails) | `display.variant-gallery` *(NEW)* |
+| Extra hours / premium attendant / template overlay as checkbox add-ons | `composition.add-ons` *(NEW)* |
 | Equipment specs (booth size, power, footprint) | `display.structured-specs` *(NEW)* |
 
 **Out of scope for v1 (defer to Phase B):**
-- Multi-step booking flow (package → backdrop → template → addons). Current single-step checkout is fine for v1.
-- Template overlay catalog. Operator can attach via order notes / asset link.
+- Multi-step booking flow (package → backdrop → template → addons). Current single-step checkout extended with variant + add-on pickers covers most operator needs for v1.
 - Post-event gallery upload. Workaround: operator emails gallery link via existing communications module.
 - Mini-session back-to-back slot booking. Workaround: operator manually splits.
 
@@ -250,10 +251,10 @@ Default: when a product is created under a category, the product inherits the ca
 | Consumables included (popcorn kernels, syrup) | `display.structured-specs` *(NEW)* |
 | Servings per unit ("makes 40 snow cones per 20lb ice") | `display.structured-specs` *(NEW)* |
 | Optional onsite attendant (1hr included, +$100/hr after) | `service.onsite-attendant` *(NEW)* |
+| Cleaning fee / extra consumables as checkbox add-ons | `composition.add-ons` *(NEW)* |
 
 **Out of scope for v1 (defer):**
-- Cleaning fee add-on. Workaround: embed in base price or operator collects later.
-- Consumables restocking flow. Workaround: each rental is fresh kit.
+- Consumables restocking workflow. Workaround: each rental is fresh kit; restocking is a Phase B inventory feature.
 
 **Sources:**
 - Freedom FUN USA Dallas concession rentals page (consumables included, 110V requirement)
@@ -264,7 +265,7 @@ Default: when a product is created under a category, the product inherits the ca
 
 ## 4. Capabilities to build (Phase 1 master list)
 
-These are the new capabilities required to ship all five verticals at 10/10 fit:
+These are the new capabilities required to ship all five verticals at **true 10/10 fit**:
 
 | Capability | Used by | Implementation notes |
 |---|---|---|
@@ -275,8 +276,10 @@ These are the new capabilities required to ship all five verticals at 10/10 fit:
 | `display.structured-specs` | All five (specs table on PDP) | New `product_specs` table — key/value pairs (`product_id`, `spec_key`, `spec_label`, `spec_value`, `display_order`). Storefront renders a definition list. Replaces ad-hoc `product_attributes` for visible specs. |
 | `service.onsite-attendant` | Photo booths, concessions | New `products.attendant_included_hours` integer + `products.attendant_overage_cents_per_hour`. Order line auto-adds overage when rental exceeds. |
 | `order.minimum-order` | Tables & chairs | New `products.minimum_order_quantity` integer OR `categories.minimum_order_cents`. Storefront blocks checkout below threshold. |
+| `composition.add-ons` | Tents (sidewalls/lighting/heating/flooring), tables/chairs (setup-service), concessions (cleaning fee), photo booths (extra hours / premium attendant) | New `product_addons` join table (`parent_product_id`, `addon_product_id`, `default_quantity`, `max_quantity`, `display_order`). Checkout step renders add-ons as checkboxes + qty steppers. Order lines link parent + add-on rows via `parent_order_item_id`. |
+| `display.variant-gallery` | Photo booths (backdrops), tents (color variants), dance floors (parquet/black/white/LED) | New `product_variants` table (`product_id`, `variant_label`, `thumbnail_url`, `price_delta_cents`, `is_default`, `display_order`). Storefront PDP renders a visual picker (clickable thumbnails). Order line stores `selected_variant_id`. |
 
-All seven capabilities are implementable in **~2–3 weeks** of focused work. Per-hour pricing is the highest-leverage single capability (unlocks 2 of the 5 verticals on its own) and should be built first inside Phase 1.
+All nine capabilities are implementable in **~4 weeks** of focused work split across Phase 1a/b/c. Per-hour pricing is the highest-leverage single capability (unlocks 2 of the 5 verticals on its own) and should be built first inside Phase 1.
 
 ---
 
@@ -381,14 +384,52 @@ alter table categories
   add column minimum_order_cents integer;
 ```
 
+```sql
+-- migration: 20260607_090000_product_addons.sql
+create table product_addons (
+  id uuid primary key default gen_random_uuid(),
+  parent_product_id uuid not null references products(id) on delete cascade,
+  addon_product_id  uuid not null references products(id) on delete restrict,
+  default_quantity  integer not null default 0,
+  max_quantity      integer,
+  is_required       boolean not null default false,
+  display_order     integer not null default 0,
+  created_at        timestamptz not null default now(),
+  unique (parent_product_id, addon_product_id)
+);
+create index on product_addons(parent_product_id, display_order);
+```
+
+```sql
+-- migration: 20260607_100000_product_variants.sql
+create table product_variants (
+  id uuid primary key default gen_random_uuid(),
+  product_id        uuid not null references products(id) on delete cascade,
+  variant_label     text not null,           -- "Sequin Gold", "Black Roman"
+  thumbnail_url     text,                    -- visible in PDP picker
+  preview_image_url text,                    -- larger lightbox view
+  price_delta_cents integer not null default 0,
+  is_default        boolean not null default false,
+  display_order     integer not null default 0,
+  created_at        timestamptz not null default now()
+);
+create index on product_variants(product_id, display_order);
+create unique index product_variants_one_default
+  on product_variants(product_id) where is_default;
+```
+
 ### 5.3 Order line changes
 
 ```sql
 -- migration: 20260607_080000_order_item_extensions.sql
 alter table order_items
-  add column billed_hours numeric(5,2),       -- per-hour pricing
-  add column billed_units integer,             -- per-unit pricing
-  add column attendant_overage_hours numeric(5,2);
+  add column billed_hours numeric(5,2),                          -- per-hour pricing
+  add column billed_units integer,                                -- per-unit pricing
+  add column attendant_overage_hours numeric(5,2),
+  add column parent_order_item_id uuid references order_items(id) on delete cascade,  -- add-ons
+  add column selected_variant_id uuid references product_variants(id);                -- variant gallery
+
+create index on order_items(parent_order_item_id);
 ```
 
 Existing `order_items` rows are unaffected; new columns are nullable and populated only by capability-aware checkout paths.
@@ -413,6 +454,9 @@ lib/
     display/
       capacity-calculator.ts
       structured-specs.ts
+      variant-gallery.ts
+    composition/
+      add-ons.ts
     mode/
       wet-dry.ts
     service/
@@ -444,6 +488,9 @@ components/
     display/
       CapacityCalculatorWidget.tsx
       StructuredSpecsTable.tsx
+      VariantGalleryPicker.tsx
+    composition/
+      AddOnsPicker.tsx
     service/
       AttendantFields.tsx
     order/
@@ -476,12 +523,13 @@ The 6 marketing pages render a single shared `<VerticalLanding vertical={slug} /
 | **1a** | `pricing.per-hour` capability | 1 week | Internal |
 | **1b** | `pricing.per-unit` + `order.minimum-order` capabilities | 1 week | Internal |
 | **1c** | `setup.setup-window` + `display.capacity-calculator` + `display.structured-specs` + `service.onsite-attendant` | 1 week | Internal |
+| **1d** | `composition.add-ons` + `display.variant-gallery` (the two capabilities that move the v1 ceiling from ~8.5/10 to true 10/10 — tent add-ons, photo-booth backdrop picker) | 2 weeks | Internal |
 | **2a** | Vertical landing pages: dynamic `[vertical]-rental-software` route + `<VerticalLanding>` component. Inflatables landing page ships. | 3 days | Public (inflatables /vertical page live) |
 | **2b** | Ship Tents + Tables/Chairs + Dance floors (configs + content + images) | 1 week | Public (3 verticals live) |
 | **2c** | Ship Photo booths + Concessions (configs + content + images) | 1 week | Public (5 verticals live) |
 | **3** | Onboarding: multi-vertical signup picker, vertical-aware dashboard empty states, vertical-aware demo data seed | 1 week | Public (10/10 onboarding) |
 
-**Total: ~7–8 weeks** from kickoff to all 5 verticals shipped at 10/10.
+**Total: ~9–10 weeks** from kickoff to all 5 verticals shipped at true 10/10.
 
 Parallel image sourcing happens during phases 1–2 (see §10).
 
@@ -597,3 +645,4 @@ US market demand context (June 2026 IBISWorld + Goodshuffle/Booqable competitive
 | Date | Author | Change |
 |---|---|---|
 | 2026-06-05 | Claude (initial draft) | Document created. Supersedes the "vehicles & fleet as #2" recommendation in `05-vertical-roadmap.md`. Awaiting Phase 0 kickoff. |
+| 2026-06-05 | Claude (true-10/10 amendment) | Promoted `composition.add-ons` and `display.variant-gallery` from deferred / Phase B into Phase 1d. Honest grade audit found v1 capped photo booths at 7/10 (no backdrop visual picker) and tents at 8.5/10 (no add-on model for sidewalls/lighting/heating). Adding these two capabilities (+2 weeks: 7–8 wks → 9–10 wks) gets all 5 verticals to true 10/10. Section 3 capability tables, section 4 master list, section 5 migrations (added `product_addons` and `product_variants` tables + `parent_order_item_id` / `selected_variant_id` columns on `order_items`), section 6 file layout, and section 7 phase plan updated. |
