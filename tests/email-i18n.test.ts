@@ -46,6 +46,20 @@ test("subject lines are localized", () => {
   assert.match(emailCopy("es").subjects.orderStatus("1042", "Acme", "Entrega programada"), /Entrega programada — pedido n\.º 1042 — Acme/);
 });
 
+test("document type names are localized", () => {
+  assert.equal(emailCopy("en").documentsReady.typeNames.rental_agreement, "Rental Agreement");
+  assert.equal(emailCopy("fr").documentsReady.typeNames.safety_waiver, "décharge de responsabilité");
+  assert.equal(emailCopy("es").documentsReady.typeNames.rental_agreement, "contrato de alquiler");
+  assert.equal(emailCopy("pt").documentsReady.typeNames.safety_waiver, "termo de responsabilidade");
+});
+
+test("around-time delivery window is localized (not English)", () => {
+  assert.equal(emailCopy("en").aroundTime("10:00 AM"), "Around 10:00 AM");
+  assert.match(emailCopy("fr").aroundTime("10:00"), /^Vers 10:00$/);
+  assert.match(emailCopy("es").aroundTime("10:00"), /^Alrededor de las 10:00$/);
+  assert.match(emailCopy("pt").aroundTime("10:00"), /^Por volta das 10:00$/);
+});
+
 test("every locale exposes the same key set as en (shape parity)", () => {
   const keys = (o: object): string[] =>
     Object.entries(o).flatMap(([k, v]) =>

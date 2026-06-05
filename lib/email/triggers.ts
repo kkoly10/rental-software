@@ -478,7 +478,7 @@ export async function triggerOrderStatusEmail(params: {
         if (windowStart && windowEnd) {
           deliveryTimeWindow = `${windowStart} – ${windowEnd}`;
         } else if (windowStart) {
-          deliveryTimeWindow = `Around ${windowStart}`;
+          deliveryTimeWindow = emailCopy(customerLocale).aroundTime(windowStart);
         }
 
         const route = (stop as Record<string, unknown>).routes as {

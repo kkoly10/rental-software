@@ -95,9 +95,13 @@ type EmailCopyBundle = {
     heading: string;
     /** Connector used to join document-type names, e.g. " and ". */
     listAnd: string;
+    /** Localized display names for known document types (unknown types fall back to title-case). */
+    typeNames: Record<"rental_agreement" | "safety_waiver", string>;
     intro: (firstName: string, docList: string, orderNumber: string, plural: boolean) => string;
     button: string;
   };
+  /** "Around 10:00 AM" — single-bound delivery-time window value. */
+  aroundTime: (time: string) => string;
   eventReminder: {
     heading: string;
     intro: (firstName: string) => string;
@@ -224,10 +228,15 @@ const en: EmailCopyBundle = {
   documentsReady: {
     heading: "Documents ready to sign",
     listAnd: " and ",
+    typeNames: {
+      rental_agreement: "Rental Agreement",
+      safety_waiver: "Safety Waiver",
+    },
     intro: (firstName, docList, orderNumber, plural) =>
       `Hi ${firstName}, your ${docList} for order #${orderNumber} ${plural ? "are" : "is"} ready for your signature.`,
     button: "Review & sign documents",
   },
+  aroundTime: (time) => `Around ${time}`,
   eventReminder: {
     heading: "Your rental is tomorrow!",
     intro: (firstName) =>
@@ -365,10 +374,15 @@ const fr: EmailCopyBundle = {
   documentsReady: {
     heading: "Documents prêts à signer",
     listAnd: " et ",
+    typeNames: {
+      rental_agreement: "contrat de location",
+      safety_waiver: "décharge de responsabilité",
+    },
     intro: (firstName, docList, orderNumber, plural) =>
       `Bonjour ${firstName}, ${plural ? "vos" : "votre"} ${docList} pour la commande n° ${orderNumber} ${plural ? "sont prêts" : "est prêt"} à être signé${plural ? "s" : ""}.`,
     button: "Consulter et signer les documents",
   },
+  aroundTime: (time) => `Vers ${time}`,
   eventReminder: {
     heading: "Votre location, c'est demain !",
     intro: (firstName) =>
@@ -506,10 +520,15 @@ const es: EmailCopyBundle = {
   documentsReady: {
     heading: "Documentos listos para firmar",
     listAnd: " y ",
+    typeNames: {
+      rental_agreement: "contrato de alquiler",
+      safety_waiver: "exención de responsabilidad",
+    },
     intro: (firstName, docList, orderNumber, plural) =>
       `Hola ${firstName}, ${plural ? "tus" : "tu"} ${docList} del pedido n.º ${orderNumber} ${plural ? "están listos" : "está listo"} para tu firma.`,
     button: "Revisar y firmar documentos",
   },
+  aroundTime: (time) => `Alrededor de las ${time}`,
   eventReminder: {
     heading: "¡Tu alquiler es mañana!",
     intro: (firstName) =>
@@ -647,10 +666,15 @@ const pt: EmailCopyBundle = {
   documentsReady: {
     heading: "Documentos prontos para assinar",
     listAnd: " e ",
+    typeNames: {
+      rental_agreement: "contrato de locação",
+      safety_waiver: "termo de responsabilidade",
+    },
     intro: (firstName, docList, orderNumber, plural) =>
       `Olá ${firstName}, ${plural ? "seus" : "seu"} ${docList} do pedido n.º ${orderNumber} ${plural ? "estão prontos" : "está pronto"} para a sua assinatura.`,
     button: "Revisar e assinar documentos",
   },
+  aroundTime: (time) => `Por volta das ${time}`,
   eventReminder: {
     heading: "Sua locação é amanhã!",
     intro: (firstName) =>
