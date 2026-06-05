@@ -39,6 +39,31 @@ export type CheckoutActionState = {
   orderNumber?: string;
   fieldErrors?: CheckoutFieldErrors;
   stripeUrl?: string;
+  /**
+   * What the customer just submitted, echoed back so the form can
+   * re-mount with their inputs intact when the action returns an
+   * error. Without this, useActionState re-renders the form with
+   * empty defaults and the customer has to retype every field
+   * (first name, last name, phone, email, address, city, state) just
+   * because their ZIP was out of coverage or terms weren't checked.
+   * Conversion-killer at scale. Populated on every error return; on
+   * success the form unmounts so we leave it undefined.
+   */
+  submittedValues?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    eventDate?: string;
+    startTime?: string;
+    endTime?: string;
+    rentalEndDate?: string;
+  };
   // Order summary fields — populated on success so the form can show a review screen
   summary?: {
     productName: string;
@@ -69,12 +94,45 @@ export async function createCheckoutOrder(
   _prevState: CheckoutActionState,
   formData: FormData
 ): Promise<CheckoutActionState> {
+  // Capture what the customer typed up front so every error path can
+  // echo it back. Without this round-trip, useActionState re-mounts
+  // the form with empty inputs after each failed submit and the
+  // customer has to retype every field just because (e.g.) the ZIP
+  // wasn't in our coverage area. That's a conversion-killer.
+  const submittedValues = {
+    firstName: String(formData.get("first_name") ?? ""),
+    lastName: String(formData.get("last_name") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    line1: String(formData.get("line1") ?? ""),
+    line2: String(formData.get("line2") ?? ""),
+    city: String(formData.get("city") ?? ""),
+    state: String(formData.get("state") ?? ""),
+    postalCode: String(formData.get("postal_code") ?? ""),
+    eventDate: String(formData.get("event_date") ?? ""),
+    startTime: String(formData.get("start_time") ?? ""),
+    endTime: String(formData.get("end_time") ?? ""),
+    rentalEndDate: String(formData.get("rental_end_date") ?? ""),
+  };
+
+  // Closure helper so every ok: false path echoes the submittedValues
+  // back to the client. Eliminates the conversion-killer where the
+  // form mounts empty after each error and the customer has to retype
+  // first name, last name, phone, email, address, city, and state
+  // because of (e.g.) an out-of-coverage ZIP.
+  const fail = (
+    extra: Omit<CheckoutActionState, "submittedValues" | "ok"> & { message: string },
+  ): CheckoutActionState => ({
+    ok: false,
+    ...extra,
+    submittedValues
+  });
+
   const termsAccepted = formData.has("terms_accepted");
   if (!termsAccepted) {
-    return {
-      ok: false,
-      message: "You must agree to the rental terms to place a booking.",
-    };
+    return fail({
+      message: "You must agree to the rental terms to place a booking."
+    });
   }
 
   const smsOptIn = formData.get("sms_opt_in") === "true";
@@ -100,7 +158,7 @@ export async function createCheckoutOrder(
     selectedMode: String(formData.get("selected_mode") ?? ""),
     fulfillmentType: String(formData.get("fulfillment_type") ?? "delivery"),
     rentalEndDate: String(formData.get("rental_end_date") ?? ""),
-    idempotencyKey: String(formData.get("idempotency_key") ?? ""),
+    idempotencyKey: String(formData.get("idempotency_key") ?? "")
   });
 
   if (!parsed.success) {
@@ -125,12 +183,11 @@ export async function createCheckoutOrder(
         }
       }
     }
-    return {
-      ok: false,
+    return fail({
       message:
         parsed.error.issues[0]?.message ?? "Please review your checkout details.",
       fieldErrors,
-    };
+    });
   }
 
   const {
@@ -164,14 +221,14 @@ export async function createCheckoutOrder(
         actor: clientKey,
         limit: 8,
         windowSeconds: 3600,
-        strict: true,
+        strict: true
       }),
       enforceRateLimit({
         scope: "checkout:email",
         actor: email,
         limit: 5,
         windowSeconds: 3600,
-        strict: true,
+        strict: true
       }),
     ]);
 
@@ -179,26 +236,24 @@ export async function createCheckoutOrder(
       await logAppEvent({
         source: "checkout.website",
         action: "rate_limited",
-        status: "warning",
+        status: "warning"
       });
 
-      return {
-        ok: false,
-        message: "Too many checkout attempts. Please wait a bit and try again.",
-      };
+      return fail({
+      message: "Too many checkout attempts. Please wait a bit and try again.",
+      });
     }
   } catch (error) {
     await logAppError({
       source: "checkout.website",
       message: "Checkout rate limit check failed",
       stack: error instanceof Error ? error.stack : undefined,
-      error,
+      error
     });
 
-    return {
-      ok: false,
+    return fail({
       message: "Unable to process checkout right now. Please try again shortly.",
-    };
+    });
   }
 
   if (!hasSupabaseEnv()) {
@@ -216,7 +271,7 @@ export async function createCheckoutOrder(
   const { blockDemoWrites } = await import("@/lib/demo/guard");
   const demoCheck = await blockDemoWrites(orgId);
   if (demoCheck.blocked) {
-    return { ok: false, message: demoCheck.message };
+    return fail({ message: demoCheck.message });
   }
 
   // Idempotency replay: if the client sent a key we've already seen
@@ -246,14 +301,13 @@ export async function createCheckoutOrder(
   if (!orgId) {
     await logAppError({
       source: "checkout.website",
-      message: "Public checkout missing organization context",
+      message: "Public checkout missing organization context"
     });
 
-    return {
-      ok: false,
+    return fail({
       message:
         "No organization found. An operator must complete onboarding first.",
-    };
+    });
   }
 
   // The public checkout runs anonymously, so the cookie-bound RLS-scoped
@@ -273,13 +327,13 @@ export async function createCheckoutOrder(
   let serviceArea: Awaited<ReturnType<typeof resolveServiceAreaForAddress>> | null = null;
   if (fulfillmentType === "delivery") {
     if (!line1 || !city || !state || !postalCode) {
-      return { ok: false, message: "Delivery address is required for delivery orders." };
+      return fail({ message: "Delivery address is required for delivery orders." });
     }
     serviceArea = await resolveServiceAreaForAddress({
       organizationId: orgId,
       postalCode,
       city,
-      state,
+      state
     });
 
     if (!serviceArea) {
@@ -288,14 +342,13 @@ export async function createCheckoutOrder(
         source: "checkout.website",
         action: "service_area_not_found",
         status: "warning",
-        metadata: { postalCode, city, state },
+        metadata: { postalCode, city, state }
       });
 
-      return {
-        ok: false,
-        message:
+      return fail({
+      message:
           "We do not currently serve that delivery area. Please enter a ZIP code within a configured service area.",
-      };
+      });
     }
   }
 
@@ -345,13 +398,12 @@ export async function createCheckoutOrder(
           metadata: {
             product_slug: productSlug,
             product_id: product.id,
-          },
+          }
         });
-        return {
-          ok: false,
-          message:
+        return fail({
+      message:
             "Pricing isn't set for this item yet. Please contact us to confirm a quote before booking.",
-        };
+        });
       }
       const ratePerDay = Number(rawBasePrice);
       productId = product.id;
@@ -392,7 +444,7 @@ export async function createCheckoutOrder(
           eventDate,
           bookingDate: new Date().toISOString().split("T")[0],
           rentalDays: days,
-          pricingModel: "per_day",
+          pricingModel: "per_day"
         });
 
         subtotal = priceCalc.finalPrice;
@@ -430,11 +482,10 @@ export async function createCheckoutOrder(
   // and surprising the operator with a $0 order. Hit when no productSlug was
   // provided AND the wet upcharge path didn't fire.
   if (subtotal <= 0) {
-    return {
-      ok: false,
+    return fail({
       message:
         "We couldn't determine pricing for this booking. Please reopen the product page and try again.",
-    };
+    });
   }
 
   if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
@@ -447,20 +498,19 @@ export async function createCheckoutOrder(
         subtotal,
         minimumOrderAmount: serviceArea.minimumOrderAmount,
         serviceAreaId: serviceArea?.id ?? null,
-      },
+      }
     });
 
-    return {
-      ok: false,
+    return fail({
       message: `This service area requires a minimum order of $${serviceArea.minimumOrderAmount.toFixed(
         2
       )}.`,
-    };
+    });
   }
 
   // Event date is required when a specific product is being booked
   if (productId && !eventDate) {
-    return { ok: false, message: "Please select an event date to check availability." };
+    return fail({ message: "Please select an event date to check availability." });
   }
 
   // Reject a reversed multi-day range up front. Earlier code (~line 339)
@@ -468,10 +518,9 @@ export async function createCheckoutOrder(
   // a customer entering "Jun 15 to Jun 10" was silently charged for one day.
   // Hard-fail with a clear message instead.
   if (eventDate && rentalEndDate && rentalEndDate < eventDate) {
-    return {
-      ok: false,
+    return fail({
       message: "Rental end date must be on or after the event date.",
-    };
+    });
   }
 
   // Enforce booking date policies (lead time and max advance).
@@ -495,14 +544,13 @@ export async function createCheckoutOrder(
         bookingPolicies.bookingLeadTimeHours === 0
           ? "This event date has already passed."
           : `Bookings require at least ${bookingPolicies.bookingLeadTimeHours} hours advance notice.`;
-      return { ok: false, message: friendly };
+      return fail({ message: friendly });
     }
 
     if (eventDateMs > maxDateMs) {
-      return {
-        ok: false,
-        message: `Bookings cannot be more than ${bookingPolicies.maxAdvanceBookingDays} days in advance.`,
-      };
+      return fail({
+      message: `Bookings cannot be more than ${bookingPolicies.maxAdvanceBookingDays} days in advance.`,
+      });
     }
   }
 
@@ -513,7 +561,7 @@ export async function createCheckoutOrder(
       eventDate,
       startTime,
       endTime,
-      rentalEndDate,
+      rentalEndDate
     });
 
     if (!availability.available) {
@@ -525,15 +573,14 @@ export async function createCheckoutOrder(
         metadata: {
           productId,
           eventDate,
-        },
+        }
       });
 
-      return {
-        ok: false,
-        message:
+      return fail({
+      message:
           availability.reason ??
           "This rental is not available for the selected date.",
-      };
+      });
     }
   }
 
@@ -577,13 +624,12 @@ export async function createCheckoutOrder(
         organizationId: orgId,
         source: "checkout.website",
         message: "Failed to update existing customer during checkout",
-        context: { customerId, reason: updateCustomerError.message },
+        context: { customerId, reason: updateCustomerError.message }
       });
 
-      return {
-        ok: false,
-        message: "We couldn't update your contact details. Please try again or contact the operator.",
-      };
+      return fail({
+      message: "We couldn't update your contact details. Please try again or contact the operator.",
+      });
     }
   } else {
     const { data: customer, error: customerError } = await supabase
@@ -596,7 +642,7 @@ export async function createCheckoutOrder(
         phone: phone ?? null,
         sms_opt_in: smsOptIn,
         sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
-        sms_opt_in_ip: smsOptIn ? clientIp : null,
+        sms_opt_in_ip: smsOptIn ? clientIp : null
       })
       .select("id")
       .single();
@@ -620,9 +666,9 @@ export async function createCheckoutOrder(
           organizationId: orgId,
           source: "checkout.website",
           message: "Customer insert hit unique constraint but re-SELECT found no row",
-          context: { reason: customerError.message },
+          context: { reason: customerError.message }
         });
-        return { ok: false, message: "We couldn't create your account. Please try again." };
+        return fail({ message: "We couldn't create your account. Please try again." });
       }
       customerId = existing.id;
       // Don't set newCustomerId — the other request owns the row, we
@@ -632,13 +678,12 @@ export async function createCheckoutOrder(
         organizationId: orgId,
         source: "checkout.website",
         message: "Failed to create customer during checkout",
-        context: { reason: customerError?.message },
+        context: { reason: customerError?.message }
       });
 
-      return {
-        ok: false,
-        message: "We couldn't create your account. Please try again.",
-      };
+      return fail({
+      message: "We couldn't create your account. Please try again.",
+      });
     } else {
       customerId = customer.id;
       newCustomerId = customer.id;
@@ -658,7 +703,7 @@ export async function createCheckoutOrder(
         city,
         state,
         postal_code: postalCode,
-        is_default_delivery: true,
+        is_default_delivery: true
       })
       .select("id")
       .single();
@@ -672,13 +717,12 @@ export async function createCheckoutOrder(
         organizationId: orgId,
         source: "checkout.website",
         message: "Failed to create address during checkout",
-        context: { reason: addressError?.message, customerId },
+        context: { reason: addressError?.message, customerId }
       });
 
-      return {
-        ok: false,
-        message: "We couldn't save your delivery address. Please check the address and try again.",
-      };
+      return fail({
+      message: "We couldn't save your delivery address. Please check the address and try again.",
+      });
     }
 
     deliveryAddressId = address.id;
@@ -724,7 +768,7 @@ export async function createCheckoutOrder(
         total_cents: totalCents,
         configured_minimum: policies.depositMinimum,
         configured_percentage: policies.depositPercentage,
-      },
+      }
     });
   }
   const deposit = depositCents / 100;
@@ -736,10 +780,9 @@ export async function createCheckoutOrder(
     const { checkFeatureAccess } = await import("@/lib/stripe/gate");
     const stripeGate = await checkFeatureAccess("stripe_payments");
     if (!stripeGate.allowed) {
-      return {
-        ok: false,
-        message: stripeGate.reason ?? "Online payments are not available on your current plan.",
-      };
+      return fail({
+      message: stripeGate.reason ?? "Online payments are not available on your current plan.",
+      });
     }
   }
 
@@ -780,7 +823,7 @@ export async function createCheckoutOrder(
       source_channel: "website",
       terms_accepted_at: new Date().toISOString(),
       notes: serviceArea ? `Service area: ${serviceArea.label}` : null,
-      idempotency_key: idempotencyKey,
+      idempotency_key: idempotencyKey
     })
     .select("id")
     .single();
@@ -819,13 +862,12 @@ export async function createCheckoutOrder(
       organizationId: orgId,
       source: "checkout.website",
       message: "Failed to create order during checkout",
-      context: { reason: orderError?.message, customerId, orderNumber },
+      context: { reason: orderError?.message, customerId, orderNumber }
     });
 
-    return {
-      ok: false,
+    return fail({
       message: "We couldn't create your booking. Please try again or contact the operator.",
-    };
+    });
   }
 
   if (productId) {
@@ -844,7 +886,7 @@ export async function createCheckoutOrder(
       // the customer hit a non-mode-aware path; only ever 'dry'/'wet'
       // because effectiveMode is reconciled against
       // supports_modes above.
-      selected_mode: effectiveMode,
+      selected_mode: effectiveMode
     });
 
     if (itemError) {
@@ -864,13 +906,12 @@ export async function createCheckoutOrder(
         organizationId: orgId,
         source: "checkout.website",
         message: "Failed to create order item during checkout",
-        context: { reason: itemError.message, orderId: order.id, productId },
+        context: { reason: itemError.message, orderId: order.id, productId }
       });
 
-      return {
-        ok: false,
-        message: "We couldn't save your booking line items. Please try again.",
-      };
+      return fail({
+      message: "We couldn't save your booking line items. Please try again.",
+      });
     }
   }
 
@@ -887,7 +928,7 @@ export async function createCheckoutOrder(
       startTime,
       endTime,
       rentalEndDate,
-      source: willUseStripe ? "checkout" : "dashboard",
+      source: willUseStripe ? "checkout" : "dashboard"
     });
 
     if (!reserveResult.ok) {
@@ -957,15 +998,14 @@ export async function createCheckoutOrder(
           productId,
           eventDate,
           cleanupFailures: cleanupFailures.length > 0 ? cleanupFailures : undefined,
-        },
+        }
       });
 
-      return {
-        ok: false,
-        message:
+      return fail({
+      message:
           reserveResult.message ??
           "Unable to reserve availability for the selected date.",
-      };
+      });
     }
   }
 
@@ -980,7 +1020,7 @@ export async function createCheckoutOrder(
       productId,
       serviceAreaId: serviceArea?.id ?? null,
       eventDate,
-    },
+    }
   });
 
   try {
@@ -1005,7 +1045,7 @@ export async function createCheckoutOrder(
         subtotal,
         deliveryFee,
         total,
-        depositDue: deposit,
+        depositDue: deposit
       });
     } catch (err) {
       // #407 preserve the actual error so we can diagnose; the form
@@ -1020,7 +1060,7 @@ export async function createCheckoutOrder(
         message: "order confirmation email failed (order already committed)",
         route: "checkout",
         context: { order_number: orderNumber, recipient: email },
-        error: err,
+        error: err
       });
     }
   }
@@ -1054,10 +1094,9 @@ export async function createCheckoutOrder(
       const { checkFeatureAccess } = await import("@/lib/stripe/gate");
       const stripeGate = await checkFeatureAccess("stripe_payments");
       if (!stripeGate.allowed) {
-        return {
-          ok: false,
-          message: stripeGate.reason ?? "Online payments are not available on your current plan.",
-        };
+        return fail({
+      message: stripeGate.reason ?? "Online payments are not available on your current plan.",
+        });
       }
 
       const stripe = getStripe();
@@ -1102,7 +1141,7 @@ export async function createCheckoutOrder(
           order_id: order.id,
           order_number: orderNumber,
           payment_type: "deposit",
-        },
+        }
       });
 
       if (session.url) {
@@ -1139,7 +1178,7 @@ export async function createCheckoutOrder(
         message: "Stripe checkout session creation failed — cancelling order and releasing hold",
         stack: stripeError instanceof Error ? stripeError.stack : undefined,
         context: { orderNumber, deposit },
-        error: stripeError,
+        error: stripeError
       });
       // Cancel the order and release the checkout hold so inventory isn't locked indefinitely
       try {
@@ -1158,10 +1197,9 @@ export async function createCheckoutOrder(
       } catch {
         console.error("[checkout] Failed to cancel order/block after Stripe failure", orderNumber);
       }
-      return {
-        ok: false,
-        message: "We were unable to process your payment at this time. Please try again or contact us for assistance.",
-      };
+      return fail({
+      message: "We were unable to process your payment at this time. Please try again or contact us for assistance.",
+      });
     }
   }
 
