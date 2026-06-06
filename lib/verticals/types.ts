@@ -30,8 +30,24 @@ export type VerticalImageSlugs = {
 };
 
 export type VerticalMarketing = {
-  /** URL slug under /(marketing)/. e.g. "inflatable-rental-software" */
+  /** URL slug under /. e.g. "inflatable-rental-software" */
   landingPageSlug: string;
+  /** SEO title for the /<vertical> landing page. */
+  seoTitle: string;
+  /** SEO meta description. */
+  seoDescription: string;
+  /** H1 above the fold on the dedicated landing page. */
+  heroHeadline: string;
+  /** Hero supporting copy — 1-2 sentences. */
+  heroSubhead: string;
+  /** Eyebrow text above the H1 (small uppercase). */
+  heroKicker: string;
+  /**
+   * 4–6 value props rendered as a feature grid below the hero.
+   * Kept English-only in Phase 2b; locale fallback can wrap this
+   * later without breaking the type shape.
+   */
+  features: ReadonlyArray<{ title: string; body: string }>;
 };
 
 export type VerticalConfig = {
