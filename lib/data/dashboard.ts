@@ -12,7 +12,27 @@ export type DashboardSummaryData = {
   activeProducts: number;
   recentPaymentsCount: number;
   recentOrders: OrderSummary[];
+  /** Real 14-day daily series for the flow-metric sparklines (oldest→newest).
+      Empty when there's no signal — the card then renders without a chart. */
+  bookingsSeries: number[];
+  paymentsSeries: number[];
 };
+
+// Count timestamps into `days` daily buckets ending today (oldest→newest, UTC).
+function bucketDaily(dates: (string | null | undefined)[], days = 14): number[] {
+  const buckets = new Array<number>(days).fill(0);
+  const now = new Date();
+  const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  for (const d of dates) {
+    if (!d) continue;
+    const t = new Date(d);
+    if (Number.isNaN(t.getTime())) continue;
+    const day = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+    const idx = days - 1 - Math.round((end - day) / 86400000);
+    if (idx >= 0 && idx < days) buckets[idx] += 1;
+  }
+  return buckets;
+}
 
 function statusTone(status: string): OrderSummary["tone"] {
   if (status === "confirmed" || status === "completed" || status === "delivered") return "success";
@@ -33,6 +53,9 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
       activeProducts: 3,
       recentPaymentsCount: 0,
       recentOrders: mockOrders.slice(0, 3),
+      // Demo-mode sample shapes so the sparkline affordance is visible.
+      bookingsSeries: [1, 0, 2, 1, 3, 1, 2, 0, 2, 4, 1, 3, 2, 5],
+      paymentsSeries: [0, 1, 0, 2, 1, 1, 3, 0, 1, 2, 2, 1, 3, 2],
     };
   }
 
@@ -44,6 +67,8 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
       activeProducts: 0,
       recentPaymentsCount: 0,
       recentOrders: [],
+      bookingsSeries: [],
+      paymentsSeries: [],
     };
   }
 
@@ -56,7 +81,13 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
   nextWeek.setDate(nextWeek.getDate() + 7);
   const nextWeekStr = nextWeek.toISOString().slice(0, 10);
 
-  const [todayRes, upcomingRes, productsRes, paymentsRes, recentRes] =
+  // 14-day window start (date-only) for the bookings event_date series.
+  const fourteenAgo = new Date();
+  fourteenAgo.setUTCDate(fourteenAgo.getUTCDate() - 13);
+  const fourteenAgoStr = fourteenAgo.toISOString().slice(0, 10);
+  const fourteenAgoIso = new Date(Date.now() - 14 * 86400000).toISOString();
+
+  const [todayRes, upcomingRes, productsRes, paymentsRes, recentRes, bookingsSeriesRes, paymentsSeriesRes] =
     await Promise.all([
       // Today's bookings: orders with event_date = today and active statuses
       supabase
@@ -114,6 +145,23 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(3),
+
+      // Bookings sparkline: orders by event_date over the last 14 days
+      supabase
+        .from("orders")
+        .select("event_date")
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
+        .gte("event_date", fourteenAgoStr)
+        .lte("event_date", today),
+
+      // Payments sparkline: paid payments over the last 14 days
+      supabase
+        .from("payments")
+        .select("paid_at, orders!inner(organization_id)")
+        .eq("orders.organization_id", ctx.organizationId)
+        .eq("payment_status", "paid")
+        .gte("paid_at", fourteenAgoIso),
     ]);
 
   if (todayRes.error) console.error("[dashboard] today bookings query failed:", todayRes.error.message);
@@ -121,6 +169,8 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
   if (productsRes.error) console.error("[dashboard] products query failed:", productsRes.error.message);
   if (paymentsRes.error) console.error("[dashboard] payments query failed:", paymentsRes.error.message);
   if (recentRes.error) console.error("[dashboard] recent orders query failed:", recentRes.error.message);
+  if (bookingsSeriesRes.error) console.error("[dashboard] bookings series query failed:", bookingsSeriesRes.error.message);
+  if (paymentsSeriesRes.error) console.error("[dashboard] payments series query failed:", paymentsSeriesRes.error.message);
 
   const recentOrders: OrderSummary[] = (recentRes.data ?? []).map((o) => {
     const c = (o as Record<string, unknown>).customers as {
@@ -152,11 +202,22 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
     };
   });
 
+  const bookingsSeries = bucketDaily(
+    (bookingsSeriesRes.data ?? []).map((r) => (r as { event_date?: string | null }).event_date),
+    14
+  );
+  const paymentsSeries = bucketDaily(
+    (paymentsSeriesRes.data ?? []).map((r) => (r as { paid_at?: string | null }).paid_at),
+    14
+  );
+
   return {
     todayBookings: todayRes.count ?? 0,
     upcomingDeliveries: upcomingRes.count ?? 0,
     activeProducts: productsRes.count ?? 0,
     recentPaymentsCount: paymentsRes.count ?? 0,
     recentOrders,
+    bookingsSeries,
+    paymentsSeries,
   };
 }
