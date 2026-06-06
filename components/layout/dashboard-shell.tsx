@@ -592,14 +592,16 @@ export function DashboardShell({
             <NotificationCenter initialNotifications={notifications} />
           </div>
         ) : (
-          <div className="section-header">
-            <div>
-              <div className="kicker">{m.dashboard.shell.kicker}</div>
-              <h1 style={{ margin: "6px 0 8px" }}>{title}</h1>
-              <div className="muted">{description}</div>
-            </div>
-            <div className="dashboard-desktop-notifications">
-              <NotificationCenter initialNotifications={notifications} />
+          <div className="page-hero">
+            <div className="page-hero__row">
+              <div>
+                <div className="eyebrow eyebrow--accent">{m.dashboard.shell.kicker}</div>
+                <h1 className="page-hero__title">{title}</h1>
+                <div className="page-hero__sub">{description}</div>
+              </div>
+              <div className="dashboard-desktop-notifications">
+                <NotificationCenter initialNotifications={notifications} />
+              </div>
             </div>
           </div>
         )}
