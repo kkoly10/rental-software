@@ -149,7 +149,33 @@ export default async function ProductDetailPage({
               <p className="muted">{product.description}</p>
 
               <div className="price-row" style={{ marginTop: 18 }}>
-                <strong style={{ fontSize: "2rem" }}>{product.price}</strong>
+                {product.capabilitySlugs?.includes("pricing.per-hour") &&
+                product.hourlyRateCents != null ? (
+                  <div>
+                    <strong style={{ fontSize: "2rem" }}>
+                      ${(product.hourlyRateCents / 100).toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}
+                    </strong>
+                    <span
+                      className="muted"
+                      style={{ fontSize: "1rem", marginLeft: 6 }}
+                    >
+                      / hour
+                    </span>
+                    {product.minimumHours && product.minimumHours > 0 && (
+                      <div
+                        className="muted"
+                        style={{ fontSize: "0.88rem", marginTop: 4 }}
+                      >
+                        {product.minimumHours}-hour minimum
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <strong style={{ fontSize: "2rem" }}>{product.price}</strong>
+                )}
                 <span className="badge">{m.inventoryDetail.depositReservesDate}</span>
               </div>
 

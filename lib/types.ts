@@ -207,4 +207,8 @@ export type CatalogDetail = {
   supportsModes?: string[];
   wetUpchargeCents?: number | null;
   basePriceCents?: number;
+  // Phase 2e.6 — capability-aware PDP rendering.
+  capabilitySlugs?: string[];
+  hourlyRateCents?: number | null;
+  minimumHours?: number | null;
 };
