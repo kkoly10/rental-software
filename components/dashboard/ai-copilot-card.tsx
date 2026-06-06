@@ -17,7 +17,9 @@ export function AiCopilotCard({ stepsLeft }: { stepsLeft: number }) {
   };
 
   const message =
-    stepsLeft > 0 ? t(c.greetingWithSteps, { count: stepsLeft }) : c.greetingDone;
+    stepsLeft > 0
+      ? t(stepsLeft === 1 ? c.greetingWithStep : c.greetingWithSteps, { count: stepsLeft })
+      : c.greetingDone;
 
   return (
     <div className="ai-copilot-card">

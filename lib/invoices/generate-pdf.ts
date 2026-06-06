@@ -186,7 +186,10 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(85, 112, 143);
-  doc.text("Deposit Paid", totalsX, y);
+  // `depositPaid` carries total payments received, not just the deposit —
+  // label it accordingly so a fully-paid invoice doesn't call the full
+  // amount a "deposit".
+  doc.text("Amount Paid", totalsX, y);
   doc.setTextColor(24, 136, 98);
   doc.text(`- ${formatMoney(data.depositPaid)}`, margin + contentWidth - 12, y, { align: "right" });
 

@@ -86,17 +86,27 @@ export async function getProductsPage(options?: {
 
   // Search path: pull a larger window and JS-filter (query spans category name
   // via embedded join).
+  const SEARCH_WINDOW = 5000;
   const { data, error } = await supabase
     .from("products")
     .select(selectFields)
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
     .order("name", { ascending: true })
-    .limit(5000);
+    .limit(SEARCH_WINDOW);
 
   if (error) {
     console.error("[products] Query failed:", error.message);
     return paginateItems([], { page: options?.page, pageSize, query });
+  }
+
+  // Surface truncation: past SEARCH_WINDOW products, JS-side search silently
+  // can't see the tail. Log it so a large catalog's missing matches aren't a
+  // mystery (mirrors the truncation logging in analytics.ts).
+  if (data.length === SEARCH_WINDOW) {
+    console.warn(
+      `[products] search window capped at ${SEARCH_WINDOW} rows for org ${ctx.organizationId}; results beyond that are not searched.`
+    );
   }
 
   const mapped: ProductSummary[] = data.map((p) => mapProductRow(p, money));
