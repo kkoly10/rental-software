@@ -634,6 +634,7 @@ export const es: Messages = {
       sections: {
         today: "Hoy",
         recentOrders: "Pedidos recientes",
+        recentActivity: "Actividad reciente",
         viewAll: "Ver todo",
         quickActions: "Acciones rápidas",
         getThingsDone: "Avanzar",
@@ -641,6 +642,8 @@ export const es: Messages = {
       empty: {
         noOrdersTitle: "Aún no hay pedidos",
         noOrdersDescription: "Cuando los clientes reserven en tu tienda o crees un pedido manual, aparecerán aquí.",
+        noActivityTitle: "Aún no hay actividad",
+        noActivityDescription: "Los nuevos pedidos, pagos y mensajes aparecerán aquí a medida que ocurran.",
         createFirst: "Crear el primer pedido",
       },
       quickLinks: {

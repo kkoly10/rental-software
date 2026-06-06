@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatCard } from "@/components/ui/stat-card";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { getDashboardSummary } from "@/lib/data/dashboard";
 import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
@@ -16,6 +15,7 @@ import { MilestoneCelebration } from "@/components/dashboard/milestone-celebrati
 import { SetupProgressBar } from "@/components/dashboard/setup-progress-bar";
 import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
 import { AiCopilotCard } from "@/components/dashboard/ai-copilot-card";
+import { ActivityTimeline } from "@/components/dashboard/activity-timeline";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getNotifications } from "@/lib/data/notifications";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
@@ -144,44 +144,23 @@ export default async function DashboardPage() {
           <div className="section-header">
             <div>
               <div className="kicker">{m.dashboard.overview.sections.today}</div>
-              <h2 className="page-title-sm">{m.dashboard.overview.sections.recentOrders}</h2>
+              <h2 className="page-title-sm">{m.dashboard.overview.sections.recentActivity}</h2>
             </div>
             <Link href="/dashboard/orders" className="ghost-btn">
               {m.dashboard.overview.sections.viewAll}
             </Link>
           </div>
 
-          {summary.recentOrders.length === 0 ? (
+          {notifications.length === 0 ? (
             <EmptyState
               icon="orders"
-              title={m.dashboard.overview.empty.noOrdersTitle}
-              description={m.dashboard.overview.empty.noOrdersDescription}
+              title={m.dashboard.overview.empty.noActivityTitle}
+              description={m.dashboard.overview.empty.noActivityDescription}
               actionLabel={m.dashboard.overview.empty.createFirst}
               actionHref="/dashboard/orders/new"
             />
           ) : (
-            <div className="list">
-              {summary.recentOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/dashboard/orders/${order.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <div className="order-card">
-                    <div className="order-row">
-                      <strong>{order.customer}</strong>
-                      <StatusBadge
-                        label={order.status}
-                        tone={order.tone as "default" | "success" | "warning"}
-                      />
-                    </div>
-                    <div className="muted">
-                      {order.item} · {order.date} · {order.total}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <ActivityTimeline items={notifications.slice(0, 6)} />
           )}
         </section>
 

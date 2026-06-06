@@ -635,6 +635,7 @@ const enValues = {
       sections: {
         today: "Today",
         recentOrders: "Recent orders",
+        recentActivity: "Recent activity",
         viewAll: "View all",
         quickActions: "Quick actions",
         getThingsDone: "Get things done",
@@ -642,6 +643,8 @@ const enValues = {
       empty: {
         noOrdersTitle: "No orders yet",
         noOrdersDescription: "When customers book through your storefront or you create a manual order, they’ll appear here.",
+        noActivityTitle: "No activity yet",
+        noActivityDescription: "New orders, payments, and messages will show up here as they happen.",
         createFirst: "Create first order",
       },
       quickLinks: {

@@ -23,7 +23,7 @@ export interface Notification {
   link?: string;
 }
 
-function relativeTime(dateStr: string | null | undefined): string {
+export function relativeTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   const now = Date.now();
   const then = new Date(dateStr).getTime();
