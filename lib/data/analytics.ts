@@ -108,6 +108,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
         .from("payments")
         .select("amount, paid_at, payment_type, order_id, orders!inner(organization_id)")
         .eq("orders.organization_id", ctx.organizationId)
+        .is("orders.deleted_at", null)
         .eq("payment_status", "paid")
         .limit(ANALYTICS_PAYMENTS_LIMIT),
 
@@ -118,6 +119,7 @@ export async function getAnalytics(): Promise<AnalyticsData> {
           "item_name_snapshot, quantity, unit_price, line_total, orders!inner(organization_id, order_status)"
         )
         .eq("orders.organization_id", ctx.organizationId)
+        .is("orders.deleted_at", null)
         .not("orders.order_status", "eq", "cancelled")
         .limit(ANALYTICS_ITEMS_LIMIT),
 

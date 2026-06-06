@@ -83,6 +83,7 @@ export async function getPaymentsPage(options?: {
       .from("payments")
       .select(selectFields, { count: "exact" })
       .eq("orders.organization_id", ctx.organizationId)
+      .is("orders.deleted_at", null)
       .order("paid_at", { ascending: false, nullsFirst: false })
       .range(start, end);
 
@@ -110,6 +111,7 @@ export async function getPaymentsPage(options?: {
     .from("payments")
     .select(selectFields)
     .eq("orders.organization_id", ctx.organizationId)
+    .is("orders.deleted_at", null)
     .order("paid_at", { ascending: false, nullsFirst: false })
     .limit(5000);
 

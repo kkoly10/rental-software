@@ -40,7 +40,14 @@ export function GuidedTourOverlay({
   useEffect(() => {
     updatePosition();
     window.addEventListener("resize", updatePosition);
-    return () => window.removeEventListener("resize", updatePosition);
+    // Recompute on scroll too — otherwise the highlight ring detaches from
+    // its target as soon as the user scrolls mid-step. Passive + capture so
+    // it tracks scrolling on any nested scroll container, not just window.
+    window.addEventListener("scroll", updatePosition, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, { capture: true } as EventListenerOptions);
+    };
   }, [updatePosition]);
 
   function finish() {

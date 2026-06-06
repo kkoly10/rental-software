@@ -123,6 +123,19 @@ export async function submitContactForm(
         });
       } catch { /* logger failures must not break the contact form */ }
     }
+  } else {
+    // No destination email configured for this tenant. The customer still
+    // sees a success message, but the lead would otherwise vanish silently —
+    // surface it centrally so the operator/Korent can follow up.
+    try {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId: orgId ?? undefined,
+        source: "contact.form",
+        message: "Contact form submitted but no operator destination email is configured",
+        context: { from: parsed.data.email, name: parsed.data.name },
+      });
+    } catch { /* logger failures must not break the contact form */ }
   }
 
   return {
