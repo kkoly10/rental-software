@@ -26,10 +26,11 @@ export function Sparkline({
   const line = `M${coords.join(" L")}`;
   const area = `${line} L${w.toFixed(1)},${h} L0,${h} Z`;
   const last = coords[coords.length - 1].split(",");
-  // Deterministic gradient id (no Math.random → no hydration surprises).
-  const gid = `spark-${color.replace(/[^a-z0-9]/gi, "")}-${pts.length}-${Math.round(
-    pts.reduce((a, b) => a + b, 0)
-  )}`;
+  // Deterministic gradient id (no Math.random → no hydration surprises). Hash
+  // every point — not just length+sum — so two series that happen to share a
+  // colour, length, and total can't resolve to the same `url(#id)`.
+  const sig = pts.reduce((h, v, i) => (h * 31 + Math.round(v * 1000) + i) >>> 0, 7);
+  const gid = `spark-${color.replace(/[^a-z0-9]/gi, "")}-${pts.length}-${sig.toString(36)}`;
 
   return (
     <svg width={w} height={h} style={{ display: "block", flexShrink: 0 }} aria-hidden="true">

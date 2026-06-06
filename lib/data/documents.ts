@@ -47,7 +47,7 @@ export async function getDocuments(): Promise<DocumentSummary[]> {
       "id, order_id, document_type, document_status, orders(order_number, customers(first_name, last_name, deleted_at))"
     )
     .eq("organization_id", ctx.organizationId)
-    .order("id", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(200);
 
   if (error) {
@@ -202,7 +202,7 @@ export async function getDocumentsDetailedPage(options?: {
       "id, order_id, document_type, document_status, orders(order_number, customers(first_name, last_name, deleted_at))"
     )
     .eq("organization_id", ctx.organizationId)
-    .order("id", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(500);
 
   if (error) {

@@ -102,7 +102,7 @@ export async function getCustomersPage(options?: {
   let baseQuery = supabase
     .from("customers")
     .select(
-      "id, first_name, last_name, email, phone, created_at, orders(order_number, event_date, order_status)",
+      "id, first_name, last_name, email, phone, created_at, orders(order_number, event_date, order_status, deleted_at)",
       { count: "exact" }
     )
     .eq("organization_id", ctx.organizationId)
@@ -128,9 +128,9 @@ export async function getCustomersPage(options?: {
   const mapped: CustomerSummary[] = (data ?? []).map((customer) => {
     const orders = [
       ...(((customer as Record<string, unknown>).orders as
-        | { order_number?: string | null; event_date?: string | null; order_status?: string | null }[]
+        | { order_number?: string | null; event_date?: string | null; order_status?: string | null; deleted_at?: string | null }[]
         | null) ?? []),
-    ];
+    ].filter((o) => !o.deleted_at);
     orders.sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""));
     return mapCustomerRow(customer as CustomerRow, orders[0]);
   });

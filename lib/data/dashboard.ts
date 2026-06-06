@@ -129,6 +129,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
           head: true,
         })
         .eq("orders.organization_id", ctx.organizationId)
+        .is("orders.deleted_at", null)
         .eq("payment_status", "paid")
         .gte(
           "paid_at",
@@ -160,6 +161,7 @@ export async function getDashboardSummary(): Promise<DashboardSummaryData> {
         .from("payments")
         .select("paid_at, orders!inner(organization_id)")
         .eq("orders.organization_id", ctx.organizationId)
+        .is("orders.deleted_at", null)
         .eq("payment_status", "paid")
         .gte("paid_at", fourteenAgoIso),
     ]);
