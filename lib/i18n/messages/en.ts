@@ -753,6 +753,7 @@ const enValues = {
       noProductsYet: "No products yet",
       noProductsYetDescription: "Add your first rental product so customers can browse and book it from your storefront.",
       createProduct: "Add product",
+      unpriced: "No price",
       name: "Name",
       category: "Category",
       price: "Price",

@@ -752,6 +752,7 @@ export const pt: Messages = {
       noProductsYet: "Sem produtos ainda",
       noProductsYetDescription: "Adicione o seu primeiro produto para que os clientes possam vê-lo e reservá-lo na sua loja.",
       createProduct: "Adicionar produto",
+      unpriced: "Sem preço",
       name: "Nome",
       category: "Categoria",
       price: "Preço",

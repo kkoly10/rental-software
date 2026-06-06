@@ -752,6 +752,7 @@ export const es: Messages = {
       noProductsYet: "Aún no hay productos",
       noProductsYetDescription: "Añade tu primer producto de alquiler para que los clientes puedan verlo y reservarlo en tu tienda.",
       createProduct: "Añadir producto",
+      unpriced: "Sin precio",
       name: "Nombre",
       category: "Categoría",
       price: "Precio",

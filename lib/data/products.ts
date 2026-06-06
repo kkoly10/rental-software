@@ -44,7 +44,7 @@ export async function getProductsPage(options?: {
   }
 
   const supabase = await createSupabaseServerClient();
-  const selectFields = "id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at)";
+  const selectFields = "id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at), product_images(image_url, is_primary, sort_order)";
   const pageSize = options?.pageSize ?? 20;
 
   // No-query path: DB-side paginate + count so every product is reachable.
@@ -105,6 +105,12 @@ export async function getProductsPage(options?: {
   });
 }
 
+type ProductImageRow = {
+  image_url: string | null;
+  is_primary: boolean | null;
+  sort_order: number | null;
+};
+
 type ProductRow = {
   id: string;
   name: string | null;
@@ -112,7 +118,19 @@ type ProductRow = {
   base_price: number | string | null;
   is_active: boolean | null;
   deleted_at: string | null;
+  product_images?: ProductImageRow[] | null;
 };
+
+// Patch 4 — primary image first, then lowest sort_order. Returns undefined
+// when the product has no images (the catalog renders a tinted placeholder).
+function pickPrimaryImage(images?: ProductImageRow[] | null): string | undefined {
+  if (!images || images.length === 0) return undefined;
+  const sorted = [...images].sort((a, b) => {
+    if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+    return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  });
+  return sorted[0].image_url ?? undefined;
+}
 
 /**
  * Post-fetch enrichment: mark each product as having open maintenance if
@@ -162,6 +180,7 @@ function mapProductRow(product: ProductRow): ProductSummary {
     // Only flag active products — a draft without a price is fine until
     // it's published.
     missingPrice: Boolean(product.is_active) && !hasValidPrice,
+    imageUrl: pickPrimaryImage(product.product_images),
   };
 }
 

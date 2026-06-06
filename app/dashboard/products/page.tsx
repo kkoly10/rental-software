@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EntityRow, IconChip, RowFigure } from "@/components/ui/entity-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { getProductsPage } from "@/lib/data/products";
 import { getGuidanceState } from "@/lib/guidance/actions";
@@ -12,10 +11,10 @@ import { ListPagination } from "@/components/dashboard/list-pagination";
 import { CsvImportButton } from "@/components/products/csv-import-button";
 import { getTranslator } from "@/lib/i18n/server";
 
-// Inline line-icon for the product leading chip (no new asset/dependency).
-function BoxIcon() {
+// Tinted placeholder glyph for products without a photo yet (Patch 4 grid).
+function BoxGlyph() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 8l-9-5-9 5 9 5 9-5z" />
       <path d="M3 8v8l9 5 9-5V8" />
       <path d="M12 13v8" />
@@ -89,24 +88,38 @@ export default async function ProductsPage({
           )
         ) : (
           <>
-            <div className="list">
+            <div className="catalog-tiles" style={{ marginTop: 14 }}>
               {productsPage.items.map((product) => (
-                <EntityRow
+                <Link
                   key={product.id}
                   href={`/dashboard/products/${product.id}`}
-                  leading={<IconChip><BoxIcon /></IconChip>}
-                  title={product.name}
-                  meta={product.category}
-                  trailing={
-                    <>
+                  className="catalog-tile"
+                >
+                  <div className="catalog-tile__thumb">
+                    {product.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={product.imageUrl} alt={product.name} />
+                    ) : (
+                      <div className="catalog-tile__ph"><BoxGlyph /></div>
+                    )}
+                    <span className="catalog-tile__status">
                       <StatusBadge
                         label={product.status}
                         tone={product.tone as "default" | "success" | "warning" | "danger"}
                       />
-                      <RowFigure>{product.price}</RowFigure>
-                    </>
-                  }
-                />
+                    </span>
+                  </div>
+                  <div className="catalog-tile__body">
+                    <div className="catalog-tile__cat">{product.category}</div>
+                    <div className="catalog-tile__name">{product.name}</div>
+                    <div className="catalog-tile__foot">
+                      <span className="catalog-tile__price">{product.price}</span>
+                      {product.missingPrice && (
+                        <StatusBadge label={m.dashboard.products.unpriced} tone="warning" />
+                      )}
+                    </div>
+                  </div>
+                </Link>
               ))}
             </div>
 
