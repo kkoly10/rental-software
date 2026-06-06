@@ -1,17 +1,25 @@
 import type { VerticalConfig } from "./types.ts";
 import { validateCapabilitySlugs } from "../capabilities/registry.ts";
 import { inflatableVertical } from "./inflatables.ts";
+import { tentsVertical } from "./tents.ts";
+import { tablesAndChairsVertical } from "./tables-and-chairs.ts";
+import { danceFloorsVertical } from "./dance-floors.ts";
 
 /**
  * Central registry of every vertical the app supports.
  *
- * Phase 0 ships with just `inflatable` — the existing mature vertical
- * extracted into the new config shape. Tents, tables & chairs, dance
- * floors, photo booths, and concessions land as separate entries in
- * Phase 2 of the multi-vertical buildout.
+ * Phase 0 shipped `inflatable`. Phase 2c adds the wedding/banquet
+ * triad — tents, tables-and-chairs, dance-floors — each composing a
+ * subset of the 13 capabilities registered by Phase 1. Photo booths
+ * and concessions land in Phase 2d.
  */
 
-const all: readonly VerticalConfig[] = [inflatableVertical];
+const all: readonly VerticalConfig[] = [
+  inflatableVertical,
+  tentsVertical,
+  tablesAndChairsVertical,
+  danceFloorsVertical,
+];
 
 const bySlug = new Map<string, VerticalConfig>(
   all.map((v) => [v.slug, v] as const),
