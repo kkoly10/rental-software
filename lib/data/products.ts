@@ -2,6 +2,8 @@ import { mockProducts } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import { paginateItems, type PaginatedResult, normalizeQuery, normalizePage } from "@/lib/listing/pagination";
 import type { ProductSummary } from "@/lib/types";
 
@@ -43,6 +45,9 @@ export async function getProductsPage(options?: {
     return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
+  const { currency, locale } = await getOrgFormatting();
+  const money = (n: number) => formatMoney(n, currency, locale);
+
   const supabase = await createSupabaseServerClient();
   const selectFields = "id, name, slug, base_price, is_active, deleted_at, categories(name, deleted_at), product_images(image_url, is_primary, sort_order)";
   const pageSize = options?.pageSize ?? 20;
@@ -65,7 +70,7 @@ export async function getProductsPage(options?: {
       return paginateItems([], { page: options?.page, pageSize, query });
     }
 
-    const mappedPage = (data ?? []).map(mapProductRow);
+    const mappedPage = (data ?? []).map((p) => mapProductRow(p, money));
     await enrichWithOpenMaintenance(supabase, ctx.organizationId, mappedPage);
     const totalItems = count ?? mappedPage.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -94,7 +99,7 @@ export async function getProductsPage(options?: {
     return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: ProductSummary[] = data.map(mapProductRow);
+  const mapped: ProductSummary[] = data.map((p) => mapProductRow(p, money));
   const filtered = mapped.filter((product) => matchesProductQuery(product, query));
   await enrichWithOpenMaintenance(supabase, ctx.organizationId, filtered);
 
@@ -163,7 +168,7 @@ async function enrichWithOpenMaintenance(
   }
 }
 
-function mapProductRow(product: ProductRow): ProductSummary {
+function mapProductRow(product: ProductRow, money: (n: number) => string): ProductSummary {
   const category = (product as Record<string, unknown>).categories as
     | { name?: string | null; deleted_at?: string | null }
     | null;
@@ -174,7 +179,7 @@ function mapProductRow(product: ProductRow): ProductSummary {
     name: product.name ?? "Unnamed",
     category:
       category && !category.deleted_at ? category.name ?? "Rental" : "Rental",
-    price: hasValidPrice ? `$${product.base_price}/day` : "—",
+    price: hasValidPrice ? `${money(Number(product.base_price))}/day` : "—",
     status: product.is_active ? "Active" : "Hidden",
     tone: (product.is_active ? "success" : "default") as ProductSummary["tone"],
     // Only flag active products — a draft without a price is fine until
