@@ -644,13 +644,49 @@ a:focus-visible {
 }
 
 .sidebar a {
-  display: block;
-  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
   border-radius: 12px;
   margin-bottom: 2px;
   font-size: 14px;
   color: var(--text-soft, #6b5545);
   transition: 0.15s ease;
+}
+/* Icon sidebar (Patch 4) — leading line glyph per nav item. */
+.sidebar-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  opacity: 0.78;
+}
+.sidebar a.active .sidebar-nav-icon { opacity: 1; }
+.sidebar-nav-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Square Korent badge before the wordmark. */
+.logo-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary, #e8590c), var(--primary-light, #fb923c));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Sora", sans-serif;
+  font-weight: 800;
+  font-size: 16px;
 }
 
 .sidebar a:hover {
