@@ -138,7 +138,7 @@ test("getVertical returns the inflatable vertical config", () => {
 });
 
 test("getVertical returns undefined for an unknown slug", () => {
-  assert.equal(getVertical("photo-booths"), undefined);
+  assert.equal(getVertical("not-a-real-vertical"), undefined);
 });
 
 test("listVerticals + listVerticalSlugs include inflatable in Phase 0", () => {

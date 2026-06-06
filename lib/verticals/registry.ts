@@ -4,14 +4,16 @@ import { inflatableVertical } from "./inflatables.ts";
 import { tentsVertical } from "./tents.ts";
 import { tablesAndChairsVertical } from "./tables-and-chairs.ts";
 import { danceFloorsVertical } from "./dance-floors.ts";
+import { photoBoothsVertical } from "./photo-booths.ts";
+import { concessionsVertical } from "./concessions.ts";
 
 /**
  * Central registry of every vertical the app supports.
  *
- * Phase 0 shipped `inflatable`. Phase 2c adds the wedding/banquet
- * triad — tents, tables-and-chairs, dance-floors — each composing a
- * subset of the 13 capabilities registered by Phase 1. Photo booths
- * and concessions land in Phase 2d.
+ * Phase 2d completes the day-one 5: inflatable, tents, tables &
+ * chairs, dance floors, photo booths, concessions. Tier C (linens,
+ * bar equipment, games, generators, restrooms, wedding decor) is
+ * deferred until first 5 reach 50+ paying customers across them.
  */
 
 const all: readonly VerticalConfig[] = [
@@ -19,6 +21,8 @@ const all: readonly VerticalConfig[] = [
   tentsVertical,
   tablesAndChairsVertical,
   danceFloorsVertical,
+  photoBoothsVertical,
+  concessionsVertical,
 ];
 
 const bySlug = new Map<string, VerticalConfig>(
