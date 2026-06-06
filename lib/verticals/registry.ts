@@ -33,10 +33,34 @@ export function getVertical(slug: string): VerticalConfig | undefined {
   return bySlug.get(slug);
 }
 
+/**
+ * Look up a vertical by its public marketing URL slug — e.g.
+ * "inflatable-rental-software" returns the inflatable vertical
+ * config. Used by the dynamic /[vertical]/page.tsx route to
+ * resolve which vertical a marketing URL belongs to.
+ *
+ * Returns undefined for unknown slugs; the caller should call
+ * Next.js notFound() so the URL 404s rather than serving a
+ * generic page.
+ */
+export function findVerticalByLandingSlug(
+  landingSlug: string,
+): VerticalConfig | undefined {
+  return all.find((v) => v.marketing.landingPageSlug === landingSlug);
+}
+
 export function listVerticals(): readonly VerticalConfig[] {
   return all;
 }
 
 export function listVerticalSlugs(): readonly string[] {
   return all.map((v) => v.slug);
+}
+
+/**
+ * Every marketing landing slug currently served. Used by
+ * generateStaticParams() so Next.js can pre-render the routes.
+ */
+export function listLandingPageSlugs(): readonly string[] {
+  return all.map((v) => v.marketing.landingPageSlug);
 }
