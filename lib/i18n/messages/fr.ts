@@ -615,6 +615,8 @@ export const fr: Messages = {
         title: "Copilote IA",
         greetingWithSteps:
           "Il vous reste {count} étapes de configuration. Je peux vous guider pour la suivante, rédiger la description de votre boutique ou répondre à une question. On commence par quoi ?",
+        greetingWithStep:
+          "Il vous reste {count} étape de configuration. Je peux vous guider pour la terminer, rédiger la description de votre boutique ou répondre à une question. On commence par quoi ?",
         greetingDone:
           "La configuration est terminée. Je peux rédiger la description de votre boutique, résumer les commandes du jour ou répondre à une question. Comment puis-je aider ?",
         q1: "Par quoi devrais-je commencer ?",
@@ -2659,6 +2661,7 @@ export const fr: Messages = {
     milestoneBody: "Vous avez réalisé l’essentiel. Votre vitrine est prête pour votre première vraie réservation.",
     go: "Aller →",
     showMore: "Afficher {count} étapes supplémentaires (avancé)",
+    showMoreOne: "Afficher {count} étape supplémentaire (avancé)",
     showLess: "Afficher moins",
   },
 

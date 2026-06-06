@@ -131,7 +131,7 @@ export function SetupChecklistCard({
               onClick={() => setShowAll(true)}
               style={{ width: "100%", textAlign: "center", marginTop: 8, fontSize: 13 }}
             >
-              {t(m.setupChecklist.showMore, { count: phase2Items.length })}
+              {t(phase2Items.length === 1 ? m.setupChecklist.showMoreOne : m.setupChecklist.showMore, { count: phase2Items.length })}
             </button>
           )}
 

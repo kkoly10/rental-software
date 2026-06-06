@@ -616,6 +616,8 @@ const enValues = {
         title: "AI Copilot",
         greetingWithSteps:
           "You have {count} setup steps left — I can walk you through the next one, draft your storefront copy, or answer a quick question. What first?",
+        greetingWithStep:
+          "You have {count} setup step left — I can walk you through it, draft your storefront copy, or answer a quick question. What first?",
         greetingDone:
           "Setup's all done. I can draft storefront copy, recap today's orders, or answer a question — what can I help with?",
         q1: "What should I do first?",
@@ -2660,6 +2662,7 @@ const enValues = {
     milestoneBody: "You've completed the essentials. Your storefront is ready for your first real booking.",
     go: "Go →",
     showMore: "Show {count} more steps (advanced)",
+    showMoreOne: "Show {count} more step (advanced)",
     showLess: "Show less",
   },
 

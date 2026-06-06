@@ -615,6 +615,8 @@ export const es: Messages = {
         title: "Copiloto IA",
         greetingWithSteps:
           "Te quedan {count} pasos de configuración. Puedo guiarte por el siguiente, redactar la descripción de tu tienda o responder una pregunta rápida. ¿Por dónde empezamos?",
+        greetingWithStep:
+          "Te queda {count} paso de configuración. Puedo guiarte para completarlo, redactar la descripción de tu tienda o responder una pregunta rápida. ¿Por dónde empezamos?",
         greetingDone:
           "La configuración está lista. Puedo redactar la descripción de tu tienda, resumir los pedidos de hoy o responder una pregunta. ¿En qué te ayudo?",
         q1: "¿Qué debería hacer primero?",
@@ -2659,6 +2661,7 @@ export const es: Messages = {
     milestoneBody: "Has completado lo esencial. Tu tienda está lista para tu primera reserva real.",
     go: "Ir →",
     showMore: "Mostrar {count} pasos más (avanzado)",
+    showMoreOne: "Mostrar {count} paso más (avanzado)",
     showLess: "Mostrar menos",
   },
 
