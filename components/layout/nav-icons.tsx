@@ -17,7 +17,7 @@ const PATHS: Record<string, string[]> = {
     "M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0",
     "M18 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0",
   ],
-  products: ["M21 8l-9-5-9 5 9 5 9-5z", "M3 8v8l9 5 9-5V8", "M12 13v8"],
+  products: ["M6 7h12l-1 13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L6 7z", "M9 7a3 3 0 0 1 6 0"],
   pricing: ["M3 3h7l11 11-7 7L3 10z", "M7.5 7.5h.01"],
   serviceAreas: [
     "M12 21s-7-6.3-7-11a7 7 0 1 1 14 0c0 4.7-7 11-7 11z",

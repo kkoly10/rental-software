@@ -29,8 +29,14 @@ export function StatCard({
 }) {
   const crafted = Boolean(icon || accent);
   const accentColor = accent ?? "var(--primary)";
-  const sparkEl =
-    spark && spark.length >= 2 ? <Sparkline data={spark} color={accentColor} /> : null;
+  // Mirror Sparkline's own render guard (≥2 points AND some positive signal) so
+  // a no-signal series doesn't produce a truthy element that silently suppresses
+  // the `trend` fallback in the card header.
+  const hasSparkSignal =
+    Array.isArray(spark) &&
+    spark.length >= 2 &&
+    spark.some((v) => Number.isFinite(v) && v > 0);
+  const sparkEl = hasSparkSignal ? <Sparkline data={spark!} color={accentColor} /> : null;
   const trendColor =
     trend?.dir === "up"
       ? "var(--success)"

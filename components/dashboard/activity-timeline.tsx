@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { relativeTime } from "@/lib/data/notifications";
 import type { Notification, NotificationType } from "@/lib/data/notifications";
 
 /**
@@ -24,16 +23,17 @@ const DOT_COLOR: Record<NotificationType, string> = {
 export function ActivityTimeline({ items }: { items: Notification[] }) {
   return (
     <div className="activity">
-      {items.map((n) => {
+      {items.map((n, i) => {
         const dot = DOT_COLOR[n.type] ?? "var(--primary)";
+        const isLast = i === items.length - 1;
         const row = (
-          <div className="activity__item" style={{ paddingBottom: 18 }}>
+          <div className="activity__item" style={{ paddingBottom: isLast ? 0 : 18 }}>
             <span className="activity__dot" style={{ background: dot }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
                 <strong style={{ fontSize: 14 }}>{n.title}</strong>
                 <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>
-                  {relativeTime(n.timestamp)}
+                  {n.timestamp}
                 </span>
               </div>
               <div className="muted" style={{ fontSize: 13, marginTop: 2, lineHeight: 1.5 }}>
