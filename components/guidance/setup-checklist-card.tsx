@@ -41,7 +41,6 @@ export function SetupChecklistCard({
   const displayItems = showAll ? items : phase1Items;
   const displayCompleted = showAll ? completed : phase1Completed;
   const displayTotal = showAll ? total : PHASE_1_COUNT;
-  const progress = displayTotal > 0 ? Math.round((displayCompleted / displayTotal) * 100) : 0;
 
   const allDone = completed === total;
 
@@ -88,11 +87,13 @@ export function SetupChecklistCard({
         </div>
       </div>
 
-      <div className="checklist-progress-bar">
-        <div
-          className="checklist-progress-fill"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="segmented-progress" style={{ margin: "14px 0 4px" }}>
+        {Array.from({ length: displayTotal }).map((_, i) => (
+          <span
+            key={i}
+            className={`segmented-progress__seg${i < displayCompleted ? " segmented-progress__seg--on" : ""}`}
+          />
+        ))}
       </div>
 
       {phase1Done && !showAll && expanded && (

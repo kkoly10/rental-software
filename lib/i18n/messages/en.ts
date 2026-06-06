@@ -611,6 +611,16 @@ const enValues = {
         tagline: "Here’s your daily overview for bookings, deliveries, and payments.",
         fallbackName: "there",
       },
+      aiCopilot: {
+        title: "AI Copilot",
+        greetingWithSteps:
+          "You have {count} setup steps left — I can walk you through the next one, draft your storefront copy, or answer a quick question. What first?",
+        greetingDone:
+          "Setup's all done. I can draft storefront copy, recap today's orders, or answer a question — what can I help with?",
+        q1: "What should I do first?",
+        q2: "Draft my storefront description",
+        q3: "How do deposits work?",
+      },
       stats: {
         todayBookings: "Today’s bookings",
         todayBookingsMeta: "Live order pipeline",

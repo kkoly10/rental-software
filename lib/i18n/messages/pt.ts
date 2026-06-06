@@ -610,6 +610,16 @@ export const pt: Messages = {
         tagline: "Aqui está a sua visão diária de reservas, entregas e pagamentos.",
         fallbackName: "olá",
       },
+      aiCopilot: {
+        title: "Copiloto IA",
+        greetingWithSteps:
+          "Faltam {count} passos de configuração. Posso orientá-lo no próximo, redigir a descrição da sua loja ou responder a uma pergunta rápida. Por onde começamos?",
+        greetingDone:
+          "A configuração está concluída. Posso redigir a descrição da sua loja, resumir os pedidos de hoje ou responder a uma pergunta. Como posso ajudar?",
+        q1: "O que devo fazer primeiro?",
+        q2: "Redija a descrição da minha loja",
+        q3: "Como funcionam os depósitos?",
+      },
       stats: {
         todayBookings: "Reservas de hoje",
         todayBookingsMeta: "Pipeline em direto",
