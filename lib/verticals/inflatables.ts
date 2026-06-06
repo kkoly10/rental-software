@@ -36,6 +36,39 @@ export const inflatableVertical: VerticalConfig = {
   ],
   marketing: {
     landingPageSlug: "inflatable-rental-software",
+    seoTitle: "Inflatable Rental Software for Bounce House Operators | Korent",
+    seoDescription:
+      "Online booking, delivery routing, damage deposits, and crew dispatch — built for bounce house, water slide, and combo unit rental businesses. Start free; no credit card.",
+    heroKicker: "Inflatable rental software",
+    heroHeadline: "Stop answering availability calls. Start taking bounce house bookings online.",
+    heroSubhead:
+      "Customers check real-time availability, pick wet or dry, and pay a deposit on your branded site — while your crew gets a pull sheet that lists the right anchoring spec and arrival time.",
+    features: [
+      {
+        title: "Wet/dry mode pricing built in",
+        body: "Customers pick wet or dry at checkout; the wet upcharge applies per unit, never as a flat add-on. Pull sheet shows the chosen mode for the crew.",
+      },
+      {
+        title: "Anchoring spec on the pull sheet",
+        body: "Stakes, sandbags, water barrels, concrete weights — your crew sees 'Bring: stakes ×6' on the printed sheet, no morning text threads.",
+      },
+      {
+        title: "Surface-aware delivery notes",
+        body: "Grass, concrete, asphalt — captured at checkout, surfaced to dispatch and the driver before they leave the yard.",
+      },
+      {
+        title: "Damage deposit + waiver, automated",
+        body: "Deposit collected at booking. Liability waiver signed online before delivery. Your spreadsheet finally gets a vacation.",
+      },
+      {
+        title: "Built for solo operators and growing crews",
+        body: "Start as a one-person shop. Add crew members with the right access — drivers see today's stops, office staff don't see payments unless you let them.",
+      },
+      {
+        title: "Real customer reviews, not stock testimonials",
+        body: "Customers can leave a public review after the event. Your storefront builds trust without you chasing it.",
+      },
+    ],
   },
   imageSlugs: {
     hero: "/home/operator-with-ipad.jpg",
