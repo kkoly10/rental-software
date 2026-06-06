@@ -10,6 +10,7 @@ import {
 } from "@/lib/navigation/dashboard-nav";
 import { CopilotLauncher } from "@/components/copilot/copilot-launcher";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
+import { NavIcon } from "@/components/layout/nav-icons";
 import { Breadcrumbs } from "@/components/dashboard/breadcrumbs";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import type { Notification } from "@/lib/data/notifications";
@@ -330,13 +331,11 @@ export function DashboardShell({
       onClick={onClick}
       className={isNavItemActive(pathname, item.href) ? "active" : undefined}
       data-tour={item.tourId}
-      style={
-        item.key === "messages"
-          ? { display: "flex", alignItems: "center", justifyContent: "space-between" }
-          : undefined
-      }
     >
-      {m.dashboard.nav[item.key]}
+      <span className="sidebar-nav-icon" aria-hidden="true">
+        <NavIcon name={item.key} />
+      </span>
+      <span className="sidebar-nav-label">{m.dashboard.nav[item.key]}</span>
       {item.key === "messages" && renderMessagesBadge()}
     </Link>
   );
@@ -467,8 +466,9 @@ export function DashboardShell({
   return (
     <div className="sidebar-layout">
       <aside className="sidebar dashboard-sidebar-desktop">
-        <Link href="/dashboard" className="logo" style={{ color: "var(--primary)", marginBottom: orgName ? 4 : 14, display: "block" }}>
-          Korent
+        <Link href="/dashboard" className="logo" style={{ color: "var(--text)", marginBottom: orgName ? 4 : 14, display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="logo-badge" aria-hidden="true">K</span>
+          <span>Korent</span>
         </Link>
         {orgName && (
           <OrgSwitcher
