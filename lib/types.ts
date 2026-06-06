@@ -45,6 +45,8 @@ export type ProductSummary = {
       told so they're not surprised when a "maintenance" item still
       takes bookings. */
   hasOpenMaintenance?: boolean;
+  /** Patch 4 — primary product photo for the catalog grid. */
+  imageUrl?: string;
 };
 
 export type CustomerSummary = {

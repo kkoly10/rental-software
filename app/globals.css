@@ -5218,6 +5218,54 @@ textarea[aria-invalid="true"] {
 .activity__item { display: flex; gap: 16px; position: relative; }
 .activity__dot { width: 12px; height: 12px; border-radius: 999px; border: 2.5px solid var(--surface); flex-shrink: 0; margin-top: 2px; z-index: 1; }
 
+/* Catalog photo grid (Patch 4 — dashboard products tab).
+   Namespaced `catalog-tile*` so it doesn't collide with the storefront's
+   own `.product-card` / `.product-grid`. */
+.catalog-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+.catalog-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.catalog-tile:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.catalog-tile__thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--bg-alt);
+  overflow: hidden;
+}
+.catalog-tile__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.catalog-tile__ph {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: color-mix(in srgb, var(--primary) 42%, transparent);
+  background: linear-gradient(135deg, var(--primary-bg), var(--bg-alt));
+}
+.catalog-tile__status { position: absolute; top: 10px; left: 10px; }
+.catalog-tile__body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.catalog-tile__cat { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.catalog-tile__name { font-family: "Sora", sans-serif; font-weight: 600; font-size: 15.5px; color: var(--text); }
+.catalog-tile__foot { margin-top: auto; padding-top: 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.catalog-tile__price { font-family: "Sora", sans-serif; font-weight: 700; font-size: 17px; color: var(--text); font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .catalog-tiles { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
+
 /* AI Copilot card — home command-center gradient panel */
 .ai-copilot-card {
   background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 8%, var(--surface)), color-mix(in srgb, var(--accent) 9%, var(--surface)));
