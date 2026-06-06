@@ -86,6 +86,7 @@ export default async function DashboardPage() {
             value={String(summary.todayBookings)}
             meta={m.dashboard.overview.stats.todayBookingsMeta}
             accent="var(--primary)"
+            spark={summary.bookingsSeries}
             icon={
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5l6.5 3.5v8L9 16.5 2.5 13V5L9 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M2.5 5L9 8.5 15.5 5M9 8.5v8" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
             }
@@ -113,6 +114,7 @@ export default async function DashboardPage() {
             value={String(summary.recentPaymentsCount)}
             meta={m.dashboard.overview.stats.paymentItemsMeta}
             accent="var(--success)"
+            spark={summary.paymentsSeries}
             icon={
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5v15M12.5 4.5H7.2a2.2 2.2 0 0 0 0 4.4h3.6a2.2 2.2 0 0 1 0 4.4H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             }
