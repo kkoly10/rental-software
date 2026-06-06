@@ -41,6 +41,10 @@ export function ProductForm({
     requiredAnchorCount?: number | null;
     // Phase 2e.1 — capability assignment.
     capabilitySlugs?: string[];
+    // Phase 2e.3 — per-hour pricing fields.
+    hourlyRateCents?: number | null;
+    minimumHours?: number | null;
+    idleHourRateCents?: number | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -303,6 +307,17 @@ export function ProductForm({
           the migration to capability-driven fields lands. */}
       <CapabilityCheckboxes initialSlugs={product?.capabilitySlugs ?? []} />
 
+      {/* Phase 2e.3 — per-hour pricing fields. Always present in the
+          DOM; the server action ignores them unless the product
+          carries the pricing.per-hour capability. A future iteration
+          can conditionally render these only when the per-hour
+          checkbox is checked client-side. */}
+      <PerHourPricingFields
+        initialHourlyRateCents={product?.hourlyRateCents ?? null}
+        initialMinimumHours={product?.minimumHours ?? null}
+        initialIdleHourRateCents={product?.idleHourRateCents ?? null}
+      />
+
       {state.message && (
         <div
           role={state.ok ? "status" : "alert"}
@@ -414,4 +429,104 @@ function slugToLabel(slug: string): string {
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+/**
+ * Phase 2e.3 — per-hour pricing form fields (photo booths, concessions,
+ * games, future AV). Posts hourly_rate / minimum_hours / idle_hour_rate
+ * as dollar values; the server action's reconcilePerHourCents helper
+ * converts to cents AND nulls them out when pricing.per-hour isn't
+ * present in the capability_slugs list, so an inactive capability
+ * never ghost-bills.
+ */
+function PerHourPricingFields({
+  initialHourlyRateCents,
+  initialMinimumHours,
+  initialIdleHourRateCents,
+}: {
+  initialHourlyRateCents: number | null;
+  initialMinimumHours: number | null;
+  initialIdleHourRateCents: number | null;
+}) {
+  const hourlyDollars =
+    initialHourlyRateCents != null ? initialHourlyRateCents / 100 : "";
+  const idleDollars =
+    initialIdleHourRateCents != null ? initialIdleHourRateCents / 100 : "";
+  const minHours = initialMinimumHours ?? "";
+
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Per-hour pricing
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the <code>pricing.per-hour</code>{" "}
+        capability — typically photo booths (3-hour minimum) and concessions
+        (1-hour minimum). Leave blank if this product is billed flat-day or
+        per-unit.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr 1fr" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Hourly rate ($)
+          </strong>
+          <input
+            type="number"
+            name="hourly_rate"
+            min="0"
+            max="5000"
+            step="0.01"
+            defaultValue={hourlyDollars}
+            placeholder="200.00"
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Minimum hours
+          </strong>
+          <input
+            type="number"
+            name="minimum_hours"
+            min="0"
+            max="24"
+            step="1"
+            defaultValue={minHours}
+            placeholder="3"
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Idle-hour rate ($)
+          </strong>
+          <input
+            type="number"
+            name="idle_hour_rate"
+            min="0"
+            max="5000"
+            step="0.01"
+            defaultValue={idleDollars}
+            placeholder="100.00"
+            style={{ width: "100%" }}
+          />
+        </label>
+      </div>
+      <p
+        className="muted"
+        style={{ marginTop: 8, fontSize: "0.82rem" }}
+      >
+        Idle-hour rate is reserved for a future checkout option that lets
+        customers price &quot;on-site but inactive&quot; hours (e.g., a photo
+        booth present during dinner service) at a discount. Leave blank
+        today.
+      </p>
+    </details>
+  );
 }

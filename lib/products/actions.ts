@@ -44,6 +44,51 @@ function readCapabilitySlugs(formData: FormData): string[] {
   return raw.filter((s) => !unknown.has(s));
 }
 
+/**
+ * Phase 2e.3 — per-hour pricing fields. Reads the dollar inputs
+ * from the form, returning numbers or undefined. The Zod schema
+ * applies the cents conversion + bounds; we just convert empty
+ * strings to undefined so the schema's `.optional()` kicks in.
+ */
+function readPerHourFields(formData: FormData) {
+  const hourlyRateRaw = String(formData.get("hourly_rate") ?? "").trim();
+  const minimumHoursRaw = String(formData.get("minimum_hours") ?? "").trim();
+  const idleHourRateRaw = String(formData.get("idle_hour_rate") ?? "").trim();
+  return {
+    hourlyRate: hourlyRateRaw === "" ? undefined : hourlyRateRaw,
+    minimumHours: minimumHoursRaw === "" ? undefined : Number(minimumHoursRaw),
+    idleHourRate: idleHourRateRaw === "" ? undefined : idleHourRateRaw,
+  };
+}
+
+/**
+ * Phase 2e.3 — convert the dollar-denominated per-hour inputs into
+ * the cents columns the DB expects. Null when the operator left the
+ * field blank OR when the product doesn't carry pricing.per-hour
+ * (forward-compat: a future capability flip shouldn't ghost-bill).
+ */
+function reconcilePerHourCents(
+  capabilitySlugs: readonly string[],
+  hourlyRate: number | undefined,
+  minimumHours: number | undefined,
+  idleHourRate: number | undefined,
+) {
+  if (!capabilitySlugs.includes("pricing.per-hour")) {
+    return {
+      hourly_rate_cents: null,
+      minimum_hours: null,
+      idle_hour_rate_cents: null,
+    };
+  }
+  return {
+    hourly_rate_cents:
+      hourlyRate === undefined ? null : Math.round(hourlyRate * 100),
+    minimum_hours: minimumHours ?? null,
+    idle_hour_rate_cents:
+      idleHourRate === undefined ? null : Math.round(idleHourRate * 100),
+  };
+}
+
 export type ProductActionState = {
   ok: boolean;
   message: string;
@@ -102,6 +147,7 @@ export async function createProduct(
     visibility: String(formData.get("visibility") ?? "public"),
     ...readInflatableSetupFields(formData),
     capabilitySlugs: readCapabilitySlugs(formData),
+    ...readPerHourFields(formData),
   });
 
   if (!parsed.success) {
@@ -127,7 +173,17 @@ export async function createProduct(
     anchoringMethods,
     requiredAnchorCount,
     capabilitySlugs,
+    hourlyRate,
+    minimumHours,
+    idleHourRate,
   } = parsed.data;
+
+  const perHourCents = reconcilePerHourCents(
+    capabilitySlugs,
+    hourlyRate,
+    minimumHours,
+    idleHourRate,
+  );
 
   const wetUpchargeCents = reconcileWetUpcharge(supportsModes, wetUpcharge);
 
@@ -237,6 +293,9 @@ export async function createProduct(
     anchoring_methods: anchoringMethods,
     required_anchor_count: requiredAnchorCount ?? null,
     capability_slugs: capabilitySlugs,
+    hourly_rate_cents: perHourCents.hourly_rate_cents,
+    minimum_hours: perHourCents.minimum_hours,
+    idle_hour_rate_cents: perHourCents.idle_hour_rate_cents,
   }).select("id").single();
 
   if (error) {
@@ -314,6 +373,7 @@ export async function updateProduct(
     visibility: String(formData.get("visibility") ?? "public"),
     ...readInflatableSetupFields(formData),
     capabilitySlugs: readCapabilitySlugs(formData),
+    ...readPerHourFields(formData),
   });
 
   if (!parsed.success) {
@@ -323,6 +383,13 @@ export async function updateProduct(
         parsed.error.issues[0]?.message ?? "Please review the product details.",
     };
   }
+
+  const updatePerHourCents = reconcilePerHourCents(
+    parsed.data.capabilitySlugs,
+    parsed.data.hourlyRate,
+    parsed.data.minimumHours,
+    parsed.data.idleHourRate,
+  );
 
   if (!hasSupabaseEnv()) {
     return {
@@ -411,6 +478,9 @@ export async function updateProduct(
       anchoring_methods: parsed.data.anchoringMethods,
       required_anchor_count: parsed.data.requiredAnchorCount ?? null,
       capability_slugs: parsed.data.capabilitySlugs,
+      hourly_rate_cents: updatePerHourCents.hourly_rate_cents,
+      minimum_hours: updatePerHourCents.minimum_hours,
+      idle_hour_rate_cents: updatePerHourCents.idle_hour_rate_cents,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)
