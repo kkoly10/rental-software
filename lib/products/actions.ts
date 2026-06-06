@@ -18,6 +18,31 @@ import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
 // Supabase + auth module graph. Re-exposed locally under its old name
 // to keep the existing call sites tidy.
 import { reconcileWetUpchargeCents as reconcileWetUpcharge } from "@/lib/pricing/inflatable-mode";
+import { validateCapabilitySlugs } from "@/lib/capabilities/registry";
+
+/**
+ * Phase 2e.1 — read the capability_slugs[] form group and filter
+ * down to slugs registered in the capability registry. Unknown slugs
+ * are dropped silently rather than erroring, so a save on an older
+ * product that pre-dates a removed capability doesn't crash.
+ *
+ * The Zod schema's `capabilitySlugs` is already an array of strings
+ * with length bounds. This pass adds the runtime "is it registered?"
+ * filter that the schema layer can't do without circular imports.
+ */
+function readCapabilitySlugs(formData: FormData): string[] {
+  const raw = formData
+    .getAll("capability_slugs")
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0);
+
+  if (raw.length === 0) return [];
+
+  const validation = validateCapabilitySlugs(raw);
+  if (validation.ok) return raw;
+  const unknown = new Set(validation.unknownSlugs);
+  return raw.filter((s) => !unknown.has(s));
+}
 
 export type ProductActionState = {
   ok: boolean;
@@ -76,6 +101,7 @@ export async function createProduct(
     isActive: formData.get("is_active") !== null,
     visibility: String(formData.get("visibility") ?? "public"),
     ...readInflatableSetupFields(formData),
+    capabilitySlugs: readCapabilitySlugs(formData),
   });
 
   if (!parsed.success) {
@@ -100,6 +126,7 @@ export async function createProduct(
     wetUpcharge,
     anchoringMethods,
     requiredAnchorCount,
+    capabilitySlugs,
   } = parsed.data;
 
   const wetUpchargeCents = reconcileWetUpcharge(supportsModes, wetUpcharge);
@@ -209,6 +236,7 @@ export async function createProduct(
     wet_upcharge_cents: wetUpchargeCents,
     anchoring_methods: anchoringMethods,
     required_anchor_count: requiredAnchorCount ?? null,
+    capability_slugs: capabilitySlugs,
   }).select("id").single();
 
   if (error) {
@@ -285,6 +313,7 @@ export async function updateProduct(
     isActive: formData.get("is_active") !== null,
     visibility: String(formData.get("visibility") ?? "public"),
     ...readInflatableSetupFields(formData),
+    capabilitySlugs: readCapabilitySlugs(formData),
   });
 
   if (!parsed.success) {
@@ -381,6 +410,7 @@ export async function updateProduct(
       wet_upcharge_cents: updateWetUpchargeCents,
       anchoring_methods: parsed.data.anchoringMethods,
       required_anchor_count: parsed.data.requiredAnchorCount ?? null,
+      capability_slugs: parsed.data.capabilitySlugs,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)

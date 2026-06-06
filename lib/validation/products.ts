@@ -39,6 +39,25 @@ const inflatableSetupShape = {
     .optional(),
 };
 
+/**
+ * Phase 2e.1 — capability assignment. The product form posts
+ * capability_slugs[] as a string array; the action validates each
+ * against the registered capability registry before writing. Unknown
+ * slugs are dropped silently (forward-compat: a removed capability
+ * shouldn't crash a save on an old product row).
+ *
+ * Schema accepts any string array here so the validation passes
+ * regardless; the actual slug filtering happens in the action so it
+ * can reference the runtime registry without a circular import via
+ * the validation layer.
+ */
+const capabilitySlugsShape = {
+  capabilitySlugs: z
+    .array(z.string().min(1).max(64))
+    .max(32, "A product can declare at most 32 capabilities.")
+    .default([]),
+};
+
 export const createProductSchema = z.object({
   name: requiredText("Product name", 120),
   categoryId: z.string().trim().uuid().optional().or(z.literal("")).transform((value) => value || undefined),
@@ -50,6 +69,7 @@ export const createProductSchema = z.object({
   isActive: z.boolean(),
   visibility: productVisibilitySchema.default("public"),
   ...inflatableSetupShape,
+  ...capabilitySlugsShape,
 });
 
 export const updateProductSchema = createProductSchema.extend({
