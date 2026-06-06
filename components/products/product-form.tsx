@@ -48,6 +48,13 @@ export function ProductForm({
     // Phase 2e.4 — per-unit pricing fields.
     unitPriceCents?: number | null;
     unitLabel?: string | null;
+    // Phase 2e.5 — setup-window, onsite-attendant, capacity, order-minimum.
+    setupMinutesBefore?: number | null;
+    attendantIncludedHours?: number | null;
+    attendantOverageCentsPerHour?: number | null;
+    capacityMetric?: string | null;
+    capacityValue?: number | null;
+    minimumOrderQuantity?: number | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -327,6 +334,24 @@ export function ProductForm({
         initialUnitLabel={product?.unitLabel ?? null}
       />
 
+      {/* Phase 2e.5 — remaining capability field sets. */}
+      <SetupWindowField
+        initialSetupMinutesBefore={product?.setupMinutesBefore ?? null}
+      />
+      <OnsiteAttendantFields
+        initialIncludedHours={product?.attendantIncludedHours ?? null}
+        initialOverageCentsPerHour={
+          product?.attendantOverageCentsPerHour ?? null
+        }
+      />
+      <CapacityCalculatorFields
+        initialMetric={product?.capacityMetric ?? null}
+        initialValue={product?.capacityValue ?? null}
+      />
+      <OrderMinimumField
+        initialMinimumOrderQuantity={product?.minimumOrderQuantity ?? null}
+      />
+
       {state.message && (
         <div
           role={state.ok ? "status" : "alert"}
@@ -602,6 +627,215 @@ function PerUnitPricingFields({
           />
         </label>
       </div>
+    </details>
+  );
+}
+
+/**
+ * Phase 2e.5 — setup window: minutes before event start the crew
+ * should arrive. Used by tents (2-4h), dance floors (1-2h),
+ * photo booths (~60min). Pull sheet renders arrival = event_start −
+ * this value.
+ */
+function SetupWindowField({
+  initialSetupMinutesBefore,
+}: {
+  initialSetupMinutesBefore: number | null;
+}) {
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Setup window
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the <code>setup.setup-window</code>{" "}
+        capability. Pull sheet shows arrival = event start − this many
+        minutes. Tents typically 120-240, dance floors 60-120, photo booths 60.
+      </p>
+      <label>
+        <strong style={{ display: "block", marginBottom: 6 }}>
+          Minutes before event start
+        </strong>
+        <input
+          type="number"
+          name="setup_minutes_before"
+          min="0"
+          max="1440"
+          step="15"
+          defaultValue={initialSetupMinutesBefore ?? ""}
+          placeholder="60"
+          style={{ width: 220 }}
+        />
+      </label>
+    </details>
+  );
+}
+
+/**
+ * Phase 2e.5 — onsite-attendant: included hours + overage rate.
+ * Used by photo booths (attendant typically included full rental)
+ * and concessions (1 hour included, +$100/hr after).
+ */
+function OnsiteAttendantFields({
+  initialIncludedHours,
+  initialOverageCentsPerHour,
+}: {
+  initialIncludedHours: number | null;
+  initialOverageCentsPerHour: number | null;
+}) {
+  const overageDollars =
+    initialOverageCentsPerHour != null ? initialOverageCentsPerHour / 100 : "";
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Onsite attendant
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the{" "}
+        <code>service.onsite-attendant</code> capability. Included hours
+        are bundled into the base price; overage bills at the per-hour rate
+        below.
+      </p>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Included hours
+          </strong>
+          <input
+            type="number"
+            name="attendant_included_hours"
+            min="0"
+            max="24"
+            step="1"
+            defaultValue={initialIncludedHours ?? ""}
+            placeholder="1"
+            style={{ width: "100%" }}
+          />
+        </label>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Overage rate ($/hr)
+          </strong>
+          <input
+            type="number"
+            name="attendant_overage_rate"
+            min="0"
+            max="5000"
+            step="0.01"
+            defaultValue={overageDollars}
+            placeholder="100.00"
+            style={{ width: "100%" }}
+          />
+        </label>
+      </div>
+    </details>
+  );
+}
+
+/**
+ * Phase 2e.5 — capacity calculator: metric + value. Storefront PDP
+ * uses these for tent "fits N guests" and dance floor "fits N
+ * dancers" recommendations.
+ */
+function CapacityCalculatorFields({
+  initialMetric,
+  initialValue,
+}: {
+  initialMetric: string | null;
+  initialValue: number | null;
+}) {
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Capacity
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the{" "}
+        <code>display.capacity-calculator</code> capability.
+      </p>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Metric
+          </strong>
+          <select
+            name="capacity_metric"
+            defaultValue={initialMetric ?? ""}
+            style={{ width: "100%" }}
+          >
+            <option value="">—</option>
+            <option value="guests">Guests</option>
+            <option value="sq_ft">Square feet</option>
+            <option value="dancers">Dancers</option>
+            <option value="servings">Servings</option>
+          </select>
+        </label>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Value
+          </strong>
+          <input
+            type="number"
+            name="capacity_value"
+            min="0"
+            max="100000"
+            step="1"
+            defaultValue={initialValue ?? ""}
+            placeholder="100"
+            style={{ width: "100%" }}
+          />
+        </label>
+      </div>
+    </details>
+  );
+}
+
+/**
+ * Phase 2e.5 — order minimum: product-level quantity floor. Used by
+ * tables/chairs ("50-chair minimum per pack").
+ */
+function OrderMinimumField({
+  initialMinimumOrderQuantity,
+}: {
+  initialMinimumOrderQuantity: number | null;
+}) {
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Order minimum
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the <code>order.minimum-order</code>{" "}
+        capability. Storefront blocks add-to-cart below this quantity with a
+        friendly &quot;minimum N units&quot; message.
+      </p>
+      <label>
+        <strong style={{ display: "block", marginBottom: 6 }}>
+          Minimum quantity per order
+        </strong>
+        <input
+          type="number"
+          name="minimum_order_quantity"
+          min="0"
+          max="100000"
+          step="1"
+          defaultValue={initialMinimumOrderQuantity ?? ""}
+          placeholder="50"
+          style={{ width: 220 }}
+        />
+      </label>
     </details>
   );
 }

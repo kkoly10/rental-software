@@ -118,6 +118,101 @@ function reconcilePerUnitCents(
   };
 }
 
+/**
+ * Phase 2e.5 — read + reconcile for the four simpler capability
+ * field sets. Each reads an int/text input, the reconcile gates on
+ * the matching capability_slug, and the cents conversion happens
+ * for the attendant overage rate.
+ */
+function readSetupWindowFields(formData: FormData) {
+  const raw = String(formData.get("setup_minutes_before") ?? "").trim();
+  return {
+    setupMinutesBefore: raw === "" ? undefined : Number(raw),
+  };
+}
+
+function readOnsiteAttendantFields(formData: FormData) {
+  const includedRaw = String(formData.get("attendant_included_hours") ?? "").trim();
+  const overageRaw = String(formData.get("attendant_overage_rate") ?? "").trim();
+  return {
+    attendantIncludedHours: includedRaw === "" ? undefined : Number(includedRaw),
+    attendantOverageRate: overageRaw === "" ? undefined : overageRaw,
+  };
+}
+
+function readCapacityFields(formData: FormData) {
+  const metricRaw = String(formData.get("capacity_metric") ?? "").trim();
+  const valueRaw = String(formData.get("capacity_value") ?? "").trim();
+  const knownMetrics = ["guests", "sq_ft", "dancers", "servings"];
+  return {
+    capacityMetric: knownMetrics.includes(metricRaw)
+      ? (metricRaw as "guests" | "sq_ft" | "dancers" | "servings")
+      : undefined,
+    capacityValue: valueRaw === "" ? undefined : Number(valueRaw),
+  };
+}
+
+function readOrderMinimumFields(formData: FormData) {
+  const raw = String(formData.get("minimum_order_quantity") ?? "").trim();
+  return {
+    minimumOrderQuantity: raw === "" ? undefined : Number(raw),
+  };
+}
+
+function reconcileSetupWindow(
+  capabilitySlugs: readonly string[],
+  setupMinutesBefore: number | undefined,
+) {
+  if (!capabilitySlugs.includes("setup.setup-window")) {
+    return { setup_minutes_before: null };
+  }
+  return { setup_minutes_before: setupMinutesBefore ?? null };
+}
+
+function reconcileOnsiteAttendant(
+  capabilitySlugs: readonly string[],
+  attendantIncludedHours: number | undefined,
+  attendantOverageRate: number | undefined,
+) {
+  if (!capabilitySlugs.includes("service.onsite-attendant")) {
+    return {
+      attendant_included_hours: null,
+      attendant_overage_cents_per_hour: null,
+    };
+  }
+  return {
+    attendant_included_hours: attendantIncludedHours ?? null,
+    attendant_overage_cents_per_hour:
+      attendantOverageRate === undefined
+        ? null
+        : Math.round(attendantOverageRate * 100),
+  };
+}
+
+function reconcileCapacity(
+  capabilitySlugs: readonly string[],
+  capacityMetric: "guests" | "sq_ft" | "dancers" | "servings" | undefined,
+  capacityValue: number | undefined,
+) {
+  if (!capabilitySlugs.includes("display.capacity-calculator")) {
+    return { capacity_metric: null, capacity_value: null };
+  }
+  return {
+    capacity_metric: capacityMetric ?? null,
+    capacity_value: capacityValue ?? null,
+  };
+}
+
+function reconcileOrderMinimum(
+  capabilitySlugs: readonly string[],
+  minimumOrderQuantity: number | undefined,
+) {
+  if (!capabilitySlugs.includes("order.minimum-order")) {
+    return { minimum_order_quantity: null };
+  }
+  return { minimum_order_quantity: minimumOrderQuantity ?? null };
+}
+
 export type ProductActionState = {
   ok: boolean;
   message: string;
@@ -178,6 +273,10 @@ export async function createProduct(
     capabilitySlugs: readCapabilitySlugs(formData),
     ...readPerHourFields(formData),
     ...readPerUnitFields(formData),
+    ...readSetupWindowFields(formData),
+    ...readOnsiteAttendantFields(formData),
+    ...readCapacityFields(formData),
+    ...readOrderMinimumFields(formData),
   });
 
   if (!parsed.success) {
@@ -208,6 +307,12 @@ export async function createProduct(
     idleHourRate,
     unitPrice,
     unitLabel,
+    setupMinutesBefore,
+    attendantIncludedHours,
+    attendantOverageRate,
+    capacityMetric,
+    capacityValue,
+    minimumOrderQuantity,
   } = parsed.data;
 
   const perHourCents = reconcilePerHourCents(
@@ -217,6 +322,14 @@ export async function createProduct(
     idleHourRate,
   );
   const perUnitCents = reconcilePerUnitCents(capabilitySlugs, unitPrice, unitLabel);
+  const setupWindow = reconcileSetupWindow(capabilitySlugs, setupMinutesBefore);
+  const attendant = reconcileOnsiteAttendant(
+    capabilitySlugs,
+    attendantIncludedHours,
+    attendantOverageRate,
+  );
+  const capacity = reconcileCapacity(capabilitySlugs, capacityMetric, capacityValue);
+  const orderMin = reconcileOrderMinimum(capabilitySlugs, minimumOrderQuantity);
 
   const wetUpchargeCents = reconcileWetUpcharge(supportsModes, wetUpcharge);
 
@@ -331,6 +444,12 @@ export async function createProduct(
     idle_hour_rate_cents: perHourCents.idle_hour_rate_cents,
     unit_price_cents: perUnitCents.unit_price_cents,
     unit_label: perUnitCents.unit_label,
+    setup_minutes_before: setupWindow.setup_minutes_before,
+    attendant_included_hours: attendant.attendant_included_hours,
+    attendant_overage_cents_per_hour: attendant.attendant_overage_cents_per_hour,
+    capacity_metric: capacity.capacity_metric,
+    capacity_value: capacity.capacity_value,
+    minimum_order_quantity: orderMin.minimum_order_quantity,
   }).select("id").single();
 
   if (error) {
@@ -410,6 +529,10 @@ export async function updateProduct(
     capabilitySlugs: readCapabilitySlugs(formData),
     ...readPerHourFields(formData),
     ...readPerUnitFields(formData),
+    ...readSetupWindowFields(formData),
+    ...readOnsiteAttendantFields(formData),
+    ...readCapacityFields(formData),
+    ...readOrderMinimumFields(formData),
   });
 
   if (!parsed.success) {
@@ -430,6 +553,24 @@ export async function updateProduct(
     parsed.data.capabilitySlugs,
     parsed.data.unitPrice,
     parsed.data.unitLabel,
+  );
+  const updateSetupWindow = reconcileSetupWindow(
+    parsed.data.capabilitySlugs,
+    parsed.data.setupMinutesBefore,
+  );
+  const updateAttendant = reconcileOnsiteAttendant(
+    parsed.data.capabilitySlugs,
+    parsed.data.attendantIncludedHours,
+    parsed.data.attendantOverageRate,
+  );
+  const updateCapacity = reconcileCapacity(
+    parsed.data.capabilitySlugs,
+    parsed.data.capacityMetric,
+    parsed.data.capacityValue,
+  );
+  const updateOrderMin = reconcileOrderMinimum(
+    parsed.data.capabilitySlugs,
+    parsed.data.minimumOrderQuantity,
   );
 
   if (!hasSupabaseEnv()) {
@@ -524,6 +665,13 @@ export async function updateProduct(
       idle_hour_rate_cents: updatePerHourCents.idle_hour_rate_cents,
       unit_price_cents: updatePerUnitCents.unit_price_cents,
       unit_label: updatePerUnitCents.unit_label,
+      setup_minutes_before: updateSetupWindow.setup_minutes_before,
+      attendant_included_hours: updateAttendant.attendant_included_hours,
+      attendant_overage_cents_per_hour:
+        updateAttendant.attendant_overage_cents_per_hour,
+      capacity_metric: updateCapacity.capacity_metric,
+      capacity_value: updateCapacity.capacity_value,
+      minimum_order_quantity: updateOrderMin.minimum_order_quantity,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)
