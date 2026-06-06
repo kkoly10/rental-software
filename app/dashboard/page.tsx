@@ -15,6 +15,7 @@ import { ContextHelpBanner } from "@/components/guidance/context-help-banner";
 import { MilestoneCelebration } from "@/components/dashboard/milestone-celebration";
 import { SetupProgressBar } from "@/components/dashboard/setup-progress-bar";
 import { DashboardGreeting } from "@/components/dashboard/dashboard-greeting";
+import { AiCopilotCard } from "@/components/dashboard/ai-copilot-card";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getNotifications } from "@/lib/data/notifications";
 import { getSubscriptionStatus } from "@/lib/stripe/get-subscription-status";
@@ -182,6 +183,8 @@ export default async function DashboardPage() {
           )}
         </section>
 
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <AiCopilotCard stepsLeft={Math.max(0, checklist.total - checklist.completed)} />
         <aside className="panel">
           <div className="section-header">
             <div>
@@ -270,6 +273,7 @@ export default async function DashboardPage() {
             {t(m.dashboard.overview.searchHint, { key: "Cmd+K" })}
           </div>
         </aside>
+        </div>
       </div>
 
       {milestone && <MilestoneCelebration milestoneKey={milestone} />}
