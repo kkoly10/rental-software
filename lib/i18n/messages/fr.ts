@@ -606,6 +606,7 @@ export const fr: Messages = {
         morning: "Bonjour, {name}",
         afternoon: "Bon après-midi, {name}",
         evening: "Bonsoir, {name}",
+        accent: { morning: "Bonjour", afternoon: "après-midi", evening: "Bonsoir" },
         workspaceEyebrow: "Votre espace de travail",
         tagline: "Voici votre aperçu du jour : réservations, livraisons et paiements.",
         fallbackName: "vous",
