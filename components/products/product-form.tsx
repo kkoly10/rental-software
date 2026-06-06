@@ -45,6 +45,9 @@ export function ProductForm({
     hourlyRateCents?: number | null;
     minimumHours?: number | null;
     idleHourRateCents?: number | null;
+    // Phase 2e.4 — per-unit pricing fields.
+    unitPriceCents?: number | null;
+    unitLabel?: string | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -318,6 +321,12 @@ export function ProductForm({
         initialIdleHourRateCents={product?.idleHourRateCents ?? null}
       />
 
+      {/* Phase 2e.4 — per-unit pricing (tables/chairs/dance floors). */}
+      <PerUnitPricingFields
+        initialUnitPriceCents={product?.unitPriceCents ?? null}
+        initialUnitLabel={product?.unitLabel ?? null}
+      />
+
       {state.message && (
         <div
           role={state.ok ? "status" : "alert"}
@@ -527,6 +536,72 @@ function PerHourPricingFields({
         booth present during dinner service) at a discount. Leave blank
         today.
       </p>
+    </details>
+  );
+}
+
+/**
+ * Phase 2e.4 — per-unit pricing form fields (tables/chairs/dance
+ * floors). Same gating pattern as per-hour: the section is always
+ * present in the DOM, the server action nulls out the columns when
+ * pricing.per-unit isn't in the capability_slugs.
+ */
+function PerUnitPricingFields({
+  initialUnitPriceCents,
+  initialUnitLabel,
+}: {
+  initialUnitPriceCents: number | null;
+  initialUnitLabel: string | null;
+}) {
+  const unitDollars =
+    initialUnitPriceCents != null ? initialUnitPriceCents / 100 : "";
+
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Per-unit pricing
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the <code>pricing.per-unit</code>{" "}
+        capability — typically chairs (&quot;$5 per chair&quot;), banquet
+        tables, and dance-floor sections. The storefront shows the math as
+        &quot;$5 per chair × 100 = $500&quot;.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Unit price ($)
+          </strong>
+          <input
+            type="number"
+            name="unit_price"
+            min="0"
+            max="5000"
+            step="0.01"
+            defaultValue={unitDollars}
+            placeholder="5.00"
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Unit label
+          </strong>
+          <input
+            type="text"
+            name="unit_label"
+            maxLength={32}
+            defaultValue={initialUnitLabel ?? ""}
+            placeholder="chair"
+            style={{ width: "100%" }}
+          />
+        </label>
+      </div>
     </details>
   );
 }

@@ -298,6 +298,10 @@ export async function getProductById(productId: string) {
       typeof data.idle_hour_rate_cents === "number"
         ? data.idle_hour_rate_cents
         : null,
+    // Phase 2e.4 — per-unit pricing fields.
+    unitPriceCents:
+      typeof data.unit_price_cents === "number" ? data.unit_price_cents : null,
+    unitLabel: typeof data.unit_label === "string" ? data.unit_label : null,
   };
 }
 
