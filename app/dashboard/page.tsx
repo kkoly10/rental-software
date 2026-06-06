@@ -84,21 +84,37 @@ export default async function DashboardPage() {
             label={m.dashboard.overview.stats.todayBookings}
             value={String(summary.todayBookings)}
             meta={m.dashboard.overview.stats.todayBookingsMeta}
+            accent="var(--primary)"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5l6.5 3.5v8L9 16.5 2.5 13V5L9 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M2.5 5L9 8.5 15.5 5M9 8.5v8" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+            }
           />
           <StatCard
             label={m.dashboard.overview.stats.upcomingDeliveries}
             value={String(summary.upcomingDeliveries)}
             meta={m.dashboard.overview.stats.upcomingDeliveriesMeta}
+            accent="var(--info)"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1.5 4.5h8v7h-8z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9.5 7h3l2 2.5v2h-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><circle cx="4.5" cy="13" r="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="12" cy="13" r="1.5" stroke="currentColor" strokeWidth="1.5"/></svg>
+            }
           />
           <StatCard
             label={m.dashboard.overview.stats.activeProducts}
             value={String(summary.activeProducts)}
             meta={m.dashboard.overview.stats.activeProductsMeta}
+            accent="var(--accent)"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.5"/></svg>
+            }
           />
           <StatCard
             label={m.dashboard.overview.stats.paymentItems}
             value={String(summary.recentPaymentsCount)}
             meta={m.dashboard.overview.stats.paymentItemsMeta}
+            accent="var(--success)"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5v15M12.5 4.5H7.2a2.2 2.2 0 0 0 0 4.4h3.6a2.2 2.2 0 0 1 0 4.4H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            }
           />
         </div>
       </div>

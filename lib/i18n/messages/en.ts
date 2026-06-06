@@ -607,6 +607,7 @@ const enValues = {
         morning: "Good morning, {name}",
         afternoon: "Good afternoon, {name}",
         evening: "Good evening, {name}",
+        workspaceEyebrow: "Your workspace",
         tagline: "Here’s your daily overview for bookings, deliveries, and payments.",
         fallbackName: "there",
       },
