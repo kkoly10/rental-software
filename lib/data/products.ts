@@ -280,6 +280,12 @@ export async function getProductById(productId: string) {
       typeof data.required_anchor_count === "number"
         ? data.required_anchor_count
         : null,
+    // Phase 2e.1 — capability assignment. Defaults to empty when the
+    // column hasn't been backfilled or the product pre-dates the
+    // migration.
+    capabilitySlugs: Array.isArray(data.capability_slugs)
+      ? (data.capability_slugs as string[])
+      : [],
   };
 }
 
