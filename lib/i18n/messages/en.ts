@@ -607,6 +607,7 @@ const enValues = {
         morning: "Good morning, {name}",
         afternoon: "Good afternoon, {name}",
         evening: "Good evening, {name}",
+        accent: { morning: "morning", afternoon: "afternoon", evening: "evening" },
         workspaceEyebrow: "Your workspace",
         tagline: "Here’s your daily overview for bookings, deliveries, and payments.",
         fallbackName: "there",

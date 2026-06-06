@@ -30,6 +30,11 @@ export async function DashboardGreeting({
               afternoon: m.dashboard.overview.greeting.afternoon,
               evening: m.dashboard.overview.greeting.evening,
             }}
+            accentWords={{
+              morning: m.dashboard.overview.greeting.accent.morning,
+              afternoon: m.dashboard.overview.greeting.accent.afternoon,
+              evening: m.dashboard.overview.greeting.accent.evening,
+            }}
           />
           <p className="dashboard-greeting-tagline">
             {m.dashboard.overview.greeting.tagline}
