@@ -1,6 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 
@@ -41,6 +43,8 @@ export async function getMaintenanceRecords() {
   if (!ctx) {
     return [];
   }
+
+  const { currency, locale } = await getOrgFormatting();
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -88,7 +92,7 @@ export async function getMaintenanceRecords() {
             year: "numeric",
           })
         : "TBD",
-      costLabel: `$${typeof record.cost_amount === "number" ? record.cost_amount : 0}`,
+      costLabel: formatMoney(typeof record.cost_amount === "number" ? record.cost_amount : 0, currency, locale),
     };
   });
 }

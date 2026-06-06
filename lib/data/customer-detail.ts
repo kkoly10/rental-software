@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import type { CustomerDetail } from "@/lib/types";
 
 const fallbackCustomerDetail: CustomerDetail = {
@@ -85,6 +87,8 @@ export async function getCustomerDetail(
   const defaultAddr =
     addresses.find((a) => a.is_default_delivery) ?? addresses[0];
 
+  const { currency, locale } = await getOrgFormatting();
+
   return {
     id: data.id,
     name:
@@ -119,7 +123,7 @@ export async function getCustomerDetail(
           .replace(/\b\w/g, (c: string) => c.toUpperCase());
         return {
           id: o.id,
-          label: `${o.order_number} · ${status} · $${Number(o.total_amount ?? 0).toFixed(2)}`,
+          label: `${o.order_number} · ${status} · ${formatMoney(Number(o.total_amount ?? 0), currency, locale)}`,
         };
       }),
   };

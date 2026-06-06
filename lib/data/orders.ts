@@ -2,6 +2,8 @@ import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import {
   paginateItems,
   type PaginatedResult,
@@ -58,7 +60,7 @@ type OrderRow = {
   total_amount: number | string | null;
 };
 
-function mapOrderRow(order: OrderRow): OrderSummary {
+function mapOrderRow(order: OrderRow, money: (n: number) => string): OrderSummary {
   const customer = (order as Record<string, unknown>).customers as
     | { first_name?: string | null; last_name?: string | null; deleted_at?: string | null }
     | null;
@@ -89,7 +91,7 @@ function mapOrderRow(order: OrderRow): OrderSummary {
           timeZone: "UTC",
         })
       : "TBD",
-    total: `$${Number(order.total_amount ?? 0).toFixed(2)}`,
+    total: money(Number(order.total_amount ?? 0)),
     status: formatStatus(status),
     tone: statusTone(status),
     eventDateRaw: order.event_date ?? undefined,
@@ -143,6 +145,9 @@ export async function getOrdersPage(options?: {
     return paginateItems([], { page: options?.page, pageSize: options?.pageSize ?? 20, query });
   }
 
+  const { currency, locale } = await getOrgFormatting();
+  const money = (n: number) => formatMoney(n, currency, locale);
+
   const supabase = await createSupabaseServerClient();
   const selectFields =
     "id, order_number, order_status, event_date, total_amount, customers(first_name, last_name, deleted_at), order_items(item_name_snapshot), customer_addresses!delivery_address_id(postal_code)";
@@ -171,7 +176,7 @@ export async function getOrdersPage(options?: {
       return paginateItems([], { page: options?.page, pageSize, query });
     }
 
-    const mappedPage = (data ?? []).map(mapOrderRow);
+    const mappedPage = (data ?? []).map((o) => mapOrderRow(o, money));
     const totalItems = count ?? mappedPage.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return {
@@ -239,7 +244,7 @@ export async function getOrdersPage(options?: {
     return paginateItems([], { page: options?.page, pageSize, query });
   }
 
-  const mapped: OrderSummary[] = (data ?? []).map(mapOrderRow);
+  const mapped: OrderSummary[] = (data ?? []).map((o) => mapOrderRow(o, money));
   const totalItems = count ?? mapped.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 

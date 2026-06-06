@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
@@ -106,6 +108,8 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const totalPaid = financials?.totalPaid ?? 0;
   const remainingBalance = financials?.remainingBalance ?? Number(data.total_amount ?? 0);
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  const { currency, locale } = await getOrgFormatting();
+  const money = (n: number) => formatMoney(n, currency, locale);
   // Sprint 6.0 — locale-aware mode + anchoring labels for the items list.
   const i18nMessages = await getMessages();
   const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
@@ -174,12 +178,12 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       type: d.document_type ?? "",
       status: d.document_status ?? "pending",
     })),
-    subtotal: `$${Number(data.subtotal_amount ?? 0).toFixed(2)}`,
-    deliveryFee: `$${Number(data.delivery_fee_amount ?? 0).toFixed(2)}`,
-    depositPaid: `$${totalPaid.toFixed(2)}`,
-    depositDue: `$${Number(data.deposit_due_amount ?? 0).toFixed(2)}`,
-    balanceDue: `$${remainingBalance.toFixed(2)}`,
-    total: `$${Number(data.total_amount ?? 0).toFixed(2)}`,
+    subtotal: money(Number(data.subtotal_amount ?? 0)),
+    deliveryFee: money(Number(data.delivery_fee_amount ?? 0)),
+    depositPaid: money(totalPaid),
+    depositDue: money(Number(data.deposit_due_amount ?? 0)),
+    balanceDue: money(remainingBalance),
+    total: money(Number(data.total_amount ?? 0)),
     notes: data.notes ?? "",
   };
 }
