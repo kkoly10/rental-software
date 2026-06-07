@@ -31,7 +31,7 @@ export function OnboardingForm() {
   // No default selection: forcing an explicit pick is the whole point of
   // the chooser. A pre-checked "inflatable" radio recreates the old
   // hardcoded behavior for anyone who skims the form.
-  const [businessType, setBusinessType] = useState<"" | "inflatable" | "car" | "equipment">("");
+  const [businessType, setBusinessType] = useState<"" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors">("");
 
   // Detect the browser timezone so a UK or Pacific operator isn't silently
   // defaulted to Eastern US time. Only honour it when it matches one of the
@@ -80,7 +80,7 @@ export function OnboardingForm() {
         businessName?: string;
         slug?: string;
         slugEdited?: boolean;
-        businessType?: "" | "inflatable" | "car" | "equipment";
+        businessType?: "" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors";
       };
       let hydrated = false;
       if (draft.businessName) {
@@ -194,9 +194,35 @@ export function OnboardingForm() {
             marginTop: 12,
           }}
         >
-          {(["inflatable", "car", "equipment"] as const).map((value) => {
+          {(
+            [
+              {
+                value: "inflatable",
+                label: "Inflatables",
+                description: "Bounce houses, water slides, combos",
+              },
+              {
+                value: "tents",
+                label: "Tents",
+                description: "Frame + pole tents, sidewalls, lighting",
+              },
+              {
+                value: "tables-and-chairs",
+                label: "Tables & Chairs",
+                description: "Chiavari, banquet tables, linens",
+              },
+              {
+                value: "dance-floors",
+                label: "Dance Floors",
+                description: "Parquet, LED, stage sections",
+              },
+            ] as const
+          ).map(({ value, label, description }) => {
             const selected = businessType === value;
-            const opt = f.businessType.options[value];
+            // Phase 3 — multi-vertical signup picker. The 4 options
+            // map to lib/verticals/registry.ts so the server-side
+            // bootstrap RPC seeds the right default categories.
+            const opt = { label, description };
             // Keeping the radio input visible (rather than opacity:0)
             // keeps keyboard focus visible — when the operator tabs in,
             // the browser's native focus ring lands on something they
