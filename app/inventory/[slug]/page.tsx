@@ -187,10 +187,7 @@ export default async function ProductDetailPage({
                 ))}
               </div>
 
-              {/* Phase 2e.8 — structured specs definition list. Only
-                  renders when the product carries display.structured-specs
-                  AND has rows. Replaces the prose-blob description for
-                  power/footprint/servings-style data. */}
+              {/* Phase 2e.8 — structured specs definition list. */}
               {product.capabilitySlugs?.includes("display.structured-specs") &&
                 product.specs &&
                 product.specs.length > 0 && (
@@ -231,6 +228,109 @@ export default async function ProductDetailPage({
                         </div>
                       ))}
                     </dl>
+                  </div>
+                )}
+
+              {/* Phase 2e.9 — variant gallery picker. */}
+              {product.capabilitySlugs?.includes("display.variant-gallery") &&
+                product.variants &&
+                product.variants.length > 0 && (
+                  <div
+                    className="order-card"
+                    style={{ marginTop: 18, padding: 16 }}
+                  >
+                    <strong
+                      style={{
+                        display: "block",
+                        fontSize: "0.78rem",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        color: "var(--text-muted, #6b7280)",
+                        marginBottom: 12,
+                      }}
+                    >
+                      Options
+                    </strong>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(120px, 1fr))",
+                        gap: 12,
+                      }}
+                    >
+                      {product.variants.map((variant) => (
+                        <div
+                          key={variant.id}
+                          style={{
+                            border: variant.isDefault
+                              ? "2px solid var(--primary, #2563eb)"
+                              : "1px solid var(--border, #e5e7eb)",
+                            borderRadius: 8,
+                            overflow: "hidden",
+                            background: "#fff",
+                          }}
+                          aria-label={variant.label}
+                        >
+                          <div
+                            style={{
+                              backgroundImage: variant.thumbnailUrl
+                                ? `url(${variant.thumbnailUrl})`
+                                : "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                              aspectRatio: "1 / 1",
+                            }}
+                          />
+                          <div style={{ padding: "8px 10px" }}>
+                            <div
+                              style={{
+                                fontSize: "0.88rem",
+                                fontWeight: 600,
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {variant.label}
+                            </div>
+                            {variant.priceDeltaCents !== 0 && (
+                              <div
+                                className="muted"
+                                style={{
+                                  fontSize: "0.78rem",
+                                  marginTop: 2,
+                                }}
+                              >
+                                {variant.priceDeltaCents > 0 ? "+" : "−"}$
+                                {Math.abs(variant.priceDeltaCents / 100).toFixed(2)}
+                              </div>
+                            )}
+                            {variant.isDefault && (
+                              <div
+                                className="muted"
+                                style={{
+                                  fontSize: "0.74rem",
+                                  marginTop: 2,
+                                  color: "var(--primary, #2563eb)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Default
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p
+                      className="muted"
+                      style={{
+                        marginTop: 12,
+                        marginBottom: 0,
+                        fontSize: "0.82rem",
+                      }}
+                    >
+                      Pick your favorite during checkout.
+                    </p>
                   </div>
                 )}
 

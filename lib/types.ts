@@ -219,4 +219,14 @@ export type CatalogDetail = {
     specValue: string;
     displayOrder: number;
   }>;
+  // Phase 2e.9 — variant gallery picker on the PDP.
+  variants?: Array<{
+    id: string;
+    label: string;
+    thumbnailUrl: string | null;
+    previewImageUrl: string | null;
+    priceDeltaCents: number;
+    isDefault: boolean;
+    displayOrder: number;
+  }>;
 };
