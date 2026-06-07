@@ -136,6 +136,13 @@ export async function createCheckoutOrder(
   }
 
   const smsOptIn = formData.get("sms_opt_in") === "true";
+  // Phase 2e.13 — per-unit pricing reads `units` outside the zod
+  // schema; it's only meaningful when the product carries
+  // pricing.per-unit, and the dispatch branch below clamps + truncates
+  // via computePerUnitLineTotal so a crafted negative or fractional
+  // value can't slip through.
+  const rawUnits = String(formData.get("units") ?? "");
+  const requestedUnits = /^\d+$/.test(rawUnits) ? parseInt(rawUnits, 10) : 1;
   const requestHeaders = await headers();
   const { getTrustedClientIp } = await import("@/lib/security/request-client");
   const trustedIp = getTrustedClientIp(requestHeaders);
@@ -365,6 +372,10 @@ export async function createCheckoutOrder(
   // computation, persisted to order_items.billed_hours so refunds
   // and disputes see the same number the customer was charged.
   let billedHoursForLineItem: number | null = null;
+  // Phase 2e.13 — per-unit billing audit trail. Captured at price
+  // computation, persisted to order_items.billed_units so refunds
+  // and disputes see the same number the customer was charged.
+  let billedUnitsForLineItem: number | null = null;
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -375,7 +386,7 @@ export async function createCheckoutOrder(
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -385,14 +396,34 @@ export async function createCheckoutOrder(
       .maybeSingle();
 
     if (product) {
+      // Phase 2e.13 — capability slugs read before the pricing
+      // validity check so per-unit products (which carry their rate
+      // on unit_price_cents, not base_price) aren't rejected by the
+      // decision-2.9 "missing price" gate.
+      const productCapabilitySlugs = Array.isArray(
+        (product as { capability_slugs?: unknown }).capability_slugs,
+      )
+        ? ((product as { capability_slugs?: unknown }).capability_slugs as string[])
+        : [];
+      const productUnitPriceCents =
+        typeof (product as { unit_price_cents?: unknown }).unit_price_cents === "number"
+          ? ((product as { unit_price_cents?: unknown }).unit_price_cents as number)
+          : null;
+      const isPerUnitProduct =
+        productCapabilitySlugs.includes("pricing.per-unit") &&
+        productUnitPriceCents !== null &&
+        productUnitPriceCents > 0;
+
       // Decision 2.9 — refuse checkout when a product has no price set,
       // instead of silently billing the magic $225 default. Matches the
       // WooCommerce default ("empty price → no Add-to-Cart button"). The
       // product itself stays browsable on the storefront so customers can
-      // still request a quote for unusual items.
+      // still request a quote for unusual items. Per-unit products
+      // satisfy the gate via unit_price_cents instead of base_price.
       const rawBasePrice = product.base_price;
       const hasValidPrice =
-        typeof rawBasePrice === "number" && rawBasePrice > 0;
+        (typeof rawBasePrice === "number" && rawBasePrice > 0) ||
+        isPerUnitProduct;
       if (!hasValidPrice) {
         await logAppEvent({
           organizationId: orgId,
@@ -431,11 +462,6 @@ export async function createCheckoutOrder(
       // times via the shared computePerHourLineTotal helper. Below
       // the minimum_hours floor still bills the minimum block, so a
       // sub-minimum rental never undercharges.
-      const productCapabilitySlugs = Array.isArray(
-        (product as { capability_slugs?: unknown }).capability_slugs,
-      )
-        ? ((product as { capability_slugs?: unknown }).capability_slugs as string[])
-        : [];
       const productHourlyRateCents =
         typeof (product as { hourly_rate_cents?: unknown }).hourly_rate_cents === "number"
           ? ((product as { hourly_rate_cents?: unknown }).hourly_rate_cents as number)
@@ -449,7 +475,24 @@ export async function createCheckoutOrder(
         productHourlyRateCents !== null;
 
       const pricingModel = product.pricing_model ?? "flat_day";
-      if (isPerHourProduct) {
+      if (isPerUnitProduct) {
+        // Phase 2e.13 — per-unit pricing branch (tables, chairs,
+        // dance-floor sections, future bulk-item verticals). The
+        // customer picks a count on the PDP; line total = units ×
+        // unit_price_cents via the shared computePerUnitLineTotal
+        // helper, which clamps negatives to 0 and truncates fractions
+        // so a crafted `units=-5` or `units=12.7` can't undercharge
+        // or write a non-integer to billed_units.
+        const { computePerUnitLineTotal } = await import(
+          "@/lib/capabilities/pricing/per-unit"
+        );
+        const perUnit = computePerUnitLineTotal({
+          unitPriceCents: productUnitPriceCents ?? 0,
+          units: requestedUnits,
+        });
+        subtotal = Number((perUnit.lineTotalCents / 100).toFixed(2));
+        billedUnitsForLineItem = perUnit.billedUnits;
+      } else if (isPerHourProduct) {
         const { computePerHourLineTotal } = await import(
           "@/lib/capabilities/pricing/per-hour"
         );
@@ -926,7 +969,11 @@ export async function createCheckoutOrder(
       order_id: order.id,
       product_id: productId,
       line_type: "rental",
-      quantity: 1,
+      // Phase 2e.13 — quantity surfaces the unit count when the
+      // product is priced per-unit so order summaries / pull sheets
+      // show "200 chairs" instead of "1". Flat-day and per-hour
+      // products still bill as a single line.
+      quantity: billedUnitsForLineItem ?? 1,
       unit_price: itemRatePerDay ?? subtotal,
       line_total: subtotal,
       item_name_snapshot: productName,
@@ -942,6 +989,10 @@ export async function createCheckoutOrder(
       // (after the minimum-floor logic). NULL for flat-day / per-day
       // products. Refund + dispute lookups read this directly.
       billed_hours: billedHoursForLineItem,
+      // Phase 2e.13 — actual units billed for per-unit products
+      // (after clamping / truncation). NULL for flat-day / per-hour
+      // products. Refund + dispute lookups read this directly.
+      billed_units: billedUnitsForLineItem,
     });
 
     if (itemError) {
