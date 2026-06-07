@@ -231,6 +231,96 @@ export default async function ProductDetailPage({
                   </div>
                 )}
 
+              {/* Phase 2e.10 — add-ons surface. Static read-only
+                  display for now: lists each available add-on with
+                  its base price and any required-by-default
+                  indicator. Interactive selection (multi-item
+                  checkout) lands in 2e.10b. */}
+              {product.capabilitySlugs?.includes("composition.add-ons") &&
+                product.addOns &&
+                product.addOns.length > 0 && (
+                  <div
+                    className="order-card"
+                    style={{ marginTop: 18, padding: 16 }}
+                  >
+                    <strong
+                      style={{
+                        display: "block",
+                        fontSize: "0.78rem",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        color: "var(--text-muted, #6b7280)",
+                        marginBottom: 12,
+                      }}
+                    >
+                      Available add-ons
+                    </strong>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      {product.addOns.map((addon) => (
+                        <li
+                          key={addon.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "8px 12px",
+                            border: "1px solid var(--border, #e5e7eb)",
+                            borderRadius: 8,
+                            background: "#fff",
+                            fontSize: "0.92rem",
+                          }}
+                        >
+                          <div>
+                            <strong>{addon.addonName}</strong>
+                            {addon.isRequired && (
+                              <span
+                                className="muted"
+                                style={{
+                                  fontSize: "0.78rem",
+                                  marginLeft: 8,
+                                  color: "var(--primary, #2563eb)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Required
+                              </span>
+                            )}
+                            {addon.maxQuantity != null && (
+                              <span
+                                className="muted"
+                                style={{ fontSize: "0.78rem", marginLeft: 8 }}
+                              >
+                                max {addon.maxQuantity}
+                              </span>
+                            )}
+                          </div>
+                          <div className="muted" style={{ fontSize: "0.88rem" }}>
+                            +${(addon.addonBasePriceCents / 100).toFixed(2)}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <p
+                      className="muted"
+                      style={{
+                        marginTop: 12,
+                        marginBottom: 0,
+                        fontSize: "0.82rem",
+                      }}
+                    >
+                      Pick the ones you want during checkout.
+                    </p>
+                  </div>
+                )}
+
               {/* Phase 2e.9 — variant gallery picker. */}
               {product.capabilitySlugs?.includes("display.variant-gallery") &&
                 product.variants &&

@@ -229,4 +229,17 @@ export type CatalogDetail = {
     isDefault: boolean;
     displayOrder: number;
   }>;
+  // Phase 2e.10 — add-ons available with this product (sidewalls,
+  // extra hours, cleaning fees, etc.). Each row links to a child
+  // product whose own pricing capability is used for the line total.
+  addOns?: Array<{
+    id: string;
+    addonProductId: string;
+    addonName: string;
+    addonBasePriceCents: number;
+    defaultQuantity: number;
+    maxQuantity: number | null;
+    isRequired: boolean;
+    displayOrder: number;
+  }>;
 };

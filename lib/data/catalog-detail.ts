@@ -107,7 +107,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order)"
+      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order), product_addons!product_addons_parent_product_id_fkey(id, addon_product_id, default_quantity, max_quantity, is_required, display_order, products!product_addons_addon_product_id_fkey(name, base_price))"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -281,6 +281,41 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
           previewImageUrl: r.preview_image_url,
           priceDeltaCents: r.price_delta_cents,
           isDefault: !!r.is_default,
+          displayOrder: r.display_order ?? 0,
+        }));
+    })(),
+    // Phase 2e.10 — add-ons. Joined through product_addons (parent
+    // FK) to the child products row for the addon's display name +
+    // base price. The addon's own pricing capability (per-hour /
+    // flat-day / etc.) will dispatch when the customer picks one;
+    // for now this surface is read-only on the PDP.
+    addOns: (() => {
+      const rows = (data as Record<string, unknown>).product_addons;
+      if (!Array.isArray(rows)) return [];
+      return [...rows]
+        .map((r) => r as {
+          id: string;
+          addon_product_id: string;
+          default_quantity: number;
+          max_quantity: number | null;
+          is_required: boolean;
+          display_order: number | null;
+          products?: { name?: string; base_price?: number } | null;
+        })
+        .sort(
+          (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+        )
+        .map((r) => ({
+          id: r.id,
+          addonProductId: r.addon_product_id,
+          addonName: r.products?.name ?? "Add-on",
+          addonBasePriceCents:
+            typeof r.products?.base_price === "number"
+              ? Math.round(r.products.base_price * 100)
+              : 0,
+          defaultQuantity: r.default_quantity,
+          maxQuantity: r.max_quantity,
+          isRequired: !!r.is_required,
           displayOrder: r.display_order ?? 0,
         }));
     })(),
