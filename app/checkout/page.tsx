@@ -57,8 +57,21 @@ export default async function CheckoutPage({
   // product's supports_modes before applying any upcharge.
   const selectedMode = mode === "wet" || mode === "dry" ? mode : undefined;
 
+  // Phase 1c follow-up — pass per-unit / variant / add-ons selections
+  // through so the review-summary subtotal matches what the submit
+  // action will charge. Defensive parsing for units (integer only); the
+  // helper itself does the UUID + add-on string validation.
+  const unitsNumeric = (() => {
+    if (!units || !/^\d+$/.test(units)) return undefined;
+    const n = parseInt(units, 10);
+    return n > 0 ? n : undefined;
+  })();
   const [pricing, policies, settings, { messages: m, t }] = await Promise.all([
-    getCheckoutPricing(product, zip, date, selectedMode, rentalEnd),
+    getCheckoutPricing(product, zip, date, selectedMode, rentalEnd, {
+      units: unitsNumeric,
+      variantId: variant,
+      addons,
+    }),
     getBookingPolicies(),
     getOrganizationSettings(),
     getTranslator(),

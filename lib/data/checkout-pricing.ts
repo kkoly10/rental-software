@@ -27,12 +27,24 @@ export type CheckoutPricingData = {
   deposit: number | null;
 };
 
+/** Parsed selections coming from the PDP query string. The page reads
+ *  ?units, ?variant, ?addons from searchParams and passes them in.
+ *  All optional; missing values fall back to "reference rate". */
+export type CheckoutSelections = {
+  units?: number;
+  variantId?: string;
+  /** Encoded as "uuid:qty,uuid:qty" — same shape the submit action
+   *  reads from formData. We re-parse here for the review summary. */
+  addons?: string;
+};
+
 export async function getCheckoutPricing(
   productSlug?: string,
   zip?: string,
   date?: string,
   selectedMode?: "dry" | "wet",
   rentalEndDate?: string,
+  selections?: CheckoutSelections,
 ): Promise<CheckoutPricingData | null> {
   if (!productSlug) return null;
 
@@ -114,13 +126,17 @@ export async function getCheckoutPricing(
   let rentalDays = 1;
 
   if (isPerUnit) {
-    // Phase 2e.13 — reference rate for the review summary: bill a
-    // single unit. The PDP doesn't yet flow `units` into the summary
-    // (2e.13b), so display the rate; the submit path recomputes with
-    // the customer's chosen count.
+    // Phase 1c follow-up — bill against the customer's chosen unit
+    // count (from ?units=N on the URL) so the review summary matches
+    // the submit-time math from #283. Falls back to 1 unit when the
+    // customer hasn't picked yet so the reference rate still renders.
+    const chosenUnits =
+      selections?.units != null && selections.units > 0
+        ? selections.units
+        : 1;
     const perUnit = computePerUnitLineTotal({
       unitPriceCents: unitPriceCents ?? 0,
-      units: 1,
+      units: chosenUnits,
     });
     subtotal = Number((perUnit.lineTotalCents / 100).toFixed(2));
   } else if (isPerHour) {
@@ -151,6 +167,96 @@ export async function getCheckoutPricing(
       const calc = calculatePrice(basePrice, rules, { eventDate: date });
       subtotal = calc.finalPrice;
       adjustments = calc.adjustments;
+    }
+  }
+
+  // Phase 1c follow-up — variant price_delta. Looked up server-side
+  // (same shape as the submit action's lookup in #285) so the review
+  // summary matches what the customer is about to be charged. UUID
+  // shape check + product-scoped lookup are the security gates.
+  if (
+    selections?.variantId &&
+    /^[0-9a-f-]{36}$/i.test(selections.variantId)
+  ) {
+    const { data: variant } = await supabase
+      .from("product_variants")
+      .select("price_delta_cents, product_id, products!inner(slug)")
+      .eq("id", selections.variantId)
+      .eq("products.slug", productSlug)
+      .maybeSingle();
+    if (variant && typeof variant.price_delta_cents === "number" && variant.price_delta_cents !== 0) {
+      subtotal = Number((subtotal + variant.price_delta_cents / 100).toFixed(2));
+    }
+  }
+
+  // Phase 1c follow-up — add-ons line items reflected in the review
+  // subtotal. Mirrors the submit-time dispatch from #286: parse the
+  // "id:qty,id:qty" string, look up each child product's base_price
+  // scoped via the parent product_addons row, sum qty × base_price.
+  if (selections?.addons) {
+    const parsed = selections.addons
+      .split(",")
+      .map((entry) => {
+        const [id, qty] = entry.split(":");
+        if (!/^[0-9a-f-]{36}$/i.test(id ?? "") || !/^\d+$/.test(qty ?? "")) {
+          return null;
+        }
+        const q = parseInt(qty, 10);
+        return q > 0 ? { addonProductId: id, quantity: q } : null;
+      })
+      .filter((x): x is { addonProductId: string; quantity: number } => x !== null);
+    if (parsed.length > 0) {
+      // Find the parent product's id by slug so we can scope the
+      // product_addons lookup to its rows only.
+      const { data: parentRow } = await supabase
+        .from("products")
+        .select("id")
+        .eq("slug", productSlug)
+        .eq("organization_id", orgId)
+        .maybeSingle();
+      if (parentRow?.id) {
+        const { data: joinRows } = await supabase
+          .from("product_addons")
+          .select(
+            "addon_product_id, max_quantity, addon:products!addon_product_id(base_price)",
+          )
+          .eq("parent_product_id", parentRow.id);
+        const byAddonId = new Map<
+          string,
+          { basePriceCents: number; maxQuantity: number | null }
+        >();
+        for (const row of (joinRows ?? []) as unknown as Array<{
+          addon_product_id: string;
+          max_quantity: number | null;
+          addon:
+            | { base_price: number | null }
+            | { base_price: number | null }[]
+            | null;
+        }>) {
+          const addon = Array.isArray(row.addon) ? row.addon[0] : row.addon;
+          if (!addon) continue;
+          byAddonId.set(row.addon_product_id, {
+            basePriceCents:
+              typeof addon.base_price === "number"
+                ? Math.round(addon.base_price * 100)
+                : 0,
+            maxQuantity: row.max_quantity,
+          });
+        }
+        let addonsTotalCents = 0;
+        for (const sel of parsed) {
+          const meta = byAddonId.get(sel.addonProductId);
+          if (!meta || meta.basePriceCents <= 0) continue;
+          const qty =
+            meta.maxQuantity != null
+              ? Math.min(sel.quantity, meta.maxQuantity)
+              : sel.quantity;
+          if (qty > 0) addonsTotalCents += qty * meta.basePriceCents;
+        }
+        if (addonsTotalCents > 0) {
+          subtotal = Number((subtotal + addonsTotalCents / 100).toFixed(2));
+        }
+      }
     }
   }
 
