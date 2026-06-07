@@ -7,8 +7,8 @@ import { ListPagination } from "@/components/dashboard/list-pagination";
 import { ExportCsvButton } from "@/components/export/export-csv-button";
 import { exportCustomers } from "@/lib/export/csv";
 import { getTranslator } from "@/lib/i18n/server";
-import { getOrgContext } from "@/lib/auth/org-context";
 import { getEmptyStateCopy } from "@/lib/verticals/empty-states";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
 
 export default async function CustomersPage({
   searchParams,
@@ -16,14 +16,14 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [customersPage, { messages: m, t }, orgCtx] = await Promise.all([
+  const [customersPage, { messages: m, t }, primaryVertical] = await Promise.all([
     getCustomersPage({ query: params.q, page: params.page }),
     getTranslator(),
-    getOrgContext(),
+    getPrimaryVerticalSlug(),
   ]);
-  // Phase 3c — vertical-aware empty-state copy. Falls back to the
-  // generic i18n strings for legacy / unknown verticals.
-  const customersEmpty = getEmptyStateCopy(orgCtx?.businessType, "customers");
+  // Phase 4b — primary vertical via the org_verticals join table
+  // helper (organization_verticals → business_type fallback).
+  const customersEmpty = getEmptyStateCopy(primaryVertical ?? undefined, "customers");
 
   return (
     <DashboardShell

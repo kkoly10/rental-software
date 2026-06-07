@@ -10,8 +10,8 @@ import { ListSearchForm } from "@/components/dashboard/list-search-form";
 import { ListPagination } from "@/components/dashboard/list-pagination";
 import { CsvImportButton } from "@/components/products/csv-import-button";
 import { getTranslator } from "@/lib/i18n/server";
-import { getOrgContext } from "@/lib/auth/org-context";
 import { getEmptyStateCopy } from "@/lib/verticals/empty-states";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
 
 // Tinted placeholder glyph for products without a photo yet (Patch 4 grid).
 function BoxGlyph() {
@@ -30,18 +30,18 @@ export default async function ProductsPage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const [productsPage, guidanceState, { messages: m, t }, orgCtx] = await Promise.all([
+  const [productsPage, guidanceState, { messages: m, t }, primaryVertical] = await Promise.all([
     getProductsPage({ query: params.q, page: params.page }),
     getGuidanceState(),
     getTranslator(),
-    getOrgContext(),
+    getPrimaryVerticalSlug(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/products"];
-  // Phase 3b — vertical-specific empty-state copy from
-  // lib/verticals/empty-states.ts; falls back to generic i18n
-  // strings when the org's business_type doesn't map to a
-  // registry vertical.
-  const verticalCopy = getEmptyStateCopy(orgCtx?.businessType, "products");
+  // Phase 4b — primary vertical from organization_verticals (with
+  // business_type fallback baked into the helper) so multi-vertical
+  // orgs can later choose which one drives empty-state copy without
+  // touching this page.
+  const verticalCopy = getEmptyStateCopy(primaryVertical ?? undefined, "products");
   const emptyStateTitle =
     verticalCopy?.title ?? m.dashboard.products.noProductsYet;
   const emptyStateDescription =
