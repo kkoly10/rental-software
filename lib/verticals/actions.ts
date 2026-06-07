@@ -284,16 +284,72 @@ export async function removeOrgVertical(
     };
   }
 
+  // Phase 4i — when a vertical is removed, also soft-delete any
+  // EMPTY categories the system seeded for it. We only touch
+  // categories with zero products so an operator who has real
+  // inventory under (say) "Frame Tent" doesn't lose their bucket.
+  // Best-effort: a failure logs but doesn't roll back the org_vertical
+  // delete since the categories are recoverable (set deleted_at back
+  // to null) but the vertical row is the source of truth.
+  let archivedCategories = 0;
+  const { data: candidateRows } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("organization_id", ownership.organization_id)
+    .eq("vertical", slugInput)
+    .is("deleted_at", null);
+  const candidateIds = (candidateRows ?? []).map(
+    (r) => (r as { id: string }).id,
+  );
+  if (candidateIds.length > 0) {
+    const { data: usedRows } = await supabase
+      .from("products")
+      .select("category_id")
+      .in("category_id", candidateIds)
+      .is("deleted_at", null);
+    const usedIds = new Set(
+      (usedRows ?? [])
+        .map((r) => (r as { category_id: string | null }).category_id)
+        .filter((id): id is string => typeof id === "string"),
+    );
+    const archivableIds = candidateIds.filter((id) => !usedIds.has(id));
+    if (archivableIds.length > 0) {
+      const { error: archiveError } = await supabase
+        .from("categories")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", archivableIds);
+      if (archiveError) {
+        await logAppError({
+          organizationId: ownership.organization_id,
+          source: "verticals.remove",
+          message: "Failed to archive empty categories on vertical remove",
+          context: { reason: archiveError.message, slug: slugInput },
+          error: archiveError,
+        });
+      } else {
+        archivedCategories = archivableIds.length;
+      }
+    }
+  }
+
   await logAppEvent({
     organizationId: ownership.organization_id,
     source: "verticals.remove",
     action: "removed",
     status: "success",
-    metadata: { vertical_slug: slugInput },
+    metadata: {
+      vertical_slug: slugInput,
+      archived_categories: archivedCategories,
+    },
   });
 
   revalidatePath("/dashboard/settings");
-  return { ok: true, message: `Removed "${slugInput}".` };
+  revalidatePath("/dashboard/products");
+  const suffix =
+    archivedCategories > 0
+      ? ` (archived ${archivedCategories} empty ${archivedCategories === 1 ? "category" : "categories"})`
+      : "";
+  return { ok: true, message: `Removed "${slugInput}".${suffix}` };
 }
 
 /**
