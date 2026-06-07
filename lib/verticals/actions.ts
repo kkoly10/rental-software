@@ -229,3 +229,74 @@ export async function removeOrgVertical(
   revalidatePath("/dashboard/settings");
   return { ok: true, message: `Removed "${slugInput}".` };
 }
+
+/**
+ * Phase 4g — promote a non-primary vertical to primary.
+ *
+ * Delegates to the set_primary_vertical RPC (migration
+ * 20260608_160000) so the clear-then-set on is_primary happens in
+ * one atomic statement-set; without that the partial unique index
+ * organization_verticals_one_primary would briefly see two
+ * primaries (or zero) and reject the second UPDATE.
+ *
+ * The RPC enforces ownership + "slug must exist for this org" so
+ * this action just rewrites the raise-exception strings into a
+ * friendlier UI message.
+ */
+export type SetPrimaryVerticalState = {
+  ok: boolean;
+  message: string;
+};
+
+export async function setPrimaryOrgVertical(
+  _prevState: SetPrimaryVerticalState,
+  formData: FormData,
+): Promise<SetPrimaryVerticalState> {
+  const slugInput = String(formData.get("vertical_slug") ?? "").trim();
+  if (!slugInput) {
+    return { ok: false, message: "Pick a vertical to promote." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return {
+      ok: true,
+      message: `Demo mode: would promote "${slugInput}".`,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("set_primary_vertical", {
+    p_vertical_slug: slugInput,
+  });
+
+  if (error) {
+    // The RPC raises with these prefixes; surface the user-facing
+    // version without leaking the raw "P0001" Postgres detail.
+    if (error.message.includes("Only org owners")) {
+      return { ok: false, message: "Only org owners can change the primary." };
+    }
+    if (error.message.includes("not declared")) {
+      return { ok: false, message: "That vertical isn't on this org yet — add it first." };
+    }
+    if (error.message.includes("Not authenticated")) {
+      return { ok: false, message: "You must be signed in to manage verticals." };
+    }
+    await logAppError({
+      source: "verticals.set_primary",
+      message: "Failed to set primary vertical",
+      context: { reason: error.message, slug: slugInput },
+      error,
+    });
+    return { ok: false, message: "Couldn't change the primary. Try again." };
+  }
+
+  await logAppEvent({
+    source: "verticals.set_primary",
+    action: "promoted",
+    status: "success",
+    metadata: { vertical_slug: slugInput },
+  });
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true, message: `"${slugInput}" is now the primary vertical.` };
+}

@@ -27,6 +27,7 @@ import { listOrgVerticalSlugs } from "@/lib/verticals/org-verticals";
 import { listVerticalSlugs } from "@/lib/verticals/registry";
 import { AddVerticalForm } from "@/components/settings/add-vertical-form";
 import { RemoveVerticalButton } from "@/components/settings/remove-vertical-button";
+import { SetPrimaryButton } from "@/components/settings/set-primary-button";
 
 const QBO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
   connected: { tone: "success", copy: "QuickBooks connected. Paid invoices will sync automatically." },
@@ -165,6 +166,9 @@ export default async function SettingsPage({
                       >
                         {slug.replace(/-/g, " ")}
                         {isPrimary ? " (primary)" : ""}
+                        {!isPrimary && verticalSlugs.length > 1 && (
+                          <SetPrimaryButton slug={slug} />
+                        )}
                         {canRemove && <RemoveVerticalButton slug={slug} />}
                       </span>
                     );
