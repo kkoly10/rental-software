@@ -24,6 +24,8 @@ import { getWhatsAppSettings } from "@/lib/data/whatsapp-settings";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 import { listOrgVerticalSlugs } from "@/lib/verticals/org-verticals";
+import { listVerticalSlugs } from "@/lib/verticals/registry";
+import { AddVerticalForm } from "@/components/settings/add-vertical-form";
 
 const QBO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
   connected: { tone: "success", copy: "QuickBooks connected. Paid invoices will sync automatically." },
@@ -156,6 +158,14 @@ export default async function SettingsPage({
                     </span>
                   ))}
                 </div>
+                {/* Phase 4e — add-vertical picker. The registry's
+                    remaining slugs are passed down so the operator
+                    can only add what they don't already declare. */}
+                <AddVerticalForm
+                  remainingSlugs={listVerticalSlugs().filter(
+                    (s) => !verticalSlugs.includes(s),
+                  )}
+                />
               </article>
             )}
 
