@@ -361,6 +361,10 @@ export async function createCheckoutOrder(
   let productName = "Rental booking";
   let itemRentalDays: number | null = null;
   let itemRatePerDay: number | null = null;
+  // Phase 2e.7b — per-hour billing audit trail. Captured at price
+  // computation, persisted to order_items.billed_hours so refunds
+  // and disputes see the same number the customer was charged.
+  let billedHoursForLineItem: number | null = null;
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -371,7 +375,7 @@ export async function createCheckoutOrder(
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -420,8 +424,55 @@ export async function createCheckoutOrder(
           ? product.wet_upcharge_cents
           : null;
 
+      // Phase 2e.7b — per-hour pricing branch (photo booths,
+      // concessions, mechanical bulls, future AV). When the product
+      // carries pricing.per-hour AND has a configured hourly rate,
+      // compute the line total from the customer's event start/end
+      // times via the shared computePerHourLineTotal helper. Below
+      // the minimum_hours floor still bills the minimum block, so a
+      // sub-minimum rental never undercharges.
+      const productCapabilitySlugs = Array.isArray(
+        (product as { capability_slugs?: unknown }).capability_slugs,
+      )
+        ? ((product as { capability_slugs?: unknown }).capability_slugs as string[])
+        : [];
+      const productHourlyRateCents =
+        typeof (product as { hourly_rate_cents?: unknown }).hourly_rate_cents === "number"
+          ? ((product as { hourly_rate_cents?: unknown }).hourly_rate_cents as number)
+          : null;
+      const productMinimumHours =
+        typeof (product as { minimum_hours?: unknown }).minimum_hours === "number"
+          ? ((product as { minimum_hours?: unknown }).minimum_hours as number)
+          : null;
+      const isPerHourProduct =
+        productCapabilitySlugs.includes("pricing.per-hour") &&
+        productHourlyRateCents !== null;
+
       const pricingModel = product.pricing_model ?? "flat_day";
-      if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate >= eventDate) {
+      if (isPerHourProduct) {
+        const { computePerHourLineTotal } = await import(
+          "@/lib/capabilities/pricing/per-hour"
+        );
+        // Hours from "HH:MM" start + end. Falls back to the minimum
+        // (or 1) when times aren't both set — the helper's min floor
+        // then rounds the rental up to a billable block.
+        const computeHours = (a: string, b: string): number => {
+          if (!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) return 0;
+          const [ah, am] = a.split(":").map(Number);
+          const [bh, bm] = b.split(":").map(Number);
+          const minutes = bh * 60 + bm - (ah * 60 + am);
+          return minutes > 0 ? minutes / 60 : 0;
+        };
+        const requestedHours = computeHours(startTime ?? "", endTime ?? "");
+        const perHour = computePerHourLineTotal({
+          hourlyRateCents: productHourlyRateCents ?? 0,
+          quantity: 1,
+          hours: requestedHours,
+          minimumHours: productMinimumHours,
+        });
+        subtotal = Number((perHour.lineTotalCents / 100).toFixed(2));
+        billedHoursForLineItem = perHour.billedHours;
+      } else if (pricingModel === "per_day" && eventDate && rentalEndDate && rentalEndDate >= eventDate) {
         // Centralised in lib/pricing/rental-days.ts so the storefront
         // summary (lib/data/checkout-pricing.ts) and this submit path
         // share one source of truth for day math (#4 — three-day,
@@ -886,7 +937,11 @@ export async function createCheckoutOrder(
       // the customer hit a non-mode-aware path; only ever 'dry'/'wet'
       // because effectiveMode is reconciled against
       // supports_modes above.
-      selected_mode: effectiveMode
+      selected_mode: effectiveMode,
+      // Phase 2e.7b — actual hours billed for per-hour products
+      // (after the minimum-floor logic). NULL for flat-day / per-day
+      // products. Refund + dispute lookups read this directly.
+      billed_hours: billedHoursForLineItem,
     });
 
     if (itemError) {
