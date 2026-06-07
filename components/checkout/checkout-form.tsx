@@ -31,6 +31,7 @@ export function CheckoutForm({
   cancellationPolicy,
   selectedMode,
   initialUnits,
+  selectedVariantId,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -47,6 +48,11 @@ export function CheckoutForm({
   // PDP selector and forwarded as a hidden field to the submit
   // action. Validated + clamped server-side.
   initialUnits?: string;
+  // Phase 2e.12 — variant id picked on the PDP. Carried as a hidden
+  // form field; the server action validates it belongs to the
+  // product, applies price_delta_cents, and writes it to
+  // order_items.selected_variant_id.
+  selectedVariantId?: string;
 }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(
@@ -293,6 +299,9 @@ export function CheckoutForm({
       ) : null}
       {initialUnits && /^\d+$/.test(initialUnits) ? (
         <input type="hidden" name="units" value={initialUnits} />
+      ) : null}
+      {selectedVariantId && /^[0-9a-f-]{36}$/i.test(selectedVariantId) ? (
+        <input type="hidden" name="selected_variant_id" value={selectedVariantId} />
       ) : null}
 
       <div className="grid grid-3">

@@ -143,6 +143,14 @@ export async function createCheckoutOrder(
   // value can't slip through.
   const rawUnits = String(formData.get("units") ?? "");
   const requestedUnits = /^\d+$/.test(rawUnits) ? parseInt(rawUnits, 10) : 1;
+  // Phase 2e.12 — variant id read outside the zod schema. UUID-shaped
+  // string only; anything else falls back to null and no variant
+  // delta is applied. The submit-time lookup validates the variant
+  // actually belongs to the product so a crafted id from another org
+  // can't surface.
+  const rawVariantId = String(formData.get("selected_variant_id") ?? "");
+  const requestedVariantId =
+    /^[0-9a-f-]{36}$/i.test(rawVariantId) ? rawVariantId : null;
   const requestHeaders = await headers();
   const { getTrustedClientIp } = await import("@/lib/security/request-client");
   const trustedIp = getTrustedClientIp(requestHeaders);
@@ -388,6 +396,11 @@ export async function createCheckoutOrder(
   // attendant_overage_hours and the subtotal reflects the overage
   // charge. Null when capability inactive or no overage triggered.
   let attendantOverageHours: number | null = null;
+  // Phase 2e.12 — selected variant resolved at the same lookup as the
+  // product. selectedVariantId persists to order_items; the cents
+  // delta is added to subtotal once the pricing branch completes.
+  let resolvedVariantId: string | null = null;
+  let variantPriceDeltaCents: number = 0;
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -624,6 +637,32 @@ export async function createCheckoutOrder(
           // the DB with a fractional that fails to coerce.
           attendantOverageHours = Number(overage.overageHours.toFixed(2));
         }
+      }
+    }
+  }
+
+  // Phase 2e.12 — variant resolution. Performed after the pricing
+  // dispatch so the cents delta lands on the post-pricing subtotal
+  // (a per-hour rental + variant correctly bills hours × rate + delta).
+  // Scoped to the resolved productId so a crafted variant id from
+  // another product / another org can't sneak through.
+  if (productId && requestedVariantId) {
+    // product_variants has no deleted_at column (variants are hard-
+    // deleted from the form); the product_id scope is the security
+    // gate that keeps a foreign variant id from being applied.
+    const { data: variant } = await supabase
+      .from("product_variants")
+      .select("id, price_delta_cents")
+      .eq("id", requestedVariantId)
+      .eq("product_id", productId)
+      .maybeSingle();
+    if (variant && typeof variant.price_delta_cents === "number") {
+      resolvedVariantId = variant.id;
+      variantPriceDeltaCents = variant.price_delta_cents;
+      if (variantPriceDeltaCents !== 0) {
+        subtotal = Number(
+          (subtotal + variantPriceDeltaCents / 100).toFixed(2),
+        );
       }
     }
   }
@@ -1133,6 +1172,11 @@ export async function createCheckoutOrder(
       // NULL when capability is off or the event fits inside included
       // hours.
       attendant_overage_hours: attendantOverageHours,
+      // Phase 2e.12 — variant the customer picked on the PDP. NULL
+      // when no variant was selected or the id failed the
+      // product-scoped lookup. The price delta has already been
+      // added to subtotal / line_total above.
+      selected_variant_id: resolvedVariantId,
     });
 
     if (itemError) {
