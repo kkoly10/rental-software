@@ -23,6 +23,14 @@ import { useI18n } from "@/lib/i18n/provider";
  * blank (which the server-side reconciler also clamps to null), so
  * the customer is never shown a price higher than what we'll charge.
  */
+export type BookNowVariant = {
+  id: string;
+  label: string;
+  thumbnailUrl: string | null;
+  priceDeltaCents: number;
+  isDefault: boolean;
+};
+
 export function BookNowWithMode({
   checkoutQuery,
   basePriceCents,
@@ -30,6 +38,7 @@ export function BookNowWithMode({
   wetUpchargeCents,
   backHref,
   perUnit,
+  variants,
 }: {
   checkoutQuery: string;
   basePriceCents: number;
@@ -45,6 +54,12 @@ export function BookNowWithMode({
     unitLabel: string;
     minimumQuantity: number;
   } | null;
+  // Phase 2e.12 — variant gallery picker. When provided + non-empty,
+  // renders an interactive thumbnail grid; the customer's pick is
+  // appended as ?variant=<id> on the checkout link so the submit
+  // action can validate it + apply price_delta_cents. Omit/empty to
+  // skip — products without display.variant-gallery won't pass any.
+  variants?: BookNowVariant[];
 }) {
   const supportsDry = supportsModes.includes("dry");
   const supportsWet = supportsModes.includes("wet");
@@ -75,12 +90,29 @@ export function BookNowWithMode({
     perUnit ? Math.max(1, perUnit.minimumQuantity || 1) : 1,
   );
 
+  // Phase 2e.12 — variant selection state. Default to the operator's
+  // is_default variant, or the first one if no default flagged. Null
+  // when there are no variants (variant picker doesn't render at all).
+  const hasVariants = Array.isArray(variants) && variants.length > 0;
+  const initialVariantId = hasVariants
+    ? (variants!.find((v) => v.isDefault) ?? variants![0]).id
+    : null;
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    initialVariantId,
+  );
+  const selectedVariant = hasVariants
+    ? variants!.find((v) => v.id === selectedVariantId) ?? null
+    : null;
+
   const params = new URLSearchParams(checkoutQuery);
   if (isDualMode) {
     params.set("mode", selectedMode);
   }
   if (perUnit && units > 0) {
     params.set("units", String(Math.trunc(units)));
+  }
+  if (selectedVariantId) {
+    params.set("variant", selectedVariantId);
   }
   const checkoutHref = `/checkout?${params.toString()}`;
 
@@ -154,6 +186,101 @@ export function BookNowWithMode({
             >
               Minimum order is {perUnit.minimumQuantity} {perUnit.unitLabel}
               s. Please add more to continue.
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasVariants && (
+        <div
+          role="radiogroup"
+          aria-label="Options"
+          className="order-card"
+          style={{ marginBottom: 16, padding: 16 }}
+        >
+          <strong
+            style={{
+              display: "block",
+              fontSize: "0.78rem",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              color: "var(--text-muted, #6b7280)",
+              marginBottom: 12,
+            }}
+          >
+            Options
+          </strong>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {variants!.map((variant) => {
+              const isSelected = variant.id === selectedVariantId;
+              return (
+                <button
+                  type="button"
+                  key={variant.id}
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setSelectedVariantId(variant.id)}
+                  style={{
+                    border: isSelected
+                      ? "2px solid var(--primary, #2563eb)"
+                      : "1px solid var(--border, #e5e7eb)",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    background: "#fff",
+                    padding: 0,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    font: "inherit",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundImage: variant.thumbnailUrl
+                        ? `url(${variant.thumbnailUrl})`
+                        : "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      aspectRatio: "1 / 1",
+                    }}
+                  />
+                  <div style={{ padding: "8px 10px" }}>
+                    <div
+                      style={{
+                        fontSize: "0.88rem",
+                        fontWeight: 600,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {variant.label}
+                    </div>
+                    {variant.priceDeltaCents !== 0 && (
+                      <div
+                        className="muted"
+                        style={{ fontSize: "0.78rem", marginTop: 2 }}
+                      >
+                        {variant.priceDeltaCents > 0 ? "+" : "−"}$
+                        {Math.abs(variant.priceDeltaCents / 100).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {selectedVariant && selectedVariant.priceDeltaCents !== 0 && (
+            <div
+              className="muted"
+              style={{ marginTop: 12, fontSize: "0.82rem" }}
+            >
+              Selected: {selectedVariant.label} (
+              {selectedVariant.priceDeltaCents > 0 ? "+" : "−"}$
+              {Math.abs(selectedVariant.priceDeltaCents / 100).toFixed(2)})
             </div>
           )}
         </div>
