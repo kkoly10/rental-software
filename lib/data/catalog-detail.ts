@@ -213,5 +213,21 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
         : null,
     basePriceCents:
       typeof data.base_price === "number" ? Math.round(data.base_price * 100) : 0,
+    // Phase 2e.6 — capability-aware PDP rendering. capability_slugs
+    // tells the page which capabilities to surface; the cents/int
+    // fields back the rendering when each is active.
+    capabilitySlugs: Array.isArray(
+      (data as Record<string, unknown>).capability_slugs,
+    )
+      ? ((data as Record<string, unknown>).capability_slugs as string[])
+      : [],
+    hourlyRateCents:
+      typeof (data as Record<string, unknown>).hourly_rate_cents === "number"
+        ? ((data as Record<string, unknown>).hourly_rate_cents as number)
+        : null,
+    minimumHours:
+      typeof (data as Record<string, unknown>).minimum_hours === "number"
+        ? ((data as Record<string, unknown>).minimum_hours as number)
+        : null,
   };
 });
