@@ -383,6 +383,11 @@ export async function createCheckoutOrder(
   let productMinimumOrderCents: number | null = null;
   let productMinimumOrderQuantity: number | null = null;
   let orderMinimumCapabilityActive = false;
+  // Phase 2e.15 — onsite-attendant overage at submit. Captured at
+  // pricing time so the line-item insert below can write
+  // attendant_overage_hours and the subtotal reflects the overage
+  // charge. Null when capability inactive or no overage triggered.
+  let attendantOverageHours: number | null = null;
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -393,7 +398,7 @@ export async function createCheckoutOrder(
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, categories(minimum_order_cents)",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, categories(minimum_order_cents)",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -574,6 +579,51 @@ export async function createCheckoutOrder(
         itemRatePerDay = ratePerDay;
       } else {
         subtotal = ratePerDay;
+      }
+
+      // Phase 2e.15 — onsite-attendant overage. When the product
+      // carries service.onsite-attendant and the customer's event
+      // window exceeds attendant_included_hours, bill the overage
+      // at attendant_overage_cents_per_hour. Helper clamps negatives
+      // and rounds cents so an event ending before its start can't
+      // crash or credit.
+      if (
+        productCapabilitySlugs.includes("service.onsite-attendant") &&
+        startTime &&
+        endTime
+      ) {
+        const includedHours =
+          typeof (product as { attendant_included_hours?: unknown }).attendant_included_hours === "number"
+            ? ((product as { attendant_included_hours?: unknown }).attendant_included_hours as number)
+            : 0;
+        const overageRateCents =
+          typeof (product as { attendant_overage_cents_per_hour?: unknown }).attendant_overage_cents_per_hour === "number"
+            ? ((product as { attendant_overage_cents_per_hour?: unknown }).attendant_overage_cents_per_hour as number)
+            : null;
+        const eventHours = (() => {
+          if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) return 0;
+          const [ah, am] = startTime.split(":").map(Number);
+          const [bh, bm] = endTime.split(":").map(Number);
+          const minutes = bh * 60 + bm - (ah * 60 + am);
+          return minutes > 0 ? minutes / 60 : 0;
+        })();
+        const { computeAttendantOverage } = await import(
+          "@/lib/capabilities/service/onsite-attendant"
+        );
+        const overage = computeAttendantOverage({
+          rentalHours: eventHours,
+          includedHours,
+          overageRateCentsPerHour: overageRateCents,
+        });
+        if (overage.overageHours > 0 && overage.overageCents > 0) {
+          subtotal = Number(
+            (subtotal + overage.overageCents / 100).toFixed(2),
+          );
+          // Two decimals to match the numeric(5,2) constraint on
+          // order_items.attendant_overage_hours without surprising
+          // the DB with a fractional that fails to coerce.
+          attendantOverageHours = Number(overage.overageHours.toFixed(2));
+        }
       }
     }
   }
@@ -1078,6 +1128,11 @@ export async function createCheckoutOrder(
       // (after clamping / truncation). NULL for flat-day / per-hour
       // products. Refund + dispute lookups read this directly.
       billed_units: billedUnitsForLineItem,
+      // Phase 2e.15 — onsite-attendant overage hours actually billed,
+      // for refund / dispute lookups and post-event reconciliation.
+      // NULL when capability is off or the event fits inside included
+      // hours.
+      attendant_overage_hours: attendantOverageHours,
     });
 
     if (itemError) {
