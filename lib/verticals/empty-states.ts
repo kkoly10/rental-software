@@ -115,3 +115,54 @@ export function getEmptyStateCopy(
   const vertical = COPY[businessType];
   return vertical ? vertical[surface] : null;
 }
+
+/**
+ * Phase 3d — first-product starter example.
+ *
+ * Shown on the "Creating your first product" banner on
+ * /dashboard/products/new so the operator sees a concrete example
+ * matching their vertical instead of abstract "use a real product
+ * name" advice. They can copy the values verbatim and tweak.
+ *
+ * Returns null for unknown verticals; the banner falls back to the
+ * existing generic tips.
+ */
+export type StarterExample = {
+  name: string;
+  price: string;
+  description: string;
+};
+
+const STARTERS: Record<string, StarterExample> = {
+  inflatable: {
+    name: "13ft Castle Bouncer",
+    price: "$165 / day",
+    description:
+      "Classic castle inflatable. 13x13 footprint, ages 3-10, max 6 jumpers. Includes blower + stakes.",
+  },
+  tents: {
+    name: "20x40 Frame Tent",
+    price: "$650 / day",
+    description:
+      "Pole-free frame tent for grass, concrete, or asphalt. Seats ~80 banquet / 60 cocktail. Sidewalls extra.",
+  },
+  "tables-and-chairs": {
+    name: "Chiavari Chair — Gold",
+    price: "$3.50 / chair",
+    description:
+      "Classic Chiavari chair with cushion. 50-chair minimum order. Stackable for easy delivery.",
+  },
+  "dance-floors": {
+    name: "12x12 Parquet Dance Floor",
+    price: "$450 / event",
+    description:
+      "Modular parquet sections, 12x12 (sixteen 3x3 panels). Sub-floor included. Indoor or covered tent only.",
+  },
+};
+
+export function getStarterExample(
+  businessType: string | undefined,
+): StarterExample | null {
+  if (!businessType) return null;
+  return STARTERS[businessType] ?? null;
+}

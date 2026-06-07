@@ -3,15 +3,22 @@ import { ProductForm } from "@/components/products/product-form";
 import { getCategories } from "@/lib/data/products";
 import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
 import { getMessages } from "@/lib/i18n/server";
+import { getOrgContext } from "@/lib/auth/org-context";
+import { getStarterExample } from "@/lib/verticals/empty-states";
 
 export default async function NewProductPage() {
-  const [categories, snapshot, m] = await Promise.all([
+  const [categories, snapshot, m, orgCtx] = await Promise.all([
     getCategories(),
     getGuidanceSnapshot(),
     getMessages(),
+    getOrgContext(),
   ]);
 
   const isFirstProduct = snapshot.productsCount === 0;
+  // Phase 3d — vertical-specific starter example shown on the first-
+  // product banner so the operator sees a concrete "this is what a
+  // good first row looks like" instead of abstract tips.
+  const starter = getStarterExample(orgCtx?.businessType);
 
   return (
     <DashboardShell
@@ -39,6 +46,39 @@ export default async function NewProductPage() {
               </li>
             ))}
           </ul>
+          {starter && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                background: "var(--surface)",
+                border: "1px dashed var(--border, #e5e7eb)",
+                borderRadius: 8,
+              }}
+            >
+              <div
+                className="kicker"
+                style={{ marginBottom: 6 }}
+              >
+                Starter example
+              </div>
+              <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+                <div>
+                  <strong>Name:</strong> {starter.name}
+                </div>
+                <div>
+                  <strong>Price:</strong> {starter.price}
+                </div>
+                <div>
+                  <strong>Description:</strong> {starter.description}
+                </div>
+              </div>
+              <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+                Copy this as a template and tweak — your real prices /
+                sizes go in below.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
