@@ -110,7 +110,7 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
   const { data: rawStops, error: stopsError } = await supabase
     .from("route_stops")
     .select(
-      "id, stop_sequence, stop_type, scheduled_window_start, orders(order_number, customers(first_name, last_name, phone), customer_addresses!delivery_address_id(line1, city, state, postal_code), order_items(item_name_snapshot, quantity, selected_mode, products(anchoring_methods, required_anchor_count)))"
+      "id, stop_sequence, stop_type, scheduled_window_start, orders(order_number, customers(first_name, last_name, phone), customer_addresses!delivery_address_id(line1, city, state, postal_code), order_items(item_name_snapshot, quantity, selected_mode, products(anchoring_methods, required_anchor_count, capability_slugs, setup_minutes_before, attendant_included_hours)))"
     )
     .eq("route_id", routeId)
     .order("stop_sequence", { ascending: true })
@@ -148,6 +148,10 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
           products?: {
             anchoring_methods?: string[] | null;
             required_anchor_count?: number | null;
+            // Phase 2e.11 — capability-driven crew lines.
+            capability_slugs?: string[] | null;
+            setup_minutes_before?: number | null;
+            attendant_included_hours?: number | null;
           } | null;
         }[] | null;
       } | null;
@@ -162,11 +166,11 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
       ].filter(Boolean);
 
       const items = (order?.order_items ?? [])
-        .map((it) => ({
+        .map((it) => {
           // Sprint 6.0 — formatInflatableItemLine renders the
           // mode + Bring: spec inline with the item name using the
           // operator's locale labels.
-          name: formatInflatableItemLine(
+          let line = formatInflatableItemLine(
             {
               itemName: it.item_name_snapshot ?? "Item",
               selectedMode: it.selected_mode,
@@ -175,9 +179,44 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
             },
             inflatableLabels,
             inflatableLabels.bringPrefix,
-          ),
-          quantity: it.quantity ?? 1,
-        }))
+          );
+
+          // Phase 2e.11 — capability-driven crew suffixes. Each
+          // capability adds a short " · X" tail to the item line,
+          // gated on its slug being present so an operator who
+          // hasn't enabled the capability sees no noise.
+          const productCapabilitySlugs = Array.isArray(
+            it.products?.capability_slugs,
+          )
+            ? (it.products?.capability_slugs as string[])
+            : [];
+
+          if (
+            productCapabilitySlugs.includes("setup.setup-window") &&
+            typeof it.products?.setup_minutes_before === "number" &&
+            it.products.setup_minutes_before > 0
+          ) {
+            const m = it.products.setup_minutes_before;
+            const label =
+              m >= 60
+                ? `${Math.round((m / 60) * 10) / 10}h early`
+                : `${m}m early`;
+            line += ` · Arrive ${label}`;
+          }
+
+          if (
+            productCapabilitySlugs.includes("service.onsite-attendant") &&
+            typeof it.products?.attendant_included_hours === "number" &&
+            it.products.attendant_included_hours > 0
+          ) {
+            line += ` · Attendant (${it.products.attendant_included_hours}h incl.)`;
+          }
+
+          return {
+            name: line,
+            quantity: it.quantity ?? 1,
+          };
+        })
         .filter((it) => it.quantity > 0);
 
       return {
