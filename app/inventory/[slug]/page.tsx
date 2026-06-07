@@ -4,6 +4,7 @@ import { getPlaceholderImage } from "@/lib/utils/placeholders";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { BookNowWithMode } from "@/components/public/book-now-with-mode";
+import { CapacityCalculator } from "@/components/public/capacity-calculator";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
@@ -186,6 +187,21 @@ export default async function ProductDetailPage({
                   </div>
                 ))}
               </div>
+
+              {/* Phase 1c — capacity calculator widget. Renders
+                  per metric: dance-floor shows an interactive guest-
+                  count input; guests/sq_ft/servings show a static
+                  capacity statement. Both gates fire: the capability
+                  slug AND a non-null capacity_value. */}
+              {product.capabilitySlugs?.includes("display.capacity-calculator") &&
+                product.capacityMetric &&
+                typeof product.capacityValue === "number" &&
+                product.capacityValue > 0 && (
+                  <CapacityCalculator
+                    metric={product.capacityMetric}
+                    value={product.capacityValue}
+                  />
+                )}
 
               {/* Phase 2e.8 — structured specs definition list. */}
               {product.capabilitySlugs?.includes("display.structured-specs") &&
