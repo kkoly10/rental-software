@@ -237,4 +237,17 @@ export type CatalogDetail = {
     isDefault: boolean;
     displayOrder: number;
   }>;
+  // Phase 2e.10 — composition.add-ons surfacing. The PDP renders a
+  // checkbox/qty selector per row; checkout passes selections via
+  // ?addons=id:qty,id:qty. Each addon's basePriceCents drives a
+  // child order_items line via parent_order_item_id at submit.
+  addOns?: Array<{
+    addonProductId: string;
+    name: string;
+    basePriceCents: number;
+    defaultQuantity: number;
+    maxQuantity: number | null;
+    isRequired: boolean;
+    displayOrder: number;
+  }>;
 };

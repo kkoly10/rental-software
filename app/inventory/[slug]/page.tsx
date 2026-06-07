@@ -265,6 +265,20 @@ export default async function ProductDetailPage({
                       }))
                     : undefined
                 }
+                addOns={
+                  product.capabilitySlugs?.includes("composition.add-ons") &&
+                  product.addOns &&
+                  product.addOns.length > 0
+                    ? product.addOns.map((a) => ({
+                        addonProductId: a.addonProductId,
+                        name: a.name,
+                        basePriceCents: a.basePriceCents,
+                        defaultQuantity: a.defaultQuantity,
+                        maxQuantity: a.maxQuantity,
+                        isRequired: a.isRequired,
+                      }))
+                    : undefined
+                }
               />
             </aside>
           </div>

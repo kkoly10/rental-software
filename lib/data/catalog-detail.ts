@@ -107,7 +107,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, unit_label, minimum_order_quantity, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order)"
+      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, unit_label, minimum_order_quantity, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order), product_addons!parent_product_id(default_quantity, max_quantity, is_required, display_order, addon:products!addon_product_id(id, name, base_price))"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -297,6 +297,43 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
           previewImageUrl: r.preview_image_url,
           priceDeltaCents: r.price_delta_cents,
           isDefault: !!r.is_default,
+          displayOrder: r.display_order ?? 0,
+        }));
+    })(),
+    // Phase 2e.10 — composition.add-ons. Each join row carries the
+    // storefront presentation rules; the nested addon product row
+    // provides the customer-visible name + base price. We bill the
+    // add-on as a child order_items line at submit time, gated by
+    // composition.add-ons being on the parent's capability_slugs.
+    addOns: (() => {
+      const rows = (data as Record<string, unknown>).product_addons;
+      if (!Array.isArray(rows)) return [];
+      return [...rows]
+        .map((r) => r as {
+          default_quantity: number;
+          max_quantity: number | null;
+          is_required: boolean;
+          display_order: number | null;
+          addon: {
+            id: string;
+            name: string | null;
+            base_price: number | null;
+          } | null;
+        })
+        .filter((r) => r.addon && typeof r.addon.id === "string")
+        .sort(
+          (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+        )
+        .map((r) => ({
+          addonProductId: r.addon!.id,
+          name: r.addon!.name ?? "Add-on",
+          basePriceCents:
+            typeof r.addon!.base_price === "number"
+              ? Math.round(r.addon!.base_price * 100)
+              : 0,
+          defaultQuantity: r.default_quantity ?? 0,
+          maxQuantity: r.max_quantity,
+          isRequired: !!r.is_required,
           displayOrder: r.display_order ?? 0,
         }));
     })(),

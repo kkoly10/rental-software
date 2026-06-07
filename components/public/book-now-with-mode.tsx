@@ -39,6 +39,7 @@ export function BookNowWithMode({
   backHref,
   perUnit,
   variants,
+  addOns,
 }: {
   checkoutQuery: string;
   basePriceCents: number;
@@ -60,6 +61,18 @@ export function BookNowWithMode({
   // action can validate it + apply price_delta_cents. Omit/empty to
   // skip — products without display.variant-gallery won't pass any.
   variants?: BookNowVariant[];
+  // Phase 2e.10 — composition.add-ons selector. Each row renders as
+  // a checkbox + quantity input; selected rows append to the checkout
+  // query as ?addons=id:qty,id:qty for the submit-time multi-line
+  // dispatch in lib/checkout/actions.ts to validate and insert.
+  addOns?: Array<{
+    addonProductId: string;
+    name: string;
+    basePriceCents: number;
+    defaultQuantity: number;
+    maxQuantity: number | null;
+    isRequired: boolean;
+  }>;
 }) {
   const supportsDry = supportsModes.includes("dry");
   const supportsWet = supportsModes.includes("wet");
@@ -104,6 +117,32 @@ export function BookNowWithMode({
     ? variants!.find((v) => v.id === selectedVariantId) ?? null
     : null;
 
+  // Phase 2e.10 — add-on selections state. Initial qty = defaultQuantity
+  // for required rows, 0 for optional. The map is keyed by
+  // addonProductId so multiple rows stay independent.
+  const hasAddons = Array.isArray(addOns) && addOns.length > 0;
+  const [addonQty, setAddonQty] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    if (hasAddons) {
+      for (const a of addOns!) {
+        init[a.addonProductId] = a.isRequired ? Math.max(1, a.defaultQuantity) : 0;
+      }
+    }
+    return init;
+  });
+  const addonsQueryValue = hasAddons
+    ? Object.entries(addonQty)
+        .filter(([, q]) => q > 0)
+        .map(([id, q]) => `${id}:${Math.trunc(q)}`)
+        .join(",")
+    : "";
+  const addonsSubtotalCents = hasAddons
+    ? addOns!.reduce(
+        (sum, a) => sum + Math.max(0, Math.trunc(addonQty[a.addonProductId] ?? 0)) * a.basePriceCents,
+        0,
+      )
+    : 0;
+
   const params = new URLSearchParams(checkoutQuery);
   if (isDualMode) {
     params.set("mode", selectedMode);
@@ -113,6 +152,9 @@ export function BookNowWithMode({
   }
   if (selectedVariantId) {
     params.set("variant", selectedVariantId);
+  }
+  if (addonsQueryValue) {
+    params.set("addons", addonsQueryValue);
   }
   const checkoutHref = `/checkout?${params.toString()}`;
 
@@ -281,6 +323,107 @@ export function BookNowWithMode({
               Selected: {selectedVariant.label} (
               {selectedVariant.priceDeltaCents > 0 ? "+" : "−"}$
               {Math.abs(selectedVariant.priceDeltaCents / 100).toFixed(2)})
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasAddons && (
+        <div className="order-card" style={{ marginBottom: 16, padding: 16 }}>
+          <strong
+            style={{
+              display: "block",
+              fontSize: "0.78rem",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              color: "var(--text-muted, #6b7280)",
+              marginBottom: 12,
+            }}
+          >
+            Add-ons
+          </strong>
+          <div style={{ display: "grid", gap: 8 }}>
+            {addOns!.map((a) => {
+              const qty = addonQty[a.addonProductId] ?? 0;
+              const checked = qty > 0;
+              const cap = a.maxQuantity ?? 99;
+              return (
+                <div
+                  key={a.addonProductId}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "6px 0",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={a.isRequired}
+                    onChange={(e) =>
+                      setAddonQty((prev) => ({
+                        ...prev,
+                        [a.addonProductId]: e.target.checked
+                          ? Math.max(1, a.defaultQuantity || 1)
+                          : 0,
+                      }))
+                    }
+                    aria-label={a.name}
+                  />
+                  <div style={{ flex: 1, fontSize: 14 }}>
+                    <div style={{ fontWeight: 600 }}>
+                      {a.name}
+                      {a.isRequired && (
+                        <span
+                          className="muted"
+                          style={{ fontWeight: 400, marginLeft: 6, fontSize: 12 }}
+                        >
+                          required
+                        </span>
+                      )}
+                    </div>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      ${(a.basePriceCents / 100).toFixed(2)} each
+                    </div>
+                  </div>
+                  {checked && (
+                    <input
+                      type="number"
+                      min={1}
+                      max={cap}
+                      step={1}
+                      value={qty}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value, 10);
+                        const clamped = Number.isFinite(n)
+                          ? Math.min(Math.max(1, n), cap)
+                          : 1;
+                        setAddonQty((prev) => ({
+                          ...prev,
+                          [a.addonProductId]: clamped,
+                        }));
+                      }}
+                      style={{
+                        width: 60,
+                        padding: "4px 8px",
+                        border: "1px solid var(--border, #e5e7eb)",
+                        borderRadius: 6,
+                        fontSize: 14,
+                      }}
+                      aria-label={`Quantity for ${a.name}`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {addonsSubtotalCents > 0 && (
+            <div
+              className="muted"
+              style={{ marginTop: 10, fontSize: "0.82rem" }}
+            >
+              Add-ons subtotal: ${(addonsSubtotalCents / 100).toFixed(2)}
             </div>
           )}
         </div>

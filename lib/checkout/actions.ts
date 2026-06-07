@@ -151,6 +151,25 @@ export async function createCheckoutOrder(
   const rawVariantId = String(formData.get("selected_variant_id") ?? "");
   const requestedVariantId =
     /^[0-9a-f-]{36}$/i.test(rawVariantId) ? rawVariantId : null;
+  // Phase 2e.10 — composition.add-ons selections, encoded as
+  // "id:qty,id:qty". Parsed defensively here; unknown ids and zero
+  // qtys are silently dropped, and the product-scoped lookup below
+  // is the actual security gate.
+  const rawAddons = String(formData.get("addons") ?? "");
+  const requestedAddons: { addonProductId: string; quantity: number }[] = (() => {
+    if (!rawAddons) return [];
+    return rawAddons
+      .split(",")
+      .map((entry) => {
+        const [id, qty] = entry.split(":");
+        if (!/^[0-9a-f-]{36}$/i.test(id ?? "") || !/^\d+$/.test(qty ?? "")) {
+          return null;
+        }
+        const q = parseInt(qty, 10);
+        return q > 0 ? { addonProductId: id, quantity: q } : null;
+      })
+      .filter((x): x is { addonProductId: string; quantity: number } => x !== null);
+  })();
   const requestHeaders = await headers();
   const { getTrustedClientIp } = await import("@/lib/security/request-client");
   const trustedIp = getTrustedClientIp(requestHeaders);
@@ -401,6 +420,18 @@ export async function createCheckoutOrder(
   // delta is added to subtotal once the pricing branch completes.
   let resolvedVariantId: string | null = null;
   let variantPriceDeltaCents: number = 0;
+  // Phase 2e.10 — resolved add-on selections + their priced totals.
+  // Populated after the parent product lookup so each child line
+  // item insert below can write parent_order_item_id with the right
+  // product_id, quantity, line_total. Empty when capability inactive
+  // or no selections sent.
+  let resolvedAddonLines: Array<{
+    addonProductId: string;
+    name: string;
+    basePriceCents: number;
+    quantity: number;
+    lineTotalCents: number;
+  }> = [];
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -636,6 +667,74 @@ export async function createCheckoutOrder(
           // order_items.attendant_overage_hours without surprising
           // the DB with a fractional that fails to coerce.
           attendantOverageHours = Number(overage.overageHours.toFixed(2));
+        }
+      }
+
+      // Phase 2e.10 — composition.add-ons dispatch. Looks up the
+      // join rows scoped to the parent productId, joins the addon
+      // products (name + base_price), validates customer selections
+      // (max qty + product-scope) and rolls each into both subtotal
+      // and the resolvedAddonLines array for the child-row insert
+      // below. First cut bills each add-on as qty × addon.base_price
+      // (the flat-day path); add-on per-hour billing is a follow-up.
+      if (
+        productCapabilitySlugs.includes("composition.add-ons") &&
+        requestedAddons.length > 0
+      ) {
+        const { data: joinRows } = await supabase
+          .from("product_addons")
+          .select(
+            "addon_product_id, max_quantity, addon:products!addon_product_id(id, name, base_price)",
+          )
+          .eq("parent_product_id", productId);
+        const byAddonId = new Map<
+          string,
+          { name: string; basePriceCents: number; maxQuantity: number | null }
+        >();
+        for (const row of (joinRows ?? []) as unknown as Array<{
+          addon_product_id: string;
+          max_quantity: number | null;
+          addon:
+            | { id: string; name: string | null; base_price: number | null }
+            | { id: string; name: string | null; base_price: number | null }[]
+            | null;
+        }>) {
+          // PostgREST returns nested joins as either a single object
+          // or an array depending on the FK cardinality; normalise.
+          const addon = Array.isArray(row.addon) ? row.addon[0] : row.addon;
+          if (!addon) continue;
+          byAddonId.set(row.addon_product_id, {
+            name: addon.name ?? "Add-on",
+            basePriceCents:
+              typeof addon.base_price === "number"
+                ? Math.round(addon.base_price * 100)
+                : 0,
+            maxQuantity: row.max_quantity,
+          });
+        }
+        let addonsTotalCents = 0;
+        for (const sel of requestedAddons) {
+          const meta = byAddonId.get(sel.addonProductId);
+          if (!meta || meta.basePriceCents <= 0) continue;
+          const qty =
+            meta.maxQuantity != null
+              ? Math.min(sel.quantity, meta.maxQuantity)
+              : sel.quantity;
+          if (qty <= 0) continue;
+          const lineCents = qty * meta.basePriceCents;
+          addonsTotalCents += lineCents;
+          resolvedAddonLines.push({
+            addonProductId: sel.addonProductId,
+            name: meta.name,
+            basePriceCents: meta.basePriceCents,
+            quantity: qty,
+            lineTotalCents: lineCents,
+          });
+        }
+        if (addonsTotalCents > 0) {
+          subtotal = Number(
+            (subtotal + addonsTotalCents / 100).toFixed(2),
+          );
         }
       }
     }
@@ -1139,7 +1238,7 @@ export async function createCheckoutOrder(
   }
 
   if (productId) {
-    const { error: itemError } = await supabase.from("order_items").insert({
+    const { data: parentItem, error: itemError } = await supabase.from("order_items").insert({
       order_id: order.id,
       product_id: productId,
       line_type: "rental",
@@ -1177,7 +1276,7 @@ export async function createCheckoutOrder(
       // product-scoped lookup. The price delta has already been
       // added to subtotal / line_total above.
       selected_variant_id: resolvedVariantId,
-    });
+    }).select("id").single();
 
     if (itemError) {
       try {
@@ -1202,6 +1301,40 @@ export async function createCheckoutOrder(
       return fail({
       message: "We couldn't save your booking line items. Please try again.",
       });
+    }
+
+    // Phase 2e.10 — add-on child line items, linked back to the
+    // parent via parent_order_item_id so refund / display can walk
+    // the tree. Insert is best-effort: a failure here does NOT roll
+    // back the order since the parent rental still bills correctly;
+    // we log so an operator can manually reconcile.
+    if (parentItem?.id && resolvedAddonLines.length > 0) {
+      const childRows = resolvedAddonLines.map((line) => ({
+        order_id: order.id,
+        product_id: line.addonProductId,
+        parent_order_item_id: parentItem.id,
+        line_type: "addon",
+        quantity: line.quantity,
+        unit_price: line.basePriceCents / 100,
+        line_total: line.lineTotalCents / 100,
+        item_name_snapshot: line.name,
+      }));
+      const { error: addonError } = await supabase
+        .from("order_items")
+        .insert(childRows);
+      if (addonError) {
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website",
+          message: "Failed to insert addon line items",
+          context: {
+            reason: addonError.message,
+            orderId: order.id,
+            parentItemId: parentItem.id,
+            addonCount: childRows.length,
+          },
+        });
+      }
     }
   }
 
