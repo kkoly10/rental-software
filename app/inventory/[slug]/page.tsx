@@ -187,6 +187,53 @@ export default async function ProductDetailPage({
                 ))}
               </div>
 
+              {/* Phase 2e.8 — structured specs definition list. Only
+                  renders when the product carries display.structured-specs
+                  AND has rows. Replaces the prose-blob description for
+                  power/footprint/servings-style data. */}
+              {product.capabilitySlugs?.includes("display.structured-specs") &&
+                product.specs &&
+                product.specs.length > 0 && (
+                  <div
+                    className="order-card"
+                    style={{ marginTop: 18, padding: 16 }}
+                  >
+                    <strong
+                      style={{
+                        display: "block",
+                        fontSize: "0.78rem",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        color: "var(--text-muted, #6b7280)",
+                        marginBottom: 12,
+                      }}
+                    >
+                      Specs
+                    </strong>
+                    <dl
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "auto 1fr",
+                        gap: "8px 16px",
+                        margin: 0,
+                        fontSize: "0.92rem",
+                      }}
+                    >
+                      {product.specs.map((spec) => (
+                        <div
+                          key={spec.id}
+                          style={{ display: "contents" }}
+                        >
+                          <dt style={{ fontWeight: 600 }}>
+                            {spec.specLabel}
+                          </dt>
+                          <dd style={{ margin: 0 }}>{spec.specValue}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+
               <BookNowWithMode
                 checkoutQuery={checkoutParams.toString()}
                 basePriceCents={product.basePriceCents ?? 0}

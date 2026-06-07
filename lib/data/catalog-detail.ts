@@ -107,7 +107,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at)"
+      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order)"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -229,5 +229,30 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
       typeof (data as Record<string, unknown>).minimum_hours === "number"
         ? ((data as Record<string, unknown>).minimum_hours as number)
         : null,
+    // Phase 2e.8 — structured specs surfaced on the PDP as a
+    // definition list. Already sorted by display_order so the
+    // operator's ordering is preserved.
+    specs: (() => {
+      const rows = (data as Record<string, unknown>).product_specs;
+      if (!Array.isArray(rows)) return [];
+      return [...rows]
+        .map((r) => r as {
+          id: string;
+          spec_key: string;
+          spec_label: string;
+          spec_value: string;
+          display_order: number | null;
+        })
+        .sort(
+          (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+        )
+        .map((r) => ({
+          id: r.id,
+          specKey: r.spec_key,
+          specLabel: r.spec_label,
+          specValue: r.spec_value,
+          displayOrder: r.display_order ?? 0,
+        }));
+    })(),
   };
 });
