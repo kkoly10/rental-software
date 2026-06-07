@@ -14,6 +14,8 @@ import { exportOrders } from "@/lib/export/csv";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 import { FirstOrderBanner } from "@/components/orders/first-order-banner";
 import { getTranslator } from "@/lib/i18n/server";
+import { getOrgContext } from "@/lib/auth/org-context";
+import { getEmptyStateCopy } from "@/lib/verticals/empty-states";
 
 export default async function OrdersPage({
   searchParams,
@@ -27,12 +29,17 @@ export default async function OrdersPage({
       ? params.status
       : "all";
 
-  const [ordersPage, statusCounts, guidanceState, { messages: m, t }] = await Promise.all([
+  const [ordersPage, statusCounts, guidanceState, { messages: m, t }, orgCtx] = await Promise.all([
     getOrdersPage({ query: params.q, page: params.page, status: activeStatus === "all" ? null : activeStatus }),
     getOrderStatusCounts(),
     getGuidanceState(),
     getTranslator(),
+    getOrgContext(),
   ]);
+  // Phase 3c — vertical-aware empty-state copy for the orders zero
+  // state. Falls back to the generic i18n strings for legacy /
+  // unknown verticals.
+  const ordersEmpty = getEmptyStateCopy(orgCtx?.businessType, "orders");
   const helpConfig = pageHelpMap["/dashboard/orders"];
   const f = m.dashboard.orders.filters;
 
@@ -114,9 +121,14 @@ export default async function OrdersPage({
         ) : (
           <EmptyState
             icon="orders"
-            title={m.dashboard.orders.noOrdersYet}
-            description={m.dashboard.orders.noOrdersYetDescription}
-            actionLabel={m.dashboard.orders.createOrder}
+            title={ordersEmpty?.title ?? m.dashboard.orders.noOrdersYet}
+            description={
+              ordersEmpty?.description ??
+              m.dashboard.orders.noOrdersYetDescription
+            }
+            actionLabel={
+              ordersEmpty?.actionLabel ?? m.dashboard.orders.createOrder
+            }
             actionHref="/dashboard/orders/new"
           />
         )
