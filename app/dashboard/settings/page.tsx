@@ -23,6 +23,7 @@ import { getXeroStatus } from "@/lib/data/xero-status";
 import { getWhatsAppSettings } from "@/lib/data/whatsapp-settings";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
+import { listOrgVerticalSlugs } from "@/lib/verticals/org-verticals";
 
 const QBO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
   connected: { tone: "success", copy: "QuickBooks connected. Paid invoices will sync automatically." },
@@ -57,7 +58,7 @@ export default async function SettingsPage({
   const params = await searchParams;
   const qboBanner = params.qbo ? QBO_BANNERS[params.qbo] : undefined;
   const xeroBanner = params.xero ? XERO_BANNERS[params.xero] : undefined;
-  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, xeroStatus, whatsappSettings, m] = await Promise.all([
+  const [orgSettings, editableSettings, smsSettings, bookingPolicies, smsLog, routingMode, qbStatus, xeroStatus, whatsappSettings, m, verticalSlugs] = await Promise.all([
     getOrganizationSettings(),
     getOrgSettings(),
     getSmsSettings(),
@@ -68,6 +69,7 @@ export default async function SettingsPage({
     getXeroStatus(),
     getWhatsAppSettings(),
     getMessages(),
+    listOrgVerticalSlugs(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/settings"];
@@ -119,6 +121,43 @@ export default async function SettingsPage({
                 {formatMessage(m.dashboard.settings.serviceAreasLabel, { value: orgSettings.serviceAreaLabel })}
               </div>
             </article>
+
+            {/* Phase 4c — verticals snapshot. Renders one chip per
+                row on organization_verticals (with primary first via
+                listOrgVerticalSlugs). Hidden when the join table is
+                empty AND no business_type fallback fires, so legacy
+                orgs we haven't backfilled aren't shown an empty card. */}
+            {verticalSlugs.length > 0 && (
+              <article className="order-card">
+                <strong>Verticals</strong>
+                <div className="muted" style={{ marginTop: 6 }}>
+                  This org rents:
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    marginTop: 8,
+                  }}
+                >
+                  {verticalSlugs.map((slug, i) => (
+                    <span
+                      key={slug}
+                      className="badge"
+                      style={{
+                        fontSize: 12,
+                        padding: "4px 10px",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {slug.replace(/-/g, " ")}
+                      {i === 0 && verticalSlugs.length > 1 ? " (primary)" : ""}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            )}
 
             <article className="order-card">
               <strong>{m.dashboard.settings.bookingPoliciesCardTitle}</strong>
