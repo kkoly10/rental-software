@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { listVerticalSlugs } from "@/lib/verticals/registry";
+import { getVertical, listVerticalSlugs } from "@/lib/verticals/registry";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 
 /**
@@ -108,20 +108,86 @@ export async function addOrgVertical(
     return { ok: false, message: "Couldn't add that vertical. Try again." };
   }
 
+  // Phase 4h — when an operator adds a vertical, also seed the
+  // matching defaultCategorySeeds from the registry so the new line
+  // of business has something to bucket products under. Best-effort:
+  // any insert failure here logs but doesn't fail the action — the
+  // org_verticals row is the canonical "this org rents X" answer; a
+  // missing category just means the operator has to create one
+  // manually, not that the whole add gets reverted.
+  let seededCategories = 0;
+  const vertical = getVertical(slugInput);
+  if (vertical && vertical.defaultCategorySeeds.length > 0) {
+    const { data: existing } = await supabase
+      .from("categories")
+      .select("slug")
+      .eq("organization_id", ownership.organization_id)
+      .is("deleted_at", null);
+    const existingSlugs = new Set(
+      (existing ?? []).map((r) => (r as { slug: string }).slug),
+    );
+    const { data: maxRow } = await supabase
+      .from("categories")
+      .select("sort_order")
+      .eq("organization_id", ownership.organization_id)
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const startSort =
+      typeof maxRow?.sort_order === "number" ? maxRow.sort_order : 0;
+    const rows = vertical.defaultCategorySeeds
+      .map((name, idx) => ({
+        organization_id: ownership.organization_id,
+        name,
+        slug: name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, ""),
+        sort_order: startSort + idx + 1,
+        vertical: slugInput,
+      }))
+      .filter((row) => !existingSlugs.has(row.slug));
+    if (rows.length > 0) {
+      const { error: catError } = await supabase
+        .from("categories")
+        .insert(rows);
+      if (catError) {
+        // Log but don't fail — see comment above.
+        await logAppError({
+          organizationId: ownership.organization_id,
+          source: "verticals.add",
+          message: "Failed to seed categories for added vertical",
+          context: { reason: catError.message, slug: slugInput },
+          error: catError,
+        });
+      } else {
+        seededCategories = rows.length;
+      }
+    }
+  }
+
   await logAppEvent({
     organizationId: ownership.organization_id,
     source: "verticals.add",
     action: "added",
     status: "success",
-    metadata: { vertical_slug: slugInput },
+    metadata: { vertical_slug: slugInput, seeded_categories: seededCategories },
   });
 
   // Refresh the settings page so the new chip shows up without a
   // hard reload. Other consumers (dashboard empty states) re-fetch
   // on their next navigation; no need to invalidate them here.
   revalidatePath("/dashboard/settings");
+  // New categories show up wherever the products dashboard reads from
+  // — invalidate so the next visit reflects them.
+  revalidatePath("/dashboard/products");
 
-  return { ok: true, message: `Added "${slugInput}".` };
+  const suffix =
+    seededCategories > 0
+      ? ` (+${seededCategories} starter ${seededCategories === 1 ? "category" : "categories"})`
+      : "";
+  return { ok: true, message: `Added "${slugInput}".${suffix}` };
 }
 
 /**
