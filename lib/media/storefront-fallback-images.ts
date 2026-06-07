@@ -1,4 +1,12 @@
-type FallbackKey = "bounce" | "water" | "combo" | "obstacle" | "package";
+type FallbackKey =
+  | "bounce"
+  | "water"
+  | "combo"
+  | "obstacle"
+  | "package"
+  | "tent"
+  | "chair-table"
+  | "dance-floor";
 
 const IMAGE_MAP: Record<FallbackKey, string> = {
   bounce:
@@ -11,11 +19,50 @@ const IMAGE_MAP: Record<FallbackKey, string> = {
     "https://images.unsplash.com/photo-1633846804415-78105890e73f?auto=format&fit=crop&w=800&q=80",
   package:
     "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=800&q=80",
+  // The non-inflatable verticals use SVG gradient data-URIs (no
+  // external CDN, no 404 risk) until the operator uploads a real
+  // photo. They render as soft branded panels that read as "this
+  // tile is intentionally placeholder" — better than serving a
+  // bounce-house photo on a Frame Tent product card.
+  tent: gradientDataUri("#0e7490", "#155e75", "Tent"),
+  "chair-table": gradientDataUri("#b45309", "#7c2d12", "Chairs & Tables"),
+  "dance-floor": gradientDataUri("#a21caf", "#86198f", "Dance Floor"),
 };
+
+function gradientDataUri(from: string, to: string, label: string): string {
+  // 800x600 SVG gradient with a centered label. data-URI keeps the
+  // dependency surface zero and survives offline / strict-CSP setups.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="${from}"/>
+    <stop offset="100%" stop-color="${to}"/>
+  </linearGradient></defs>
+  <rect width="800" height="600" fill="url(#g)"/>
+  <text x="400" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="600" fill="rgba(255,255,255,0.92)" text-anchor="middle">${label}</text>
+</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
 
 function resolveFallbackKey(slug?: string, category?: string): FallbackKey {
   const slugValue = slug?.toLowerCase() ?? "";
   const categoryValue = category?.toLowerCase() ?? "";
+  const haystack = `${slugValue} ${categoryValue}`;
+
+  // Order matters — more specific matches first. "dance floor" must
+  // beat the generic "floor", and the tent / chair / table buckets
+  // need their own branches before bounce/water/combo fallthrough so
+  // a "Frame Tent" or "Chiavari Chair" doesn't get bounce-house art.
+  if (/\bdance\b|\bstage\b/.test(haystack)) {
+    return "dance-floor";
+  }
+
+  if (/\btent\b|\bsidewall/.test(haystack)) {
+    return "tent";
+  }
+
+  if (/\bchair\b|\btable\b|\blinen/.test(haystack)) {
+    return "chair-table";
+  }
 
   if (slugValue.includes("water") || categoryValue.includes("water")) {
     return "water";
