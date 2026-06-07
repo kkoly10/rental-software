@@ -58,6 +58,24 @@ const capabilitySlugsShape = {
     .default([]),
 };
 
+/**
+ * Phase 2e.3 — per-hour pricing fields. Posted in dollars by the
+ * form; the action multiplies by 100 to land cents in the DB
+ * columns added by migration 20260608_030000_per_hour_pricing.sql.
+ * All three are optional — they only matter when the product
+ * declares the pricing.per-hour capability.
+ */
+const perHourShape = {
+  hourlyRate: moneySchema("Hourly rate", { min: 0, max: 5000 }).optional(),
+  minimumHours: z
+    .number()
+    .int()
+    .min(0, "Minimum hours cannot be negative.")
+    .max(24, "Minimum hours above 24 are likely a typo.")
+    .optional(),
+  idleHourRate: moneySchema("Idle hour rate", { min: 0, max: 5000 }).optional(),
+};
+
 export const createProductSchema = z.object({
   name: requiredText("Product name", 120),
   categoryId: z.string().trim().uuid().optional().or(z.literal("")).transform((value) => value || undefined),
@@ -70,6 +88,7 @@ export const createProductSchema = z.object({
   visibility: productVisibilitySchema.default("public"),
   ...inflatableSetupShape,
   ...capabilitySlugsShape,
+  ...perHourShape,
 });
 
 export const updateProductSchema = createProductSchema.extend({

@@ -3,6 +3,11 @@
 import { useActionState, useState } from "react";
 import { createProduct, updateProduct } from "@/lib/products/actions";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  listCapabilities,
+  listCapabilitiesByGroup,
+} from "@/lib/capabilities/registry";
+import type { CapabilityGroup } from "@/lib/capabilities/types";
 
 const initialState = { ok: false, message: "" };
 
@@ -34,6 +39,12 @@ export function ProductForm({
     wetUpchargeCents?: number | null;
     anchoringMethods?: string[];
     requiredAnchorCount?: number | null;
+    // Phase 2e.1 — capability assignment.
+    capabilitySlugs?: string[];
+    // Phase 2e.3 — per-hour pricing fields.
+    hourlyRateCents?: number | null;
+    minimumHours?: number | null;
+    idleHourRateCents?: number | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -288,6 +299,25 @@ export function ProductForm({
         </label>
       </div>
 
+      {/* Phase 2e.2 — capability assignment. Operator picks which
+          capabilities apply to this product; each one will (in 2e.3+)
+          render its own form fields conditionally. For now, this
+          section sets product.capability_slugs only — the inflatable
+          wet/dry + anchoring sections above stay independent until
+          the migration to capability-driven fields lands. */}
+      <CapabilityCheckboxes initialSlugs={product?.capabilitySlugs ?? []} />
+
+      {/* Phase 2e.3 — per-hour pricing fields. Always present in the
+          DOM; the server action ignores them unless the product
+          carries the pricing.per-hour capability. A future iteration
+          can conditionally render these only when the per-hour
+          checkbox is checked client-side. */}
+      <PerHourPricingFields
+        initialHourlyRateCents={product?.hourlyRateCents ?? null}
+        initialMinimumHours={product?.minimumHours ?? null}
+        initialIdleHourRateCents={product?.idleHourRateCents ?? null}
+      />
+
       {state.message && (
         <div
           role={state.ok ? "status" : "alert"}
@@ -305,5 +335,198 @@ export function ProductForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Phase 2e.2 — capability assignment UI. Renders checkboxes for every
+ * registered capability, grouped by capability group. The selected
+ * slugs are posted as the `capability_slugs[]` form group, which the
+ * server action's `readCapabilitySlugs` helper filters against the
+ * registry one more time before writing to the DB.
+ *
+ * Display labels are derived from the slug for now (split on `.` and
+ * title-case the last segment). An i18n pass can localize these once
+ * the marketing content settles.
+ */
+function CapabilityCheckboxes({ initialSlugs }: { initialSlugs: string[] }) {
+  const all = listCapabilities();
+  const groups: CapabilityGroup[] = [
+    "pricing",
+    "mode",
+    "setup",
+    "display",
+    "service",
+    "order",
+    "composition",
+  ];
+
+  const checkedSet = new Set(initialSlugs);
+
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Capabilities ({checkedSet.size}/{all.length} selected)
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Choose which features apply to this product. Each capability surfaces
+        its own pricing, display, or operational fields elsewhere in the form
+        (coming in follow-up releases).
+      </p>
+      <div style={{ display: "grid", gap: 16 }}>
+        {groups.map((group) => {
+          const inGroup = listCapabilitiesByGroup(group);
+          if (inGroup.length === 0) return null;
+          return (
+            <div key={group}>
+              <strong
+                style={{
+                  display: "block",
+                  fontSize: "0.78rem",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  color: "var(--text-muted, #6b7280)",
+                  marginBottom: 8,
+                }}
+              >
+                {group}
+              </strong>
+              <div style={{ display: "grid", gap: 6 }}>
+                {inGroup.map((c) => (
+                  <label
+                    key={c.slug}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: "0.92rem",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="capability_slugs"
+                      value={c.slug}
+                      defaultChecked={checkedSet.has(c.slug)}
+                    />
+                    <span>{slugToLabel(c.slug)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
+function slugToLabel(slug: string): string {
+  const last = slug.split(".").pop() ?? slug;
+  return last
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
+ * Phase 2e.3 — per-hour pricing form fields (photo booths, concessions,
+ * games, future AV). Posts hourly_rate / minimum_hours / idle_hour_rate
+ * as dollar values; the server action's reconcilePerHourCents helper
+ * converts to cents AND nulls them out when pricing.per-hour isn't
+ * present in the capability_slugs list, so an inactive capability
+ * never ghost-bills.
+ */
+function PerHourPricingFields({
+  initialHourlyRateCents,
+  initialMinimumHours,
+  initialIdleHourRateCents,
+}: {
+  initialHourlyRateCents: number | null;
+  initialMinimumHours: number | null;
+  initialIdleHourRateCents: number | null;
+}) {
+  const hourlyDollars =
+    initialHourlyRateCents != null ? initialHourlyRateCents / 100 : "";
+  const idleDollars =
+    initialIdleHourRateCents != null ? initialIdleHourRateCents / 100 : "";
+  const minHours = initialMinimumHours ?? "";
+
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Per-hour pricing
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Used when the product carries the <code>pricing.per-hour</code>{" "}
+        capability — typically photo booths (3-hour minimum) and concessions
+        (1-hour minimum). Leave blank if this product is billed flat-day or
+        per-unit.
+      </p>
+
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr 1fr" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Hourly rate ($)
+          </strong>
+          <input
+            type="number"
+            name="hourly_rate"
+            min="0"
+            max="5000"
+            step="0.01"
+            defaultValue={hourlyDollars}
+            placeholder="200.00"
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Minimum hours
+          </strong>
+          <input
+            type="number"
+            name="minimum_hours"
+            min="0"
+            max="24"
+            step="1"
+            defaultValue={minHours}
+            placeholder="3"
+            style={{ width: "100%" }}
+          />
+        </label>
+
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Idle-hour rate ($)
+          </strong>
+          <input
+            type="number"
+            name="idle_hour_rate"
+            min="0"
+            max="5000"
+            step="0.01"
+            defaultValue={idleDollars}
+            placeholder="100.00"
+            style={{ width: "100%" }}
+          />
+        </label>
+      </div>
+      <p
+        className="muted"
+        style={{ marginTop: 8, fontSize: "0.82rem" }}
+      >
+        Idle-hour rate is reserved for a future checkout option that lets
+        customers price &quot;on-site but inactive&quot; hours (e.g., a photo
+        booth present during dinner service) at a discount. Leave blank
+        today.
+      </p>
+    </details>
   );
 }

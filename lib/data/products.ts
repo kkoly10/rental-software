@@ -280,6 +280,24 @@ export async function getProductById(productId: string) {
       typeof data.required_anchor_count === "number"
         ? data.required_anchor_count
         : null,
+    // Phase 2e.1 — capability assignment. Defaults to empty when the
+    // column hasn't been backfilled or the product pre-dates the
+    // migration.
+    capabilitySlugs: Array.isArray(data.capability_slugs)
+      ? (data.capability_slugs as string[])
+      : [],
+    // Phase 2e.3 — per-hour pricing fields. Null = the operator
+    // hasn't entered a value (or the capability isn't active).
+    hourlyRateCents:
+      typeof data.hourly_rate_cents === "number"
+        ? data.hourly_rate_cents
+        : null,
+    minimumHours:
+      typeof data.minimum_hours === "number" ? data.minimum_hours : null,
+    idleHourRateCents:
+      typeof data.idle_hour_rate_cents === "number"
+        ? data.idle_hour_rate_cents
+        : null,
   };
 }
 
