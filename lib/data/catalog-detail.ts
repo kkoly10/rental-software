@@ -107,7 +107,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order)"
+      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, unit_label, minimum_order_quantity, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order)"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -228,6 +228,22 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
     minimumHours:
       typeof (data as Record<string, unknown>).minimum_hours === "number"
         ? ((data as Record<string, unknown>).minimum_hours as number)
+        : null,
+    // Phase 2e.13b — per-unit pricing fields surfaced to the PDP.
+    // The units selector is gated on pricing.per-unit being in
+    // capability_slugs, so the absent-values case for verticals that
+    // don't use per-unit billing renders nothing on the storefront.
+    unitPriceCents:
+      typeof (data as Record<string, unknown>).unit_price_cents === "number"
+        ? ((data as Record<string, unknown>).unit_price_cents as number)
+        : null,
+    unitLabel:
+      typeof (data as Record<string, unknown>).unit_label === "string"
+        ? ((data as Record<string, unknown>).unit_label as string)
+        : null,
+    minimumOrderQuantity:
+      typeof (data as Record<string, unknown>).minimum_order_quantity === "number"
+        ? ((data as Record<string, unknown>).minimum_order_quantity as number)
         : null,
     // Phase 2e.8 — structured specs surfaced on the PDP as a
     // definition list. Already sorted by display_order so the

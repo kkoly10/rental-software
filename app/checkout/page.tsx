@@ -45,12 +45,12 @@ export async function generateMetadata({
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ product?: string; date?: string; zip?: string; mode?: string; rentalEnd?: string }>;
+  searchParams: Promise<{ product?: string; date?: string; zip?: string; mode?: string; rentalEnd?: string; units?: string }>;
 }) {
   await requirePublicOrg();
   const isDemo = await isCurrentTenantDemo();
 
-  const { product, date, zip, mode, rentalEnd } = await searchParams;
+  const { product, date, zip, mode, rentalEnd, units } = await searchParams;
   const productName = formatProductName(product);
   // Sprint 6.0 — passed in from the product-detail Book Now CTA when
   // the customer picked wet/dry. The action validates against the
@@ -111,6 +111,7 @@ export default async function CheckoutPage({
                 maxDate={maxDate}
                 cancellationPolicy={policies.cancellationPolicyText ?? undefined}
                 selectedMode={selectedMode}
+                initialUnits={units}
               />
             </section>
 

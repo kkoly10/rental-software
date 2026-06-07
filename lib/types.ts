@@ -211,6 +211,14 @@ export type CatalogDetail = {
   capabilitySlugs?: string[];
   hourlyRateCents?: number | null;
   minimumHours?: number | null;
+  // Phase 2e.13b — per-unit pricing on the PDP. unitPriceCents drives
+  // the line total, unitLabel makes the customer-facing display human
+  // ("$5 per chair × 200 = $1,000"), minimumOrderQuantity gates the
+  // selector's lower bound so the customer can't submit below the
+  // operator's minimum.
+  unitPriceCents?: number | null;
+  unitLabel?: string | null;
+  minimumOrderQuantity?: number | null;
   // Phase 2e.8 — structured specs table on the PDP.
   specs?: Array<{
     id: string;
