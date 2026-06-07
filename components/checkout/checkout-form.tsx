@@ -32,6 +32,7 @@ export function CheckoutForm({
   selectedMode,
   initialUnits,
   selectedVariantId,
+  initialAddons,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -53,6 +54,11 @@ export function CheckoutForm({
   // product, applies price_delta_cents, and writes it to
   // order_items.selected_variant_id.
   selectedVariantId?: string;
+  // Phase 2e.10 — composition.add-ons selections, encoded as
+  // "id:qty,id:qty". Forwarded verbatim to the server action which
+  // parses + validates each entry against the parent product's
+  // configured add-ons before inserting child order_items rows.
+  initialAddons?: string;
 }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(
@@ -302,6 +308,9 @@ export function CheckoutForm({
       ) : null}
       {selectedVariantId && /^[0-9a-f-]{36}$/i.test(selectedVariantId) ? (
         <input type="hidden" name="selected_variant_id" value={selectedVariantId} />
+      ) : null}
+      {initialAddons && /^[0-9a-f-]{36}:\d+(,[0-9a-f-]{36}:\d+)*$/i.test(initialAddons) ? (
+        <input type="hidden" name="addons" value={initialAddons} />
       ) : null}
 
       <div className="grid grid-3">
