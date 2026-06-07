@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getVertical, listVerticalSlugs } from "@/lib/verticals/registry";
-import {
-  nextSortOrders,
-  slugifyCategoryName,
-} from "@/lib/verticals/category-seed";
+import { buildSeedDrafts } from "@/lib/verticals/category-seed";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 
 /**
@@ -140,19 +137,18 @@ export async function addOrgVertical(
       .maybeSingle();
     const startSort =
       typeof maxRow?.sort_order === "number" ? maxRow.sort_order : 0;
-    const sortOrders = nextSortOrders(
+    const drafts = buildSeedDrafts(
+      vertical.defaultCategorySeeds,
+      existingSlugs,
       startSort,
-      vertical.defaultCategorySeeds.length,
     );
-    const rows = vertical.defaultCategorySeeds
-      .map((name, idx) => ({
-        organization_id: ownership.organization_id,
-        name,
-        slug: slugifyCategoryName(name),
-        sort_order: sortOrders[idx],
-        vertical: slugInput,
-      }))
-      .filter((row) => row.slug.length > 0 && !existingSlugs.has(row.slug));
+    const rows = drafts.map((d) => ({
+      organization_id: ownership.organization_id,
+      name: d.name,
+      slug: d.slug,
+      sort_order: d.sortOrder,
+      vertical: slugInput,
+    }));
     if (rows.length > 0) {
       const { error: catError } = await supabase
         .from("categories")

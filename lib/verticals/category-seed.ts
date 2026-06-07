@@ -44,3 +44,33 @@ export function nextSortOrders(startSort: number, count: number): number[] {
   const base = Number.isFinite(startSort) ? Math.max(0, Math.trunc(startSort)) : 0;
   return Array.from({ length: Math.max(0, Math.trunc(count)) }, (_, i) => base + i + 1);
 }
+
+export type SeedRowDraft = {
+  name: string;
+  slug: string;
+  sortOrder: number;
+};
+
+/**
+ * Build the final list of category rows to insert when an operator
+ * adds a vertical: turns the registry's defaultCategorySeeds into
+ * (name, slug, sortOrder) tuples, then drops any whose slug already
+ * exists or collapsed to empty.
+ *
+ * Pure — caller wires the insert. Splitting this out means an action
+ * can be a one-liner and the dedup logic gets a deterministic test.
+ */
+export function buildSeedDrafts(
+  names: readonly string[],
+  existingSlugs: ReadonlySet<string>,
+  startSort: number,
+): SeedRowDraft[] {
+  const sortOrders = nextSortOrders(startSort, names.length);
+  return names
+    .map((name, idx) => ({
+      name,
+      slug: slugifyCategoryName(name),
+      sortOrder: sortOrders[idx] ?? 0,
+    }))
+    .filter((row) => row.slug.length > 0 && !existingSlugs.has(row.slug));
+}
