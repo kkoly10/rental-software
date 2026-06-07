@@ -3,6 +3,11 @@
 import { useActionState, useState } from "react";
 import { createProduct, updateProduct } from "@/lib/products/actions";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  listCapabilities,
+  listCapabilitiesByGroup,
+} from "@/lib/capabilities/registry";
+import type { CapabilityGroup } from "@/lib/capabilities/types";
 
 const initialState = { ok: false, message: "" };
 
@@ -34,6 +39,8 @@ export function ProductForm({
     wetUpchargeCents?: number | null;
     anchoringMethods?: string[];
     requiredAnchorCount?: number | null;
+    // Phase 2e.1 — capability assignment.
+    capabilitySlugs?: string[];
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -288,6 +295,14 @@ export function ProductForm({
         </label>
       </div>
 
+      {/* Phase 2e.2 — capability assignment. Operator picks which
+          capabilities apply to this product; each one will (in 2e.3+)
+          render its own form fields conditionally. For now, this
+          section sets product.capability_slugs only — the inflatable
+          wet/dry + anchoring sections above stay independent until
+          the migration to capability-driven fields lands. */}
+      <CapabilityCheckboxes initialSlugs={product?.capabilitySlugs ?? []} />
+
       {state.message && (
         <div
           role={state.ok ? "status" : "alert"}
@@ -306,4 +321,97 @@ export function ProductForm({
       </div>
     </form>
   );
+}
+
+/**
+ * Phase 2e.2 — capability assignment UI. Renders checkboxes for every
+ * registered capability, grouped by capability group. The selected
+ * slugs are posted as the `capability_slugs[]` form group, which the
+ * server action's `readCapabilitySlugs` helper filters against the
+ * registry one more time before writing to the DB.
+ *
+ * Display labels are derived from the slug for now (split on `.` and
+ * title-case the last segment). An i18n pass can localize these once
+ * the marketing content settles.
+ */
+function CapabilityCheckboxes({ initialSlugs }: { initialSlugs: string[] }) {
+  const all = listCapabilities();
+  const groups: CapabilityGroup[] = [
+    "pricing",
+    "mode",
+    "setup",
+    "display",
+    "service",
+    "order",
+    "composition",
+  ];
+
+  const checkedSet = new Set(initialSlugs);
+
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Capabilities ({checkedSet.size}/{all.length} selected)
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Choose which features apply to this product. Each capability surfaces
+        its own pricing, display, or operational fields elsewhere in the form
+        (coming in follow-up releases).
+      </p>
+      <div style={{ display: "grid", gap: 16 }}>
+        {groups.map((group) => {
+          const inGroup = listCapabilitiesByGroup(group);
+          if (inGroup.length === 0) return null;
+          return (
+            <div key={group}>
+              <strong
+                style={{
+                  display: "block",
+                  fontSize: "0.78rem",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  color: "var(--text-muted, #6b7280)",
+                  marginBottom: 8,
+                }}
+              >
+                {group}
+              </strong>
+              <div style={{ display: "grid", gap: 6 }}>
+                {inGroup.map((c) => (
+                  <label
+                    key={c.slug}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: "0.92rem",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="capability_slugs"
+                      value={c.slug}
+                      defaultChecked={checkedSet.has(c.slug)}
+                    />
+                    <span>{slugToLabel(c.slug)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
+function slugToLabel(slug: string): string {
+  const last = slug.split(".").pop() ?? slug;
+  return last
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
