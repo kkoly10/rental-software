@@ -211,4 +211,12 @@ export type CatalogDetail = {
   capabilitySlugs?: string[];
   hourlyRateCents?: number | null;
   minimumHours?: number | null;
+  // Phase 2e.8 — structured specs table on the PDP.
+  specs?: Array<{
+    id: string;
+    specKey: string;
+    specLabel: string;
+    specValue: string;
+    displayOrder: number;
+  }>;
 };
