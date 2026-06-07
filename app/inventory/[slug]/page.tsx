@@ -340,6 +340,17 @@ export default async function ProductDetailPage({
                 supportsModes={product.supportsModes ?? ["dry"]}
                 wetUpchargeCents={product.wetUpchargeCents ?? null}
                 backHref={`/inventory${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`}
+                perUnit={
+                  product.capabilitySlugs?.includes("pricing.per-unit") &&
+                  typeof product.unitPriceCents === "number" &&
+                  product.unitPriceCents > 0
+                    ? {
+                        unitPriceCents: product.unitPriceCents,
+                        unitLabel: product.unitLabel ?? "unit",
+                        minimumQuantity: product.minimumOrderQuantity ?? 0,
+                      }
+                    : null
+                }
               />
             </aside>
           </div>

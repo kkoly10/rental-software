@@ -29,12 +29,22 @@ export function BookNowWithMode({
   supportsModes,
   wetUpchargeCents,
   backHref,
+  perUnit,
 }: {
   checkoutQuery: string;
   basePriceCents: number;
   supportsModes: string[];
   wetUpchargeCents: number | null;
   backHref: string;
+  // Phase 2e.13b — per-unit pricing. Present only when the product
+  // carries pricing.per-unit AND has a unit_price_cents configured;
+  // null/undefined renders the existing single-button CTA so a
+  // dual-mode bouncer with no per-unit fields stays unchanged.
+  perUnit?: {
+    unitPriceCents: number;
+    unitLabel: string;
+    minimumQuantity: number;
+  } | null;
 }) {
   const supportsDry = supportsModes.includes("dry");
   const supportsWet = supportsModes.includes("wet");
@@ -56,14 +66,99 @@ export function BookNowWithMode({
   const dryPrice = formatDollars(basePriceCents);
   const wetPrice = formatDollars(wetEffectiveCents);
 
+  // Phase 2e.13b — units selector state. Starts at the operator's
+  // minimum (or 1) so the customer never submits below the minimum
+  // by default; tied to a number input below. The submit-time
+  // dispatch in lib/checkout/actions.ts clamps + truncates so a
+  // crafted ?units=… in the URL can't undercharge.
+  const [units, setUnits] = useState<number>(() =>
+    perUnit ? Math.max(1, perUnit.minimumQuantity || 1) : 1,
+  );
+
   const params = new URLSearchParams(checkoutQuery);
   if (isDualMode) {
     params.set("mode", selectedMode);
   }
+  if (perUnit && units > 0) {
+    params.set("units", String(Math.trunc(units)));
+  }
   const checkoutHref = `/checkout?${params.toString()}`;
+
+  // Live per-unit total preview so the customer sees their actual
+  // line total before clicking through. Mirrors the per-unit helper
+  // math (units × rate / 100).
+  const perUnitTotalDollars = perUnit
+    ? ((Math.max(0, Math.trunc(units)) * perUnit.unitPriceCents) / 100).toFixed(2)
+    : null;
+
+  const belowMinimum =
+    perUnit && perUnit.minimumQuantity > 0 && units < perUnit.minimumQuantity;
 
   return (
     <div style={{ marginTop: 20 }}>
+      {perUnit && (
+        <div
+          className="order-card"
+          style={{ marginBottom: 16, padding: 16 }}
+        >
+          <label
+            style={{ display: "flex", flexDirection: "column", gap: 6 }}
+          >
+            <strong style={{ fontSize: 14 }}>
+              How many {perUnit.unitLabel}s?
+            </strong>
+            <input
+              type="number"
+              min={perUnit.minimumQuantity || 1}
+              step={1}
+              value={units}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                setUnits(Number.isFinite(n) && n > 0 ? n : 1);
+              }}
+              style={{
+                padding: "8px 10px",
+                fontSize: 15,
+                border: "1px solid var(--border, #e5e7eb)",
+                borderRadius: 6,
+                maxWidth: 160,
+              }}
+              aria-describedby="units-help"
+            />
+            <span
+              id="units-help"
+              className="muted"
+              style={{ fontSize: 13 }}
+            >
+              ${(perUnit.unitPriceCents / 100).toFixed(2)} per{" "}
+              {perUnit.unitLabel}
+              {perUnit.minimumQuantity > 0 ? (
+                <> · {perUnit.minimumQuantity} minimum</>
+              ) : null}
+            </span>
+          </label>
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+          >
+            Subtotal: ${perUnitTotalDollars}
+          </div>
+          {belowMinimum && (
+            <div
+              className="field-error"
+              role="alert"
+              style={{ marginTop: 8, fontSize: 13 }}
+            >
+              Minimum order is {perUnit.minimumQuantity} {perUnit.unitLabel}
+              s. Please add more to continue.
+            </div>
+          )}
+        </div>
+      )}
+
       {isDualMode && (
         <div
           role="radiogroup"
@@ -93,9 +188,21 @@ export function BookNowWithMode({
       )}
 
       <div className="price-row">
-        <Link href={checkoutHref} className="primary-btn">
-          {cta}
-        </Link>
+        {belowMinimum ? (
+          <button
+            type="button"
+            className="primary-btn"
+            disabled
+            aria-disabled="true"
+            style={{ opacity: 0.5, cursor: "not-allowed" }}
+          >
+            {cta}
+          </button>
+        ) : (
+          <Link href={checkoutHref} className="primary-btn">
+            {cta}
+          </Link>
+        )}
         <Link href={backHref} className="secondary-btn">
           {back}
         </Link>

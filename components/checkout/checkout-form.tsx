@@ -30,6 +30,7 @@ export function CheckoutForm({
   maxDate,
   cancellationPolicy,
   selectedMode,
+  initialUnits,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -42,6 +43,10 @@ export function CheckoutForm({
   // server action so it lands on order_items.selected_mode + drives
   // the wet upcharge on the line total.
   selectedMode?: "dry" | "wet";
+  // Phase 2e.13b — units count for per-unit products, taken from the
+  // PDP selector and forwarded as a hidden field to the submit
+  // action. Validated + clamped server-side.
+  initialUnits?: string;
 }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(
@@ -285,6 +290,9 @@ export function CheckoutForm({
       ) : null}
       {selectedMode ? (
         <input type="hidden" name="selected_mode" value={selectedMode} />
+      ) : null}
+      {initialUnits && /^\d+$/.test(initialUnits) ? (
+        <input type="hidden" name="units" value={initialUnits} />
       ) : null}
 
       <div className="grid grid-3">
