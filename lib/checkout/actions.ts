@@ -136,6 +136,13 @@ export async function createCheckoutOrder(
   }
 
   const smsOptIn = formData.get("sms_opt_in") === "true";
+  // Phase 2e.13 — per-unit pricing reads `units` outside the zod
+  // schema; it's only meaningful when the product carries
+  // pricing.per-unit, and the dispatch branch below clamps + truncates
+  // via computePerUnitLineTotal so a crafted negative or fractional
+  // value can't slip through.
+  const rawUnits = String(formData.get("units") ?? "");
+  const requestedUnits = /^\d+$/.test(rawUnits) ? parseInt(rawUnits, 10) : 1;
   const requestHeaders = await headers();
   const { getTrustedClientIp } = await import("@/lib/security/request-client");
   const trustedIp = getTrustedClientIp(requestHeaders);
@@ -365,6 +372,22 @@ export async function createCheckoutOrder(
   // computation, persisted to order_items.billed_hours so refunds
   // and disputes see the same number the customer was charged.
   let billedHoursForLineItem: number | null = null;
+  // Phase 2e.13 — per-unit billing audit trail. Captured at price
+  // computation, persisted to order_items.billed_units so refunds
+  // and disputes see the same number the customer was charged.
+  let billedUnitsForLineItem: number | null = null;
+  // Phase 2e.14 — order-minimum enforcement at submit. Captured from
+  // the product/category lookup so the post-pricing gate below can
+  // reject "$5 chair order, $600 minimum" before we create the
+  // order. Null when the capability isn't active.
+  let productMinimumOrderCents: number | null = null;
+  let productMinimumOrderQuantity: number | null = null;
+  let orderMinimumCapabilityActive = false;
+  // Phase 2e.15 — onsite-attendant overage at submit. Captured at
+  // pricing time so the line-item insert below can write
+  // attendant_overage_hours and the subtotal reflects the overage
+  // charge. Null when capability inactive or no overage triggered.
+  let attendantOverageHours: number | null = null;
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -375,7 +398,7 @@ export async function createCheckoutOrder(
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, categories(minimum_order_cents)",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -385,14 +408,55 @@ export async function createCheckoutOrder(
       .maybeSingle();
 
     if (product) {
+      // Phase 2e.13 — capability slugs read before the pricing
+      // validity check so per-unit products (which carry their rate
+      // on unit_price_cents, not base_price) aren't rejected by the
+      // decision-2.9 "missing price" gate.
+      const productCapabilitySlugs = Array.isArray(
+        (product as { capability_slugs?: unknown }).capability_slugs,
+      )
+        ? ((product as { capability_slugs?: unknown }).capability_slugs as string[])
+        : [];
+      const productUnitPriceCents =
+        typeof (product as { unit_price_cents?: unknown }).unit_price_cents === "number"
+          ? ((product as { unit_price_cents?: unknown }).unit_price_cents as number)
+          : null;
+      const isPerUnitProduct =
+        productCapabilitySlugs.includes("pricing.per-unit") &&
+        productUnitPriceCents !== null &&
+        productUnitPriceCents > 0;
+
+      // Phase 2e.14 — order-minimum capability. The product carries
+      // the unit-count minimum (`minimum_order_quantity`); the dollar
+      // minimum lives on the category (`minimum_order_cents`) since
+      // operators commonly say "tables/chairs orders < $600 aren't
+      // worth our delivery time" at the category level.
+      orderMinimumCapabilityActive =
+        productCapabilitySlugs.includes("order.minimum-order");
+      if (orderMinimumCapabilityActive) {
+        productMinimumOrderQuantity =
+          typeof (product as { minimum_order_quantity?: unknown }).minimum_order_quantity === "number"
+            ? ((product as { minimum_order_quantity?: unknown }).minimum_order_quantity as number)
+            : null;
+        const category = (product as { categories?: unknown }).categories as
+          | { minimum_order_cents?: number | null }
+          | null;
+        productMinimumOrderCents =
+          typeof category?.minimum_order_cents === "number"
+            ? category.minimum_order_cents
+            : null;
+      }
+
       // Decision 2.9 — refuse checkout when a product has no price set,
       // instead of silently billing the magic $225 default. Matches the
       // WooCommerce default ("empty price → no Add-to-Cart button"). The
       // product itself stays browsable on the storefront so customers can
-      // still request a quote for unusual items.
+      // still request a quote for unusual items. Per-unit products
+      // satisfy the gate via unit_price_cents instead of base_price.
       const rawBasePrice = product.base_price;
       const hasValidPrice =
-        typeof rawBasePrice === "number" && rawBasePrice > 0;
+        (typeof rawBasePrice === "number" && rawBasePrice > 0) ||
+        isPerUnitProduct;
       if (!hasValidPrice) {
         await logAppEvent({
           organizationId: orgId,
@@ -431,11 +495,6 @@ export async function createCheckoutOrder(
       // times via the shared computePerHourLineTotal helper. Below
       // the minimum_hours floor still bills the minimum block, so a
       // sub-minimum rental never undercharges.
-      const productCapabilitySlugs = Array.isArray(
-        (product as { capability_slugs?: unknown }).capability_slugs,
-      )
-        ? ((product as { capability_slugs?: unknown }).capability_slugs as string[])
-        : [];
       const productHourlyRateCents =
         typeof (product as { hourly_rate_cents?: unknown }).hourly_rate_cents === "number"
           ? ((product as { hourly_rate_cents?: unknown }).hourly_rate_cents as number)
@@ -449,7 +508,24 @@ export async function createCheckoutOrder(
         productHourlyRateCents !== null;
 
       const pricingModel = product.pricing_model ?? "flat_day";
-      if (isPerHourProduct) {
+      if (isPerUnitProduct) {
+        // Phase 2e.13 — per-unit pricing branch (tables, chairs,
+        // dance-floor sections, future bulk-item verticals). The
+        // customer picks a count on the PDP; line total = units ×
+        // unit_price_cents via the shared computePerUnitLineTotal
+        // helper, which clamps negatives to 0 and truncates fractions
+        // so a crafted `units=-5` or `units=12.7` can't undercharge
+        // or write a non-integer to billed_units.
+        const { computePerUnitLineTotal } = await import(
+          "@/lib/capabilities/pricing/per-unit"
+        );
+        const perUnit = computePerUnitLineTotal({
+          unitPriceCents: productUnitPriceCents ?? 0,
+          units: requestedUnits,
+        });
+        subtotal = Number((perUnit.lineTotalCents / 100).toFixed(2));
+        billedUnitsForLineItem = perUnit.billedUnits;
+      } else if (isPerHourProduct) {
         const { computePerHourLineTotal } = await import(
           "@/lib/capabilities/pricing/per-hour"
         );
@@ -504,6 +580,51 @@ export async function createCheckoutOrder(
       } else {
         subtotal = ratePerDay;
       }
+
+      // Phase 2e.15 — onsite-attendant overage. When the product
+      // carries service.onsite-attendant and the customer's event
+      // window exceeds attendant_included_hours, bill the overage
+      // at attendant_overage_cents_per_hour. Helper clamps negatives
+      // and rounds cents so an event ending before its start can't
+      // crash or credit.
+      if (
+        productCapabilitySlugs.includes("service.onsite-attendant") &&
+        startTime &&
+        endTime
+      ) {
+        const includedHours =
+          typeof (product as { attendant_included_hours?: unknown }).attendant_included_hours === "number"
+            ? ((product as { attendant_included_hours?: unknown }).attendant_included_hours as number)
+            : 0;
+        const overageRateCents =
+          typeof (product as { attendant_overage_cents_per_hour?: unknown }).attendant_overage_cents_per_hour === "number"
+            ? ((product as { attendant_overage_cents_per_hour?: unknown }).attendant_overage_cents_per_hour as number)
+            : null;
+        const eventHours = (() => {
+          if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) return 0;
+          const [ah, am] = startTime.split(":").map(Number);
+          const [bh, bm] = endTime.split(":").map(Number);
+          const minutes = bh * 60 + bm - (ah * 60 + am);
+          return minutes > 0 ? minutes / 60 : 0;
+        })();
+        const { computeAttendantOverage } = await import(
+          "@/lib/capabilities/service/onsite-attendant"
+        );
+        const overage = computeAttendantOverage({
+          rentalHours: eventHours,
+          includedHours,
+          overageRateCentsPerHour: overageRateCents,
+        });
+        if (overage.overageHours > 0 && overage.overageCents > 0) {
+          subtotal = Number(
+            (subtotal + overage.overageCents / 100).toFixed(2),
+          );
+          // Two decimals to match the numeric(5,2) constraint on
+          // order_items.attendant_overage_hours without surprising
+          // the DB with a fractional that fails to coerce.
+          attendantOverageHours = Number(overage.overageHours.toFixed(2));
+        }
+      }
     }
   }
 
@@ -537,6 +658,63 @@ export async function createCheckoutOrder(
       message:
         "We couldn't determine pricing for this booking. Please reopen the product page and try again.",
     });
+  }
+
+  // Phase 2e.14 — order.minimum-order capability gate. Runs before the
+  // service-area minimum so the customer gets the most specific message
+  // (product unit minimum > category dollar minimum > service-area
+  // minimum). Helpers clamp shortfalls to non-negative.
+  if (orderMinimumCapabilityActive) {
+    const { enforceOrderMinimum, enforceProductMinQuantity } = await import(
+      "@/lib/capabilities/order/minimum-order"
+    );
+    if (productMinimumOrderQuantity && billedUnitsForLineItem !== null) {
+      const qtyCheck = enforceProductMinQuantity(
+        billedUnitsForLineItem,
+        productMinimumOrderQuantity,
+      );
+      if (!qtyCheck.ok) {
+        await logAppEvent({
+          organizationId: orgId,
+          source: "checkout.website",
+          action: "minimum_quantity_blocked",
+          status: "warning",
+          metadata: {
+            productId,
+            billedUnits: billedUnitsForLineItem,
+            minimumQuantity: productMinimumOrderQuantity,
+          },
+        });
+        return fail({
+          message: `This item requires a minimum of ${productMinimumOrderQuantity} units. Please add ${qtyCheck.shortByUnits} more to continue.`,
+        });
+      }
+    }
+    if (productMinimumOrderCents && productMinimumOrderCents > 0) {
+      const subtotalCents = Math.round(subtotal * 100);
+      const dollarCheck = enforceOrderMinimum(
+        subtotalCents,
+        productMinimumOrderCents,
+      );
+      if (!dollarCheck.ok) {
+        const minDollars = (productMinimumOrderCents / 100).toFixed(2);
+        const shortDollars = (dollarCheck.shortByCents / 100).toFixed(2);
+        await logAppEvent({
+          organizationId: orgId,
+          source: "checkout.website",
+          action: "minimum_order_blocked",
+          status: "warning",
+          metadata: {
+            subtotalCents,
+            minimumOrderCents: productMinimumOrderCents,
+            source: "category",
+          },
+        });
+        return fail({
+          message: `This category requires a minimum order of $${minDollars}. Please add $${shortDollars} more to continue.`,
+        });
+      }
+    }
   }
 
   if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
@@ -926,7 +1104,11 @@ export async function createCheckoutOrder(
       order_id: order.id,
       product_id: productId,
       line_type: "rental",
-      quantity: 1,
+      // Phase 2e.13 — quantity surfaces the unit count when the
+      // product is priced per-unit so order summaries / pull sheets
+      // show "200 chairs" instead of "1". Flat-day and per-hour
+      // products still bill as a single line.
+      quantity: billedUnitsForLineItem ?? 1,
       unit_price: itemRatePerDay ?? subtotal,
       line_total: subtotal,
       item_name_snapshot: productName,
@@ -942,6 +1124,15 @@ export async function createCheckoutOrder(
       // (after the minimum-floor logic). NULL for flat-day / per-day
       // products. Refund + dispute lookups read this directly.
       billed_hours: billedHoursForLineItem,
+      // Phase 2e.13 — actual units billed for per-unit products
+      // (after clamping / truncation). NULL for flat-day / per-hour
+      // products. Refund + dispute lookups read this directly.
+      billed_units: billedUnitsForLineItem,
+      // Phase 2e.15 — onsite-attendant overage hours actually billed,
+      // for refund / dispute lookups and post-event reconciliation.
+      // NULL when capability is off or the event fits inside included
+      // hours.
+      attendant_overage_hours: attendantOverageHours,
     });
 
     if (itemError) {

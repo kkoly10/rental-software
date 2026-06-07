@@ -6,6 +6,7 @@ import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { calculatePrice } from "@/lib/pricing/engine";
 import { computeRentalDays } from "@/lib/pricing/rental-days";
 import { computePerHourLineTotal } from "@/lib/capabilities/pricing/per-hour";
+import { computePerUnitLineTotal } from "@/lib/capabilities/pricing/per-unit";
 import type { PricingRule } from "@/lib/pricing/types";
 
 export type CheckoutPricingData = {
@@ -57,7 +58,7 @@ export async function getCheckoutPricing(
   const [{ data: product }, { data: org }] = await Promise.all([
     supabase
       .from("products")
-      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours")
+      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .is("deleted_at", null)
@@ -70,9 +71,24 @@ export async function getCheckoutPricing(
       .maybeSingle(),
   ]);
 
-  if (!product || typeof product.base_price !== "number") return null;
+  if (!product) return null;
 
-  const basePrice = Number(product.base_price);
+  // Phase 2e.13 — per-unit products price from unit_price_cents, not
+  // base_price; allow them past the "no base_price" early return so
+  // the review summary can display the per-unit reference rate.
+  const capabilitySlugs =
+    ((product as { capability_slugs?: unknown }).capability_slugs as string[] | null) ?? [];
+  const unitPriceCents =
+    ((product as { unit_price_cents?: unknown }).unit_price_cents as number | null) ?? null;
+  const isPerUnit =
+    capabilitySlugs.includes("pricing.per-unit") &&
+    unitPriceCents != null &&
+    unitPriceCents > 0;
+
+  if (typeof product.base_price !== "number" && !isPerUnit) return null;
+
+  const basePrice =
+    typeof product.base_price === "number" ? Number(product.base_price) : 0;
   const pricingModel = ((product as { pricing_model?: string }).pricing_model) ?? "flat_day";
 
   // Phase 2e.7 — per-hour pricing display. When the product carries
@@ -81,8 +97,6 @@ export async function getCheckoutPricing(
   // matching what computePerHourLineTotal would bill for the shortest
   // valid rental. Submit-time dispatch reads the actual event start
   // and end times from the order form and bills the real hours.
-  const capabilitySlugs =
-    ((product as { capability_slugs?: unknown }).capability_slugs as string[] | null) ?? [];
   const hourlyRateCents =
     ((product as { hourly_rate_cents?: unknown }).hourly_rate_cents as number | null) ?? null;
   const minimumHours =
@@ -99,7 +113,17 @@ export async function getCheckoutPricing(
   let adjustments: { ruleName: string; amount: number; percentage: number }[] = [];
   let rentalDays = 1;
 
-  if (isPerHour) {
+  if (isPerUnit) {
+    // Phase 2e.13 — reference rate for the review summary: bill a
+    // single unit. The PDP doesn't yet flow `units` into the summary
+    // (2e.13b), so display the rate; the submit path recomputes with
+    // the customer's chosen count.
+    const perUnit = computePerUnitLineTotal({
+      unitPriceCents: unitPriceCents ?? 0,
+      units: 1,
+    });
+    subtotal = Number((perUnit.lineTotalCents / 100).toFixed(2));
+  } else if (isPerHour) {
     // Reference billing block for the review summary: bill the
     // minimum_hours (or 1 hour if unset). Submit path will recompute
     // against the actual event start/end the customer enters.
