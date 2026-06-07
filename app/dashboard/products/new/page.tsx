@@ -3,22 +3,21 @@ import { ProductForm } from "@/components/products/product-form";
 import { getCategories } from "@/lib/data/products";
 import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
 import { getMessages } from "@/lib/i18n/server";
-import { getOrgContext } from "@/lib/auth/org-context";
 import { getStarterExample } from "@/lib/verticals/empty-states";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
 
 export default async function NewProductPage() {
-  const [categories, snapshot, m, orgCtx] = await Promise.all([
+  const [categories, snapshot, m, primaryVertical] = await Promise.all([
     getCategories(),
     getGuidanceSnapshot(),
     getMessages(),
-    getOrgContext(),
+    getPrimaryVerticalSlug(),
   ]);
 
   const isFirstProduct = snapshot.productsCount === 0;
-  // Phase 3d — vertical-specific starter example shown on the first-
-  // product banner so the operator sees a concrete "this is what a
-  // good first row looks like" instead of abstract tips.
-  const starter = getStarterExample(orgCtx?.businessType);
+  // Phase 4b — vertical-specific starter via the join-table helper
+  // (falls back to organizations.business_type for pre-backfill orgs).
+  const starter = getStarterExample(primaryVertical ?? undefined);
 
   return (
     <DashboardShell

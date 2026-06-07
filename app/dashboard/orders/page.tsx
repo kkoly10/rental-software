@@ -14,8 +14,8 @@ import { exportOrders } from "@/lib/export/csv";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 import { FirstOrderBanner } from "@/components/orders/first-order-banner";
 import { getTranslator } from "@/lib/i18n/server";
-import { getOrgContext } from "@/lib/auth/org-context";
 import { getEmptyStateCopy } from "@/lib/verticals/empty-states";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
 
 export default async function OrdersPage({
   searchParams,
@@ -29,17 +29,16 @@ export default async function OrdersPage({
       ? params.status
       : "all";
 
-  const [ordersPage, statusCounts, guidanceState, { messages: m, t }, orgCtx] = await Promise.all([
+  const [ordersPage, statusCounts, guidanceState, { messages: m, t }, primaryVertical] = await Promise.all([
     getOrdersPage({ query: params.q, page: params.page, status: activeStatus === "all" ? null : activeStatus }),
     getOrderStatusCounts(),
     getGuidanceState(),
     getTranslator(),
-    getOrgContext(),
+    getPrimaryVerticalSlug(),
   ]);
-  // Phase 3c — vertical-aware empty-state copy for the orders zero
-  // state. Falls back to the generic i18n strings for legacy /
-  // unknown verticals.
-  const ordersEmpty = getEmptyStateCopy(orgCtx?.businessType, "orders");
+  // Phase 4b — primary vertical via the org_verticals join table
+  // helper (organization_verticals → business_type fallback).
+  const ordersEmpty = getEmptyStateCopy(primaryVertical ?? undefined, "orders");
   const helpConfig = pageHelpMap["/dashboard/orders"];
   const f = m.dashboard.orders.filters;
 
