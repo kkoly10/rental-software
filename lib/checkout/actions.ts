@@ -376,6 +376,13 @@ export async function createCheckoutOrder(
   // computation, persisted to order_items.billed_units so refunds
   // and disputes see the same number the customer was charged.
   let billedUnitsForLineItem: number | null = null;
+  // Phase 2e.14 — order-minimum enforcement at submit. Captured from
+  // the product/category lookup so the post-pricing gate below can
+  // reject "$5 chair order, $600 minimum" before we create the
+  // order. Null when the capability isn't active.
+  let productMinimumOrderCents: number | null = null;
+  let productMinimumOrderQuantity: number | null = null;
+  let orderMinimumCapabilityActive = false;
   // Sprint 6.0 — captured during the product lookup so the wet
   // upcharge can be applied after the per-day pricing branch and
   // the eventual order_items insert has a value for selected_mode.
@@ -386,7 +393,7 @@ export async function createCheckoutOrder(
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, categories(minimum_order_cents)",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -413,6 +420,27 @@ export async function createCheckoutOrder(
         productCapabilitySlugs.includes("pricing.per-unit") &&
         productUnitPriceCents !== null &&
         productUnitPriceCents > 0;
+
+      // Phase 2e.14 — order-minimum capability. The product carries
+      // the unit-count minimum (`minimum_order_quantity`); the dollar
+      // minimum lives on the category (`minimum_order_cents`) since
+      // operators commonly say "tables/chairs orders < $600 aren't
+      // worth our delivery time" at the category level.
+      orderMinimumCapabilityActive =
+        productCapabilitySlugs.includes("order.minimum-order");
+      if (orderMinimumCapabilityActive) {
+        productMinimumOrderQuantity =
+          typeof (product as { minimum_order_quantity?: unknown }).minimum_order_quantity === "number"
+            ? ((product as { minimum_order_quantity?: unknown }).minimum_order_quantity as number)
+            : null;
+        const category = (product as { categories?: unknown }).categories as
+          | { minimum_order_cents?: number | null }
+          | null;
+        productMinimumOrderCents =
+          typeof category?.minimum_order_cents === "number"
+            ? category.minimum_order_cents
+            : null;
+      }
 
       // Decision 2.9 — refuse checkout when a product has no price set,
       // instead of silently billing the magic $225 default. Matches the
@@ -580,6 +608,63 @@ export async function createCheckoutOrder(
       message:
         "We couldn't determine pricing for this booking. Please reopen the product page and try again.",
     });
+  }
+
+  // Phase 2e.14 — order.minimum-order capability gate. Runs before the
+  // service-area minimum so the customer gets the most specific message
+  // (product unit minimum > category dollar minimum > service-area
+  // minimum). Helpers clamp shortfalls to non-negative.
+  if (orderMinimumCapabilityActive) {
+    const { enforceOrderMinimum, enforceProductMinQuantity } = await import(
+      "@/lib/capabilities/order/minimum-order"
+    );
+    if (productMinimumOrderQuantity && billedUnitsForLineItem !== null) {
+      const qtyCheck = enforceProductMinQuantity(
+        billedUnitsForLineItem,
+        productMinimumOrderQuantity,
+      );
+      if (!qtyCheck.ok) {
+        await logAppEvent({
+          organizationId: orgId,
+          source: "checkout.website",
+          action: "minimum_quantity_blocked",
+          status: "warning",
+          metadata: {
+            productId,
+            billedUnits: billedUnitsForLineItem,
+            minimumQuantity: productMinimumOrderQuantity,
+          },
+        });
+        return fail({
+          message: `This item requires a minimum of ${productMinimumOrderQuantity} units. Please add ${qtyCheck.shortByUnits} more to continue.`,
+        });
+      }
+    }
+    if (productMinimumOrderCents && productMinimumOrderCents > 0) {
+      const subtotalCents = Math.round(subtotal * 100);
+      const dollarCheck = enforceOrderMinimum(
+        subtotalCents,
+        productMinimumOrderCents,
+      );
+      if (!dollarCheck.ok) {
+        const minDollars = (productMinimumOrderCents / 100).toFixed(2);
+        const shortDollars = (dollarCheck.shortByCents / 100).toFixed(2);
+        await logAppEvent({
+          organizationId: orgId,
+          source: "checkout.website",
+          action: "minimum_order_blocked",
+          status: "warning",
+          metadata: {
+            subtotalCents,
+            minimumOrderCents: productMinimumOrderCents,
+            source: "category",
+          },
+        });
+        return fail({
+          message: `This category requires a minimum order of $${minDollars}. Please add $${shortDollars} more to continue.`,
+        });
+      }
+    }
   }
 
   if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
