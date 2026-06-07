@@ -107,7 +107,7 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order)"
+      "id, name, slug, base_price, supports_modes, wet_upcharge_cents, short_description, description, deleted_at, capability_slugs, hourly_rate_cents, minimum_hours, categories(name, deleted_at), product_attributes(attribute_key, attribute_value), product_images(image_url, is_primary, sort_order, deleted_at), product_specs(id, spec_key, spec_label, spec_value, display_order), product_variants(id, variant_label, thumbnail_url, preview_image_url, price_delta_cents, is_default, display_order)"
     )
     .eq("organization_id", organizationId)
     .eq("slug", slug)
@@ -251,6 +251,36 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
           specKey: r.spec_key,
           specLabel: r.spec_label,
           specValue: r.spec_value,
+          displayOrder: r.display_order ?? 0,
+        }));
+    })(),
+    // Phase 2e.9 — variant gallery. One row per visual option
+    // (backdrop / color / surface). Sorted by display_order;
+    // is_default kept as a flag so the picker can highlight it on
+    // initial render.
+    variants: (() => {
+      const rows = (data as Record<string, unknown>).product_variants;
+      if (!Array.isArray(rows)) return [];
+      return [...rows]
+        .map((r) => r as {
+          id: string;
+          variant_label: string;
+          thumbnail_url: string | null;
+          preview_image_url: string | null;
+          price_delta_cents: number;
+          is_default: boolean;
+          display_order: number | null;
+        })
+        .sort(
+          (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+        )
+        .map((r) => ({
+          id: r.id,
+          label: r.variant_label,
+          thumbnailUrl: r.thumbnail_url,
+          previewImageUrl: r.preview_image_url,
+          priceDeltaCents: r.price_delta_cents,
+          isDefault: !!r.is_default,
           displayOrder: r.display_order ?? 0,
         }));
     })(),
