@@ -20,8 +20,38 @@ function formatTitle(type: string): string {
 }
 
 // ─── Rental Agreement terms by vertical ──────────────────────────────────────
+//
+// Generic event-rental terms covering tents, tables-and-chairs, and
+// dance-floors. These verticals share enough operational shape
+// (delivery + setup at a venue, rental period bracketed by an event,
+// weather considerations) that one shared block reads cleanly.
+// Inflatables keeps its own version because the safety / supervision
+// language is materially different.
+
+const EVENT_RENTAL_TERMS: string[] = [
+  "1. RENTAL PERIOD & RETURN: Equipment is delivered and picked up at the agreed times. The rental period begins upon delivery and ends at pickup. Customer is responsible for the equipment until it is retrieved.",
+  "2. DAMAGE & LIABILITY: Customer accepts full responsibility for all damage to the equipment during the rental period, including damage caused by misuse, weather, or negligence. Normal wear is excluded.",
+  "3. PAYMENT: Full balance is due no later than the event date. Deposits are non-refundable. Cancellations within 72 hours of the event forfeit the full deposit.",
+  "4. WEATHER POLICY: Setup may be postponed or canceled if severe weather (high winds, lightning, heavy rain) makes installation unsafe. Customer may reschedule once at no charge under these conditions.",
+  "5. SETUP AREA: Customer is responsible for providing a clean, level, obstacle-free area suitable for installation, plus reasonable access for the delivery crew. Additional setup fees apply for inaccessible locations or relocations.",
+  "6. SITE CONDITIONS: Customer is responsible for marking buried utilities, sprinkler lines, and irrigation before the crew arrives. The rental company is not liable for damage caused by undisclosed obstructions.",
+  "7. PERMITS & APPROVALS: Customer is responsible for any permits, venue approvals, or HOA notifications required for the installation.",
+  "8. INDEMNIFICATION: Customer agrees to indemnify and hold harmless the rental company, its owners and employees from any claims, damages, or injuries arising from use of the rented equipment.",
+];
+
+const EVENT_SAFETY_WAIVER_TERMS: string[] = [
+  "1. ASSUMPTION OF RISK: I understand that the use of rental equipment at an event involves risks, including those associated with weather, surface conditions, and crowd movement. I voluntarily assume all such risks.",
+  "2. RELEASE OF LIABILITY: In consideration for the use of this equipment, I, on behalf of myself and my guests, hereby release and discharge the rental company from any and all claims, demands, or causes of action arising from participation.",
+  "3. SUPERVISION: I certify that responsible adults will supervise the installation and venue during the rental period.",
+  "4. PROPER USE: I agree to use the equipment only as intended (no climbing on tents or tables, no overloading capacities, no relocating during the event without rental company approval).",
+  "5. ANCHORING & SAFETY: I acknowledge the rental company's setup decisions including anchoring methods, sandbags, and exclusion zones, and agree not to alter or remove them.",
+  "6. ACKNOWLEDGMENT: I have read this waiver, understand its terms, and sign it voluntarily. I am at least 18 years of age and have the authority to sign on behalf of all participants.",
+];
 
 const RENTAL_AGREEMENT_TERMS: Record<string, string[]> = {
+  tents: EVENT_RENTAL_TERMS,
+  "tables-and-chairs": EVENT_RENTAL_TERMS,
+  "dance-floors": EVENT_RENTAL_TERMS,
   inflatable: [
     "1. RENTAL PERIOD & RETURN: Equipment must be available for pickup at the agreed time. Rental period begins upon delivery and ends at pickup. Customer is responsible for the equipment until it is retrieved.",
     "2. DAMAGE & LIABILITY: Customer accepts full responsibility for all damage to the equipment during the rental period, including damage caused by misuse, weather, or negligence. Normal wear is excluded.",
@@ -57,6 +87,9 @@ const RENTAL_AGREEMENT_TERMS: Record<string, string[]> = {
 // ─── Safety Waiver terms by vertical ─────────────────────────────────────────
 
 const SAFETY_WAIVER_TERMS: Record<string, string[]> = {
+  tents: EVENT_SAFETY_WAIVER_TERMS,
+  "tables-and-chairs": EVENT_SAFETY_WAIVER_TERMS,
+  "dance-floors": EVENT_SAFETY_WAIVER_TERMS,
   inflatable: [
     "1. ASSUMPTION OF RISK: I understand that the use of rental equipment involves risks, including but not limited to falls, collisions, and entrapment. I voluntarily assume all such risks.",
     "2. RELEASE OF LIABILITY: In consideration for the use of this equipment, I, on behalf of myself and any minor children in my care, hereby release and discharge the rental company from any and all claims, demands, or causes of action arising from participation.",
@@ -89,7 +122,16 @@ function getTerms(
   businessType: string
 ): string[] {
   const map = documentType === "rental_agreement" ? RENTAL_AGREEMENT_TERMS : SAFETY_WAIVER_TERMS;
-  return map[businessType] ?? map["inflatable"];
+  // Unknown business types fall through to the generic event-rental
+  // block — previously they got the inflatable terms which mention
+  // bouncers and "no shoes" rules, which would read as oddly specific
+  // for, say, a hardware-equipment operator that landed on the
+  // wrong key. The event-rental block reads cleanly across every
+  // delivery-driven vertical.
+  const fallback = documentType === "rental_agreement"
+    ? EVENT_RENTAL_TERMS
+    : EVENT_SAFETY_WAIVER_TERMS;
+  return map[businessType] ?? fallback;
 }
 
 export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
