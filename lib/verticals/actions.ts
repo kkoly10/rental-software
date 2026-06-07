@@ -123,3 +123,109 @@ export async function addOrgVertical(
 
   return { ok: true, message: `Added "${slugInput}".` };
 }
+
+/**
+ * Phase 4f — remove a non-primary vertical.
+ *
+ * Counterpart to addOrgVertical. Refuses to remove the primary
+ * (is_primary = true) row so an org always has a canonical answer
+ * for surfaces that expect one (#288 / #289 empty states, #290
+ * starter examples). The operator changes primary via a separate
+ * action (out of scope here).
+ *
+ * Idempotent: removing a row that doesn't exist (e.g. concurrent
+ * remove from two tabs) returns success, not an error.
+ */
+export type RemoveVerticalState = {
+  ok: boolean;
+  message: string;
+};
+
+export async function removeOrgVertical(
+  _prevState: RemoveVerticalState,
+  formData: FormData,
+): Promise<RemoveVerticalState> {
+  const slugInput = String(formData.get("vertical_slug") ?? "").trim();
+  if (!slugInput) {
+    return { ok: false, message: "Pick a vertical to remove." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return {
+      ok: true,
+      message: `Demo mode: would remove "${slugInput}".`,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      ok: false,
+      message: "You must be signed in to manage verticals.",
+    };
+  }
+
+  const { data: ownership } = await supabase
+    .from("organization_memberships")
+    .select("organization_id")
+    .eq("profile_id", user.id)
+    .eq("role", "owner")
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  if (!ownership?.organization_id) {
+    return {
+      ok: false,
+      message: "Only org owners can remove verticals.",
+    };
+  }
+
+  // Refuse to remove the primary row. Filtering is_primary = false
+  // on the delete query is the security gate; a crafted slug for
+  // the primary vertical just no-ops instead of leaving the org in
+  // a no-primary state.
+  const { error, count } = await supabase
+    .from("organization_verticals")
+    .delete({ count: "exact" })
+    .eq("organization_id", ownership.organization_id)
+    .eq("vertical_slug", slugInput)
+    .eq("is_primary", false);
+
+  if (error) {
+    await logAppError({
+      organizationId: ownership.organization_id,
+      source: "verticals.remove",
+      message: "Failed to remove organization vertical",
+      context: { reason: error.message, slug: slugInput },
+      error,
+    });
+    return { ok: false, message: "Couldn't remove that vertical. Try again." };
+  }
+
+  if ((count ?? 0) === 0) {
+    // Either the row didn't exist (already removed) or it was the
+    // primary (which the filter intentionally excludes). Both surface
+    // as a friendly nudge so the operator understands why nothing
+    // changed without making them re-read the docs.
+    return {
+      ok: true,
+      message: "Nothing to remove — that vertical isn't a secondary one.",
+    };
+  }
+
+  await logAppEvent({
+    organizationId: ownership.organization_id,
+    source: "verticals.remove",
+    action: "removed",
+    status: "success",
+    metadata: { vertical_slug: slugInput },
+  });
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true, message: `Removed "${slugInput}".` };
+}

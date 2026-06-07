@@ -26,6 +26,7 @@ import { formatMessage } from "@/lib/i18n/format";
 import { listOrgVerticalSlugs } from "@/lib/verticals/org-verticals";
 import { listVerticalSlugs } from "@/lib/verticals/registry";
 import { AddVerticalForm } from "@/components/settings/add-vertical-form";
+import { RemoveVerticalButton } from "@/components/settings/remove-vertical-button";
 
 const QBO_BANNERS: Record<string, { tone: "success" | "warning"; copy: string }> = {
   connected: { tone: "success", copy: "QuickBooks connected. Paid invoices will sync automatically." },
@@ -143,20 +144,31 @@ export default async function SettingsPage({
                     marginTop: 8,
                   }}
                 >
-                  {verticalSlugs.map((slug, i) => (
-                    <span
-                      key={slug}
-                      className="badge"
-                      style={{
-                        fontSize: 12,
-                        padding: "4px 10px",
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {slug.replace(/-/g, " ")}
-                      {i === 0 && verticalSlugs.length > 1 ? " (primary)" : ""}
-                    </span>
-                  ))}
+                  {verticalSlugs.map((slug, i) => {
+                    // listOrgVerticalSlugs places the primary first, so
+                    // index 0 with > 1 slug is the only "(primary)" chip.
+                    // Single-vertical orgs have no primary suffix but
+                    // also no remove button — there'd be nothing left.
+                    const isPrimary = i === 0 && verticalSlugs.length > 1;
+                    const canRemove = !isPrimary && verticalSlugs.length > 1;
+                    return (
+                      <span
+                        key={slug}
+                        className="badge"
+                        style={{
+                          fontSize: 12,
+                          padding: "4px 10px",
+                          textTransform: "capitalize",
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {slug.replace(/-/g, " ")}
+                        {isPrimary ? " (primary)" : ""}
+                        {canRemove && <RemoveVerticalButton slug={slug} />}
+                      </span>
+                    );
+                  })}
                 </div>
                 {/* Phase 4e — add-vertical picker. The registry's
                     remaining slugs are passed down so the operator
