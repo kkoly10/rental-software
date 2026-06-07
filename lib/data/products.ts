@@ -302,6 +302,27 @@ export async function getProductById(productId: string) {
     unitPriceCents:
       typeof data.unit_price_cents === "number" ? data.unit_price_cents : null,
     unitLabel: typeof data.unit_label === "string" ? data.unit_label : null,
+    // Phase 2e.5 — setup-window, onsite-attendant, capacity, order-minimum.
+    setupMinutesBefore:
+      typeof data.setup_minutes_before === "number"
+        ? data.setup_minutes_before
+        : null,
+    attendantIncludedHours:
+      typeof data.attendant_included_hours === "number"
+        ? data.attendant_included_hours
+        : null,
+    attendantOverageCentsPerHour:
+      typeof data.attendant_overage_cents_per_hour === "number"
+        ? data.attendant_overage_cents_per_hour
+        : null,
+    capacityMetric:
+      typeof data.capacity_metric === "string" ? data.capacity_metric : null,
+    capacityValue:
+      typeof data.capacity_value === "number" ? data.capacity_value : null,
+    minimumOrderQuantity:
+      typeof data.minimum_order_quantity === "number"
+        ? data.minimum_order_quantity
+        : null,
   };
 }
 

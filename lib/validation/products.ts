@@ -88,6 +88,59 @@ const perUnitShape = {
   unitLabel: optionalText("Unit label", 32),
 };
 
+/**
+ * Phase 2e.5 — setup-window, onsite-attendant, capacity-calculator,
+ * order-minimum. All are integer / enum / money fields gated by
+ * their respective capability_slug at save time.
+ */
+export const capacityMetricSchema = z.enum([
+  "guests",
+  "sq_ft",
+  "dancers",
+  "servings",
+]);
+
+const setupWindowShape = {
+  setupMinutesBefore: z
+    .number()
+    .int()
+    .min(0, "Setup minutes cannot be negative.")
+    .max(24 * 60, "Setup minutes above 24 hours are likely a typo.")
+    .optional(),
+};
+
+const onsiteAttendantShape = {
+  attendantIncludedHours: z
+    .number()
+    .int()
+    .min(0, "Included hours cannot be negative.")
+    .max(24, "Included hours above 24 are likely a typo.")
+    .optional(),
+  attendantOverageRate: moneySchema("Attendant overage rate", {
+    min: 0,
+    max: 5000,
+  }).optional(),
+};
+
+const capacityCalculatorShape = {
+  capacityMetric: capacityMetricSchema.optional(),
+  capacityValue: z
+    .number()
+    .int()
+    .min(0, "Capacity value cannot be negative.")
+    .max(100000, "Capacity values above 100,000 are likely a typo.")
+    .optional(),
+};
+
+const orderMinimumShape = {
+  minimumOrderQuantity: z
+    .number()
+    .int()
+    .min(0, "Minimum order quantity cannot be negative.")
+    .max(100000, "Minimum order quantity above 100,000 is likely a typo.")
+    .optional(),
+};
+
 export const createProductSchema = z.object({
   name: requiredText("Product name", 120),
   categoryId: z.string().trim().uuid().optional().or(z.literal("")).transform((value) => value || undefined),
@@ -102,6 +155,10 @@ export const createProductSchema = z.object({
   ...capabilitySlugsShape,
   ...perHourShape,
   ...perUnitShape,
+  ...setupWindowShape,
+  ...onsiteAttendantShape,
+  ...capacityCalculatorShape,
+  ...orderMinimumShape,
 });
 
 export const updateProductSchema = createProductSchema.extend({
