@@ -28,6 +28,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Path filter so the smoke job — which boots the Next.js build +
+  # installs Playwright + runs ~2-3 min of HTTP API tests — only runs
+  # when something it could actually catch changed. TypeScript + Unit
+  # always run because those are fast and gate every PR.
+  #
+  # The smoke job hits /api/* routes and the boot path, so anything
+  # that could shift those needs the filter to match:
+  #   - app/api/**            — the actual route handlers
+  #   - lib/auth/**           — auth helpers the routes call
+  #   - lib/supabase/**       — DB clients the auth helpers wrap
+  #   - middleware.ts         — request routing layer
+  #   - next.config.*         — build affects what routes exist
+  #   - package*.json         — dep upgrades can break boot
+  #   - playwright.config.ts  — test config
+  #   - tests/smoke/**        — the tests themselves
+  #   - .github/workflows/**  — always run when CI changes
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      smoke: ${{ steps.filter.outputs.smoke }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            smoke:
+              - 'app/api/**'
+              - 'lib/auth/**'
+              - 'lib/supabase/**'
+              - 'middleware.ts'
+              - 'next.config.*'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'playwright.config.ts'
+              - 'tests/smoke/**'
+              - '.github/workflows/**'
+
   typecheck:
     name: TypeScript
     runs-on: ubuntu-latest
@@ -91,6 +130,12 @@ jobs:
 
   smoke-tests:
     name: Playwright API smoke
+    # Skip when no surface the smoke tests cover changed. The
+    # `changes` job above flips `smoke` based on dorny/paths-filter.
+    # A skipped job shows as a green check in the GitHub UI, so
+    # branch protection that requires the smoke check still passes.
+    needs: changes
+    if: needs.changes.outputs.smoke == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
