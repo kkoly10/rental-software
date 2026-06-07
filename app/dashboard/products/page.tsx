@@ -11,43 +11,7 @@ import { ListPagination } from "@/components/dashboard/list-pagination";
 import { CsvImportButton } from "@/components/products/csv-import-button";
 import { getTranslator } from "@/lib/i18n/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-
-// Phase 3b — vertical-aware empty-state copy. Maps the operator's
-// business_type to a noun the catalog UI uses as the call-to-action,
-// so a tents operator sees "Add your first tent" instead of a
-// generic "rental product". Falls back to generic when the
-// business_type doesn't match a registry vertical (legacy car /
-// equipment orgs, or anything we add post-Phase-3 before the map
-// is updated).
-const verticalEmptyStateCopy: Record<
-  string,
-  { title: string; description: string; actionLabel: string }
-> = {
-  inflatable: {
-    title: "No bouncers yet",
-    description:
-      "Add your first inflatable so customers can book bounce houses, water slides, and combos from your storefront.",
-    actionLabel: "Add bouncer",
-  },
-  tents: {
-    title: "No tents yet",
-    description:
-      "Add your first tent so customers can book frame tents, pole tents, sidewalls, and lighting from your storefront.",
-    actionLabel: "Add tent",
-  },
-  "tables-and-chairs": {
-    title: "No tables or chairs yet",
-    description:
-      "Add your first chair or table so customers can build their event order with Chiavari, banquet, and linen rentals.",
-    actionLabel: "Add inventory",
-  },
-  "dance-floors": {
-    title: "No dance floors yet",
-    description:
-      "Add your first dance floor or stage section so customers can size their venue at checkout.",
-    actionLabel: "Add dance floor",
-  },
-};
+import { getEmptyStateCopy } from "@/lib/verticals/empty-states";
 
 // Tinted placeholder glyph for products without a photo yet (Patch 4 grid).
 function BoxGlyph() {
@@ -73,12 +37,11 @@ export default async function ProductsPage({
     getOrgContext(),
   ]);
   const helpConfig = pageHelpMap["/dashboard/products"];
-  // Phase 3b — pick the vertical-specific copy, or fall back to the
-  // generic i18n strings when the org's business_type doesn't map.
-  const verticalCopy =
-    orgCtx?.businessType && verticalEmptyStateCopy[orgCtx.businessType]
-      ? verticalEmptyStateCopy[orgCtx.businessType]
-      : null;
+  // Phase 3b — vertical-specific empty-state copy from
+  // lib/verticals/empty-states.ts; falls back to generic i18n
+  // strings when the org's business_type doesn't map to a
+  // registry vertical.
+  const verticalCopy = getEmptyStateCopy(orgCtx?.businessType, "products");
   const emptyStateTitle =
     verticalCopy?.title ?? m.dashboard.products.noProductsYet;
   const emptyStateDescription =
