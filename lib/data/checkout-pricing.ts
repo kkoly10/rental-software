@@ -5,6 +5,7 @@ import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { calculatePrice } from "@/lib/pricing/engine";
 import { computeRentalDays } from "@/lib/pricing/rental-days";
+import { computePerHourLineTotal } from "@/lib/capabilities/pricing/per-hour";
 import type { PricingRule } from "@/lib/pricing/types";
 
 export type CheckoutPricingData = {
@@ -56,7 +57,7 @@ export async function getCheckoutPricing(
   const [{ data: product }, { data: org }] = await Promise.all([
     supabase
       .from("products")
-      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model")
+      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .is("deleted_at", null)
@@ -74,6 +75,21 @@ export async function getCheckoutPricing(
   const basePrice = Number(product.base_price);
   const pricingModel = ((product as { pricing_model?: string }).pricing_model) ?? "flat_day";
 
+  // Phase 2e.7 — per-hour pricing display. When the product carries
+  // pricing.per-hour and the operator has set hourly_rate_cents, the
+  // displayed subtotal is the minimum block (minimum_hours × rate),
+  // matching what computePerHourLineTotal would bill for the shortest
+  // valid rental. Submit-time dispatch reads the actual event start
+  // and end times from the order form and bills the real hours.
+  const capabilitySlugs =
+    ((product as { capability_slugs?: unknown }).capability_slugs as string[] | null) ?? [];
+  const hourlyRateCents =
+    ((product as { hourly_rate_cents?: unknown }).hourly_rate_cents as number | null) ?? null;
+  const minimumHours =
+    ((product as { minimum_hours?: unknown }).minimum_hours as number | null) ?? null;
+  const isPerHour =
+    capabilitySlugs.includes("pricing.per-hour") && hourlyRateCents != null;
+
   // Apply pricing rules when the customer has selected an event date.
   // Pre-#3a, this branch ignored pricing_model + rentalEndDate entirely,
   // so a per_day product's review summary showed single-day pricing
@@ -83,7 +99,19 @@ export async function getCheckoutPricing(
   let adjustments: { ruleName: string; amount: number; percentage: number }[] = [];
   let rentalDays = 1;
 
-  if (date) {
+  if (isPerHour) {
+    // Reference billing block for the review summary: bill the
+    // minimum_hours (or 1 hour if unset). Submit path will recompute
+    // against the actual event start/end the customer enters.
+    const referenceHours = Math.max(1, minimumHours ?? 1);
+    const perHour = computePerHourLineTotal({
+      hourlyRateCents: hourlyRateCents ?? 0,
+      quantity: 1,
+      hours: referenceHours,
+      minimumHours,
+    });
+    subtotal = Number((perHour.lineTotalCents / 100).toFixed(2));
+  } else if (date) {
     const settings = (org?.settings as Record<string, unknown>) ?? {};
     const rules = (settings.pricing_rules as PricingRule[] | undefined) ?? [];
     rentalDays = computeRentalDays(date, rentalEndDate);
