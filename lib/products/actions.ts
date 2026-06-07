@@ -89,6 +89,35 @@ function reconcilePerHourCents(
   };
 }
 
+/**
+ * Phase 2e.4 — per-unit pricing reads + reconciliation. Same shape
+ * as per-hour: when pricing.per-unit isn't selected, both DB
+ * columns null out so an inactive capability never ghost-bills.
+ */
+function readPerUnitFields(formData: FormData) {
+  const unitPriceRaw = String(formData.get("unit_price") ?? "").trim();
+  const unitLabelRaw = String(formData.get("unit_label") ?? "").trim();
+  return {
+    unitPrice: unitPriceRaw === "" ? undefined : unitPriceRaw,
+    unitLabel: unitLabelRaw === "" ? undefined : unitLabelRaw,
+  };
+}
+
+function reconcilePerUnitCents(
+  capabilitySlugs: readonly string[],
+  unitPrice: number | undefined,
+  unitLabel: string | undefined,
+) {
+  if (!capabilitySlugs.includes("pricing.per-unit")) {
+    return { unit_price_cents: null, unit_label: null };
+  }
+  return {
+    unit_price_cents:
+      unitPrice === undefined ? null : Math.round(unitPrice * 100),
+    unit_label: unitLabel ?? null,
+  };
+}
+
 export type ProductActionState = {
   ok: boolean;
   message: string;
@@ -148,6 +177,7 @@ export async function createProduct(
     ...readInflatableSetupFields(formData),
     capabilitySlugs: readCapabilitySlugs(formData),
     ...readPerHourFields(formData),
+    ...readPerUnitFields(formData),
   });
 
   if (!parsed.success) {
@@ -176,6 +206,8 @@ export async function createProduct(
     hourlyRate,
     minimumHours,
     idleHourRate,
+    unitPrice,
+    unitLabel,
   } = parsed.data;
 
   const perHourCents = reconcilePerHourCents(
@@ -184,6 +216,7 @@ export async function createProduct(
     minimumHours,
     idleHourRate,
   );
+  const perUnitCents = reconcilePerUnitCents(capabilitySlugs, unitPrice, unitLabel);
 
   const wetUpchargeCents = reconcileWetUpcharge(supportsModes, wetUpcharge);
 
@@ -296,6 +329,8 @@ export async function createProduct(
     hourly_rate_cents: perHourCents.hourly_rate_cents,
     minimum_hours: perHourCents.minimum_hours,
     idle_hour_rate_cents: perHourCents.idle_hour_rate_cents,
+    unit_price_cents: perUnitCents.unit_price_cents,
+    unit_label: perUnitCents.unit_label,
   }).select("id").single();
 
   if (error) {
@@ -374,6 +409,7 @@ export async function updateProduct(
     ...readInflatableSetupFields(formData),
     capabilitySlugs: readCapabilitySlugs(formData),
     ...readPerHourFields(formData),
+    ...readPerUnitFields(formData),
   });
 
   if (!parsed.success) {
@@ -389,6 +425,11 @@ export async function updateProduct(
     parsed.data.hourlyRate,
     parsed.data.minimumHours,
     parsed.data.idleHourRate,
+  );
+  const updatePerUnitCents = reconcilePerUnitCents(
+    parsed.data.capabilitySlugs,
+    parsed.data.unitPrice,
+    parsed.data.unitLabel,
   );
 
   if (!hasSupabaseEnv()) {
@@ -481,6 +522,8 @@ export async function updateProduct(
       hourly_rate_cents: updatePerHourCents.hourly_rate_cents,
       minimum_hours: updatePerHourCents.minimum_hours,
       idle_hour_rate_cents: updatePerHourCents.idle_hour_rate_cents,
+      unit_price_cents: updatePerUnitCents.unit_price_cents,
+      unit_label: updatePerUnitCents.unit_label,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)

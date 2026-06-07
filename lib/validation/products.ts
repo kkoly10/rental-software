@@ -76,6 +76,18 @@ const perHourShape = {
   idleHourRate: moneySchema("Idle hour rate", { min: 0, max: 5000 }).optional(),
 };
 
+/**
+ * Phase 2e.4 — per-unit pricing fields. Posted in dollars by the
+ * form; the action multiplies by 100 for the cents DB column added
+ * by migration 20260608_040000_per_unit_pricing.sql. unit_label is
+ * the singular display string ("chair", "section", "table") with a
+ * 32-char DB CHECK upper bound.
+ */
+const perUnitShape = {
+  unitPrice: moneySchema("Unit price", { min: 0, max: 5000 }).optional(),
+  unitLabel: optionalText("Unit label", 32),
+};
+
 export const createProductSchema = z.object({
   name: requiredText("Product name", 120),
   categoryId: z.string().trim().uuid().optional().or(z.literal("")).transform((value) => value || undefined),
@@ -89,6 +101,7 @@ export const createProductSchema = z.object({
   ...inflatableSetupShape,
   ...capabilitySlugsShape,
   ...perHourShape,
+  ...perUnitShape,
 });
 
 export const updateProductSchema = createProductSchema.extend({
