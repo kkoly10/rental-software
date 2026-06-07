@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActiveMemberRole, FINANCIAL_DOC_ROLES } from "@/lib/auth/member-role";
 import { generateDocumentPdf } from "@/lib/documents/generate-pdf";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
@@ -64,12 +65,20 @@ export async function GET(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("name, support_email, business_type")
-    .eq("id", ctx.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  // Resolve the org's primary vertical via the join-table helper —
+  // for multi-vertical orgs the operator may have promoted a
+  // different vertical after signup, and organizations.business_type
+  // can be stale. The helper falls back to business_type when no
+  // join row exists.
+  const [{ data: org }, primaryVertical] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("name, support_email")
+      .eq("id", ctx.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    getPrimaryVerticalSlug(),
+  ]);
 
   const order = document.orders as unknown as {
     order_number: string;
@@ -112,7 +121,12 @@ export async function GET(
     signerName: document.signer_name ?? null,
     signerIp: document.signer_ip ?? null,
     signatureDataUrl: document.signature_data_url ?? null,
-    businessType: org?.business_type ?? "inflatable",
+    // Phase 4 follow-up — use the primary-vertical helper, not
+    // a hardcoded "inflatable" fallback. getTerms() in
+    // lib/documents/generate-pdf.ts now lands on the generic
+    // event-rental block when the slug is unknown (#304), so
+    // passing the raw slug is safe even for legacy orgs.
+    businessType: primaryVertical ?? "",
   });
 
   const docTitle = document.document_type === "rental_agreement"
