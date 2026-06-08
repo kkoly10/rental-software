@@ -26,11 +26,12 @@ Legend: ✅ pass · ⚠️ pass with issue (see notes) · ❌ blocked · ⏳ not
 |---|---|---|---|---|---|---|
 | 1. Marketing → Signup | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 2. Login → dashboard | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 3. Store setup / products | ⚠️ → ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 4. Customer browse (storefront PDP) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 3. Store setup / products | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 4. Customer browse (storefront PDP) | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 5. Customer checkout + deposit | ❌ Stripe not configured | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 6. Operator receives order | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 7. Delivery + crew + pull sheet | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 6. Operator receives order | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 7. Order management (confirm) | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 7b. Delivery + crew + pull sheet | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 8. Balance + documents + close | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 9. Repeat customer / CRM | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
@@ -134,6 +135,45 @@ matching how `wetUpcharge`, `hourlyRate`, etc. handle the same
 blank-input case. Pinning the parse with a unit test would be
 worth doing in a follow-up so the misleadingly-named helper
 doesn't strike again.
+
+**Update:** unit test landed at `tests/product-schema-blank-fields.test.ts`
++ a misleading-name warning on `optionalText` itself. After the
+fix deployed to the preview, Stages 1 → 7 all pass on the
+inflatable walk (only Stripe-gated Stage 5 of the original
+matrix is still blocked).
+
+### Stages 4 + 6 + 7 — passing on inflatable
+
+After fixing the unitLabel "Required" issue, the walk now drives
+through:
+
+- **Stage 4** — anonymous customer lands on `couranr.korent.app/inventory`
+  and clicks through to the PDP for the newly-created product.
+  PDP shows price + Book Now CTA. ✅
+- **Stage 6** — operator goes to `/dashboard/orders/new`, fills
+  in Jordan Rivera + the bouncer + future event date + a $50
+  deposit on a $165 subtotal, submits, and lands on the order
+  detail page. ✅
+- **Stage 7** — operator clicks "Mark Confirmed" on the inquiry
+  → DB row flips to `order_status='confirmed'` + the button
+  unmounts because the state machine no longer allows the
+  confirm transition. ✅
+
+### Stage 5 — dashboard sub-pages
+
+All 15 sub-pages (`/dashboard/orders`, calendar, customers,
+deliveries, messages, pricing, service-areas, maintenance,
+payments, documents, analytics, website, settings, team, billing)
+render without 500s on the freshly-onboarded org. ✅
+
+### Test infrastructure pinned
+
+- `tests/e2e/global-setup.ts` signs in once, saves the auth
+  cookie, and every test in the suite reuses it via
+  `storageState`. Without this each test logs in fresh and trips
+  the `auth:signin:email` rate limiter after ~5 attempts.
+- Vercel preview share token is handled by the same setup so
+  protected-preview runs work without per-test fiddling.
 
 ### Stage 4 — Customer browse
 

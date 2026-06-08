@@ -19,6 +19,7 @@ playwright-report/
 playwright-e2e-report/
 test-results/
 .env.e2e.local
+playwright/.auth/
 
 # Supabase CLI scratch — created by `supabase link` and `db push` in CI.
 # config.toml is committed (project_id is non-secret); .temp holds the

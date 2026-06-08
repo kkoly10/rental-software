@@ -26,7 +26,12 @@ export default defineConfig({
   // a parallel signup would land two `[E2E TEST] Inflatable` orgs.
   workers: 1,
 
+  // Sign in once, reuse the cookie across every test. Without this
+  // each test triggers the /login rate limiter after ~5 attempts.
+  globalSetup: require.resolve("./tests/e2e/global-setup.ts"),
+
   use: {
+    storageState: "playwright/.auth/operator.json",
     baseURL: process.env.E2E_BASE_URL ?? "https://korent.app",
     // The sandboxed container's chromium can have a stale CA bundle
     // that rejects valid prod certs (mirrors the smoke config). The

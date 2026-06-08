@@ -25,20 +25,34 @@ mkdirSync(SCREENSHOTS, { recursive: true });
 const OPERATOR_EMAIL = process.env.E2E_INFLATABLE_OPERATOR_EMAIL;
 const OPERATOR_PASSWORD = process.env.E2E_INFLATABLE_OPERATOR_PASSWORD;
 
+// When the spec runs against a protected Vercel preview, the share
+// token has to be presented on the first request so the bypass
+// cookie can be set. After that the test navigates as if on prod.
+const VERCEL_BYPASS_TOKEN = process.env.E2E_VERCEL_BYPASS_TOKEN;
+
 test.describe("Inflatable — fresh operator journey", () => {
-  test("Stage 1 (anonymous): marketing → signup form", async ({ page }) => {
-    await page.goto("/inflatable-rental-software");
-    await expect(page).toHaveTitle(/Inflatable/i);
-    await page.screenshot({ path: `${SCREENSHOTS}/01-marketing.png`, fullPage: true });
+  // Stage 1 is the only anonymous step — drop the shared auth
+  // cookie so the marketing page renders for a logged-out visitor.
+  test.describe("anonymous", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-    const signupLink = page.locator('a[href*="/signup"]').first();
-    await expect(signupLink).toBeVisible();
-    await signupLink.click();
-    await expect(page).toHaveURL(/\/signup/);
-    await page.screenshot({ path: `${SCREENSHOTS}/02-signup-form.png`, fullPage: true });
+    test.beforeEach(async ({ page, baseURL }) => {
+      if (VERCEL_BYPASS_TOKEN && baseURL) {
+        await page.goto(`${baseURL}/?_vercel_share=${VERCEL_BYPASS_TOKEN}`);
+      }
+    });
 
-    // Don't actually submit — we use the existing test account
-    // for the rest of the walk.
+    test("Stage 1: marketing → signup form", async ({ page }) => {
+      await page.goto("/inflatable-rental-software");
+      await expect(page).toHaveTitle(/Inflatable/i);
+      await page.screenshot({ path: `${SCREENSHOTS}/01-marketing.png`, fullPage: true });
+
+      const signupLink = page.locator('a[href*="/signup"]').first();
+      await expect(signupLink).toBeVisible();
+      await signupLink.click();
+      await expect(page).toHaveURL(/\/signup/);
+      await page.screenshot({ path: `${SCREENSHOTS}/02-signup-form.png`, fullPage: true });
+    });
   });
 
   test.describe("authenticated journey", () => {
@@ -47,11 +61,11 @@ test.describe("Inflatable — fresh operator journey", () => {
       "Needs E2E_INFLATABLE_OPERATOR_EMAIL + E2E_INFLATABLE_OPERATOR_PASSWORD env vars",
     );
 
-    test("Stage 2: login → dashboard shows empty state", async ({ page }) => {
-      await page.goto("/login");
-      await page.fill('input[name="email"]', OPERATOR_EMAIL!);
-      await page.fill('input[name="password"]', OPERATOR_PASSWORD!);
-      await page.click('button[type="submit"]');
+    // The shared storageState from global-setup logs the operator
+    // in for every test in this group — no per-test login needed.
+
+    test("Stage 2: dashboard loads without error", async ({ page }) => {
+      await page.goto("/dashboard");
       await expect(page).toHaveURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
       await page.screenshot({ path: `${SCREENSHOTS}/03-dashboard-home.png`, fullPage: true });
 
@@ -60,7 +74,6 @@ test.describe("Inflatable — fresh operator journey", () => {
     });
 
     test("Stage 3a: /dashboard/products shows vertical-specific empty state", async ({ page }) => {
-      await loginIfNeeded(page);
       await page.goto("/dashboard/products");
       await page.screenshot({ path: `${SCREENSHOTS}/04-products-empty.png`, fullPage: true });
 
@@ -71,7 +84,6 @@ test.describe("Inflatable — fresh operator journey", () => {
     });
 
     test("Stage 3b: /dashboard/products/new shows starter example", async ({ page }) => {
-      await loginIfNeeded(page);
       await page.goto("/dashboard/products/new");
       await page.screenshot({ path: `${SCREENSHOTS}/05-new-product-banner.png`, fullPage: true });
 
@@ -81,7 +93,6 @@ test.describe("Inflatable — fresh operator journey", () => {
     });
 
     test("Stage 3c: operator creates their first product", async ({ page }) => {
-      await loginIfNeeded(page);
       await page.goto("/dashboard/products/new");
 
       // Fill in the bouncer-the-starter-example-suggests + submit.
@@ -165,8 +176,97 @@ test.describe("Inflatable — fresh operator journey", () => {
       await customerContext.close();
     });
 
+    test("Stage 6: operator creates a draft order on behalf of a phone-in customer", async ({ page }) => {
+      await page.goto("/dashboard/orders/new");
+      await page.screenshot({ path: `${SCREENSHOTS}/11-new-order-empty.png`, fullPage: true });
+
+      // Future event date so the form's `min` constraint passes.
+      const future = new Date();
+      future.setDate(future.getDate() + 14);
+      const eventDate = future.toISOString().slice(0, 10);
+
+      await page.fill('input[name="first_name"]', "Jordan");
+      await page.fill('input[name="last_name"]', "Rivera");
+      await page.fill('input[name="phone"]', "555-0142");
+      await page.fill('input[name="event_date"]', eventDate);
+
+      // Pick our newly-created bouncer. The select option text includes
+      // both name + price, so a regex find is more robust than asserting
+      // exact text.
+      const productSelect = page.locator('select[name="product_id"]');
+      const productOptions = await productSelect.locator("option").allTextContents();
+      const bouncerIndex = productOptions.findIndex((t) => /Castle Bouncer/i.test(t));
+      expect(bouncerIndex, "newly-created product wasn't in the dropdown").toBeGreaterThan(0);
+      await productSelect.selectOption({ index: bouncerIndex });
+
+      // Subtotal matches the product's base price; depositAmount must
+      // be ≤ subtotal+deliveryFee per the schema's superRefine.
+      await page.fill('input[name="subtotal"]', "165");
+      await page.fill('input[name="deposit_amount"]', "50");
+
+      await page.screenshot({ path: `${SCREENSHOTS}/12-new-order-filled.png`, fullPage: true });
+
+      await page.locator('button[type="submit"]').first().click();
+      await page.waitForLoadState("networkidle", { timeout: 15_000 });
+      await page.screenshot({ path: `${SCREENSHOTS}/13-after-order-submit.png`, fullPage: true });
+
+      const finalUrl = page.url();
+      const errorBanner = page.locator('[role="alert"], .field-error, .form-error');
+      const errorText =
+        (await errorBanner.count()) > 0 ? await errorBanner.first().innerText() : "(none)";
+
+      test.info().annotations.push({
+        type: "result",
+        description: `Final URL: ${finalUrl}`,
+      });
+      test.info().annotations.push({
+        type: "result",
+        description: `Error text: ${errorText}`,
+      });
+
+      // Successful create redirects to /dashboard/orders/<id>. If we
+      // stayed on /new, the action errored — surface the message.
+      expect(
+        finalUrl,
+        `Form stayed on /new — likely a validation error: ${errorText}`,
+      ).not.toMatch(/\/orders\/new/);
+    });
+
+    test("Stage 7: operator confirms the draft order", async ({ page }) => {
+      await page.goto("/dashboard/orders");
+      await page.screenshot({ path: `${SCREENSHOTS}/14-orders-list.png`, fullPage: true });
+
+      // Order rows render as <a> wrapping an <article>; the link
+      // itself has no accessible name (the customer name is just a
+      // nested div). Use the article-wrap to disambiguate from the
+      // "New Order" CTA and the filter chips on this page.
+      const orderLink = page
+        .locator('a[href^="/dashboard/orders/"]')
+        .filter({ has: page.locator("article") })
+        .first();
+      await expect(orderLink).toBeVisible({ timeout: 10_000 });
+      await orderLink.click();
+      await page.waitForLoadState("networkidle", { timeout: 10_000 });
+      await page.screenshot({ path: `${SCREENSHOTS}/15-order-detail.png`, fullPage: true });
+
+      // Confirm button is hidden once the order has moved past
+      // {inquiry, quote_sent, awaiting_deposit}. On a fresh draft
+      // it should be visible. Label is "Mark Confirmed" (en) per
+      // lib/i18n/messages/en.ts → dashboard.orders.detail.confirmOrderCta.
+      const confirmBtn = page.getByRole("button", { name: /mark confirmed/i });
+      await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
+      await confirmBtn.click();
+
+      // The ConfirmOrderButton calls router.refresh() on success,
+      // re-rendering the page with the new status. The button then
+      // unmounts (no longer in ALLOWED_FROM). Wait for that absence
+      // + the "Confirmed" status text appearing somewhere on the page.
+      await expect(confirmBtn).toBeHidden({ timeout: 10_000 });
+      await expect(page.getByText(/confirmed/i).first()).toBeVisible();
+      await page.screenshot({ path: `${SCREENSHOTS}/16-order-confirmed.png`, fullPage: true });
+    });
+
     test("Stage 5: dashboard sub-pages render without 500s", async ({ page }) => {
-      await loginIfNeeded(page);
 
       const subPages = [
         "/dashboard/orders",
@@ -201,16 +301,3 @@ test.describe("Inflatable — fresh operator journey", () => {
   });
 });
 
-/**
- * Best-effort login if the current page isn't already inside the
- * dashboard. Saves logging in once per test; Playwright spec
- * scopes don't share storage state across tests by default.
- */
-async function loginIfNeeded(page: import("@playwright/test").Page) {
-  if (page.url().includes("/dashboard")) return;
-  await page.goto("/login");
-  await page.fill('input[name="email"]', OPERATOR_EMAIL!);
-  await page.fill('input[name="password"]', OPERATOR_PASSWORD!);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
