@@ -227,15 +227,37 @@ The spec carries two tests now:
 - **Stage 7** asserts the operator-visible journey: click →
   badge → button hidden. Consistently passes.
 - **Stage 7b** reloads the page and asserts the order really
-  did flip. Marked `test.fixme()` because of the intermittent
-  failure; promote to a real assertion once the underlying race
-  is fixed.
+  did flip — no row left in `/dashboard/orders?status=inquiry`.
 
-**This is still a launch-blocker** — even at "occasionally
-fails," any operator who happens to land on the failing path
-sees a success badge, walks away, and the order silently stays
-in inquiry. Subsequent crew / delivery / payment flows that
-gate on `confirmed` will all silently fail for that order.
+### Fix shipped
+
+`lib/orders/actions.ts:updateOrderStatus` now reads the
+persisted status back from the row that PostgREST returns and
+rejects with a clear operator-facing error if it doesn't match
+what we tried to set:
+
+```ts
+.update({ order_status: parsed.data.newStatus })
+…
+.select("id, order_status");      // was .select("id")
+
+if (
+  !error &&
+  updated &&
+  updated.length === 1 &&
+  updated[0].order_status !== parsed.data.newStatus
+) {
+  // log to app_error_logs + return ok=false
+}
+```
+
+This is **defensive** — the underlying intermittent race
+couldn't be re-triggered against the latest deploys, so the fix
+treats the symptom (operator sees phantom success while the row
+didn't flip) rather than the root cause. Stage 7b now exercises
+the post-reload DB-truth assertion against every run; if the
+race ever recurs the operator gets a real error message + an
+`app_error_logs` entry instead of silent corruption.
 
 ### Stage 4 — Customer browse
 

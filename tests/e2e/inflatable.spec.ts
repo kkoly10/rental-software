@@ -377,27 +377,12 @@ test.describe("Inflatable — fresh operator journey", () => {
     });
 
     test("Stage 7b: confirm survives a hard reload", async ({ page }) => {
-      // FLAKY ON PREVIEW — INTERMITTENTLY FAILS. Sometimes the
-      // Mark-Confirmed click in Stage 7 returns ok=true to the
-      // client and the order ends up confirmed in Postgres. Other
-      // times the action returns ok=true to the client but the
-      // Supabase row's `updated_at` matches `created_at` to the
-      // microsecond — the DB write never landed. Running the same
-      // Stage 7 click in isolation against a directly-inserted
-      // inquiry order is 100% reliable; running it after the
-      // customer-storefront checkout from Stage 4b shows the bug
-      // intermittently. Suspected race between concurrent server
-      // actions on the same Vercel Lambda instance, but pinning the
-      // root cause needs server-side trace capture from prod.
-      //
-      // Marked `test.fixme` so the spec documents the gap without
-      // poisoning the run output. Promote to a real assertion once
-      // the underlying race is fixed.
-      test.fixme();
-
+      // Verifies DB truth after Stage 7's click. The action now
+      // re-reads the persisted status (lib/orders/actions.ts) and
+      // returns ok=false if the UPDATE somehow returned a row
+      // count without committing — so a reload here should always
+      // find an empty inquiry list when Stage 7 reported success.
       await page.goto("/dashboard/orders?status=inquiry");
-      // If the order really got confirmed, the inquiry filter
-      // should be empty. If it didn't, Jordan's row is still here.
       await expect(
         page.locator('a[href^="/dashboard/orders/"]').filter({ has: page.locator("article") }),
       ).toHaveCount(0, { timeout: 10_000 });

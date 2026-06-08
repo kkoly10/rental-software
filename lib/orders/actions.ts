@@ -935,27 +935,43 @@ export async function updateOrderStatus(
     .eq("organization_id", ctx.organizationId)
     .eq("order_status", currentOrder.order_status)
     .is("deleted_at", null)
-    .select("id");
+    .select("id, order_status");
 
-  // TEMP DIAGNOSTIC — Stage 7 of the inflatable walkthrough caught
-  // an intermittent case where this action returns ok=true to the
-  // client but the row's updated_at matches created_at to the µs.
-  // Emit the exact inputs + the row count back so a Vercel log
-  // query can pin the failing branch.
-  console.log(
-    JSON.stringify({
-      tag: "[updateOrderStatus]",
-      orderId: parsed.data.orderId,
-      from: currentOrder.order_status,
-      to: parsed.data.newStatus,
+  // Stage 7 of the inflatable E2E walk caught an intermittent
+  // case where this action returned ok=true to the client but
+  // the row never actually flipped — the dashboard re-renders
+  // and the operator finds the order still in `inquiry`,
+  // assuming Vercel Lambda cold-start / PostgREST batching
+  // returns a row count without committing the write. Defend
+  // by reading the persisted status back from the row that
+  // PostgREST returns and rejecting if it doesn't match what
+  // we tried to set. The operator now sees a clear error
+  // instead of a phantom success.
+  if (
+    !error &&
+    updated &&
+    updated.length === 1 &&
+    updated[0].order_status !== parsed.data.newStatus
+  ) {
+    const { logAppError } = await import("@/lib/observability/server");
+    await logAppError({
+      organizationId: ctx.organizationId,
       userId: ctx.userId,
-      orgId: ctx.organizationId,
-      updateError: error?.message ?? null,
-      updateErrorCode: error?.code ?? null,
-      updatedRowCount: updated?.length ?? 0,
-      updatedRows: updated ?? null,
-    }),
-  );
+      source: "orders.updateOrderStatus",
+      message: "UPDATE returned 1 row but the persisted status didn't change",
+      context: {
+        orderId: parsed.data.orderId,
+        from: currentOrder.order_status,
+        attempted: parsed.data.newStatus,
+        persisted: updated[0].order_status,
+      },
+    });
+    return {
+      ok: false,
+      message:
+        "Order status didn't persist. Refresh the page and try again — if this keeps happening, please contact support.",
+    };
+  }
 
   if (error) {
     console.error("[orders] update order status failed:", error.message);
