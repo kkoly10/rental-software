@@ -23,6 +23,17 @@ export function requiredText(label: string, maxLength: number) {
     );
 }
 
+/**
+ * Name is misleading: this accepts an empty string and transforms it
+ * to `undefined`, but the inner `z.string()` still rejects an actual
+ * `undefined` input with the bare Zod default "Required" message.
+ *
+ * Callers must either always pass a string (e.g. `String(formData.get("x") ?? "")`)
+ * or wrap the field with `.optional()` at the schema layer when the
+ * reader can hand back `undefined`. See lib/products/actions.ts:101 +
+ * lib/validation/products.ts:91 for the failure mode that motivated
+ * this warning.
+ */
 export function optionalText(label: string, maxLength: number) {
   return z
     .string()

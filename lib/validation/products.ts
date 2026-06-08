@@ -4,7 +4,7 @@ import {
   optionalText,
   requiredText,
   uuidSchema,
-} from "@/lib/validation/common";
+} from "./common.ts";
 
 export const productVisibilitySchema = z.enum(["public", "unlisted", "hidden"]);
 
