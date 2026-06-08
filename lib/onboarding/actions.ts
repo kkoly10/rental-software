@@ -21,17 +21,19 @@ export async function completeOnboarding(
   const zipCode = String(formData.get("zip_code") ?? "").trim().slice(0, 20);
   const deliveryFee = parseFloat(String(formData.get("delivery_fee") ?? "25"));
   const minimumOrder = parseFloat(String(formData.get("minimum_order") ?? "100"));
-  // Phase 3 — multi-vertical signup picker. The form now offers the
-  // 4 registry verticals (inflatable, tents, tables-and-chairs,
-  // dance-floors); car/equipment stay accepted for any half-completed
-  // legacy session that posts an old value. The bootstrap RPC
-  // (20260608_140000_bootstrap_multi_vertical_categories.sql) seeds
-  // the matching default categories for each.
+  // Phase 3/2d — multi-vertical signup picker. The form now offers
+  // the 6 registry verticals (inflatable + the wedding/banquet triad
+  // + photo-booths + concessions); car/equipment stay accepted for
+  // any half-completed legacy session that posts an old value. The
+  // bootstrap RPC's per-vertical category seed branches keep these
+  // values in lockstep (migration 20260608_170000).
   const businessType = [
     "inflatable",
     "tents",
     "tables-and-chairs",
     "dance-floors",
+    "photo-booths",
+    "concessions",
     "car",
     "equipment",
   ].includes(String(formData.get("business_type") ?? ""))
