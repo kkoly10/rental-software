@@ -28,6 +28,10 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "https://korent.app",
+    // The sandboxed container's chromium can have a stale CA bundle
+    // that rejects valid prod certs (mirrors the smoke config). The
+    // harness is for our own production domain; trust it.
+    ignoreHTTPSErrors: true,
     // Capture screenshots + traces always — they're the artefact
     // the human reviewer cross-references against the findings doc.
     screenshot: "on",

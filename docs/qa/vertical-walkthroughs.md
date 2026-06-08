@@ -24,11 +24,11 @@ Legend: ✅ pass · ⚠️ pass with issue (see notes) · ❌ blocked · ⏳ not
 
 | Stage | Inflatable | Tents | Tables & Chairs | Dance floors | Photo booths | Concessions |
 |---|---|---|---|---|---|---|
-| 1. Marketing → Signup | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 2. Email verify → Onboarding | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 3. Store setup (profile, policies, first product) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 1. Marketing → Signup | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 2. Login → dashboard | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 3. Store setup / products | ⚠️ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 4. Customer browse (storefront PDP) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 5. Customer checkout + deposit | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 5. Customer checkout + deposit | ❌ Stripe not configured | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 6. Operator receives order | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 7. Delivery + crew + pull sheet | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 8. Balance + documents + close | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
@@ -65,15 +65,61 @@ proposed fix.
 
 ### Stage 1 — Marketing → Signup
 
-(no findings yet)
+**Inflatable** (`https://korent.app/inflatable-rental-software`) — ✅ pass.
+- Marketing page loads, title matches `/Inflatable/i`.
+- Signup CTA visible + clicks through to `/signup`.
+- Signup form renders all required fields (`email`, `password`,
+  `full_name`, `terms_accepted`).
+- (Did not actually submit — operator account already exists.)
 
-### Stage 2 — Onboarding
+### Stage 2 — Login → dashboard
 
-(no findings yet)
+**Inflatable** (`komlankouhiko@icloud.com` / `Couranr LLC`) — ✅ pass.
+- `/login` → submit → lands on `/dashboard`.
+- Sidebar shows all 4 groups (Ops, Catalog, Finance, Admin) with
+  the post-#304 fix in place. Deliveries item visible (would have
+  been hidden pre-fix for non-inflatable verticals).
+- Header shows the org name "Couranr LLC".
 
 ### Stage 3 — Store setup
 
-(no findings yet)
+**Inflatable** — ⚠️ pass with 3 observations to verify.
+
+The walkthrough confirms `/dashboard/products` renders 3 existing
+products on this mature account, and `/dashboard/products/new`
+renders the form. **Three things to verify next:**
+
+1. **Category mis-assignment.** Product *"20x20 Party Tent"* is
+   filed under category **"Bounce Houses"**. Operator-side mistake
+   or a real bug in category resolution? Likely the former since
+   the org's `business_type = 'inflatable'` and the operator
+   created the product. But it's the kind of thing a multi-vertical
+   add (#298) would have to handle correctly — if this org later
+   adds the tents vertical via the settings card, "20x20 Party
+   Tent" should be reassignable, not silently re-filed.
+
+2. **Product named "Scheduled delivery"** — looks like leftover
+   test data, not a real product name. Not a bug, just cleanup.
+
+3. **`<ContextHelpBanner>` showing "Add new product"** on
+   `/dashboard/products` despite the account having 3 products.
+   Verify the banner is gated on `productsCount === 0`, not just
+   "user hasn't dismissed it." If the dismiss is the only gate,
+   that's a UX bug — mature accounts shouldn't see new-operator
+   onboarding nudges.
+
+### Stage 4 — Customer browse
+
+(not yet driven; spec needs the operator's public storefront URL —
+look it up from `organizations.slug` and run a separate anonymous
+walk against `<slug>.korent.app`.)
+
+### Stage 5 — Customer checkout + deposit
+
+Blocked across all verticals — Stripe is not yet configured for
+the prod org. Re-run this stage once Stripe test-mode keys are
+wired so we can verify deposit charges + webhook delivery without
+real money.
 
 ### Stage 4 — Customer browse
 
