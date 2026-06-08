@@ -26,7 +26,7 @@ Legend: ✅ pass · ⚠️ pass with issue (see notes) · ❌ blocked · ⏳ not
 |---|---|---|---|---|---|---|
 | 1. Marketing → Signup | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 2. Login → dashboard | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 3. Store setup / products | ⚠️ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 3. Store setup / products | ⚠️ → ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 4. Customer browse (storefront PDP) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 5. Customer checkout + deposit | ❌ Stripe not configured | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 6. Operator receives order | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
@@ -107,6 +107,33 @@ renders the form. **Three things to verify next:**
    "user hasn't dismissed it." If the dismiss is the only gate,
    that's a UX bug — mature accounts shouldn't see new-operator
    onboarding nudges.
+
+**Real bug found — Stage 3c product creation silently fails with
+"Required":** the Playwright spec drove a fresh operator through
+`/dashboard/products/new` with the starter-example fields filled
+in (name, base price, category, description, is_active) and the
+form refused to save — `state.message = "Required"`, page rerendered
+empty.
+
+Root cause: `lib/validation/products.ts:91` — `unitLabel` field is
+declared as `optionalText("Unit label", 32)` with no `.optional()`
+on the outside. `optionalText` is misleadingly named — it accepts
+an empty string but **starts with `z.string()` so it rejects
+undefined** with the bare "Required" Zod default message. The
+action's `readPerUnitFields` returns `unitLabel: undefined` when
+the input is blank, which is the steady-state for any product
+that doesn't carry the `pricing.per-unit` capability — i.e. every
+inflatable, tent, dance-floor-by-section-not-by-unit product the
+operator tries to save.
+
+This is a **launch-blocker for inflatable, the day-one vertical** —
+no operator could create their first product on a fresh org.
+
+Fix: add `.optional()` to the schema so undefined passes through,
+matching how `wetUpcharge`, `hourlyRate`, etc. handle the same
+blank-input case. Pinning the parse with a unit test would be
+worth doing in a follow-up so the misleadingly-named helper
+doesn't strike again.
 
 ### Stage 4 — Customer browse
 
