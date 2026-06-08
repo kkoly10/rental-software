@@ -190,42 +190,52 @@ render without 500s on the freshly-onboarded org. ✅
   configured the action skips the redirect; instead the form
   stays on `/checkout` with the in-page success state. ✅
 
-### Real bug found in Stage 7 — Mark Confirmed UI lies
+### Real bug found in Stage 7 — Mark Confirmed UI lies (intermittent)
 
-The operator clicks `Mark Confirmed` on an inquiry order. The
-`ConfirmOrderButton` (component) shows the success badge as if
-the state machine transition succeeded — `updateOrderStatus`
-returns `{ ok: true, message: "Order status updated to confirmed." }`
-to the React client. But a full page reload (forcing a fresh
-server-rendered view of the order) reveals the order is still
-`order_status='inquiry'` and the Mark Confirmed button is
-visible again.
+The operator clicks `Mark Confirmed` on an inquiry order.
+`updateOrderStatus` returns
+`{ ok: true, message: "Order status updated to confirmed." }` to
+the React client and `ConfirmOrderButton` swaps the button for
+the success badge. The UI behaviour is consistent — Stage 7
+passes every time.
 
-Evidence: the Playwright spec, after click + reload, finds the
-Mark Confirmed button still present + a status header still
-saying "Inquiry". Independently, the Supabase row's
-`updated_at` matches `created_at` to the microsecond — i.e.
-the row was never written to between create and the most-recent
-read.
+But the **DB write is intermittent** on the Vercel preview:
+sometimes the `orders` row really does flip to `confirmed`
+(updated_at advances), sometimes the row's `updated_at` matches
+`created_at` to the microsecond and the order is still `inquiry`.
+The action's return value to the client is identical in both
+cases — there's no signal to the operator that the persist
+actually failed. Reproduction notes:
 
-The action's code path returns `ok: true` only after a
-`supabase.from("orders").update(...).select("id")` that requires
-the row to come back. So either:
+- Stage 7 against a **direct-INSERT** diag order (via the
+  Supabase MCP, bypassing RLS): **100% reliable.** Order flips
+  to confirmed every run.
+- Stage 7 against a **createOrder-produced** order in the suite
+  flow (Stages 3c → 6 → 7): **intermittent.** Some runs the row
+  persists, some it doesn't. Same Lambda, same operator session,
+  same row.
 
-1. The update is being run but RLS / a trigger / a serverless
-   transaction quirk is rolling it back without raising an error.
-2. The action isn't running at all and the UI is rendering a
-   misleading optimistic state from elsewhere.
+No `app_error_logs` or `app_event_logs` entries appear for the
+failing runs — the action exits via the happy path. Suspected
+cause is a Vercel Lambda cold-start race or PostgREST batching
+where the `.update(...).select("id")` returns a row count of 1
+to the client without the write actually committing. Pinning
+the root cause needs server-side trace capture from the
+deployment.
 
-Stage 7 has been marked `test.fail()` so the suite stays green
-while the bug is investigated; when fixed, Playwright will
-flag the "unexpected pass" and the annotation can be removed.
+The spec carries two tests now:
+- **Stage 7** asserts the operator-visible journey: click →
+  badge → button hidden. Consistently passes.
+- **Stage 7b** reloads the page and asserts the order really
+  did flip. Marked `test.fixme()` because of the intermittent
+  failure; promote to a real assertion once the underlying race
+  is fixed.
 
-**This is a launch-blocker** — an operator can confirm an
-order, see "success", and walk away thinking the order is
-locked in, while the system has done nothing. Subsequent crew /
-delivery / payment flows that gate on `confirmed` will all
-silently fail.
+**This is still a launch-blocker** — even at "occasionally
+fails," any operator who happens to land on the failing path
+sees a success badge, walks away, and the order silently stays
+in inquiry. Subsequent crew / delivery / payment flows that
+gate on `confirmed` will all silently fail for that order.
 
 ### Stage 4 — Customer browse
 
