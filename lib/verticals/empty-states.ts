@@ -105,6 +105,46 @@ const COPY: Record<string, Record<EmptyStateSurface, EmptyStateCopy>> = {
       actionLabel: "Add customer",
     },
   },
+  "photo-booths": {
+    products: {
+      title: "No booths yet",
+      description:
+        "Add your first photo booth so customers can pick a backdrop, see the 3-hour minimum priced honestly, and book online.",
+      actionLabel: "Add booth",
+    },
+    orders: {
+      title: "No bookings yet",
+      description:
+        "Most photo-booth bookings come from wedding planners and corporate event coordinators. Share your storefront link or take a phone order to start.",
+      actionLabel: "Create booking",
+    },
+    customers: {
+      title: "No customers yet",
+      description:
+        "Add planners and coordinators you've worked with so their next booking auto-fills at checkout.",
+      actionLabel: "Add customer",
+    },
+  },
+  concessions: {
+    products: {
+      title: "No machines yet",
+      description:
+        "Add your first concession machine so customers can see servings yield, power requirements, and the 1-hour-attendant-included pricing.",
+      actionLabel: "Add machine",
+    },
+    orders: {
+      title: "No bookings yet",
+      description:
+        "Concession bookings often bundle with inflatables — share your storefront link or take a phone order to log your first event.",
+      actionLabel: "Create booking",
+    },
+    customers: {
+      title: "No customers yet",
+      description:
+        "Carnival-circuit and school-event repeat customers go here. Add one manually to seed your repeat-business list.",
+      actionLabel: "Add customer",
+    },
+  },
 };
 
 export function getEmptyStateCopy(
@@ -157,6 +197,18 @@ const STARTERS: Record<string, StarterExample> = {
     price: "$450 / event",
     description:
       "Modular parquet sections, 12x12 (sixteen 3x3 panels). Sub-floor included. Indoor or covered tent only.",
+  },
+  "photo-booths": {
+    name: "Open-Air Photo Booth — 3hr",
+    price: "$600 / 3hr (then $150/hr)",
+    description:
+      "DSLR camera, ring light, 6 backdrop options, prop kit, attendant included. 3-hour minimum. Needs one 110V outlet.",
+  },
+  concessions: {
+    name: "Popcorn Machine",
+    price: "$175 (1hr attendant included)",
+    description:
+      "16oz commercial popper, serves ~200 guests. Kernels + bags + butter included. Standard 110V power.",
   },
 };
 

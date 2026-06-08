@@ -17,6 +17,8 @@ const REGISTRY_VERTICALS = [
   "tents",
   "tables-and-chairs",
   "dance-floors",
+  "photo-booths",
+  "concessions",
 ] as const;
 
 const SURFACES = ["products", "orders", "customers"] as const;
@@ -77,6 +79,18 @@ test("each vertical's product copy mentions a domain-specific noun", () => {
   assert.ok(
     /bouncer/i.test(inflatable.title),
     "inflatable title should mention bouncer",
+  );
+
+  const photoBooths = getEmptyStateCopy("photo-booths", "products")!;
+  assert.ok(
+    /booth/i.test(photoBooths.title),
+    "photo-booths title should mention booth",
+  );
+
+  const concessions = getEmptyStateCopy("concessions", "products")!;
+  assert.ok(
+    /machine/i.test(concessions.title),
+    "concessions title should mention machine",
   );
 });
 

@@ -1,0 +1,80 @@
+import type { VerticalConfig } from "./types.ts";
+
+/**
+ * Concessions — popcorn, snow cone, cotton candy, hot dog, frozen
+ * drink. Sold per-hour with "1 hour included, +$100/hr after" as the
+ * industry baseline. Servings counts are the customer-facing trust
+ * signal ("makes 40 snow cones per 20lb ice bag"). Bundles cleanly
+ * with inflatable rentals — same operator, same checkout, same crew.
+ *
+ * Pricing recon (2026):
+ *   - "1 hour included, +$100/hr after" for full-service is the
+ *     standard offering.
+ *   - Standard 110V power.
+ *   - Consumables included by operator (popcorn kernels, syrup, ice).
+ *   - Servings counts vary by machine — surface on the PDP via
+ *     structured-specs.
+ *   - Common combo packages (popcorn + cotton candy + snow cone).
+ */
+export const concessionsVertical: VerticalConfig = {
+  slug: "concessions",
+  label: {
+    en: "Concessions",
+    es: "Concesiones",
+    fr: "Concessions",
+    pt: "Concessões",
+  },
+  capabilities: [
+    "pricing.per-hour",
+    "service.onsite-attendant",
+    "display.structured-specs",
+    "display.capacity-calculator",
+    "composition.add-ons",
+  ],
+  defaultCategorySeeds: [
+    "Popcorn Machine",
+    "Snow Cone Machine",
+    "Cotton Candy Machine",
+    "Hot Dog Roller",
+    "Frozen Drink Machine",
+  ],
+  marketing: {
+    landingPageSlug: "concession-rental-software",
+    seoTitle:
+      "Concession Equipment Rental Software (Popcorn, Snow Cone) | Korent",
+    seoDescription:
+      "Per-hour pricing with first-hour-included attendant, servings-per-rental on structured PDP specs, and combo-package add-ons — built for concession equipment rental businesses.",
+    heroKicker: "Concession rental software",
+    heroHeadline:
+      "Pop the popcorn, scoop the snow cones. Take concession equipment bookings online with per-hour pricing.",
+    heroSubhead:
+      "Customers see servings yield, power requirements, and the 1-hour-attendant-included pricing right on the listing. Combo packages (popcorn + cotton candy + snow cone) land as one order with three child line items.",
+    features: [
+      {
+        title: "Per-hour with first hour included",
+        body: "Operator sets included attendant hours = 1 and overage rate = $100/hr; the helper computes overage at submit and writes attendant_overage_hours to the line item for refund / dispute lookups.",
+      },
+      {
+        title: "Servings yield on the PDP",
+        body: "Capacity calculator's `servings` metric ('Makes about 200 snow cones per rental') is the customer-facing trust signal. Operator sets it once; storefront shows it forever.",
+      },
+      {
+        title: "Structured specs row",
+        body: "Power (110V / 20A standard), footprint, weight, consumables included — definition list rendered in the operator's display order so the customer can pre-check their venue.",
+      },
+      {
+        title: "Cleaning fee + consumables as add-ons",
+        body: "Composition.add-ons lets the operator surface 'Extra Bag of Kernels' or 'Cleaning Fee' as optional/required add-ons. Customer toggles, child order_items lines link via parent_order_item_id.",
+      },
+      {
+        title: "Bundles with inflatables",
+        body: "Concession-only operators are rare. The dashboard supports multi-vertical orgs — declare both concessions + inflatables and your storefront / categories / nav adapt automatically.",
+      },
+    ],
+  },
+  imageSlugs: {
+    hero: "/home/operator-with-ipad.jpg",
+    crew: "/home/crew-loading-trailer.jpg",
+    inventory: "/home/inventory-warehouse.jpg",
+  },
+};

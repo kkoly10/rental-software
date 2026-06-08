@@ -46,6 +46,40 @@ test("chair / table categories return the chairs-and-tables SVG", () => {
   }
 });
 
+test("photo-booth categories return the photo-booth SVG", () => {
+  for (const c of [
+    "Open-Air Photo Booth",
+    "Enclosed Photo Booth",
+    "360° Video Booth",
+    "Mirror Photo Booth",
+    "Selfie Pod",
+  ]) {
+    const url = getStorefrontFallbackImage(undefined, c);
+    assert.ok(isSvgDataUri(url), `expected SVG for "${c}"`);
+    assert.ok(
+      decodeURIComponent(url).includes("Photo Booth"),
+      `photo booth label missing for "${c}"`,
+    );
+  }
+});
+
+test("concession categories return the concession SVG", () => {
+  for (const c of [
+    "Popcorn Machine",
+    "Snow Cone Machine",
+    "Cotton Candy Machine",
+    "Hot Dog Roller",
+    "Frozen Drink Machine",
+  ]) {
+    const url = getStorefrontFallbackImage(undefined, c);
+    assert.ok(isSvgDataUri(url), `expected SVG for "${c}"`);
+    assert.ok(
+      decodeURIComponent(url).includes("Concessions"),
+      `concession label missing for "${c}"`,
+    );
+  }
+});
+
 test("dance floor / stage categories return the dance-floor SVG", () => {
   for (const c of [
     "Parquet Dance Floor",

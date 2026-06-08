@@ -16,6 +16,8 @@ const REGISTRY_VERTICALS = [
   "tents",
   "tables-and-chairs",
   "dance-floors",
+  "photo-booths",
+  "concessions",
 ] as const;
 
 const DELIVERY_HREFS = [

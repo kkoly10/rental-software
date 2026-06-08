@@ -6,7 +6,9 @@ type FallbackKey =
   | "package"
   | "tent"
   | "chair-table"
-  | "dance-floor";
+  | "dance-floor"
+  | "photo-booth"
+  | "concession";
 
 const IMAGE_MAP: Record<FallbackKey, string> = {
   bounce:
@@ -27,6 +29,8 @@ const IMAGE_MAP: Record<FallbackKey, string> = {
   tent: gradientDataUri("#0e7490", "#155e75", "Tent"),
   "chair-table": gradientDataUri("#b45309", "#7c2d12", "Chairs & Tables"),
   "dance-floor": gradientDataUri("#a21caf", "#86198f", "Dance Floor"),
+  "photo-booth": gradientDataUri("#7c3aed", "#5b21b6", "Photo Booth"),
+  concession: gradientDataUri("#dc2626", "#991b1b", "Concessions"),
 };
 
 function gradientDataUri(from: string, to: string, label: string): string {
@@ -62,6 +66,21 @@ function resolveFallbackKey(slug?: string, category?: string): FallbackKey {
 
   if (/\bchair\b|\btable\b|\blinen/.test(haystack)) {
     return "chair-table";
+  }
+
+  // Photo-booth + concessions keywords must come before the bouncer
+  // fallthrough — "selfie pod" or "popcorn machine" otherwise lands on
+  // bounce-house art.
+  if (/\bphoto\s*booth\b|\bselfie\b|\b360\b|\bmirror\s*booth\b/.test(haystack)) {
+    return "photo-booth";
+  }
+
+  if (
+    /\bpopcorn\b|\bsnow\s*cone\b|\bcotton\s*candy\b|\bhot\s*dog\b|\bfrozen\s*drink\b|\bconcession/.test(
+      haystack,
+    )
+  ) {
+    return "concession";
   }
 
   if (slugValue.includes("water") || categoryValue.includes("water")) {

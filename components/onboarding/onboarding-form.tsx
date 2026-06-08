@@ -31,7 +31,7 @@ export function OnboardingForm() {
   // No default selection: forcing an explicit pick is the whole point of
   // the chooser. A pre-checked "inflatable" radio recreates the old
   // hardcoded behavior for anyone who skims the form.
-  const [businessType, setBusinessType] = useState<"" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors">("");
+  const [businessType, setBusinessType] = useState<"" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors" | "photo-booths" | "concessions">("");
 
   // Detect the browser timezone so a UK or Pacific operator isn't silently
   // defaulted to Eastern US time. Only honour it when it matches one of the
@@ -80,7 +80,7 @@ export function OnboardingForm() {
         businessName?: string;
         slug?: string;
         slugEdited?: boolean;
-        businessType?: "" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors";
+        businessType?: "" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors" | "photo-booths" | "concessions";
       };
       let hydrated = false;
       if (draft.businessName) {
@@ -215,6 +215,16 @@ export function OnboardingForm() {
                 value: "dance-floors",
                 label: "Dance Floors",
                 description: "Parquet, LED, stage sections",
+              },
+              {
+                value: "photo-booths",
+                label: "Photo Booths",
+                description: "Open-air, enclosed, 360°, mirror, selfie",
+              },
+              {
+                value: "concessions",
+                label: "Concessions",
+                description: "Popcorn, snow cone, cotton candy, frozen drink",
               },
             ] as const
           ).map(({ value, label, description }) => {
