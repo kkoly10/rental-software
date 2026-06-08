@@ -4,7 +4,7 @@ import {
   optionalText,
   requiredText,
   uuidSchema,
-} from "@/lib/validation/common";
+} from "./common.ts";
 
 export const productVisibilitySchema = z.enum(["public", "unlisted", "hidden"]);
 
@@ -85,7 +85,10 @@ const perHourShape = {
  */
 const perUnitShape = {
   unitPrice: moneySchema("Unit price", { min: 0, max: 5000 }).optional(),
-  unitLabel: optionalText("Unit label", 32),
+  // readPerUnitFields posts `undefined` for a blank input (not "")
+  // so we need .optional() outside optionalText — which starts with
+  // z.string() and otherwise rejects undefined with "Required".
+  unitLabel: optionalText("Unit label", 32).optional(),
 };
 
 /**

@@ -935,7 +935,43 @@ export async function updateOrderStatus(
     .eq("organization_id", ctx.organizationId)
     .eq("order_status", currentOrder.order_status)
     .is("deleted_at", null)
-    .select("id");
+    .select("id, order_status");
+
+  // Stage 7 of the inflatable E2E walk caught an intermittent
+  // case where this action returned ok=true to the client but
+  // the row never actually flipped — the dashboard re-renders
+  // and the operator finds the order still in `inquiry`,
+  // assuming Vercel Lambda cold-start / PostgREST batching
+  // returns a row count without committing the write. Defend
+  // by reading the persisted status back from the row that
+  // PostgREST returns and rejecting if it doesn't match what
+  // we tried to set. The operator now sees a clear error
+  // instead of a phantom success.
+  if (
+    !error &&
+    updated &&
+    updated.length === 1 &&
+    updated[0].order_status !== parsed.data.newStatus
+  ) {
+    const { logAppError } = await import("@/lib/observability/server");
+    await logAppError({
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      source: "orders.updateOrderStatus",
+      message: "UPDATE returned 1 row but the persisted status didn't change",
+      context: {
+        orderId: parsed.data.orderId,
+        from: currentOrder.order_status,
+        attempted: parsed.data.newStatus,
+        persisted: updated[0].order_status,
+      },
+    });
+    return {
+      ok: false,
+      message:
+        "Order status didn't persist. Refresh the page and try again — if this keeps happening, please contact support.",
+    };
+  }
 
   if (error) {
     console.error("[orders] update order status failed:", error.message);

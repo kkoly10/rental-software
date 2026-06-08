@@ -10,7 +10,9 @@
     "test": "node --test --experimental-strip-types tests/**/*.test.ts",
     "test:smoke": "playwright test",
     "test:smoke:report": "playwright show-report",
-    "test:rbac": "playwright test --config playwright.rbac.config.ts"
+    "test:rbac": "playwright test --config playwright.rbac.config.ts",
+    "test:e2e": "playwright test --config playwright.e2e.config.ts",
+    "test:e2e:report": "playwright show-report playwright-e2e-report"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.52.0",
