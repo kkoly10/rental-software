@@ -16,7 +16,9 @@ coverage
 next-env.d.ts
 .claude/
 playwright-report/
+playwright-e2e-report/
 test-results/
+.env.e2e.local
 
 # Supabase CLI scratch — created by `supabase link` and `db push` in CI.
 # config.toml is committed (project_id is non-secret); .temp holds the
