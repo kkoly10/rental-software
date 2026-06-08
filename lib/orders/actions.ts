@@ -937,6 +937,26 @@ export async function updateOrderStatus(
     .is("deleted_at", null)
     .select("id");
 
+  // TEMP DIAGNOSTIC — Stage 7 of the inflatable walkthrough caught
+  // an intermittent case where this action returns ok=true to the
+  // client but the row's updated_at matches created_at to the µs.
+  // Emit the exact inputs + the row count back so a Vercel log
+  // query can pin the failing branch.
+  console.log(
+    JSON.stringify({
+      tag: "[updateOrderStatus]",
+      orderId: parsed.data.orderId,
+      from: currentOrder.order_status,
+      to: parsed.data.newStatus,
+      userId: ctx.userId,
+      orgId: ctx.organizationId,
+      updateError: error?.message ?? null,
+      updateErrorCode: error?.code ?? null,
+      updatedRowCount: updated?.length ?? 0,
+      updatedRows: updated ?? null,
+    }),
+  );
+
   if (error) {
     console.error("[orders] update order status failed:", error.message);
     return { ok: false, message: "Couldn't update order status." };
