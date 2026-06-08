@@ -175,6 +175,58 @@ render without 500s on the freshly-onboarded org. ✅
 - Vercel preview share token is handled by the same setup so
   protected-preview runs work without per-test fiddling.
 
+### Stages 3d + 4b — uploads + customer-side checkout
+
+- **Stage 3d** — operator uploads a product image via the
+  product detail page. Playwright drives `setInputFiles` with an
+  inline 1×1 PNG buffer (no on-disk fixture). `product_images`
+  row lands + the "Image uploaded successfully." badge confirms.
+  ✅
+- **Stage 4b** — anonymous customer hits
+  `couranr.korent.app/checkout?product=…` with their event date
+  + delivery zip, fills the booking form (name, phone, email,
+  address, terms), submits, and the action returns a success
+  banner with the new `ORD-…` number. Because Stripe isn't
+  configured the action skips the redirect; instead the form
+  stays on `/checkout` with the in-page success state. ✅
+
+### Real bug found in Stage 7 — Mark Confirmed UI lies
+
+The operator clicks `Mark Confirmed` on an inquiry order. The
+`ConfirmOrderButton` (component) shows the success badge as if
+the state machine transition succeeded — `updateOrderStatus`
+returns `{ ok: true, message: "Order status updated to confirmed." }`
+to the React client. But a full page reload (forcing a fresh
+server-rendered view of the order) reveals the order is still
+`order_status='inquiry'` and the Mark Confirmed button is
+visible again.
+
+Evidence: the Playwright spec, after click + reload, finds the
+Mark Confirmed button still present + a status header still
+saying "Inquiry". Independently, the Supabase row's
+`updated_at` matches `created_at` to the microsecond — i.e.
+the row was never written to between create and the most-recent
+read.
+
+The action's code path returns `ok: true` only after a
+`supabase.from("orders").update(...).select("id")` that requires
+the row to come back. So either:
+
+1. The update is being run but RLS / a trigger / a serverless
+   transaction quirk is rolling it back without raising an error.
+2. The action isn't running at all and the UI is rendering a
+   misleading optimistic state from elsewhere.
+
+Stage 7 has been marked `test.fail()` so the suite stays green
+while the bug is investigated; when fixed, Playwright will
+flag the "unexpected pass" and the annotation can be removed.
+
+**This is a launch-blocker** — an operator can confirm an
+order, see "success", and walk away thinking the order is
+locked in, while the system has done nothing. Subsequent crew /
+delivery / payment flows that gate on `confirmed` will all
+silently fail.
+
 ### Stage 4 — Customer browse
 
 (not yet driven; spec needs the operator's public storefront URL —
