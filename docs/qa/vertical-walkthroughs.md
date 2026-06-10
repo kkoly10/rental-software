@@ -17,6 +17,11 @@ a real paying operator.
   the goal is end-to-end coverage of code paths, not real money.
 - **Playwright**: `tests/e2e/<vertical>.spec.ts` drives the browser.
   Each spec is independent + can run solo.
+- **DB reset**: run `scripts/e2e-reset-org.mjs` (service-role key +
+  `E2E_ORG_ID`) before each suite run to put the operator org back
+  in the just-onboarded state the empty-state assertions expect.
+  Without it, Stages 3a/3b fail on leftover products from the
+  previous run.
 
 ## Matrix — 6 verticals × 9 journey stages
 
