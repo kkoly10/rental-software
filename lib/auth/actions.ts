@@ -308,7 +308,7 @@ export async function signUpWithPassword(
   const siteUrl = await getSiteUrl();
   const supabase = await createSupabaseServerClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -337,27 +337,53 @@ export async function signUpWithPassword(
     status: "success",
   });
 
-  // Record terms acceptance on the profile before terminating the Lambda via redirect
+  // Record terms acceptance on the profile before terminating the Lambda
+  // via redirect.
+  //
+  // Compliance review (gap #24) found ZERO of the production profiles
+  // carried this audit data despite 6 of 7 signing up after the feature
+  // shipped. Root cause: the old code called `supabase.auth.getUser()`
+  // here — but with email confirmation required, signUp creates NO
+  // session, so getUser() returned null and the `if (user)` block
+  // silently never ran. The user id is available on the signUp response
+  // itself (returned even before the email is confirmed), so use that.
   const hdrs = await headers();
   const { getTrustedClientIp } = await import("@/lib/security/request-client");
   const trustedIp = getTrustedClientIp(hdrs);
   const clientIp = trustedIp === "unknown" ? null : trustedIp;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
+  const newUserId = signUpData?.user?.id ?? null;
+  if (newUserId) {
     try {
       const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
       const admin = createSupabaseAdminClient();
-      await admin
+      const { error: termsError } = await admin
         .from("profiles")
         .update({
           terms_accepted_at: new Date().toISOString(),
           terms_version: "2026-03-30",
           terms_ip: clientIp,
         })
-        .eq("id", user.id);
+        .eq("id", newUserId);
+      if (termsError) {
+        // Don't fail the signup — but a silent miss here is exactly the
+        // bug this comment documents, so it must land in observability.
+        await logAppError({
+          source: "auth/terms-acceptance",
+          message: "Failed to record terms acceptance",
+          context: { db_error: termsError.message, user_id: newUserId },
+        });
+      }
     } catch (err) {
       await logAppError({ source: "auth/terms-acceptance", message: "Failed to record terms acceptance", context: { error: String(err) }, error: err });
     }
+  } else {
+    // signUp returned no user object at all (e.g. obfuscated duplicate-
+    // email response). Log it — an empty audit trail must never be silent.
+    await logAppError({
+      source: "auth/terms-acceptance",
+      message: "signUp returned no user — terms acceptance not recorded",
+      context: { email_domain: email.split("@")[1] ?? "unknown" },
+    });
   }
 
   await supabase.auth.signOut();
