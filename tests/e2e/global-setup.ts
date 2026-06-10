@@ -16,8 +16,11 @@ import { dirname } from "node:path";
 export const STORAGE_STATE_PATH = "playwright/.auth/operator.json";
 
 export default async function globalSetup(config: FullConfig) {
-  const email = process.env.E2E_INFLATABLE_OPERATOR_EMAIL;
-  const password = process.env.E2E_INFLATABLE_OPERATOR_PASSWORD;
+  const email =
+    process.env.E2E_OPERATOR_EMAIL ?? process.env.E2E_INFLATABLE_OPERATOR_EMAIL;
+  const password =
+    process.env.E2E_OPERATOR_PASSWORD ??
+    process.env.E2E_INFLATABLE_OPERATOR_PASSWORD;
   if (!email || !password) {
     console.warn(
       "[e2e:setup] no operator creds in env — skipping shared login. " +

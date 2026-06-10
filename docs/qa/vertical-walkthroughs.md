@@ -17,23 +17,45 @@ a real paying operator.
   the goal is end-to-end coverage of code paths, not real money.
 - **Playwright**: `tests/e2e/<vertical>.spec.ts` drives the browser.
   Each spec is independent + can run solo.
+- **DB reset**: run `scripts/e2e-reset-org.mjs` (service-role key +
+  `E2E_ORG_ID`) before each suite run to put the operator org back
+  in the just-onboarded state the empty-state assertions expect.
+  Without it, Stages 3a/3b fail on leftover products from the
+  previous run.
 
 ## Matrix — 6 verticals × 9 journey stages
 
 Legend: ✅ pass · ⚠️ pass with issue (see notes) · ❌ blocked · ⏳ not driven yet
 
+All six verticals were driven against **live production**
+(korent.app, post-#310 deploy) by the parameterized journey in
+`tests/e2e/vertical-journey.ts` — 12 stages each, all green, on
+2026-06-10. The org was flipped + reset between runs (business_type,
+organization_verticals primary row, category reseed from the
+registry's defaultCategorySeeds).
+
 | Stage | Inflatable | Tents | Tables & Chairs | Dance floors | Photo booths | Concessions |
 |---|---|---|---|---|---|---|
-| 1. Marketing → Signup | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 2. Login → dashboard | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 3. Store setup / products | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 4. Customer browse (storefront PDP) | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 5. Customer checkout + deposit | ❌ Stripe not configured | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 6. Operator receives order | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 7. Order management (confirm) | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 1. Marketing → Signup | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 2. Login → dashboard | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 3. Store setup / products + image upload | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 4. Customer browse (storefront PDP) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 4b. Customer booking form submit ($0 deposit) | ✅ | ✅ | ✅ below-min edge | ✅ | ✅ | ✅ |
+| 5. Customer checkout + Stripe deposit | ❌ Stripe not configured | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 6. Operator receives order | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 7. Order management (confirm + DB truth) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 7b. Delivery + crew + pull sheet | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 8. Balance + documents + close | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | 9. Repeat customer / CRM | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+
+Tables & Chairs Stage 4b note: a single $3.50 Chiavari chair sits
+below the org's $100 service-area minimum, and the storefront
+deep-link can't express quantity without the pricing.per-unit
+capability — so the **correct** outcome is the "requires a minimum
+order of $100.00" rejection, which the spec asserts. This also
+checks off the "below minimum order" edge-case row below. A full
+per-unit checkout (capability + quantity picker) is a follow-up
+walk.
 
 ## Cross-cutting concerns (one walk covers all verticals)
 
@@ -53,7 +75,7 @@ Legend: ✅ pass · ⚠️ pass with issue (see notes) · ❌ blocked · ⏳ not
 | Mobile responsiveness | ⏳ | operator + customer + crew |
 | i18n (es / fr / pt) | ⏳ | spot-check one non-English locale |
 | Edge cases — out of service area | ⏳ | |
-| Edge cases — below minimum order | ⏳ | |
+| Edge cases — below minimum order | ✅ | T&C Stage 4b: $3.50 chair vs $100 minimum → clear rejection alert |
 | Edge cases — product on maintenance | ⏳ | |
 | Edge cases — Stripe down / demo mode | ⏳ | |
 | Edge cases — lead-time conflict | ⏳ | |
