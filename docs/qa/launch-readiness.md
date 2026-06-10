@@ -223,6 +223,45 @@ for the PII purge auth surface (E2E) + logic surface (SQL).
   Phase-1 and Phase-2 walks.
 - `scripts/e2e-reset-org.mjs` — pre-suite org reset.
 
+## Multi-vertical launch program — PR-1 through PR-3 (June 2026)
+
+After the tier-1/2/3/4 program above, a deeper recon caught 13 more
+launch-shaping items the original audit didn't surface (see
+`docs/qa/multi-vertical-launch-plan.md`). Closed in 9 stacked PRs:
+
+| PR | Scope | Migrations applied |
+|---|---|---|
+| #318 PR-1 | Per-jurisdiction sales tax (was never computed) · Stripe refund integration (was manual-only) · Setup/breakdown buffer wired into the availability check | tax_rules, payment_refund_metadata, breakdown_minutes_after |
+| #320 PR-2 | Stripe Connect Express — direct charges on the operator's connected account (Korent never holds operator funds; no money-transmitter exposure). Subscription-only, no platform fee (the marketplace plan in docs/marketplace/master-plan.md uses the same accounts with application_fee_amount). | stripe_connect_express |
+| #321 PR-2b | Per-vertical cancellation policy (registry-driven) · Per-vertical lead-time floors · Portal-cancel auto-refund through the shared refund engine · Fixes a latent PR-1 deposit-lookup bug | — |
+| #322 PR-2c | Damage waiver (8–12% opt-in surcharge, capability-gated) · Customer connected-account Stripe Customer + `payment_methods` mirror · Operator post-event damage charge (off-session, SCA-aware) | damage_waiver_and_saved_cards |
+| #323 PR-3a | Suggested capabilities by vertical in the product form (audit UX fix) · Legacy terms backfill (4 RBAC fixtures + record-on-next-login for the 3 real accounts) | legacy_terms_backfill_rbac_fixtures |
+| #324 PR-3b | Per-category minimum overrides service-area minimum (T&C single-chair unblock) | — |
+| #325 PR-3c | Customer-facing damage waiver checkbox + i18n · Operator damage-charge button form | — |
+| #326 PR-3d | Customer-initiated quote request on the PDP (gated by theme_settings.cta_secondary) | — |
+| #319 | Marketplace master plan side-project doc | — |
+
+**Numbers**
+- 9 launch-readiness PRs · 8 prod migrations · ~30 new unit tests
+  (compute-financials, vertical policies, damage waiver, tax lookup,
+  Connect status, availability buffer)
+- All 4 verticals' policies declared in the registry, all 6
+  verticals exercised through Phase 2
+
+**Multi-vertical launch verdict.** The app is ready for a controlled
+launch across all 6 verticals. Operator-side gaps deferred to
+Supabase Studio config (tax_rules / categories.minimum_order_cents
+/ operator override card for vertical policies) are explicit; every
+runtime path that exists in production is covered by either a unit
+test, a Phase 2 walk, or a manual preview walkthrough.
+
+**Documented policy choice.** A damage waiver line is included in
+the taxable base (i.e., taxed alongside the rental). Some US
+jurisdictions exempt insurance-style surcharges from sales tax; the
+conservative read for launch is to tax the waiver and refund on
+challenge. Per-jurisdiction policy can be added later by extending
+the `tax_rules` row with a waiver-exempt flag.
+
 ## Recommendation
 
 The app is ready for a controlled launch (single market, single
