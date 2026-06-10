@@ -185,13 +185,13 @@ over-promise on cancellation terms they can't honor.
 Goal: storefront stops blocking conversions on the verticals that
 need quantity, multilingual access, or quote-first flow.
 
-### #8 Storefront i18n
+### #8 Storefront i18n ✅ (already shipped pre-program)
 
-- [ ] Audit `messages/operator.<locale>.json` for reusable strings
-- [ ] Create `messages/storefront.{es,fr,pt}.json` translations (es prioritized for US market)
-- [ ] Locale picker component in storefront header (sets `NEXT_LOCALE` cookie)
-- [ ] Walk: storefront PDP + checkout in `es` renders without English fallbacks
-- [ ] Test: spec switches locale via picker and asserts PDP labels change
+- [x] Single shared `lib/i18n/messages/{en,es,fr,pt}.ts` carries both operator AND storefront strings (checkoutSummary, checkout.form, inventoryDetail, storefront.*, catalog, etc.). en/es/fr/pt all present and parity-checked.
+- [x] `<LanguageSwitcher>` component (components/layout/language-switcher.tsx) mounted on the storefront party-classic header (line 69) AND the dashboard. POSTs via the existing `setLocale` server action which writes `NEXT_LOCALE` (1-year TTL).
+- [x] `lib/i18n/server.ts` resolves locale via the cookie with Accept-Language fallback and a hard fallback to `en`.
+- [x] Throughout PR-1 / PR-2 / PR-2c, every new storefront-touching string (tax line, deposits-off banner, damage waiver checkbox, Connect status copy) was added to all four locales at the same edit — no English-only leaks introduced.
+- [ ] End-to-end Playwright spec exercising the locale switch on a storefront PDP — deferred (covered manually during preview walks; one-spec follow-up can land as standalone E2E PR if desired)
 
 ### #9 Per-unit quantity selector ✅ (already shipped pre-program — Phase 2e.13b)
 

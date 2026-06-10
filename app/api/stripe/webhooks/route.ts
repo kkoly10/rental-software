@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
 
         const { data: originalPayment } = await admin
           .from("payments")
-          .select("id, order_id, orders!inner(organization_id)")
+          .select("id, order_id, payment_type, orders!inner(organization_id)")
           .eq("provider_payment_id", paymentIntentId)
           .eq("provider", "stripe")
           .maybeSingle();
@@ -423,9 +423,19 @@ export async function POST(request: NextRequest) {
           // (lib/payments/refund-actions.ts) inserted a 'pending' row that
           // now needs to flip to 'paid'. Flip via UPDATE — idempotent
           // because we're keying on the same provider_payment_id.
+          // PR-3e review fix — refunds of damage_charges land as
+          // payment_type='damage_refund' so compute-financials can
+          // exclude them symmetrically with the charge. Generic
+          // refunds (of deposits) keep the 'refund' type so they
+          // subtract from totalPaid as before.
+          const refundType =
+            (originalPayment as { payment_type?: string }).payment_type ===
+            "damage_charge"
+              ? "damage_refund"
+              : "refund";
           const { error: refundErr } = await admin.from("payments").insert({
             order_id: originalPayment.order_id,
-            payment_type: "refund",
+            payment_type: refundType,
             payment_status: "paid",
             // Apply zero-decimal handling based on the charge's currency.
             // Previously divided by 100 unconditionally — JPY/KRW refunds
