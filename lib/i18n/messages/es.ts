@@ -559,6 +559,15 @@ export const es: Messages = {
   },
 
   dashboard: {
+    storefrontReadiness: {
+      noServiceAreaTitle: "Tu tienda aún no puede aceptar reservas",
+      noServiceAreaBody:
+        "Tienes productos activos pero ninguna zona de servicio — cada pago de cliente se rechaza con \"No damos servicio en esa zona de entrega.\" Añade al menos un código postal para publicar.",
+      noServiceAreaCta: "Añadir zona de servicio",
+      depositsOffTitle: "Los depósitos en línea no están configurados",
+      depositsOffBody:
+        "Stripe no está configurado: los clientes pueden enviar solicitudes de reserva pero no pueden pagar un depósito en línea. Las reservas llegan como solicitudes sin depósito hasta configurar los pagos.",
+    },
     nav: {
       dashboard: "Panel",
       orders: "Pedidos",
@@ -733,6 +742,22 @@ export const es: Messages = {
         confirmOrderCta: "Marcar como confirmado",
         confirmingOrder: "Confirmando…",
         sendDeliveryCta: "Enviar entrega",
+        markCompletedCta: "Marcar como completado",
+        confirmCompleteCta: "Confirmar — cerrar este pedido",
+        completingOrder: "Cerrando…",
+        completeHint: "Cierra el ciclo del alquiler. Haz clic de nuevo para confirmar.",
+        addressForm: {
+          addCta: "Añadir dirección de entrega",
+          editCta: "Editar dirección de entrega",
+          line1: "Dirección",
+          line2: "Apto / Suite / Unidad (opcional)",
+          city: "Ciudad",
+          state: "Estado",
+          zip: "Código postal",
+          save: "Guardar dirección",
+          saving: "Guardando…",
+          cancel: "Cancelar",
+        },
         dispatchingDelivery: "Despachando…",
         attachToRouteFirstCta: "Asigna a una ruta primero",
         createDocuments: "Crear documentos",

@@ -559,6 +559,15 @@ export const fr: Messages = {
   },
 
   dashboard: {
+    storefrontReadiness: {
+      noServiceAreaTitle: "Votre boutique ne peut pas encore prendre de réservations",
+      noServiceAreaBody:
+        "Vous avez des produits actifs mais aucune zone de service — chaque commande client est rejetée avec \"Nous ne desservons pas cette zone de livraison.\" Ajoutez au moins un code postal pour passer en ligne.",
+      noServiceAreaCta: "Ajouter une zone de service",
+      depositsOffTitle: "Les acomptes en ligne ne sont pas configurés",
+      depositsOffBody:
+        "Stripe n'est pas configuré : les clients peuvent envoyer des demandes de réservation mais ne peuvent pas payer d'acompte en ligne. Les réservations arrivent sans acompte tant que les paiements ne sont pas configurés.",
+    },
     nav: {
       dashboard: "Tableau de bord",
       orders: "Commandes",
@@ -733,6 +742,22 @@ export const fr: Messages = {
         confirmOrderCta: "Marquer comme confirmée",
         confirmingOrder: "Confirmation…",
         sendDeliveryCta: "Lancer la livraison",
+        markCompletedCta: "Marquer comme terminée",
+        confirmCompleteCta: "Confirmer — clôturer cette commande",
+        completingOrder: "Clôture…",
+        completeHint: "Clôture le cycle de location. Cliquez à nouveau pour confirmer.",
+        addressForm: {
+          addCta: "Ajouter une adresse de livraison",
+          editCta: "Modifier l’adresse de livraison",
+          line1: "Adresse",
+          line2: "Apt / Suite / Unité (facultatif)",
+          city: "Ville",
+          state: "État",
+          zip: "Code postal",
+          save: "Enregistrer l’adresse",
+          saving: "Enregistrement…",
+          cancel: "Annuler",
+        },
         dispatchingDelivery: "Envoi en cours…",
         attachToRouteFirstCta: "Rattachez d'abord à une tournée",
         createDocuments: "Créer les documents",

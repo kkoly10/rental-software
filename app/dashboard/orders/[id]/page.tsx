@@ -11,6 +11,8 @@ import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
+import { MarkCompletedButton } from "@/components/orders/mark-completed-button";
+import { DeliveryAddressForm } from "@/components/orders/delivery-address-form";
 import { SendDeliveryButton } from "@/components/orders/send-delivery-button";
 import { SyncQuickBooksButton } from "@/components/orders/sync-quickbooks-button";
 import { SyncXeroButton } from "@/components/orders/sync-xero-button";
@@ -126,6 +128,7 @@ export default async function OrderDetailPage({
             <div className="order-card">
               <strong>{m.dashboard.orders.detail.labels.deliveryAddress}</strong>
               <div className="muted">{order.deliveryLabel}</div>
+              <DeliveryAddressForm orderId={id} address={order.deliveryAddress ?? null} />
               {(order.deliverySurfaceType || order.deliveryGateCode || order.deliveryContactName || order.deliverySetupNotes) && (
                 <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
                   {order.deliverySurfaceType && (
@@ -271,6 +274,7 @@ export default async function OrderDetailPage({
               currentStatus={order.status}
               hasRouteStop={routingState?.kind === "already_assigned"}
             />
+            <MarkCompletedButton orderId={id} currentStatus={order.status} />
             {qboConnected && <SyncQuickBooksButton orderId={id} />}
             {xeroConnected && <SyncXeroButton orderId={id} />}
             <MakeRecurringForm

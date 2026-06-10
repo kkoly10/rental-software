@@ -159,6 +159,18 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
           `${address.city}, ${address.state} ${address.postal_code}`,
         ].join(" · ")
       : "No delivery address on file",
+    // Raw parts for the add/edit address form — null when the order
+    // has no linked address yet (the stranded-at-confirmed case the
+    // form exists to fix).
+    deliveryAddress: address
+      ? {
+          line1: address.line1,
+          line2: address.line2,
+          city: address.city,
+          state: address.state,
+          postalCode: address.postal_code,
+        }
+      : null,
     deliverySurfaceType: ((data as Record<string, unknown>).delivery_surface_type as string | null) ?? undefined,
     deliveryGateCode: ((data as Record<string, unknown>).delivery_gate_code as string | null) ?? undefined,
     deliveryContactName: ((data as Record<string, unknown>).delivery_contact_name as string | null) ?? undefined,
