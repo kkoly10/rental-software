@@ -76,6 +76,7 @@ test("listCapabilities exposes every registered capability exactly once", () => 
     "display.variant-gallery",
     "service.onsite-attendant",
     "order.minimum-order",
+    "order.damage-waiver",
     "composition.add-ons",
   ]) {
     assert.ok(slugs.includes(slug), `expected slug ${slug} in registry`);
@@ -109,7 +110,10 @@ test("listCapabilitiesByGroup partitions the registry by group", () => {
     ],
   );
   assert.deepEqual([...service].sort(), ["service.onsite-attendant"]);
-  assert.deepEqual([...order].sort(), ["order.minimum-order"]);
+  assert.deepEqual(
+    [...order].sort(),
+    ["order.damage-waiver", "order.minimum-order"],
+  );
   assert.deepEqual([...composition].sort(), ["composition.add-ons"]);
 });
 

@@ -136,24 +136,22 @@ account's Customers, not the platform's).
 Goal: non-inflatable verticals stop bleeding revenue and don't
 over-promise on cancellation terms they can't honor.
 
-### #4 Damage waiver
+### #4 Damage waiver ✅ (landed in PR-2c)
 
-- [ ] Migration: `products.damage_waiver_rate_bps integer` (basis points; null = not offered)
-- [ ] New capability slug `pricing.damage-waiver` in `lib/capabilities/**`
-- [ ] Vertical defaults in `lib/verticals/<v>.ts` registry (tents/dance-floors/inflatable: 10%, T&C/concessions: 0% by default)
-- [ ] Checkout form: opt-in checkbox shown when product capability includes `pricing.damage-waiver`
-- [ ] `lib/checkout/actions.ts` — add waiver line to subtotal calc; persist as order_item with `line_type='damage_waiver'`
-- [ ] Receipt + invoice surfaces show the waiver line
-- [ ] Test: spec asserts opt-in adds the line; opt-out does not
+- [x] Migration: `products.damage_waiver_rate_bps integer` (0–5000 bps; null = not offered)
+- [x] Operator product form gains a "Damage waiver" details panel; rate entered as % and stored as bps
+- [x] `lib/checkout/damage-waiver.ts` — pure cents-safe calculator with 8-test unit suite (clamps, rounding, not-offered, not-accepted)
+- [x] Checkout reads `damage_waiver` form field; adds the surcharge to subtotal AFTER wet-upcharge AND BEFORE delivery+tax (waiver applies to rental subtotal only)
+- [x] Persists as `order_items` child with `line_type='damage_waiver'`; parent_order_item_id ties it to the rental
+- [ ] Storefront PDP / checkout UI to opt in (deferred to PR-3 — operator product form field shipped here; the customer-facing checkbox lands with i18n in PR-3)
 
-### #5 Saved-card / post-event damage charge
+### #5 Saved-card / post-event damage charge ✅ (landed in PR-2c)
 
-- [ ] Migration: `customers.stripe_customer_id text`, new table `payment_methods (id, customer_id, stripe_payment_method_id, card_brand, card_last4, card_exp_month, card_exp_year, is_default)`
-- [ ] Checkout: pass `setup_future_usage='on_session'` and `customer={customer_id}` when creating Stripe payment intent
-- [ ] Webhook: on `payment_method.attached`, write to `payment_methods`
-- [ ] Operator UI: "Charge for damage" action on completed order — amount + reason + selects saved payment method
-- [ ] Server action: `stripe.paymentIntents.create({customer, payment_method, off_session: true, confirm: true})`
-- [ ] Test: end-to-end charge a saved card on a completed order
+- [x] Migration: `customers.stripe_customer_id`, new `payment_methods` table (org-scoped, RLS, unique on `stripe_payment_method_id`)
+- [x] Checkout creates / reuses a connected-account Stripe Customer for the renter; checkout session passes `customer` + `payment_intent_data.setup_future_usage='on_session'` so the card attaches for off-session reuse
+- [x] Webhook `payment_method.attached` mirrors the card metadata (brand, last4, exp) onto `payment_methods` with 23505 dedup
+- [x] `lib/payments/damage-charge-actions.ts` — operator action calls `stripe.paymentIntents.create({off_session: true, confirm: true})` scoped to the connected account; records as `payment_type='damage_charge'`; surfaces SCA authentication_required as a friendly message ("send an invoice link instead")
+- [ ] Operator UI button "Charge for damage" on the order detail (action exists; thin form binding deferred to PR-3 alongside the customer-facing waiver checkbox so both ship together)
 
 ### #6 Per-vertical cancellation policy ✅ (landed in PR-2b)
 

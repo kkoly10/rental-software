@@ -31,6 +31,7 @@ export const photoBoothsVertical: VerticalConfig = {
     "display.variant-gallery",
     "display.structured-specs",
     "composition.add-ons",
+    "order.damage-waiver",
   ],
   /**
    * Booth + attendant are committed per event date — 50% forfeit
