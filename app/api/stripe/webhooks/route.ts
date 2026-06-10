@@ -8,6 +8,11 @@ import {
 } from "@/lib/supabase/admin";
 import { fromStripeMinorUnits } from "@/lib/money/currency";
 import { logAppError } from "@/lib/observability/server";
+import {
+  claimWebhookEvent,
+  markWebhookEventFailed,
+  markWebhookEventSucceeded,
+} from "@/lib/stripe/webhook-ledger";
 import type Stripe from "stripe";
 
 // #360 After each material order/payment state change, invalidate the pages
@@ -67,21 +72,32 @@ export async function POST(request: NextRequest) {
 
   const admin = createSupabaseAdminClient();
 
-  // Idempotency: claim this Stripe event id before processing. Retries and
-  // replays of the same event hit the primary-key conflict and are skipped,
-  // preventing double side effects (duplicate refund emails, repeated
-  // subscription syncs). The claim is released on handler failure below so a
-  // genuine retry can reprocess.
-  const { error: claimError } = await admin
-    .from("stripe_webhook_events")
-    .insert({ event_id: event.id, event_type: event.type });
-  if (claimError) {
-    if ((claimError as { code?: string }).code === "23505") {
-      return NextResponse.json({ received: true, duplicate: true });
-    }
-    // Dedup ledger unavailable — fall open and process rather than drop the event.
-    console.error("[stripe-webhook] dedup claim failed, processing anyway:", claimError.message);
+  // Idempotency: claim this Stripe event id before processing. The
+  // claim is a state machine (claimed → succeeded | failed), not a
+  // mere DELETE-on-failure as the pre-Tier-2 handler used — failure
+  // could otherwise release the claim mid-flight and a concurrent
+  // retry could re-run side-effects whose dedup the unique payment
+  // index doesn't cover (confirmation email, operator notification).
+  // See lib/stripe/webhook-ledger.ts for the full state machine.
+  const claim = await claimWebhookEvent(admin, event.id, event.type);
+  if (claim.kind === "duplicate") {
+    return NextResponse.json({ received: true, duplicate: true });
   }
+  if (claim.kind === "retry_exhausted") {
+    // Poison-pill event — operator has to look. 200 stops the Stripe
+    // retry loop; the row stays as `failed` for forensics.
+    await logAppError({
+      source: "stripe-webhook",
+      message: `Event ${event.type} retry-exhausted; refusing to reprocess`,
+      route: "/api/stripe/webhooks",
+      context: { event_id: event.id, attempt: claim.attempt },
+    });
+    return NextResponse.json({ received: true, exhausted: true });
+  }
+  // claim.kind === 'claimed' OR 'ledger_unavailable' (fall-open) —
+  // either way, we process. Track which path so the catch knows
+  // whether there's a row to mark failed.
+  const haveClaim = claim.kind === "claimed";
 
   try {
     switch (event.type) {
@@ -689,8 +705,14 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (error) {
-    // Release the idempotency claim so Stripe's retry can reprocess this event.
-    await admin.from("stripe_webhook_events").delete().eq("event_id", event.id);
+    // Mark the claim failed (NOT delete it). Stripe's next retry will
+    // re-enter through claimWebhookEvent and either re-claim (if
+    // under the attempt cap) or get retry_exhausted (capped).
+    if (haveClaim) {
+      const reason =
+        error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      await markWebhookEventFailed(admin, event.id, reason);
+    }
     await logAppError({
       source: "stripe-webhook",
       message: `Handler error for ${event.type}`,
@@ -704,6 +726,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (haveClaim) {
+    await markWebhookEventSucceeded(admin, event.id);
+  }
   return NextResponse.json({ received: true });
 }
 
