@@ -193,19 +193,19 @@ need quantity, multilingual access, or quote-first flow.
 - [ ] Walk: storefront PDP + checkout in `es` renders without English fallbacks
 - [ ] Test: spec switches locale via picker and asserts PDP labels change
 
-### #9 Per-unit quantity selector
+### #9 Per-unit quantity selector ✅ (already shipped pre-program — Phase 2e.13b)
 
-- [ ] `<QuantityStepper>` component on PDP for products where `pricing_model='per_unit'`
-- [ ] Wire selector value to checkout link's `?units=N` param
-- [ ] Show subtotal preview ("$5 × 80 = $400") as user adjusts
-- [ ] Test: spec adds 80 chairs and asserts checkout total
+- [x] PDP renders a quantity stepper for products with `pricing.per-unit` capability via `components/public/book-now-with-mode.tsx:102`
+- [x] Selector value flows into the checkout URL as `?units=N`
+- [x] Live "$5 × 80 = $400" subtotal preview rendered next to the Book button
+- [x] Server-side clamp/truncate in `lib/checkout/actions.ts` prevents a hand-crafted URL from undercharging
 
-### #10 Per-category minimum
+### #10 Per-category minimum override ✅ (landed in PR-3b)
 
-- [ ] Migration: `categories.minimum_order_amount numeric(10,2) null`
-- [ ] `lib/checkout/actions.ts:858` — use category min when set, else fall back to service-area min
-- [ ] Operator settings: per-category min field on category edit form
-- [ ] Test: spec configures T&C category to $30 min, books a $40 chair order, asserts checkout succeeds
+- [x] Column `categories.minimum_order_cents` already existed (pre-program, sprint 1c)
+- [x] Checkout enforcement now treats the category min as the EFFECTIVE minimum when set (and only falls back to the service-area min when the category value is null) — `lib/checkout/actions.ts`. Operator who lists T&C with category min `$30` is no longer stuck with the inflatable side's `$100` service-area floor.
+- [x] Error copy distinguishes "This category requires…" vs "This service area requires…" so the customer knows which lever to pull (more chairs vs. larger order).
+- [ ] Operator UI for setting `categories.minimum_order_cents` — deferred to Supabase Studio for the first market (same path as `tax_rules`); per-category Settings card lands in a follow-up
 
 ### #11 Customer-initiated quote path
 
