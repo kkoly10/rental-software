@@ -540,6 +540,53 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "payment_method.attached": {
+        // PR-2c — saved card. setup_future_usage=on_session on the
+        // deposit attaches a payment method to the connected-account
+        // Customer. Mirror it onto payment_methods so the operator's
+        // "Charge for damage" action can pick it without a live API
+        // call. Customer is resolved via the acct-scoped stripe id
+        // we stamped on customers.stripe_customer_id at checkout.
+        const pm = event.data.object as Stripe.PaymentMethod;
+        const pmCustomerId =
+          typeof pm.customer === "string"
+            ? pm.customer
+            : pm.customer?.id ?? null;
+        if (!pmCustomerId || !event.account) break;
+
+        const { data: customerRow } = await admin
+          .from("customers")
+          .select("id, organization_id")
+          .eq("stripe_customer_id", pmCustomerId)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (!customerRow) {
+          console.warn("[webhook] payment_method.attached: no customer for stripe id", pmCustomerId);
+          break;
+        }
+
+        // Unique index on stripe_payment_method_id absorbs the dedup
+        // race; ignore 23505 like the refund insert does.
+        const { error: pmInsertError } = await admin.from("payment_methods").insert({
+          organization_id: customerRow.organization_id,
+          customer_id: customerRow.id,
+          stripe_payment_method_id: pm.id,
+          card_brand: pm.card?.brand ?? null,
+          card_last4: pm.card?.last4 ?? null,
+          card_exp_month: pm.card?.exp_month ?? null,
+          card_exp_year: pm.card?.exp_year ?? null,
+        });
+        if (pmInsertError && pmInsertError.code !== "23505") {
+          await logAppError({
+            organizationId: customerRow.organization_id,
+            source: "stripe-webhook.payment_method_attached",
+            message: "Failed to mirror payment method",
+            context: { stripePaymentMethodId: pm.id, reason: pmInsertError.message },
+          });
+        }
+        break;
+      }
+
       case "account.updated": {
         // Connect Express — mirror the connected account's verification
         // state onto the org so the dashboard + checkout gate read

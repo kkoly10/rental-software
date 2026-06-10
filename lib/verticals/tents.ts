@@ -33,6 +33,7 @@ export const tentsVertical: VerticalConfig = {
     "display.structured-specs",
     "display.variant-gallery",
     "composition.add-ons",
+    "order.damage-waiver",
   ],
   /**
    * Tent builds are reserved weeks out and rarely re-book — 50%

@@ -450,12 +450,16 @@ export async function createCheckoutOrder(
   // per-vertical lead-time floor checked in the date-policy block
   // below. Null for category-less products → org policy alone.
   let productVerticalSlug: string | null = null;
+  // PR-2c — damage waiver opt-in surcharge rate (bps). null/0 → not
+  // offered. The customer's accept-checkbox arrives as form field
+  // `damage_waiver` ("on" when checked).
+  let productDamageWaiverBps: number | null = null;
 
   if (productSlug) {
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, categories(minimum_order_cents, vertical)",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, damage_waiver_rate_bps, categories(minimum_order_cents, vertical)",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -472,6 +476,12 @@ export async function createCheckoutOrder(
       productVerticalSlug =
         typeof (categoryRow as { vertical?: unknown } | null)?.vertical === "string"
           ? ((categoryRow as { vertical: string }).vertical)
+          : null;
+
+      // PR-2c — damage waiver rate (bps).
+      productDamageWaiverBps =
+        typeof (product as { damage_waiver_rate_bps?: unknown }).damage_waiver_rate_bps === "number"
+          ? ((product as { damage_waiver_rate_bps: number }).damage_waiver_rate_bps)
           : null;
 
       // Phase 2e.13 — capability slugs read before the pricing
@@ -808,6 +818,20 @@ export async function createCheckoutOrder(
       : 0;
   if (wetUpchargeApplied > 0) {
     subtotal += wetUpchargeApplied;
+  }
+
+  // PR-2c — damage waiver opt-in surcharge. Computed off the rental
+  // subtotal (excludes delivery fee + tax). The customer's accept
+  // checkbox arrives as form field `damage_waiver` ("on" when ticked).
+  const waiverAccepted = String(formData.get("damage_waiver") ?? "").toLowerCase() === "on";
+  const { computeDamageWaiver } = await import("@/lib/checkout/damage-waiver");
+  const waiver = computeDamageWaiver({
+    rentalSubtotal: subtotal,
+    rateBps: productDamageWaiverBps,
+    accepted: waiverAccepted,
+  });
+  if (waiver.amount > 0) {
+    subtotal = Number((subtotal + waiver.amount).toFixed(2));
   }
 
   // Decision 2.9 — reject zero-total bookings instead of letting them through
@@ -1406,6 +1430,33 @@ export async function createCheckoutOrder(
         });
       }
     }
+
+    // PR-2c — damage waiver as its own line so invoices and exports
+    // show the customer agreed to the surcharge (rather than burying
+    // it in the rental's unit_price). Best-effort like the add-ons:
+    // the waiver dollars already live on orders.subtotal_amount, so
+    // a failed insert is a reporting gap, not a billing error.
+    if (parentItem?.id && waiver.amount > 0) {
+      const { error: waiverItemError } = await supabase
+        .from("order_items")
+        .insert({
+          order_id: order.id,
+          parent_order_item_id: parentItem.id,
+          line_type: "damage_waiver",
+          quantity: 1,
+          unit_price: waiver.amount,
+          line_total: waiver.amount,
+          item_name_snapshot: `Damage waiver (${(waiver.rateBps / 100).toFixed(2)}%)`,
+        });
+      if (waiverItemError) {
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website",
+          message: "Failed to insert damage waiver line item",
+          context: { parentItemId: parentItem.id, waiverAmount: waiver.amount },
+        });
+      }
+    }
   }
 
   // Use a temporary checkout_hold only when Stripe payment is expected (webhook will convert it).
@@ -1609,6 +1660,52 @@ export async function createCheckoutOrder(
       const { normalizeCurrency, toStripeMinorUnits } = await import("@/lib/money/currency");
       const orgCurrency = normalizeCurrency(connectRow?.default_currency);
 
+      // PR-2c — saved card flow. Create / reuse a connected-account
+      // Customer for the renter so `setup_future_usage='on_session'`
+      // attaches the payment method to a stable id the operator can
+      // charge against post-event for damage. Customer rows are
+      // org-scoped (one renter who rents from two operators ends up
+      // with two acct-scoped customer ids — the right model for
+      // direct charges).
+      let customerStripeId: string | null = null;
+      try {
+        const { data: customerRow } = await supabase
+          .from("customers")
+          .select("stripe_customer_id")
+          .eq("id", customerId)
+          .eq("organization_id", orgId)
+          .maybeSingle();
+        customerStripeId = customerRow?.stripe_customer_id ?? null;
+        if (!customerStripeId) {
+          const created = await stripe.customers.create(
+            {
+              email: email ?? undefined,
+              name: [firstName, lastName].filter(Boolean).join(" ") || undefined,
+              phone: phone ?? undefined,
+              metadata: { organization_id: orgId, customer_id: customerId },
+            },
+            { stripeAccount: stripeAccountId }
+          );
+          customerStripeId = created.id;
+          await supabase
+            .from("customers")
+            .update({ stripe_customer_id: customerStripeId })
+            .eq("id", customerId)
+            .eq("organization_id", orgId)
+            .is("stripe_customer_id", null);
+        }
+      } catch (custErr) {
+        // Non-fatal — checkout proceeds without saving the card. The
+        // operator can still issue manual damage invoices via cash /
+        // direct billing.
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website.stripe_customer",
+          message: "Connected-account customer create failed",
+          context: { orderNumber, reason: custErr instanceof Error ? custErr.message : String(custErr) },
+        });
+      }
+
       const session = await stripe.checkout.sessions.create(
         {
           mode: "payment",
@@ -1625,7 +1722,14 @@ export async function createCheckoutOrder(
               quantity: 1,
             },
           ],
-          customer_email: email,
+          customer_email: customerStripeId ? undefined : email,
+          customer: customerStripeId ?? undefined,
+          // setup_future_usage=on_session attaches the payment method
+          // used here to the customer so the operator can charge it
+          // for damage after the event without re-collecting a card.
+          payment_intent_data: customerStripeId
+            ? { setup_future_usage: "on_session" }
+            : undefined,
           success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}`,
           metadata: {

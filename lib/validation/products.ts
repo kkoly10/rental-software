@@ -150,6 +150,15 @@ const orderMinimumShape = {
     .optional(),
 };
 
+const damageWaiverShape = {
+  damageWaiverRateBps: z
+    .number()
+    .int()
+    .min(0, "Waiver rate cannot be negative.")
+    .max(5000, "Waiver rate above 50% is not allowed.")
+    .optional(),
+};
+
 export const createProductSchema = z.object({
   name: requiredText("Product name", 120),
   categoryId: z.string().trim().uuid().optional().or(z.literal("")).transform((value) => value || undefined),
@@ -168,6 +177,7 @@ export const createProductSchema = z.object({
   ...onsiteAttendantShape,
   ...capacityCalculatorShape,
   ...orderMinimumShape,
+  ...damageWaiverShape,
 });
 
 export const updateProductSchema = createProductSchema.extend({

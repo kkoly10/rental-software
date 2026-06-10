@@ -56,6 +56,7 @@ export function ProductForm({
     capacityMetric?: string | null;
     capacityValue?: number | null;
     minimumOrderQuantity?: number | null;
+    damageWaiverRateBps?: number | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -352,6 +353,9 @@ export function ProductForm({
       />
       <OrderMinimumField
         initialMinimumOrderQuantity={product?.minimumOrderQuantity ?? null}
+      />
+      <DamageWaiverField
+        initialDamageWaiverRateBps={product?.damageWaiverRateBps ?? null}
       />
 
       {state.message && (
@@ -857,6 +861,52 @@ function OrderMinimumField({
           step="1"
           defaultValue={initialMinimumOrderQuantity ?? ""}
           placeholder="50"
+          style={{ width: 220 }}
+        />
+      </label>
+    </details>
+  );
+}
+
+/**
+ * PR-2c — optional damage waiver (per-product opt-in surcharge).
+ * Stored as basis points on the product so cents round predictably.
+ * Operator inputs a percentage; we convert on save.
+ */
+function DamageWaiverField({
+  initialDamageWaiverRateBps,
+}: {
+  initialDamageWaiverRateBps: number | null;
+}) {
+  const initialPct =
+    initialDamageWaiverRateBps !== null
+      ? (initialDamageWaiverRateBps / 100).toString()
+      : "";
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Damage waiver
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Optional surcharge customers can opt into at checkout to cap their
+        liability for accidental damage. Industry standard is 8–12% of the
+        rental subtotal. Leave blank to not offer it.
+      </p>
+      <label>
+        <strong style={{ display: "block", marginBottom: 6 }}>
+          Waiver rate (%)
+        </strong>
+        <input
+          type="number"
+          name="damage_waiver_rate_pct"
+          min="0"
+          max="50"
+          step="0.25"
+          defaultValue={initialPct}
+          placeholder="10"
           style={{ width: 220 }}
         />
       </label>

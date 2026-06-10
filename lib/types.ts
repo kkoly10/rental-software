@@ -233,6 +233,7 @@ export type CatalogDetail = {
   unitPriceCents?: number | null;
   unitLabel?: string | null;
   minimumOrderQuantity?: number | null;
+  damageWaiverRateBps?: number | null;
   // Phase 1c — capacity calculator fields surfaced on the PDP as
   // an interactive guest-count → recommendation widget.
   capacityMetric?: "guests" | "sq_ft" | "dancers" | "servings" | null;

@@ -25,6 +25,7 @@ export const danceFloorsVertical: VerticalConfig = {
     "display.capacity-calculator",
     "display.structured-specs",
     "display.variant-gallery",
+    "order.damage-waiver",
   ],
   /**
    * Install crews are scheduled a week out — 50% forfeit inside

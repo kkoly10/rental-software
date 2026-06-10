@@ -327,6 +327,10 @@ export async function getProductById(productId: string) {
       typeof data.minimum_order_quantity === "number"
         ? data.minimum_order_quantity
         : null,
+    damageWaiverRateBps:
+      typeof data.damage_waiver_rate_bps === "number"
+        ? data.damage_waiver_rate_bps
+        : null,
   };
 }
 
