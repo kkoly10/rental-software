@@ -139,6 +139,9 @@ export type OrderDetail = {
    *  to suggest a default refund and cap the input. Mirrors
    *  `depositPaid` (which is the formatted display string). */
   depositPaidAmount: number;
+  /** Used to scope the saved-card picker to this customer's
+   *  payment_methods. Null on the demo fallback row. */
+  customerId: string | null;
   depositDue?: string;
   balanceDue: string;
   total: string;

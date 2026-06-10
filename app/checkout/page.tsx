@@ -127,6 +127,16 @@ export default async function CheckoutPage({
                 initialUnits={units}
                 selectedVariantId={variant}
                 initialAddons={addons}
+                damageWaiver={
+                  pricing?.damageWaiverRateBps
+                    ? {
+                        rateBps: pricing.damageWaiverRateBps,
+                        previewAmountCents: Math.round(
+                          pricing.subtotal * 100 * pricing.damageWaiverRateBps / 10_000
+                        ),
+                      }
+                    : null
+                }
               />
             </section>
 
