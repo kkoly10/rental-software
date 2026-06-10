@@ -5,6 +5,8 @@ const enValues = {
   common: {
     appName: "Korent",
     loading: "Loading…",
+    listLoadErrorTitle: "Couldn't load this list",
+    listLoadErrorBody: "Something went wrong fetching the data. Refresh the page — if it keeps happening, contact support.",
     save: "Save",
     cancel: "Cancel",
     submit: "Submit",
@@ -2110,6 +2112,9 @@ const enValues = {
           no_address:
             "Add a delivery address (street, city, ZIP) before routing this order.",
         },
+        loadErrorTitle: "Couldn't load routing info",
+        loadErrorBody:
+          "Something went wrong loading routes for this order. Refresh the page — if it keeps happening, contact support.",
         stopCount: "{n} stop(s)",
         routeStatus: {
           planned: "Planned",

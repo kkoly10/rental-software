@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { reportQueryError } from "@/lib/data/query-error";
 
 /**
  * Why the order can't be attached to a route right now (the same
@@ -36,6 +37,12 @@ export type OrderRoutingState =
        *  / completed). Surfaced as a hint so the operator knows why
        *  there are no candidates even though routes exist. */
       hasNonPlannedRoutes: boolean;
+    }
+  | {
+      /** One of the routing queries failed. Rendered as "couldn't
+       *  load — refresh" instead of a misleading empty state; the
+       *  error itself lands in app_error_logs via reportQueryError. */
+      kind: "load_error";
     };
 
 /**
@@ -63,7 +70,7 @@ export async function getOrderRoutingState(
   // every order on the detail page showed "blocked: no_address" in
   // the AssignToRouteCard — even orders that had a perfectly valid
   // delivery_line1 in customer_addresses.
-  const { data: order } = await supabase
+  const { data: order, error: orderError } = await supabase
     .from("orders")
     .select(
       "id, order_status, event_date, delivery_address_id, customer_addresses!delivery_address_id(line1)"
@@ -73,6 +80,10 @@ export async function getOrderRoutingState(
     .is("deleted_at", null)
     .maybeSingle();
 
+  if (orderError) {
+    reportQueryError("data.order-routing.order", orderError, { orderId });
+    return { kind: "load_error" };
+  }
   if (!order) return null;
 
   const eventDate = order.event_date as string | null;
@@ -98,13 +109,18 @@ export async function getOrderRoutingState(
   // the previous deleted_at filter caused PostgREST to error out and
   // return null, so the AssignToRouteCard never noticed when an order
   // was already attached and showed "eligible" anyway.
-  const { data: existingStop } = await supabase
+  const { data: existingStop, error: stopError } = await supabase
     .from("route_stops")
     .select("route_id, routes!inner(id, name, organization_id, route_date)")
     .eq("order_id", orderId)
     .eq("routes.organization_id", ctx.organizationId)
     .limit(1)
     .maybeSingle();
+
+  if (stopError) {
+    reportQueryError("data.order-routing.existing-stop", stopError, { orderId });
+    return { kind: "load_error" };
+  }
 
   if (existingStop) {
     const r = (existingStop as Record<string, unknown>).routes as {
@@ -133,13 +149,26 @@ export async function getOrderRoutingState(
   // mid-run route here only to see the stop silently miss the
   // dispatch. Now matches auto-attach: candidates are planned only,
   // with a flag so the card can hint at non-planned routes that exist.
-  const { data: routes } = await supabase
+  // NB: routes has no created_at column — ordering by it made
+  // PostgREST 400 on every call, and with the error swallowed the
+  // card permanently rendered "No routes exist for this date yet"
+  // even when planned routes were sitting right there. Order by
+  // updated_at (exists, set on insert) instead.
+  const { data: routes, error: routesError } = await supabase
     .from("routes")
     .select("id, name, route_status, route_stops(id)")
     .eq("organization_id", ctx.organizationId)
     .eq("route_date", eventDate)
     .neq("route_status", "completed")
-    .order("created_at", { ascending: true });
+    .order("updated_at", { ascending: true });
+
+  if (routesError) {
+    reportQueryError("data.order-routing.routes", routesError, {
+      orderId,
+      eventDate,
+    });
+    return { kind: "load_error" };
+  }
 
   const allRoutes = routes ?? [];
   const candidateRoutes = allRoutes

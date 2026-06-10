@@ -11,6 +11,7 @@ import {
   normalizePage,
 } from "@/lib/listing/pagination";
 import { escapeIlike } from "@/lib/listing/ilike-escape";
+import { reportQueryError } from "@/lib/data/query-error";
 import type { OrderSummary } from "@/lib/types";
 
 // Maps each Orders-tab filter chip to the raw order_status values it covers.
@@ -172,8 +173,13 @@ export async function getOrdersPage(options?: {
       .range(start, end);
 
     if (error) {
-      console.error("[orders] Query failed:", error.message);
-      return paginateItems([], { page: options?.page, pageSize, query });
+      reportQueryError("data.orders.list", error, {
+        status: options?.status ?? null,
+      });
+      return {
+        ...paginateItems([], { page: options?.page, pageSize, query }),
+        loadFailed: true,
+      };
     }
 
     const mappedPage = (data ?? []).map((o) => mapOrderRow(o, money));
@@ -215,7 +221,7 @@ export async function getOrdersPage(options?: {
     .limit(NAME_MATCH_CAP);
 
   if (nameError) {
-    console.error("[orders] Customer-name lookup failed:", nameError.message);
+    reportQueryError("data.orders.customer-name-lookup", nameError);
     // Fall through with no customer ids; order-number search still works.
   }
   const matchedIds = (nameMatches ?? []).map((c) => c.id);
@@ -240,8 +246,13 @@ export async function getOrdersPage(options?: {
     .range(start, end);
 
   if (error) {
-    console.error("[orders] Search query failed:", error.message);
-    return paginateItems([], { page: options?.page, pageSize, query });
+    reportQueryError("data.orders.search", error, {
+      status: options?.status ?? null,
+    });
+    return {
+      ...paginateItems([], { page: options?.page, pageSize, query }),
+      loadFailed: true,
+    };
   }
 
   const mapped: OrderSummary[] = (data ?? []).map((o) => mapOrderRow(o, money));

@@ -4,6 +4,8 @@ export const pt: Messages = {
   common: {
     appName: "Korent",
     loading: "A carregar…",
+    listLoadErrorTitle: "Não foi possível carregar esta lista",
+    listLoadErrorBody: "Ocorreu um erro ao obter os dados. Atualize a página — se persistir, contacte o suporte.",
     save: "Guardar",
     cancel: "Cancelar",
     submit: "Enviar",
@@ -2109,6 +2111,9 @@ export const pt: Messages = {
           no_address:
             "Adicione uma morada de entrega (rua, cidade, código postal) antes de a adicionar a uma rota.",
         },
+        loadErrorTitle: "Não foi possível carregar a informação de rotas",
+        loadErrorBody:
+          "Ocorreu um erro ao carregar as rotas desta encomenda. Atualize a página — se persistir, contacte o suporte.",
         stopCount: "{n} paragem(ns)",
         routeStatus: {
           planned: "Planeada",

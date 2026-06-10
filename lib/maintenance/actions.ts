@@ -70,15 +70,28 @@ export async function logMaintenance(
 
   // Find or auto-create an asset for this product
   let assetId: string;
-  const { data: existingAsset } = await supabase
+  // NB: assets has no created_at column — ordering by it made
+  // PostgREST 400 on every call, and with the error swallowed
+  // `existingAsset` was always null, so every maintenance action
+  // spawned a duplicate asset instead of reusing the existing one.
+  // updated_at exists and is set on insert.
+  const { data: existingAsset, error: existingAssetError } = await supabase
     .from("assets")
     .select("id")
     .eq("organization_id", ctx.organizationId)
     .eq("product_id", productId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true })
+    .order("updated_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  if (existingAssetError) {
+    const { reportQueryError } = await import("@/lib/data/query-error");
+    reportQueryError("maintenance.existing-asset", existingAssetError, {
+      productId,
+    });
+    return { ok: false, message: "Couldn't look up this product's assets. Please try again." };
+  }
 
   if (existingAsset) {
     assetId = existingAsset.id;
