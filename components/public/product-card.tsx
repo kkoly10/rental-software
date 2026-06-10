@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getPlaceholderImage } from "@/lib/utils/placeholders";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -28,56 +29,43 @@ export function ProductCard({
 }) {
   const { messages: m } = useI18n();
   const isUnavailable = status.startsWith("Unavailable");
-  const isLimited = status === "Limited";
+
+  const tone =
+    isUnavailable
+      ? "danger"
+      : status === "Available"
+        ? "success"
+        : status === "Limited"
+          ? "warning"
+          : "default";
 
   const displayImage = imageUrl || getPlaceholderImage(category);
 
-  const statusClass = isUnavailable
-    ? "is-unavailable"
-    : isLimited
-    ? "is-limited"
-    : "is-available";
-
-  // Split the price string into the dollar amount and the period
-  // (e.g. "$175/day" → "$175" + "/day") so we can typeset the period in
-  // a softer color, matching the Carnival product-card design.
-  const priceParts = /^(.*?)(\s*\/\s*\w+.*)$/.exec(price);
-  const priceAmount = priceParts ? priceParts[1].trim() : price;
-  const pricePeriod = priceParts ? priceParts[2] : "";
-
-  const detailHref =
-    `/inventory/${slug}` +
-    (date || zip
-      ? `?${new URLSearchParams({
-          ...(date ? { date } : {}),
-          ...(zip ? { zip } : {}),
-        }).toString()}`
-      : "");
-
   return (
     <article
-      className={`st-product-card${isUnavailable ? " st-product-card-unavailable" : ""}`}
+      className={`product-card${isUnavailable ? " product-card-unavailable" : ""}`}
     >
-      <div className="st-product-media">
+      <div className="product-media" style={{ position: "relative" }}>
         <Image
           src={displayImage}
           alt={name}
           fill
-          sizes="(max-width: 540px) 100vw, (max-width: 980px) 50vw, 25vw"
-          className="st-product-media-img"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          className="product-media-img"
         />
-        <span className="st-product-pill-cat">{category}</span>
-        <span className={`st-product-pill-status ${statusClass}`}>{status}</span>
       </div>
-      <div className="st-product-body">
-        <h3 className="st-product-name">{name}</h3>
-        <p className="st-product-desc">{description}</p>
-        <div className="st-product-footer">
-          <span className="st-product-price">
-            {priceAmount}
-            {pricePeriod && <span className="st-product-price-period">{pricePeriod}</span>}
-          </span>
-          <Link href={detailHref} className="st-product-cta">
+      <div className="product-copy">
+        <div className="price-row card-header-wrap" style={{ marginTop: 0 }}>
+          <div className="kicker">{category}</div>
+          <StatusBadge label={status} tone={tone} />
+        </div>
+        <h3 className="card-title-tight">{name}</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          {description}
+        </p>
+        <div className="price-row action-row-inline">
+          <strong>{price}</strong>
+          <Link href={`/inventory/${slug}${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`} className="secondary-btn">
             {m.inventory.viewDetails}
           </Link>
         </div>
