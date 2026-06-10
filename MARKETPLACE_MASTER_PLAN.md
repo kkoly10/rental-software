@@ -149,6 +149,13 @@ Every listing must have:
 - 1 risk family slug
 - optional secondary tags
 
+Category slug scoping: category slugs are scoped to their world. The
+canonical identity of a category is world-slug/category-slug, never
+the bare category slug. This is required because the same slug
+legitimately exists in multiple worlds (e.g., chairs-and-seating in
+both hosting-and-events and office-and-pop-up). All foreign keys,
+URLs, and policy-registry lookups must use the world-qualified pair.
+
 Secondary tags should exist for cross-world behavior like:
 - furniture
 - event-furniture
@@ -353,6 +360,14 @@ Recommended category-family target bands:
 - restoration-and-emergency: target ≈ 12%
 - multi-component-event: target ≈ 7.5%
 
+These bands are pre-benchmark DEFAULTS, not truths. Each category
+must be sanity-checked against its dominant retail anchor before the
+band is trusted (e.g., towable-road: U-Haul rents utility trailers
+for roughly $15-40/day, far below 3.5% of replacement value for many
+trailers; commodity tools anchor to Home Depot rental rates). Where
+the anchor and the band conflict, the benchmark library (section 11)
+wins and the band is corrected.
+
 Pricing engine must output:
 - hourly/day/weekend/weekly recommendations
 - low/recommended/premium bands
@@ -399,6 +414,11 @@ base_deposit =
 
 Then clamp by category floor/cap and never exceed estimated used value.
 
+Clamp precedence: the used-value cap ALWAYS wins over the category
+floor. If the floor exceeds estimated used value (cheap or old items),
+deposit = estimated used value. A renter must never be asked to
+deposit more than the item is worth.
+
 Risk-family deposit defaults:
 - passive-standard: 15%, floor $50
 - furniture-standard: 20%, floor $75
@@ -421,8 +441,21 @@ Critical rule:
 Do NOT place damage authorization holds too early.
 Place them close to pickup/handoff.
 
-Use auth holds only when safe hold window <= 96 hours.
-Otherwise use captured refundable deposit.
+The deposit secures the RENTAL PERIOD, not the booking. Default
+behavior: schedule the auth hold to be placed at handoff minus <= 96
+hours, regardless of how far in advance the booking was made. Booking
+weeks ahead is NOT a reason to capture a deposit early.
+
+Use captured_refundable only when:
+- the category mandates it (policy registry), or
+- the auth hold fails or the card cannot support the hold amount, or
+- handoff timing is unknown/unreliable for scheduling the hold
+
+Cost note: captured refundable deposits incur non-recoverable card
+processing fees on capture (the processor keeps fees on refund).
+This cost must be explicitly assigned in the ledger (platform absorbs
+or renter pays a disclosed handling fee) — do not let it silently
+erode the platform fee.
 
 Towable-road and high-value-electronics should lean stricter.
 
@@ -443,8 +476,33 @@ Reservation states:
 TTL defaults:
 - checkout_hold: 15 min
 - verification_hold: additional 15 min (30 min max combined)
-- awaiting_seller: 2 hours
-- awaiting_renter_payment: 30 min
+- awaiting_seller: 24 hours (industry standard for request-to-book;
+  2 hours is unrealistic for casual sellers and would tank approval
+  rates)
+- awaiting_renter_payment: 24 hours, but see auto-capture rule below
+
+Hold strategy by booking mode:
+- instant-book: checkout_hold hard-holds inventory (renter is live
+  in checkout)
+- request-to-book: the request does NOT hard-hold inventory while
+  awaiting the seller. Holding a slot for 24h on an unapproved,
+  unpaid request lets requests function as denial-of-inventory.
+  Inventory hard-holds begin at approval.
+
+Auto-capture rule (request-to-book):
+Collect the payment method at request time and auto-capture on
+seller approval. This eliminates the awaiting_renter_payment gap for
+the common case (the renter is not watching the app hours later).
+awaiting_renter_payment exists only as the fallback when auto-capture
+fails (expired/declined card).
+
+Verification interplay (see section 12):
+First-time identity verification happens at the ACCOUNT level,
+prompted before or during checkout — never inside a 15-minute
+inventory hold. If verification is pending manual review at checkout
+time, do not hard-hold inventory; place the renter in standby and
+notify when verification clears. verification_hold covers only fast
+synchronous re-checks for already-verified users.
 
 Add standby queue concept:
 - one active hard hold on inventory slot
@@ -468,10 +526,10 @@ Pipeline:
 3. review / outlier filtering
 4. published benchmark snapshots
 
-Geo fallback chain:
+Geo fallback chain (most specific to least specific):
 1. exact metro / city cluster
-2. state / region
-3. ZIP3 prefix
+2. ZIP3 prefix
+3. state / region
 4. national same-category
 5. national same-risk-family
 
@@ -498,14 +556,22 @@ At signup:
 - phone verification
 
 Before first booking:
-- identity verification
-- selfie / liveness
-- payment method
+- payment method (always)
+- identity verification + selfie/liveness ONLY at the level the
+  category's identity-verification setting requires (section 6
+  operating matrix decides — this section does not override it).
+  Low-risk, low-value categories must not force full ID + liveness
+  on a first-time renter; high-risk categories always do.
 
-Before first payout:
-- seller KYC / Stripe onboarding
+Before a seller's first listing becomes BOOKABLE (not first payout):
+- seller KYC / Stripe Connect onboarding
 - payout details
 - business info if needed
+
+Rationale: gating KYC on "first payout" means the platform can take
+renter money for a seller who later fails KYC — an unpayable seller
+and a forced-refund mess. No listing accepts bookings until the
+seller can actually be paid.
 
 Higher-risk categories require stronger rules:
 - trailers-and-hauling
@@ -518,8 +584,16 @@ Higher-risk categories require stronger rules:
 ==================================================
 
 v1 booking rule:
-- one primary listing per booking
-- avoid multi-seller cart in v1
+- one SELLER per booking — multiple listings from the same seller
+  may share one booking (or be packaged as a bundle listing)
+- no multi-seller cart in v1
+
+Rationale: the launch world (hosting-and-events) is exactly the one
+where renters need tent + tables + chairs together. Restricting v1
+to one listing per booking would force three checkouts on the launch
+audience. One-seller-per-booking keeps payments, deposits, evidence,
+and disputes single-counterparty (the actual complexity multi-seller
+carts would introduce) while keeping event checkout usable.
 
 Booking state machine:
 - draft
