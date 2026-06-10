@@ -394,11 +394,20 @@ export async function POST(request: NextRequest) {
         // Webhook Charge payloads don't reliably expand the `refunds` sub-list
         // (it's paginated and often empty/truncated), so fetch authoritatively
         // from the API to avoid silently dropping refunds.
+        //
+        // Connect: direct-charge refunds arrive as connected-account
+        // events (event.account = acct_xxx) and the charge lives THERE —
+        // a platform-key list call would 404 with resource_missing and
+        // the refund row would silently never land. Scope the call to
+        // the event's account when present.
         const refundCurrency = charge.currency; // ISO 4217, lowercase
         let refunds = (charge.refunds?.data ?? []) as Array<{ id: string; amount: number }>;
         if (refunds.length === 0 && charge.id) {
           try {
-            const refundList = await stripe.refunds.list({ charge: charge.id, limit: 100 });
+            const refundList = await stripe.refunds.list(
+              { charge: charge.id, limit: 100 },
+              event.account ? { stripeAccount: event.account } : undefined
+            );
             refunds = refundList.data.map((r) => ({ id: r.id, amount: r.amount }));
           } catch (err) {
             console.error("[webhook] charge.refunded: failed to list refunds", err instanceof Error ? err.message : String(err));
@@ -528,6 +537,55 @@ export async function POST(request: NextRequest) {
 
           revalidateOrderAndPayments(originalPayment.order_id);
         }
+        break;
+      }
+
+      case "account.updated": {
+        // Connect Express — mirror the connected account's verification
+        // state onto the org so the dashboard + checkout gate read
+        // fresh columns without a live Stripe call. Lookup order:
+        // metadata.organization_id (we stamp it at account creation),
+        // falling back to the acct id column for accounts created
+        // before metadata stamping or re-linked manually.
+        const account = event.data.object as Stripe.Account;
+        const metaOrgId = account.metadata?.organization_id;
+
+        let connectOrgId: string | null = null;
+        if (metaOrgId) {
+          const { data: byMeta } = await admin
+            .from("organizations")
+            .select("id, stripe_connect_account_id")
+            .eq("id", metaOrgId)
+            .is("deleted_at", null)
+            .maybeSingle();
+          // Guard against a spoofed/foreign metadata value: the org's
+          // recorded acct id must match (or be unset mid-onboarding).
+          if (
+            byMeta &&
+            (!byMeta.stripe_connect_account_id ||
+              byMeta.stripe_connect_account_id === account.id)
+          ) {
+            connectOrgId = byMeta.id;
+          }
+        }
+        if (!connectOrgId) {
+          const { data: byAcct } = await admin
+            .from("organizations")
+            .select("id")
+            .eq("stripe_connect_account_id", account.id)
+            .is("deleted_at", null)
+            .maybeSingle();
+          connectOrgId = byAcct?.id ?? null;
+        }
+
+        if (!connectOrgId) {
+          console.warn("[webhook] account.updated: no org for account", account.id);
+          break;
+        }
+
+        const { syncConnectAccountToOrg } = await import("@/lib/stripe/connect");
+        await syncConnectAccountToOrg(admin, connectOrgId, account);
+        revalidateBilling();
         break;
       }
 

@@ -108,19 +108,46 @@ export async function issueStripeRefund(
     };
   }
 
+  // Connect Express — direct charges live on the operator's connected
+  // account, so the refund must be issued there. Pre-Connect payments
+  // were captured on the platform account; a resource_missing error on
+  // the connected attempt falls back to the platform so historical
+  // deposits stay refundable.
+  const { data: connectRow } = await readClient
+    .from("organizations")
+    .select("stripe_connect_account_id")
+    .eq("id", ctx.organizationId)
+    .maybeSingle();
+  const connectAccountId = connectRow?.stripe_connect_account_id ?? null;
+
   const stripe = getStripe();
+  const refundParams = {
+    payment_intent: payment.provider_payment_id,
+    amount: Math.round(amount * 100),
+    reason: "requested_by_customer" as const,
+    metadata: {
+      order_id: orderId,
+      organization_id: ctx.organizationId,
+      operator_note: reason.slice(0, 480),
+    },
+  };
+
   let stripeRefund;
   try {
-    stripeRefund = await stripe.refunds.create({
-      payment_intent: payment.provider_payment_id,
-      amount: Math.round(amount * 100),
-      reason: "requested_by_customer",
-      metadata: {
-        order_id: orderId,
-        organization_id: ctx.organizationId,
-        operator_note: reason.slice(0, 480),
-      },
-    });
+    if (connectAccountId) {
+      try {
+        stripeRefund = await stripe.refunds.create(refundParams, {
+          stripeAccount: connectAccountId,
+        });
+      } catch (connectErr) {
+        const code = (connectErr as { code?: string })?.code;
+        if (code !== "resource_missing") throw connectErr;
+        // Payment predates Connect — it lives on the platform account.
+        stripeRefund = await stripe.refunds.create(refundParams);
+      }
+    } else {
+      stripeRefund = await stripe.refunds.create(refundParams);
+    }
   } catch (err) {
     await logAppError({
       organizationId: ctx.organizationId,
