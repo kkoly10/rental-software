@@ -1000,3 +1000,61 @@ If these remain unresolved in code, flag them explicitly instead of pretending t
 - final notification channel/provider policy if multiple options exist
 
 Build the system so these can be configured later without redesign.
+
+==================================================
+31. LAUNCH SCOPE & WORLD GRADUATION GATES
+==================================================
+
+All 7 worlds exist in the policy registry from day one.
+Only 1 world operates live at launch.
+
+LIVE AT LAUNCH:
+- hosting-and-events, in 1-2 launch metros only
+- supply seeded by existing Korent SaaS operators at the 8% operator fee
+- categories map directly to the SaaS verticals already shipped
+  (inflatables, tents, tables/chairs, dance floors, photo booths, concessions)
+
+SMOKE-TEST MODE (the other 6 worlds):
+- world and category pages are browsable ("coming soon" state)
+- search works and demand is logged per world / category / metro
+- renters can join a notify-me waitlist per world + metro
+- sellers can pre-list inventory (draft listings, not bookable)
+- NO live bookings, NO payments, NO trust-ops, NO insurance exposure,
+  NO restricted-items legal review spend in smoke-test worlds
+
+Measure per world per metro:
+- renter searches
+- waitlist joins
+- seller pre-listings (count and inventory value)
+- seller signups attributable to the world
+
+GRADUATION GATE (smoke-test world -> live world in a metro):
+A world goes live in a metro only when, within a rolling 60 days:
+- >= 25 seller pre-listings in that metro, AND
+- >= 200 renter searches or >= 75 waitlist joins in that metro, AND
+- restricted-items legal review for that world is complete, AND
+- deposit/pricing defaults for its risk families are calibrated
+
+Gates are configuration, not code. Tune thresholds with real data;
+do not hard-code them.
+
+WORLD #2 CANDIDATE ORDER (from docs/strategy/05-vertical-roadmap.md scoring):
+1. creator-gear — thin SaaS competition, ShareGrid ~20% commission is the
+   wedge the 12% fee undercuts
+2. home-and-projects / seasonal-and-emergency — viable but price-capped by
+   Home Depot / Sunbelt rental rates
+3. baby-gear — BabyQuip incumbent + child-safety/recall liability; needs
+   strongest sanitation + recall enforcement before going live
+4. office-and-pop-up — low frequency, B2B; consider folding into
+   hosting-and-events via tags instead of a standalone live world
+5. trailers-and-hauling — LAST; road-insurance and state title/registration
+   liability are unresolved (deposits + VIN checks are not sufficient).
+   Do not go live without a real insurance answer.
+
+RATIONALE:
+Marketplace liquidity is geo + category specific. Operating all 7 worlds
+at launch splits demand-gen spend 7 ways, produces inconclusive results
+everywhere, and shows renters empty search results in 6 worlds. Smoke-test
+mode preserves the 7-world experiment at a fraction of the cost: it tests
+intent (searches, waitlists, pre-listings) instead of operations, and
+measured demand — not guesswork — picks which world goes live next.
