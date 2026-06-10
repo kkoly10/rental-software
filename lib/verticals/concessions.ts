@@ -31,6 +31,15 @@ export const concessionsVertical: VerticalConfig = {
     "display.capacity-calculator",
     "composition.add-ons",
   ],
+  /**
+   * Machines re-rent but consumables are pre-ordered — full
+   * refund until 7 days out; 48h notice for supplies.
+   */
+  policies: {
+    refundWindowDays: 7,
+    forfeitPct: 0,
+    minLeadTimeHours: 48,
+  },
   defaultCategorySeeds: [
     "Popcorn Machine",
     "Snow Cone Machine",

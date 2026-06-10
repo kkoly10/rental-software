@@ -26,6 +26,15 @@ export const danceFloorsVertical: VerticalConfig = {
     "display.structured-specs",
     "display.variant-gallery",
   ],
+  /**
+   * Install crews are scheduled a week out — 50% forfeit inside
+   * 7 days; 72h minimum notice for a floor install.
+   */
+  policies: {
+    refundWindowDays: 7,
+    forfeitPct: 50,
+    minLeadTimeHours: 72,
+  },
   defaultCategorySeeds: [
     "Parquet Dance Floor",
     "Black Dance Floor",

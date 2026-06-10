@@ -34,6 +34,15 @@ export const tentsVertical: VerticalConfig = {
     "display.variant-gallery",
     "composition.add-ons",
   ],
+  /**
+   * Tent builds are reserved weeks out and rarely re-book — 50%
+   * forfeit inside 30 days, 3-week minimum notice to book.
+   */
+  policies: {
+    refundWindowDays: 30,
+    forfeitPct: 50,
+    minLeadTimeHours: 504,
+  },
   defaultCategorySeeds: [
     "Frame Tent",
     "Pole Tent",

@@ -8,8 +8,7 @@ import {
 } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
-import { logAppError, logAppEvent } from "@/lib/observability/server";
+import { hasStripeEnv } from "@/lib/stripe/config";
 
 export type RefundActionState = { ok: boolean; message: string };
 
@@ -61,10 +60,10 @@ export async function issueStripeRefund(
   const ctx = await getOrgContext();
   if (!ctx) return { ok: false, message: "Sign in required." };
 
-  // Reads use the auth-gated client to inherit org RLS; writes use the
-  // admin client because the refund insert needs to bypass the
-  // record_manual_payment RPC's role check (the operator owns this
-  // surface, but the RPC is for cash-side recordings).
+  // Reads use the auth-gated client to inherit org RLS; the refund
+  // engine writes through the admin client because the refund insert
+  // bypasses the record_manual_payment RPC (that RPC is for cash-side
+  // recordings; Stripe-side rows are owned by the refund core).
   const readClient = await createSupabaseServerClient();
   const writeClient = hasSupabaseServiceRoleEnv()
     ? createSupabaseAdminClient()
@@ -79,152 +78,26 @@ export async function issueStripeRefund(
     .maybeSingle();
   if (!order) return { ok: false, message: "Order not found." };
 
-  // Find the captured Stripe deposit to refund against. We refund
-  // against the most recent succeeded Stripe deposit; if there are
-  // multiple, the operator can call this twice.
-  const { data: payment } = await readClient
-    .from("payments")
-    .select("id, provider, provider_payment_id, amount, payment_status, payment_type")
-    .eq("order_id", orderId)
-    .eq("provider", "stripe")
-    .eq("payment_type", "deposit")
-    .eq("payment_status", "succeeded")
-    .order("paid_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!payment || !payment.provider_payment_id) {
-    return {
-      ok: false,
-      message:
-        "No Stripe deposit found on this order. Record a manual refund instead.",
-    };
-  }
-
-  if (amount > Number(payment.amount)) {
-    return {
-      ok: false,
-      message: `Refund cannot exceed the original deposit ($${Number(payment.amount).toFixed(2)}).`,
-    };
-  }
-
-  // Connect Express — direct charges live on the operator's connected
-  // account, so the refund must be issued there. Pre-Connect payments
-  // were captured on the platform account; a resource_missing error on
-  // the connected attempt falls back to the platform so historical
-  // deposits stay refundable.
-  const { data: connectRow } = await readClient
-    .from("organizations")
-    .select("stripe_connect_account_id")
-    .eq("id", ctx.organizationId)
-    .maybeSingle();
-  const connectAccountId = connectRow?.stripe_connect_account_id ?? null;
-
-  const stripe = getStripe();
-  const refundParams = {
-    payment_intent: payment.provider_payment_id,
-    amount: Math.round(amount * 100),
-    reason: "requested_by_customer" as const,
-    metadata: {
-      order_id: orderId,
-      organization_id: ctx.organizationId,
-      operator_note: reason.slice(0, 480),
-    },
-  };
-
-  let stripeRefund;
-  try {
-    if (connectAccountId) {
-      try {
-        stripeRefund = await stripe.refunds.create(refundParams, {
-          stripeAccount: connectAccountId,
-        });
-      } catch (connectErr) {
-        const code = (connectErr as { code?: string })?.code;
-        if (code !== "resource_missing") throw connectErr;
-        // Payment predates Connect — it lives on the platform account.
-        stripeRefund = await stripe.refunds.create(refundParams);
-      }
-    } else {
-      stripeRefund = await stripe.refunds.create(refundParams);
-    }
-  } catch (err) {
-    await logAppError({
-      organizationId: ctx.organizationId,
-      source: "payments.refund",
-      message: "Stripe refund call failed",
-      context: { orderId, amount },
-      error: err,
-    });
-    return {
-      ok: false,
-      message:
-        err instanceof Error
-          ? `Stripe rejected the refund: ${err.message}`
-          : "Stripe rejected the refund.",
-    };
-  }
-
-  // Record the refund as a payment row. We use the same
-  // `refund_<re_xxx>` shape for provider_payment_id that the
-  // existing charge.refunded webhook handler uses, so a webhook
-  // arriving after this insert hits the unique (order_id,
-  // provider_payment_id) constraint and silently no-ops. The
-  // stripe_refund_id column carries the raw re_xxx for direct
-  // reconciliation queries.
-  const initialStatus = stripeRefund.status === "succeeded" ? "paid" : "pending";
-  const providerRef = `refund_${stripeRefund.id}`;
-
-  const { error: insertError } = await writeClient
-    .from("payments")
-    .insert({
-      order_id: orderId,
-      provider: "stripe",
-      provider_payment_id: providerRef,
-      payment_type: "refund",
-      payment_status: initialStatus,
-      amount: amount,
-      paid_at:
-        stripeRefund.status === "succeeded"
-          ? new Date().toISOString()
-          : null,
-      payment_method: "card",
-      reference_note: reason,
-      refund_reason: reason,
-      stripe_refund_id: stripeRefund.id,
-    });
-
-  // Unique-index collision is the webhook-already-landed case — fine.
-  if (insertError && !/duplicate key/i.test(insertError.message)) {
-    await logAppError({
-      organizationId: ctx.organizationId,
-      source: "payments.refund.insert",
-      message: "Refund insert failed after Stripe success",
-      context: {
-        orderId,
-        stripeRefundId: stripeRefund.id,
-        reason: insertError.message,
-      },
-    });
-    return {
-      ok: false,
-      message:
-        "Refund was issued via Stripe but we couldn't record it locally. Check the Stripe dashboard and contact support.",
-    };
-  }
-
-  await logAppEvent({
+  // PR-2b — Stripe routing (connected-account-first with platform
+  // fallback), deposit lookup, and the ledger insert live in the
+  // shared refund core so the portal cancellation auto-refund and
+  // this operator surface can never drift apart.
+  const { executeStripeRefundForOrder } = await import("@/lib/payments/refund-core");
+  const result = await executeStripeRefundForOrder(writeClient, {
     organizationId: ctx.organizationId,
-    source: "payments.refund",
-    action: "stripe_refund_issued",
-    status: "info",
-    metadata: {
-      orderId,
-      amount,
-      stripeRefundId: stripeRefund.id,
-      stripeStatus: stripeRefund.status,
-    },
+    orderId,
+    amount,
+    reason,
+    source: "operator",
   });
+
+  if (!result.ok) {
+    const friendly =
+      result.code === "no_deposit"
+        ? "No Stripe deposit found on this order. Record a manual refund instead."
+        : result.message;
+    return { ok: false, message: friendly };
+  }
 
   revalidatePath(`/dashboard/orders/${orderId}`);
   revalidatePath("/dashboard/orders");
@@ -232,7 +105,7 @@ export async function issueStripeRefund(
   return {
     ok: true,
     message:
-      stripeRefund.status === "succeeded"
+      result.status === "paid"
         ? `Refunded $${amount.toFixed(2)} to the customer's card.`
         : `Refund of $${amount.toFixed(2)} is pending. We'll update the status when Stripe confirms.`,
   };

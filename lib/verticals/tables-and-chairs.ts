@@ -26,6 +26,15 @@ export const tablesAndChairsVertical: VerticalConfig = {
     "display.variant-gallery",
     "composition.add-ons",
   ],
+  /**
+   * Commodity inventory re-rents easily — full refund until 3
+   * days out, no forfeit; 48h notice to pull and stage an order.
+   */
+  policies: {
+    refundWindowDays: 3,
+    forfeitPct: 0,
+    minLeadTimeHours: 48,
+  },
   defaultCategorySeeds: [
     "Chiavari Chair",
     "Folding Chair",

@@ -27,6 +27,15 @@ export const inflatableVertical: VerticalConfig = {
     "setup.surface-type",
     "mode.wet-dry",
   ],
+  /**
+   * Bouncers re-rent on a day's notice — stay flexible: full
+   * refund until 24h out, no forfeit.
+   */
+  policies: {
+    refundWindowDays: 1,
+    forfeitPct: 0,
+    minLeadTimeHours: 24,
+  },
   defaultCategorySeeds: [
     "Bounce House",
     "Water Slide",

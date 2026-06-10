@@ -446,12 +446,16 @@ export async function createCheckoutOrder(
   // the eventual order_items insert has a value for selected_mode.
   let productSupportsModes: string[] = ["dry"];
   let productWetUpchargeCents: number | null = null;
+  // PR-2b — the product's vertical (via its category) drives the
+  // per-vertical lead-time floor checked in the date-policy block
+  // below. Null for category-less products → org policy alone.
+  let productVerticalSlug: string | null = null;
 
   if (productSlug) {
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, categories(minimum_order_cents)",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, categories(minimum_order_cents, vertical)",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -461,6 +465,15 @@ export async function createCheckoutOrder(
       .maybeSingle();
 
     if (product) {
+      // PR-2b — vertical via the category embed (single or array
+      // shape depending on the PostgREST relationship inference).
+      const categoryJoin = (product as { categories?: unknown }).categories;
+      const categoryRow = Array.isArray(categoryJoin) ? categoryJoin[0] : categoryJoin;
+      productVerticalSlug =
+        typeof (categoryRow as { vertical?: unknown } | null)?.vertical === "string"
+          ? ((categoryRow as { vertical: string }).vertical)
+          : null;
+
       // Phase 2e.13 — capability slugs read before the pricing
       // validity check so per-unit products (which carry their rate
       // on unit_price_cents, not base_price) aren't rejected by the
@@ -906,9 +919,21 @@ export async function createCheckoutOrder(
   // of "today" is in the past once the day has started.
   if (eventDate) {
     const bookingPolicies = await getBookingPolicies();
+    // PR-2b — vertical lead-time floor: a tent build needs weeks of
+    // notice regardless of the org's generic 24h setting. Effective
+    // lead time = max(org policy, vertical floor); the org can be
+    // stricter than the vertical, never looser.
+    const { resolveVerticalPolicies, effectiveLeadTimeHours } = await import(
+      "@/lib/verticals/policies"
+    );
+    const verticalPolicies = resolveVerticalPolicies(productVerticalSlug);
+    const leadTimeHours = effectiveLeadTimeHours(
+      bookingPolicies.bookingLeadTimeHours,
+      verticalPolicies
+    );
     const eventDateMs = new Date(`${eventDate}T00:00:00Z`).getTime();
     const nowMs = Date.now();
-    const leadTimeMs = bookingPolicies.bookingLeadTimeHours * 60 * 60 * 1000;
+    const leadTimeMs = leadTimeHours * 60 * 60 * 1000;
     const earliestMs = nowMs + leadTimeMs;
     // Round earliestMs down to the start of that UTC day so a calendar-day
     // comparison vs eventDateMs (also at 00:00 UTC) is fair.
@@ -917,9 +942,11 @@ export async function createCheckoutOrder(
 
     if (eventDateMs < earliestDayMs) {
       const friendly =
-        bookingPolicies.bookingLeadTimeHours === 0
+        leadTimeHours === 0
           ? "This event date has already passed."
-          : `Bookings require at least ${bookingPolicies.bookingLeadTimeHours} hours advance notice.`;
+          : leadTimeHours >= 48
+            ? `Bookings for this item require at least ${Math.round(leadTimeHours / 24)} days advance notice.`
+            : `Bookings require at least ${leadTimeHours} hours advance notice.`;
       return fail({ message: friendly });
     }
 

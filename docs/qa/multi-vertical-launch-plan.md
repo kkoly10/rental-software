@@ -155,20 +155,23 @@ over-promise on cancellation terms they can't honor.
 - [ ] Server action: `stripe.paymentIntents.create({customer, payment_method, off_session: true, confirm: true})`
 - [ ] Test: end-to-end charge a saved card on a completed order
 
-### #6 Per-vertical cancellation policy
+### #6 Per-vertical cancellation policy ✅ (landed in PR-2b)
 
-- [ ] Add to `lib/verticals/<v>.ts` registry: `{refundWindowDays, forfeitPct}` — inflatable 1/0, T&C 3/0, dance-floors 7/50, tents 30/50, photo-booths 14/50, concessions 7/0
-- [ ] `lib/portal/cancel-order.ts` — read vertical from order's primary product, compute refund amount, apply forfeit
-- [ ] Operator settings: per-vertical override card
-- [ ] Customer-facing T&C blurb on portal cancel page
+- [x] `VerticalPolicies` on the registry: `{refundWindowDays, forfeitPct, minLeadTimeHours}` — inflatable 1/0/24h, T&C 3/0/48h, dance-floors 7/50/72h, tents 30/50/504h, photo-booths 14/50/72h, concessions 7/0/48h
+- [x] `lib/verticals/policies.ts` — pure outcome calculator (cents-safe; refund+forfeit always equals deposit; permissive fallback for unknown verticals)
+- [x] `lib/portal/cancel-order.ts` — resolves vertical via order item → product → category, computes the outcome, AUTO-REFUNDS the computed amount via the shared refund core, customer message states refund/forfeit explicitly; failures never un-cancel (operator falls back to the manual button)
+- [x] `lib/payments/refund-core.ts` — extracted shared Stripe refund engine (Connect routing + ledger insert) used by both the operator button and portal cancel. **Fixed latent PR-1 bug**: deposit lookup filtered `payment_status='succeeded'` but the codebase convention is `'paid'` — the operator refund button would have always said "No Stripe deposit found"
+- [x] 11-test unit suite pins window boundaries, forfeit math, clamps
+- [ ] Operator settings: per-vertical override card (deferred — registry defaults for launch)
+- [ ] Customer-facing policy blurb on PDP/checkout (deferred to PR-3 polish)
 - [ ] Test: spec walks a 30-day-out tent cancel (full refund) and 5-day-out (50% forfeit)
 
-### #7 Per-vertical lead-time
+### #7 Per-vertical lead-time ✅ (landed in PR-2b)
 
-- [ ] Add `minLeadTimeHours` to `lib/verticals/<v>.ts` registry
-- [ ] `lib/checkout/actions.ts:893` — compute `effectiveLeadTime = max(orgLeadTime, verticalLeadTime, productLeadTime)`
-- [ ] Storefront PDP: show "Earliest available: <date>" based on effective lead time
-- [ ] Test: spec asserts a tent booking for tomorrow is rejected; for 3 weeks out is accepted
+- [x] `minLeadTimeHours` in the registry (see #6 values)
+- [x] `lib/checkout/actions.ts` — effective lead time = max(org policy, vertical floor); vertical resolved via the product's category embed; day-denominated error copy for ≥48h floors
+- [x] Unit tests cover the max() semantics
+- [ ] Storefront PDP "Earliest available: <date>" hint (deferred to PR-3 polish)
 
 ### PR-2 sign-off
 
