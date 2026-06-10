@@ -211,6 +211,12 @@ export function CheckoutForm({
                 <span className="muted">{m.checkout.review.deliveryFee}</span>
                 <span>{s.deliveryFee}</span>
               </div>
+              {s.tax && (
+                <div className="order-row">
+                  <span className="muted">{s.taxLabel ?? m.checkoutSummary.tax}</span>
+                  <span>{s.tax}</span>
+                </div>
+              )}
               <div className="order-row" style={{ fontWeight: 600 }}>
                 <span>{m.checkout.review.total}</span>
                 <span>{s.total}</span>

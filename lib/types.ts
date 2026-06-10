@@ -133,6 +133,7 @@ export type OrderDetail = {
   documentObjects: { id: string; type: string; status: string }[];
   subtotal: string;
   deliveryFee: string;
+  tax: string;
   depositPaid: string;
   depositDue?: string;
   balanceDue: string;

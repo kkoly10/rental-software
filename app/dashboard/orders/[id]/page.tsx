@@ -238,6 +238,14 @@ export default async function OrderDetailPage({
                 <strong>{order.deliveryFee}</strong>
               </div>
             </div>
+            {order.tax !== "$0.00" && order.tax !== "$0" && (
+              <div className="order-card">
+                <div className="order-row">
+                  <span className="muted">{m.checkoutSummary.tax}</span>
+                  <strong>{order.tax}</strong>
+                </div>
+              </div>
+            )}
             <div className="order-card">
               <div className="order-row">
                 <span className="muted">{m.common.total}</span>

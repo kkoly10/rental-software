@@ -2468,6 +2468,7 @@ export const es: Messages = {
     deliveryFee: "Tarifa de entrega",
     deliveryTBD: "Por determinar",
     deliveryFree: "Gratis",
+    tax: "Impuesto",
     total: "Total",
     depositDue: "Depósito a pagar",
     enterZipMessage: "Introduce un código postal de entrega para ver tu total con la tarifa de envío.",

@@ -9,6 +9,10 @@ export type ResolvedServiceArea = {
   id: string;
   label: string;
   postalCode: string | null;
+  /** Two-letter state code captured on the service-area row. Used by
+   *  checkout to look up the per-jurisdiction tax rule even when the
+   *  customer has only entered a ZIP. */
+  state: string | null;
   deliveryFee: number;
   minimumOrderAmount: number;
 };
@@ -102,6 +106,7 @@ export async function resolveServiceAreaForAddress(options: {
 function mapServiceArea(area: {
   id: string;
   label: string | null;
+  state: string | null;
   zip_code: string | null;
   delivery_fee: number | string | null;
   minimum_order_amount: number | string | null;
@@ -110,6 +115,7 @@ function mapServiceArea(area: {
     id: area.id,
     label: area.label || "Service Area",
     postalCode: area.zip_code,
+    state: area.state ? area.state.trim().toUpperCase().slice(0, 2) : null,
     deliveryFee: Number(area.delivery_fee ?? 0),
     minimumOrderAmount: Number(area.minimum_order_amount ?? 0),
   } satisfies ResolvedServiceArea;

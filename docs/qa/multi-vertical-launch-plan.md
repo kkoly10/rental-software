@@ -60,13 +60,18 @@ double-booked crew.
 
 ### #1 Sales tax computation
 
-- [ ] Decide tax strategy (see decision above)
-- [ ] Schema change: add chosen-strategy columns/tables
-- [ ] `lib/checkout/actions.ts` — compute tax after subtotal + delivery_fee; populate `orders.tax_amount`
-- [ ] Surface tax line on `components/checkout/checkout-summary-card.tsx`
-- [ ] Surface tax line on order detail + invoice PDF
-- [ ] Backfill: leave existing 11 orders with `tax_amount=0` (historical)
-- [ ] Test: new spec asserts tax appears on a fresh checkout in a non-zero state
+- [x] Decide tax strategy — per-jurisdiction (state + optional postal_code override)
+- [x] Schema change: `tax_rules` table with `(org, state, postal_code, rate_bps, label)` + RLS
+- [x] `lib/checkout/tax.ts` — lookup helper, exact-match-wins precedence
+- [x] `lib/checkout/actions.ts` — compute tax after subtotal + delivery_fee; populate `orders.tax_amount`; total = subtotal + fee + tax
+- [x] `lib/data/checkout-pricing.ts` — preview tax on the review screen using service_area's state for ZIP-only lookups
+- [x] Surface tax line on `components/checkout/checkout-summary-card.tsx`
+- [x] Surface tax line on `components/checkout/checkout-form.tsx` review block
+- [x] Surface tax line on order detail page + invoice PDF + quote PDF
+- [x] i18n: `tax` key added to en/es/fr/pt
+- [x] Backfill: leave existing 11 orders with `tax_amount=0` (historical)
+- [x] Tests: 7-case unit suite for tax lookup precedence + rounding + state normalization
+- [ ] Operator UI for managing `tax_rules` (deferred — operators can seed via DB / Supabase Studio for now; settings card lands in a follow-up)
 
 ### #2 Stripe refund integration
 
