@@ -409,7 +409,11 @@ export async function POST(request: NextRequest) {
           // Atomic dedup: rely on the unique index (order_id, provider_payment_id)
           // to gate duplicates. Two concurrent webhooks for the same refund.id
           // both pass any SELECT-based check; only one INSERT wins. Catch
-          // 23505 (unique violation) below and treat as "already recorded".
+          // 23505 (unique violation) below: it means either a concurrent
+          // webhook beat us OR the operator-initiated refund action
+          // (lib/payments/refund-actions.ts) inserted a 'pending' row that
+          // now needs to flip to 'paid'. Flip via UPDATE — idempotent
+          // because we're keying on the same provider_payment_id.
           const { error: refundErr } = await admin.from("payments").insert({
             order_id: originalPayment.order_id,
             payment_type: "refund",
@@ -420,11 +424,22 @@ export async function POST(request: NextRequest) {
             amount: fromStripeMinorUnits(refund.amount, refundCurrency),
             provider: "stripe",
             provider_payment_id: refundKey,
+            stripe_refund_id: refund.id,
             paid_at: new Date().toISOString(),
           });
 
           if (refundErr?.code === "23505") {
-            // Already recorded by a concurrent / retried webhook — skip.
+            // Row already exists — operator-initiated refund inserted as
+            // 'pending', or a concurrent webhook beat us. Either way, the
+            // refund has now succeeded server-side, so flip status to
+            // 'paid' and set paid_at. WHERE status='pending' makes this
+            // a no-op for already-paid rows (idempotent re-runs).
+            await admin
+              .from("payments")
+              .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+              .eq("order_id", originalPayment.order_id)
+              .eq("provider_payment_id", refundKey)
+              .eq("payment_status", "pending");
             continue;
           }
           if (refundErr) {

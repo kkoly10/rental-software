@@ -14,6 +14,12 @@ export type InvoiceData = {
   items: { name: string; quantity: number; unitPrice: number; lineTotal: number }[];
   subtotal: number;
   deliveryFee: number;
+  /** Sales/rental tax computed from the operator's tax_rules for
+   *  the delivery jurisdiction. 0 when no rule matched. */
+  tax: number;
+  /** Label from the matched tax_rule ("Florida sales tax",
+   *  "Miami-Dade surtax", etc.). Null when no rule matched. */
+  taxLabel: string | null;
   total: number;
   depositPaid: number;
   balanceDue: number;
@@ -174,6 +180,12 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
   y += 18;
   doc.text("Delivery", totalsX, y);
   doc.text(formatMoney(data.deliveryFee), margin + contentWidth - 12, y, { align: "right" });
+
+  if (data.tax > 0) {
+    y += 18;
+    doc.text(data.taxLabel ?? "Tax", totalsX, y);
+    doc.text(formatMoney(data.tax), margin + contentWidth - 12, y, { align: "right" });
+  }
 
   y += 18;
   doc.setFont("helvetica", "bold");

@@ -126,8 +126,10 @@ function reconcilePerUnitCents(
  */
 function readSetupWindowFields(formData: FormData) {
   const raw = String(formData.get("setup_minutes_before") ?? "").trim();
+  const breakdownRaw = String(formData.get("breakdown_minutes_after") ?? "").trim();
   return {
     setupMinutesBefore: raw === "" ? undefined : Number(raw),
+    breakdownMinutesAfter: breakdownRaw === "" ? undefined : Number(breakdownRaw),
   };
 }
 
@@ -162,11 +164,24 @@ function readOrderMinimumFields(formData: FormData) {
 function reconcileSetupWindow(
   capabilitySlugs: readonly string[],
   setupMinutesBefore: number | undefined,
+  breakdownMinutesAfter: number | undefined,
 ) {
+  // The setup.setup-window capability gates the pull-sheet arrival
+  // display. Breakdown minutes feed the availability buffer
+  // independently (a product without setup display may still need
+  // to block crew time after the event). Both columns persist when
+  // the capability is enabled; only setup_minutes_before is forced
+  // to null when the capability is disabled.
   if (!capabilitySlugs.includes("setup.setup-window")) {
-    return { setup_minutes_before: null };
+    return {
+      setup_minutes_before: null,
+      breakdown_minutes_after: breakdownMinutesAfter ?? null,
+    };
   }
-  return { setup_minutes_before: setupMinutesBefore ?? null };
+  return {
+    setup_minutes_before: setupMinutesBefore ?? null,
+    breakdown_minutes_after: breakdownMinutesAfter ?? null,
+  };
 }
 
 function reconcileOnsiteAttendant(
@@ -308,6 +323,7 @@ export async function createProduct(
     unitPrice,
     unitLabel,
     setupMinutesBefore,
+    breakdownMinutesAfter,
     attendantIncludedHours,
     attendantOverageRate,
     capacityMetric,
@@ -322,7 +338,7 @@ export async function createProduct(
     idleHourRate,
   );
   const perUnitCents = reconcilePerUnitCents(capabilitySlugs, unitPrice, unitLabel);
-  const setupWindow = reconcileSetupWindow(capabilitySlugs, setupMinutesBefore);
+  const setupWindow = reconcileSetupWindow(capabilitySlugs, setupMinutesBefore, breakdownMinutesAfter);
   const attendant = reconcileOnsiteAttendant(
     capabilitySlugs,
     attendantIncludedHours,
@@ -445,6 +461,7 @@ export async function createProduct(
     unit_price_cents: perUnitCents.unit_price_cents,
     unit_label: perUnitCents.unit_label,
     setup_minutes_before: setupWindow.setup_minutes_before,
+    breakdown_minutes_after: setupWindow.breakdown_minutes_after,
     attendant_included_hours: attendant.attendant_included_hours,
     attendant_overage_cents_per_hour: attendant.attendant_overage_cents_per_hour,
     capacity_metric: capacity.capacity_metric,
@@ -557,6 +574,7 @@ export async function updateProduct(
   const updateSetupWindow = reconcileSetupWindow(
     parsed.data.capabilitySlugs,
     parsed.data.setupMinutesBefore,
+    parsed.data.breakdownMinutesAfter,
   );
   const updateAttendant = reconcileOnsiteAttendant(
     parsed.data.capabilitySlugs,
@@ -666,6 +684,7 @@ export async function updateProduct(
       unit_price_cents: updatePerUnitCents.unit_price_cents,
       unit_label: updatePerUnitCents.unit_label,
       setup_minutes_before: updateSetupWindow.setup_minutes_before,
+      breakdown_minutes_after: updateSetupWindow.breakdown_minutes_after,
       attendant_included_hours: updateAttendant.attendant_included_hours,
       attendant_overage_cents_per_hour:
         updateAttendant.attendant_overage_cents_per_hour,

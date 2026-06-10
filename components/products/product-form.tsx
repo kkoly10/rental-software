@@ -50,6 +50,7 @@ export function ProductForm({
     unitLabel?: string | null;
     // Phase 2e.5 — setup-window, onsite-attendant, capacity, order-minimum.
     setupMinutesBefore?: number | null;
+    breakdownMinutesAfter?: number | null;
     attendantIncludedHours?: number | null;
     attendantOverageCentsPerHour?: number | null;
     capacityMetric?: string | null;
@@ -337,6 +338,7 @@ export function ProductForm({
       {/* Phase 2e.5 — remaining capability field sets. */}
       <SetupWindowField
         initialSetupMinutesBefore={product?.setupMinutesBefore ?? null}
+        initialBreakdownMinutesAfter={product?.breakdownMinutesAfter ?? null}
       />
       <OnsiteAttendantFields
         initialIncludedHours={product?.attendantIncludedHours ?? null}
@@ -639,37 +641,59 @@ function PerUnitPricingFields({
  */
 function SetupWindowField({
   initialSetupMinutesBefore,
+  initialBreakdownMinutesAfter,
 }: {
   initialSetupMinutesBefore: number | null;
+  initialBreakdownMinutesAfter: number | null;
 }) {
   return (
     <details className="order-card" style={{ padding: 16 }}>
       <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-        Setup window
+        Setup &amp; breakdown window
       </summary>
       <p
         className="muted"
         style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
       >
-        Used when the product carries the <code>setup.setup-window</code>{" "}
-        capability. Pull sheet shows arrival = event start − this many
-        minutes. Tents typically 120-240, dance floors 60-120, photo booths 60.
+        Pull sheet shows arrival = event start − setup minutes. The
+        availability check also extends each booking by these buffers
+        on both sides so a Saturday tent with 4h setup blocks Friday
+        evening for the crew + inventory.
+        Tents typically 120-240 setup / 60-120 breakdown; dance floors
+        60-120 / 60; photo booths 60 / 30.
       </p>
-      <label>
-        <strong style={{ display: "block", marginBottom: 6 }}>
-          Minutes before event start
-        </strong>
-        <input
-          type="number"
-          name="setup_minutes_before"
-          min="0"
-          max="1440"
-          step="15"
-          defaultValue={initialSetupMinutesBefore ?? ""}
-          placeholder="60"
-          style={{ width: 220 }}
-        />
-      </label>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Minutes before event start
+          </strong>
+          <input
+            type="number"
+            name="setup_minutes_before"
+            min="0"
+            max="1440"
+            step="15"
+            defaultValue={initialSetupMinutesBefore ?? ""}
+            placeholder="60"
+            style={{ width: 220 }}
+          />
+        </label>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Minutes after event end
+          </strong>
+          <input
+            type="number"
+            name="breakdown_minutes_after"
+            min="0"
+            max="1440"
+            step="15"
+            defaultValue={initialBreakdownMinutesAfter ?? ""}
+            placeholder="60"
+            style={{ width: 220 }}
+          />
+        </label>
+      </div>
     </details>
   );
 }

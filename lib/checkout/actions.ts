@@ -18,6 +18,7 @@ import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
+import { computeOrderTax } from "@/lib/checkout/tax";
 import { calculatePrice } from "@/lib/pricing/engine";
 import type { PricingRule } from "@/lib/pricing/types";
 
@@ -71,6 +72,14 @@ export type CheckoutActionState = {
     address: string;
     subtotal: string;
     deliveryFee: string;
+    /** Sales/rental tax line — present only when the operator's
+     *  tax_rules matched the delivery jurisdiction and produced a
+     *  non-zero amount. Undefined for pickup orders or unmatched
+     *  jurisdictions. */
+    tax?: string;
+    /** Operator-facing label from the matched tax_rule. Shown next
+     *  to the tax amount on the review screen. */
+    taxLabel?: string;
     total: string;
     depositDue: string;
     balanceDue: string;
@@ -1097,6 +1106,21 @@ export async function createCheckoutOrder(
 
   const deliveryFee = serviceArea?.deliveryFee ?? 0;
 
+  // Tax is computed off the taxable base (subtotal + delivery_fee) by
+  // looking up the operator's per-jurisdiction rule for the delivery
+  // address. A missing rule returns 0 — operators opt in by configuring
+  // jurisdictions they actually collect tax in. Pickup orders without
+  // a delivery address fall through to 0 as well.
+  const taxableBaseCents = Math.round((subtotal + deliveryFee) * 100);
+  const taxResult = await computeOrderTax(supabase, {
+    organizationId: orgId,
+    state: fulfillmentType === "delivery" ? state ?? null : null,
+    postalCode: fulfillmentType === "delivery" ? postalCode ?? null : null,
+    taxableBaseCents,
+  });
+  const taxCents = taxResult.taxCents;
+  const taxAmount = taxCents / 100;
+
   // Compute deposit + balance in cents-integers to avoid the accumulated
   // toFixed(2) rounding drift that the previous chain — subtotal+fee
   // rounded, then *percentage rounded — could produce on multi-line
@@ -1104,7 +1128,7 @@ export async function createCheckoutOrder(
   // previously yielded deposit 59.99 + balance 140.00 = 199.99 (≠ 200).
   // Working in cents until the final boundary keeps deposit+balance
   // equal to total to the penny.
-  const totalCents = Math.round((subtotal + deliveryFee) * 100);
+  const totalCents = taxableBaseCents + taxCents;
   const total = totalCents / 100;
 
   const policies = await getBookingPolicies();
@@ -1184,6 +1208,7 @@ export async function createCheckoutOrder(
       fulfillment_type: fulfillmentType,
       subtotal_amount: subtotal,
       delivery_fee_amount: deliveryFee,
+      tax_amount: taxAmount,
       total_amount: total,
       deposit_due_amount: deposit,
       balance_due_amount: balance,
@@ -1586,6 +1611,8 @@ export async function createCheckoutOrder(
             // this is purely for human-readable display arithmetic.
             subtotal: fmt(subtotal - wetUpchargeApplied),
             deliveryFee: fmt(deliveryFee),
+            tax: taxAmount > 0 ? fmt(taxAmount) : undefined,
+            taxLabel: taxResult.label ?? undefined,
             total: fmt(total),
             depositDue: fmt(deposit),
             balanceDue: fmt(balance),
@@ -1642,6 +1669,8 @@ export async function createCheckoutOrder(
       // without the wet upcharge so the line items sum to the total.
       subtotal: fmt(subtotal - wetUpchargeApplied),
       deliveryFee: fmt(deliveryFee),
+      tax: taxAmount > 0 ? fmt(taxAmount) : undefined,
+      taxLabel: taxResult.label ?? undefined,
       total: fmt(total),
       depositDue: fmt(deposit),
       balanceDue: fmt(balance),

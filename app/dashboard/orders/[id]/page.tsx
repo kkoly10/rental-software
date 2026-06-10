@@ -9,6 +9,7 @@ import { CommunicationList } from "@/components/communications/communication-lis
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
+import { RefundDepositButton } from "@/components/orders/refund-deposit-button";
 import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
 import { MarkCompletedButton } from "@/components/orders/mark-completed-button";
@@ -238,6 +239,14 @@ export default async function OrderDetailPage({
                 <strong>{order.deliveryFee}</strong>
               </div>
             </div>
+            {order.tax !== "$0.00" && order.tax !== "$0" && (
+              <div className="order-card">
+                <div className="order-row">
+                  <span className="muted">{m.checkoutSummary.tax}</span>
+                  <strong>{order.tax}</strong>
+                </div>
+              </div>
+            )}
             <div className="order-card">
               <div className="order-row">
                 <span className="muted">{m.common.total}</span>
@@ -275,6 +284,11 @@ export default async function OrderDetailPage({
               hasRouteStop={routingState?.kind === "already_assigned"}
             />
             <MarkCompletedButton orderId={id} currentStatus={order.status} />
+            <RefundDepositButton
+              orderId={id}
+              depositPaidAmount={order.depositPaidAmount}
+              status={order.status}
+            />
             {qboConnected && <SyncQuickBooksButton orderId={id} />}
             {xeroConnected && <SyncXeroButton orderId={id} />}
             <MakeRecurringForm

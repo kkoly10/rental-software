@@ -2469,6 +2469,7 @@ const enValues = {
     deliveryFee: "Delivery fee",
     deliveryTBD: "TBD",
     deliveryFree: "Free",
+    tax: "Tax",
     total: "Total",
     depositDue: "Deposit due",
     enterZipMessage: "Enter a delivery ZIP code to see your total with delivery fee.",

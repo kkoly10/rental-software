@@ -7,6 +7,7 @@ import { calculatePrice } from "@/lib/pricing/engine";
 import { computeRentalDays } from "@/lib/pricing/rental-days";
 import { computePerHourLineTotal } from "@/lib/capabilities/pricing/per-hour";
 import { computePerUnitLineTotal } from "@/lib/capabilities/pricing/per-unit";
+import { computeOrderTax } from "@/lib/checkout/tax";
 import type { PricingRule } from "@/lib/pricing/types";
 
 export type CheckoutPricingData = {
@@ -23,6 +24,14 @@ export type CheckoutPricingData = {
    *  summary can label "$300 × 3 days = $900". */
   rentalDays: number;
   deliveryFee: number | null;
+  /** Per-jurisdiction sales/rental tax computed from the operator's
+   *  tax_rules. Null while the ZIP isn't known yet; 0 when no rule
+   *  matches the resolved state+postal_code (operator opts in by
+   *  configuring jurisdictions). */
+  tax: number | null;
+  /** Label from the matched tax_rule for the receipt — null when no
+   *  rule matched or pricing is still indeterminate. */
+  taxLabel: string | null;
   total: number | null;
   deposit: number | null;
 };
@@ -57,6 +66,8 @@ export async function getCheckoutPricing(
       wetUpcharge: 0,
       rentalDays: 1,
       deliveryFee: null,
+      tax: null,
+      taxLabel: null,
       total: null,
       deposit: null,
     };
@@ -277,7 +288,7 @@ export async function getCheckoutPricing(
   subtotal = Number((subtotal + wetUpcharge).toFixed(2));
 
   if (!zip) {
-    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null };
   }
 
   const serviceArea = await resolveServiceAreaForAddress({
@@ -286,11 +297,26 @@ export async function getCheckoutPricing(
   });
 
   if (!serviceArea) {
-    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null };
   }
 
   const deliveryFee = serviceArea.deliveryFee;
-  const total = Number((subtotal + deliveryFee).toFixed(2));
+
+  // Tax preview uses the service area's configured state — the
+  // customer hasn't typed their full address yet on the preview
+  // page, but the operator's service-area row already carries the
+  // state for this ZIP, so the same per-jurisdiction lookup runs.
+  const taxableBaseCents = Math.round((subtotal + deliveryFee) * 100);
+  const taxResult = await computeOrderTax(supabase, {
+    organizationId: orgId,
+    state: serviceArea.state ?? null,
+    postalCode: zip,
+    taxableBaseCents,
+  });
+  const tax = taxResult.taxCents / 100;
+  const taxLabel = taxResult.label;
+
+  const total = Number(((taxableBaseCents + taxResult.taxCents) / 100).toFixed(2));
 
   const policies = await getBookingPolicies();
   let deposit = Number((total * (policies.depositPercentage / 100)).toFixed(2));
@@ -298,5 +324,5 @@ export async function getCheckoutPricing(
     deposit = Math.min(policies.depositMinimum, total);
   }
 
-  return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee, total, deposit };
+  return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee, tax, taxLabel, total, deposit };
 }

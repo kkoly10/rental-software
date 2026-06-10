@@ -51,7 +51,7 @@ export async function GET(
     .from("orders")
     .select(`
       id, order_number, order_status, event_date,
-      subtotal_amount, delivery_fee_amount, total_amount, deposit_due_amount,
+      subtotal_amount, delivery_fee_amount, tax_amount, total_amount, deposit_due_amount,
       customers!inner(first_name, last_name, email, phone),
       order_items(item_name_snapshot, quantity, unit_price, line_total),
       customer_addresses!delivery_address_id(line1, city, state, postal_code)
@@ -135,6 +135,8 @@ export async function GET(
     })),
     subtotal: Number(order.subtotal_amount ?? 0),
     deliveryFee: Number(order.delivery_fee_amount ?? 0),
+    tax: Number(order.tax_amount ?? 0),
+    taxLabel: null,
     total: Number(order.total_amount ?? 0),
     depositRequired: Number(order.deposit_due_amount ?? 0),
     portalUrl,

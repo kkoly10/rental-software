@@ -133,7 +133,12 @@ export type OrderDetail = {
   documentObjects: { id: string; type: string; status: string }[];
   subtotal: string;
   deliveryFee: string;
+  tax: string;
   depositPaid: string;
+  /** Raw deposit-paid amount as a number — used by the refund flow
+   *  to suggest a default refund and cap the input. Mirrors
+   *  `depositPaid` (which is the formatted display string). */
+  depositPaidAmount: number;
   depositDue?: string;
   balanceDue: string;
   total: string;
