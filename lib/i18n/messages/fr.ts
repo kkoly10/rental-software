@@ -1481,6 +1481,9 @@ export const fr: Messages = {
       phone: "Téléphone",
       email: "E-mail",
       smsOptIn: "Envoyez-moi des SMS de suivi (confirmation, rappels, statut). Frais SMS et données possibles. Répondez STOP pour vous désinscrire.",
+      damageWaiverTitle: "Ajouter la garantie dommages",
+      damageWaiverBody:
+        "Plafonne votre responsabilité en cas de dommages accidentels aux articles loués à {rate}% du sous-total (+{amount}$).",
       eventDate: "Date de l’événement",
       startTime: "Heure de début",
       endTime: "Heure de fin",

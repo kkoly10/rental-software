@@ -15,6 +15,7 @@ const fallbackOrderDetail: OrderDetail = {
   id: "ord_1001",
   orderNumber: "ORD-1001",
   status: "Confirmed",
+  customerId: null,
   customerName: "Ashley Johnson",
   customerEmail: "ashley@example.com",
   customerPhone: "(540) 555-0102",
@@ -53,7 +54,8 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
       deposit_due_amount, balance_due_amount,
       delivery_surface_type, delivery_gate_code,
       delivery_contact_name, delivery_contact_phone, delivery_setup_notes,
-      customers(first_name, last_name, email, phone),
+      customer_id,
+      customers(id, first_name, last_name, email, phone),
       order_items(item_name_snapshot, line_total, selected_mode, products(anchoring_methods, required_anchor_count)),
       documents(id, document_type, document_status),
       customer_addresses!delivery_address_id(line1, line2, city, state, postal_code)
@@ -197,6 +199,9 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     tax: money(Number(data.tax_amount ?? 0)),
     depositPaid: money(totalPaid),
     depositPaidAmount: totalPaid,
+    customerId: typeof (data as { customer_id?: unknown }).customer_id === "string"
+      ? ((data as { customer_id: string }).customer_id)
+      : null,
     depositDue: money(Number(data.deposit_due_amount ?? 0)),
     balanceDue: money(remainingBalance),
     total: money(Number(data.total_amount ?? 0)),

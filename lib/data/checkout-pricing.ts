@@ -34,6 +34,10 @@ export type CheckoutPricingData = {
   taxLabel: string | null;
   total: number | null;
   deposit: number | null;
+  /** PR-2c — damage waiver opt-in. Null when the product doesn't
+   *  offer one; otherwise carries the rate the operator configured.
+   *  The form computes the live preview against the current subtotal. */
+  damageWaiverRateBps: number | null;
 };
 
 /** Parsed selections coming from the PDP query string. The page reads
@@ -70,6 +74,7 @@ export async function getCheckoutPricing(
       taxLabel: null,
       total: null,
       deposit: null,
+      damageWaiverRateBps: null,
     };
   }
 
@@ -81,7 +86,7 @@ export async function getCheckoutPricing(
   const [{ data: product }, { data: org }] = await Promise.all([
     supabase
       .from("products")
-      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents")
+      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, damage_waiver_rate_bps")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .is("deleted_at", null)
@@ -287,8 +292,13 @@ export async function getCheckoutPricing(
       : 0;
   subtotal = Number((subtotal + wetUpcharge).toFixed(2));
 
+  const damageWaiverRateBps =
+    typeof product.damage_waiver_rate_bps === "number" && product.damage_waiver_rate_bps > 0
+      ? product.damage_waiver_rate_bps
+      : null;
+
   if (!zip) {
-    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null, damageWaiverRateBps };
   }
 
   const serviceArea = await resolveServiceAreaForAddress({
@@ -297,7 +307,7 @@ export async function getCheckoutPricing(
   });
 
   if (!serviceArea) {
-    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null, damageWaiverRateBps };
   }
 
   const deliveryFee = serviceArea.deliveryFee;
@@ -324,5 +334,5 @@ export async function getCheckoutPricing(
     deposit = Math.min(policies.depositMinimum, total);
   }
 
-  return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee, tax, taxLabel, total, deposit };
+  return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee, tax, taxLabel, total, deposit, damageWaiverRateBps };
 }

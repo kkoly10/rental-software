@@ -143,7 +143,7 @@ over-promise on cancellation terms they can't honor.
 - [x] `lib/checkout/damage-waiver.ts` — pure cents-safe calculator with 8-test unit suite (clamps, rounding, not-offered, not-accepted)
 - [x] Checkout reads `damage_waiver` form field; adds the surcharge to subtotal AFTER wet-upcharge AND BEFORE delivery+tax (waiver applies to rental subtotal only)
 - [x] Persists as `order_items` child with `line_type='damage_waiver'`; parent_order_item_id ties it to the rental
-- [ ] Storefront PDP / checkout UI to opt in (deferred to PR-3 — operator product form field shipped here; the customer-facing checkbox lands with i18n in PR-3)
+- [x] Storefront checkout UI to opt in — `<CheckoutForm>` renders the waiver checkbox + i18n'd preview (rate% × subtotal) when the product offers it. `damageWaiverRateBps` threaded through the pricing preview shape (PR-3c)
 
 ### #5 Saved-card / post-event damage charge ✅ (landed in PR-2c)
 
@@ -151,7 +151,7 @@ over-promise on cancellation terms they can't honor.
 - [x] Checkout creates / reuses a connected-account Stripe Customer for the renter; checkout session passes `customer` + `payment_intent_data.setup_future_usage='on_session'` so the card attaches for off-session reuse
 - [x] Webhook `payment_method.attached` mirrors the card metadata (brand, last4, exp) onto `payment_methods` with 23505 dedup
 - [x] `lib/payments/damage-charge-actions.ts` — operator action calls `stripe.paymentIntents.create({off_session: true, confirm: true})` scoped to the connected account; records as `payment_type='damage_charge'`; surfaces SCA authentication_required as a friendly message ("send an invoice link instead")
-- [ ] Operator UI button "Charge for damage" on the order detail (action exists; thin form binding deferred to PR-3 alongside the customer-facing waiver checkbox so both ship together)
+- [x] Operator UI button "Charge for damage" on order detail — `<DamageChargeButton>` (PR-3c) reuses the refund button's two-step form; picker lists the saved cards we mirrored from `payment_method.attached`; hidden when the customer has none. Server action surfaces SCA failures as the "send an invoice link" friendly message
 
 ### #6 Per-vertical cancellation policy ✅ (landed in PR-2b)
 

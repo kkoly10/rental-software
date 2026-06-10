@@ -1482,6 +1482,9 @@ const enValues = {
       phone: "Phone",
       email: "Email",
       smsOptIn: "Text me order updates (confirmation, delivery reminders, status). Msg & data rates may apply. Reply STOP to opt out.",
+      damageWaiverTitle: "Add damage waiver",
+      damageWaiverBody:
+        "Caps your liability for accidental damage to the rented goods at {rate}% of the rental subtotal (+${amount}).",
       eventDate: "Event date",
       startTime: "Start time",
       endTime: "End time",

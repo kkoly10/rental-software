@@ -1481,6 +1481,9 @@ export const es: Messages = {
       phone: "Teléfono",
       email: "Correo",
       smsOptIn: "Envíame avisos por SMS (confirmación, recordatorios de entrega, estado). Pueden aplicarse tarifas. Responde STOP para cancelar.",
+      damageWaiverTitle: "Añadir cobertura por daños",
+      damageWaiverBody:
+        "Limita tu responsabilidad por daños accidentales a los artículos alquilados al {rate}% del subtotal (+${amount}).",
       eventDate: "Fecha del evento",
       startTime: "Hora de inicio",
       endTime: "Hora de fin",
