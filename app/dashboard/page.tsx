@@ -4,6 +4,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { getDashboardSummary } from "@/lib/data/dashboard";
 import { getGuidanceSnapshot } from "@/lib/data/guidance-snapshot";
+import { StorefrontReadinessBanner } from "@/components/guidance/storefront-readiness-banner";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { computeChecklist } from "@/lib/guidance/checklist";
 import { detectNewMilestone } from "@/lib/guidance/milestones";
@@ -68,6 +69,11 @@ export default async function DashboardPage() {
       )}
 
       <DashboardGreeting businessName={settings.businessName} />
+
+      <StorefrontReadinessBanner
+        productsCount={snapshot.productsCount}
+        serviceAreasCount={snapshot.serviceAreasCount}
+      />
 
       {!guidanceState.dismissedChecklist && (
         <div style={{ marginBottom: 16 }}>

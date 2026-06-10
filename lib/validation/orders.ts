@@ -6,6 +6,8 @@ import {
   optionalPhoneSchema,
   optionalText,
   personNameSchema,
+  requiredPostalCodeSchema,
+  requiredText,
   uuidSchema,
 } from "@/lib/validation/common";
 
@@ -104,6 +106,23 @@ export const createOrderSchema = z
 export const updateOrderStatusSchema = z.object({
   orderId: uuidSchema,
   newStatus: orderStatusSchema,
+});
+
+/**
+ * Tier-1 launch fix — the operator new-order form leaves the
+ * delivery address optional (phone inquiries legitimately lack one),
+ * but a delivery order can never be routed without it. This schema
+ * backs the add/edit address card on the order detail page, where
+ * the fields ARE required: the whole point of the card is producing
+ * a routable address.
+ */
+export const updateOrderDeliveryAddressSchema = z.object({
+  orderId: uuidSchema,
+  line1: requiredText("Street address", 200),
+  line2: optionalText("Apt / Suite / Unit", 100),
+  city: requiredText("City", 100),
+  state: requiredText("State", 3),
+  postalCode: requiredPostalCodeSchema,
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

@@ -560,6 +560,15 @@ const enValues = {
   },
 
   dashboard: {
+    storefrontReadiness: {
+      noServiceAreaTitle: "Your storefront can't take bookings yet",
+      noServiceAreaBody:
+        "You have active products but no service areas — every customer checkout is rejected with \"We do not currently serve that delivery area.\" Add at least one ZIP code to go live.",
+      noServiceAreaCta: "Add a service area",
+      depositsOffTitle: "Online deposits are not configured",
+      depositsOffBody:
+        "Stripe isn't set up, so customers can submit booking requests but can't pay a deposit online. Bookings arrive as $0-deposit requests until payments are configured.",
+    },
     nav: {
       dashboard: "Dashboard",
       orders: "Orders",
@@ -734,6 +743,22 @@ const enValues = {
         confirmOrderCta: "Mark Confirmed",
         confirmingOrder: "Confirming…",
         sendDeliveryCta: "Send delivery",
+        markCompletedCta: "Mark completed",
+        confirmCompleteCta: "Confirm — close out this order",
+        completingOrder: "Closing out…",
+        completeHint: "Closes the rental lifecycle. Click again to confirm.",
+        addressForm: {
+          addCta: "Add delivery address",
+          editCta: "Edit delivery address",
+          line1: "Street address",
+          line2: "Apt / Suite / Unit (optional)",
+          city: "City",
+          state: "State",
+          zip: "ZIP code",
+          save: "Save address",
+          saving: "Saving…",
+          cancel: "Cancel",
+        },
         dispatchingDelivery: "Dispatching…",
         attachToRouteFirstCta: "Attach to a route first",
         createDocuments: "Create documents",

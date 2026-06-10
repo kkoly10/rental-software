@@ -115,6 +115,15 @@ export type OrderDetail = {
   eventEndTime?: string;
   items: string[];
   deliveryLabel: string;
+  /** Raw address parts for the add/edit form on the order detail
+      page; null when the order has no linked delivery address. */
+  deliveryAddress?: {
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+  } | null;
   deliverySurfaceType?: string;
   deliveryGateCode?: string;
   deliveryContactName?: string;
