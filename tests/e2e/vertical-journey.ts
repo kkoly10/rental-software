@@ -303,6 +303,16 @@ export function defineVerticalJourney(config: VerticalJourneyConfig) {
         await page.fill('input[name="subtotal"]', config.orderSubtotal ?? config.productPrice);
         await page.fill('input[name="deposit_amount"]', "50");
 
+        // Delivery address — without it /dashboard/orders/[id] blocks
+        // routing ("Add a delivery address before routing this order")
+        // and Phase 2's Stage 7b-ii can't attach the order to a route.
+        // The form leaves these optional, but a delivery-fulfillment
+        // order can't actually move past `confirmed` without them.
+        await page.fill('input[name="delivery_line1"]', "742 Evergreen Terrace");
+        await page.fill('input[name="delivery_city"]', "Stafford");
+        await page.fill('input[name="delivery_state"]', "VA");
+        await page.fill('input[name="delivery_zip"]', SERVICE_AREA_ZIP);
+
         await page.screenshot({ path: `${SCREENSHOTS}/12-new-order-filled.png`, fullPage: true });
         await page.locator('button[type="submit"]').first().click();
         await page.waitForLoadState("networkidle", { timeout: 15_000 });

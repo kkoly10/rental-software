@@ -44,9 +44,9 @@ registry's defaultCategorySeeds).
 | 5. Customer checkout + Stripe deposit | ❌ Stripe not configured | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 6. Operator receives order | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 7. Order management (confirm + DB truth) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 7b. Delivery + crew + pull sheet | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 8. Balance + documents + close | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 9. Repeat customer / CRM | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 7b. Delivery + crew + pull sheet | ⚠️ partial | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 8. Balance + documents + close | ⏳ blocked | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 9. Repeat customer / CRM | ⏳ blocked | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
 Tables & Chairs Stage 4b note: a single $3.50 Chiavari chair sits
 below the org's $100 service-area minimum, and the storefront
@@ -56,6 +56,40 @@ order of $100.00" rejection, which the spec asserts. This also
 checks off the "below minimum order" edge-case row below. A full
 per-unit checkout (capability + quantity picker) is a follow-up
 walk.
+
+## Phase 2 walk — delivery + settlement + CRM
+
+`tests/e2e/vertical-journey-phase2.ts` extends the inflatable
+walkthrough past Stage 7 with eight more stages: create a
+delivery route → attach the order → render the pull sheet →
+dispatch → crew today view → create rental documents → record a
+cash balance payment → repeat-customer auto-link. Run after the
+Phase 1 spec, with the org reset between (the same
+`scripts/e2e-reset-org.mjs`).
+
+### Findings driving the walk
+
+| Finding | Severity | Detail |
+|---|---|---|
+| Operator new-order form omits delivery address | **launch-blocker** | Stage 6's form lets the operator submit with no delivery address even for `fulfillment_type='delivery'`; the order then sits at Confirmed and routes / dispatch / crew all refuse to touch it (*"Add a delivery address before routing this order"*). Either require the address inline for delivery orders or hoist an "Add address" CTA into the routing card. The spec now fills it as a workaround so subsequent stages can proceed. |
+| Auto-attach is silent | medium | `updateOrderStatus` auto-attaches a confirmed order to a single matching-date route. Operators never see "attached automatically" feedback — they just find an "On route" card on next visit. Either surface a toast/banner or add a one-line "Auto-attached to X" note in the routing card so the operator knows. |
+| Delivery board is today-only | medium | `/dashboard/deliveries` shows only routes with `route_date = today`. Future routes exist in DB and are reachable by direct URL but invisible in the main UI. Operators planning a Saturday from a Wednesday have no list view. Add a date scrubber or a "Coming up" section. |
+| No "Mark Completed" button | medium | `VALID_TRANSITIONS` allows `delivered → completed`, but the operator UI never exposes the affordance. Today an order stays at `delivered` indefinitely; the lifecycle has no obvious close. Decision-2.2 note (`lib/orders/actions.ts:868`) says a confirm modal is required but it hasn't been built. |
+| Cross-write read staleness on order detail | **intermittent, real** | After Stage 7b-i creates a route, Stage 7b-ii's order-detail page intermittently renders *"No routes exist for this date yet"* even though the DB has the matching `route_date` row visible to the operator's RLS-scoped queries. Same shape as the Mark Confirmed bug — defensive write-then-read isn't enough; the next *page render* sometimes lags. Needs Vercel server-side logs to root-cause. |
+| Stage 7b-v crew today empty for future-dated order | low | Expected behaviour — the test event date is +14 days, so the crew "today" view won't carry it. Worth re-running on the event-date itself to confirm a stop renders with customer, address, and product. |
+
+### Stage results — inflatable Phase 2
+
+| Stage | Result | Note |
+|---|---|---|
+| 7b-i — Create delivery route | ✅ | |
+| 7b-ii — Order on route (auto or manual) | ⚠️ intermittent | Read staleness; passes in isolation, fails inside the same-run flow. |
+| 7b-iii — Pull sheet renders with name + customer + product | ⏳ blocked | Reachable via "View route" link on the order detail; gated by 7b-ii. |
+| 7b-iv — Dispatch (Send delivery) | ⏳ blocked | Click fires but observed staleness in the same session. |
+| 7b-v — Crew today renders without 500 | ✅ | |
+| 8a — Create rental documents | ⏳ blocked | Gated by 7b-iv to reach `out_for_delivery`. |
+| 8b — Record cash balance payment | ⏳ blocked | Same. |
+| 9 — Repeat customer reuses record | ⏳ blocked | Same. |
 
 ## Cross-cutting concerns (one walk covers all verticals)
 
