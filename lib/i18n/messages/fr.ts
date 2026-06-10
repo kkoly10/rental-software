@@ -4,6 +4,8 @@ export const fr: Messages = {
   common: {
     appName: "Korent",
     loading: "Chargement…",
+    listLoadErrorTitle: "Impossible de charger cette liste",
+    listLoadErrorBody: "Une erreur est survenue lors de la récupération des données. Actualisez la page — si le problème persiste, contactez le support.",
     save: "Enregistrer",
     cancel: "Annuler",
     submit: "Envoyer",
@@ -2109,6 +2111,9 @@ export const fr: Messages = {
           no_address:
             "Ajoutez une adresse de livraison (rue, ville, code postal) avant d’ajouter cette commande à une tournée.",
         },
+        loadErrorTitle: "Impossible de charger les informations de tournée",
+        loadErrorBody:
+          "Une erreur est survenue lors du chargement des tournées pour cette commande. Actualisez la page — si le problème persiste, contactez le support.",
         stopCount: "{n} arrêt(s)",
         routeStatus: {
           planned: "Planifiée",

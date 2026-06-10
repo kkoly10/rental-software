@@ -5,6 +5,15 @@ export type PaginatedResult<T> = {
   totalItems: number;
   totalPages: number;
   query: string;
+  /**
+   * True when the underlying query FAILED — the empty `items` then
+   * means "couldn't load", not "no rows". List pages must render an
+   * error banner for this case instead of the no-data empty state,
+   * otherwise operators see "you have no orders" during a transient
+   * DB failure and panic. Optional so existing mock/demo callers
+   * don't need changes.
+   */
+  loadFailed?: boolean;
 };
 
 export function normalizePage(value?: string | number | null) {

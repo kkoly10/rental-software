@@ -52,6 +52,18 @@ export function AssignToRouteCard({
     );
   }
 
+  // ─── Query failed — say so instead of faking an empty state ────────
+  // Pre-fix, a failed routes query rendered "No routes exist for this
+  // date yet" and operators chased phantom data problems.
+  if (state.kind === "load_error") {
+    return (
+      <div className="assign-route-card assign-route-card--blocked" role="alert">
+        <div className="assign-route-card-headline">{t.loadErrorTitle}</div>
+        <div className="assign-route-card-body">{t.loadErrorBody}</div>
+      </div>
+    );
+  }
+
   // ─── Eligible — show routes for this date or a create-route CTA ───
   const { eventDateRaw, candidateRoutes, hasNonPlannedRoutes } = state;
   const noRoutesYet = candidateRoutes.length === 0;

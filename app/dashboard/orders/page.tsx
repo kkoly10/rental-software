@@ -109,7 +109,17 @@ export default async function OrdersPage({
         initialQuery={ordersPage.query}
       />
 
-      {ordersPage.items.length === 0 ? (
+      {ordersPage.loadFailed ? (
+        // Query failed — say so. Pre-fix this fell through to the
+        // "no orders yet" empty state, and operators with a transient
+        // DB error saw their whole pipeline "vanish".
+        <div className="entity-row" role="alert" style={{ justifyContent: "center", padding: 32 }}>
+          <div style={{ textAlign: "center" }}>
+            <strong>{m.common.listLoadErrorTitle}</strong>
+            <div className="muted" style={{ marginTop: 8 }}>{m.common.listLoadErrorBody}</div>
+          </div>
+        </div>
+      ) : ordersPage.items.length === 0 ? (
         ordersPage.query || activeStatus !== "all" ? (
           <div className="entity-row" style={{ justifyContent: "center", padding: 32 }}>
             <div style={{ textAlign: "center" }}>

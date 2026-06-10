@@ -283,13 +283,26 @@ async function ensurePickupStop(args: {
   if (existing) return;
 
   // 2) Find or create a route on the pickup date.
-  const { data: routes } = await supabase
+  // NB: routes has NO deleted_at column (see the comment at the top of
+  // this function) — the old `.is("deleted_at", null)` filter made
+  // PostgREST 400 on every call. With the error swallowed, `routes`
+  // was always null: auto mode then created a DUPLICATE route on
+  // every invocation, and single-route mode silently never attached.
+  const { data: routes, error: routesError } = await supabase
     .from("routes")
     .select("id, name, route_status")
     .eq("organization_id", organizationId)
     .eq("route_date", pickupDate)
-    .eq("route_status", "planned")
-    .is("deleted_at", null);
+    .eq("route_status", "planned");
+
+  if (routesError) {
+    const { reportQueryError } = await import("@/lib/data/query-error");
+    reportQueryError("routes.auto-attach.pickup-routes", routesError, {
+      organizationId,
+      pickupDate,
+    });
+    return;
+  }
 
   let routeId: string | null = null;
   if (routes && routes.length === 1) {

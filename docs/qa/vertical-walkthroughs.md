@@ -44,9 +44,9 @@ registry's defaultCategorySeeds).
 | 5. Customer checkout + Stripe deposit | ❌ Stripe not configured | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 6. Operator receives order | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 7. Order management (confirm + DB truth) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 7b. Delivery + crew + pull sheet | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 8. Balance + documents + close | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 9. Repeat customer / CRM | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 7b. Delivery + crew + pull sheet | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 8. Balance + documents + close | ✅ (close UI still missing) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 9. Repeat customer / CRM | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
 Tables & Chairs Stage 4b note: a single $3.50 Chiavari chair sits
 below the org's $100 service-area minimum, and the storefront
@@ -56,6 +56,75 @@ order of $100.00" rejection, which the spec asserts. This also
 checks off the "below minimum order" edge-case row below. A full
 per-unit checkout (capability + quantity picker) is a follow-up
 walk.
+
+## Phase 2 walk — delivery + settlement + CRM
+
+`tests/e2e/vertical-journey-phase2.ts` extends the inflatable
+walkthrough past Stage 7 with eight more stages: create a
+delivery route → attach the order → render the pull sheet →
+dispatch → crew today view → create rental documents → record a
+cash balance payment → repeat-customer auto-link. Run after the
+Phase 1 spec, with the org reset between (the same
+`scripts/e2e-reset-org.mjs`).
+
+### Findings driving the walk
+
+| Finding | Severity | Detail |
+|---|---|---|
+| Operator new-order form omits delivery address | **launch-blocker** | Stage 6's form lets the operator submit with no delivery address even for `fulfillment_type='delivery'`; the order then sits at Confirmed and routes / dispatch / crew all refuse to touch it (*"Add a delivery address before routing this order"*). Either require the address inline for delivery orders or hoist an "Add address" CTA into the routing card. The spec now fills it as a workaround so subsequent stages can proceed. |
+| Auto-attach is silent | medium | `updateOrderStatus` auto-attaches a confirmed order to a single matching-date route. Operators never see "attached automatically" feedback — they just find an "On route" card on next visit. Either surface a toast/banner or add a one-line "Auto-attached to X" note in the routing card so the operator knows. |
+| Delivery board is today-only | medium | `/dashboard/deliveries` shows only routes with `route_date = today`. Future routes exist in DB and are reachable by direct URL but invisible in the main UI. Operators planning a Saturday from a Wednesday have no list view. Add a date scrubber or a "Coming up" section. |
+| No "Mark Completed" button | medium | `VALID_TRANSITIONS` allows `delivered → completed`, but the operator UI never exposes the affordance. Today an order stays at `delivered` indefinitely; the lifecycle has no obvious close. Decision-2.2 note (`lib/orders/actions.ts:868`) says a confirm modal is required but it hasn't been built. |
+| Cross-write read staleness on order detail | **intermittent, real** | After Stage 7b-i creates a route, Stage 7b-ii's order-detail page intermittently renders *"No routes exist for this date yet"* even though the DB has the matching `route_date` row visible to the operator's RLS-scoped queries. Same shape as the Mark Confirmed bug — defensive write-then-read isn't enough; the next *page render* sometimes lags. Needs Vercel server-side logs to root-cause. |
+| Stage 7b-v crew today empty for future-dated order | low | Expected behaviour — the test event date is +14 days, so the crew "today" view won't carry it. Worth re-running on the event-date itself to confirm a stop renders with customer, address, and product. |
+
+### Stage results — inflatable Phase 2 (final: 21/21 green)
+
+| Stage | Result | Note |
+|---|---|---|
+| 7b-i — Create delivery route | ✅ | |
+| 7b-ii — Order on route (auto or manual) | ✅ | After the order-routing `created_at` fix the card lists candidate routes for the first time; manual attach verified. |
+| 7b-iii — Pull sheet renders with name + customer + product | ✅ | Via the order's "View route" link. |
+| 7b-iv — Dispatch (Send delivery) | ✅ | After the dispatch-RPC `assigned` fix (below). |
+| 7b-v — Crew today renders without 500 | ✅ | |
+| 8a — Create rental documents | ✅ | Rental agreement + safety waiver rows render. |
+| 8b — Record cash balance payment | ✅ | Balance drops to $0.00 via record_manual_payment RPC. |
+| 9a — Repeat customer books again | ✅ | Date-jittered so re-runs don't trip the (working) double-booking guard. |
+| 9b — CRM dedupes under one customer | ✅ | One Avery row, two ORD-* entries on her detail page. |
+
+### The "staleness" post-mortem — it was never staleness
+
+The intermittent "0 orders in your pipeline" / "No routes exist"
+failures had three real causes, all now fixed:
+
+1. **Test ordering, not the app.** Playwright runs spec files
+   alphabetically and `inflatable-phase2.spec.ts` sorts *before*
+   `inflatable.spec.ts` (`-` < `.`) — Phase 2 ran first against a
+   freshly-reset empty org, and "0 orders" was simply true. The
+   file is now `inflatable2.spec.ts`.
+2. **`order-routing.ts` ordered `routes` by `created_at`, a column
+   that table doesn't have.** PostgREST 400'd on every call, the
+   error was discarded, and the card rendered the no-routes empty
+   state 100% of the time. Manual attach had never worked in
+   production. Two sibling instances of the same class:
+   `maintenance/actions.ts` (assets ordered by missing
+   `created_at` → every maintenance action created a duplicate
+   asset) and `routes/auto-attach.ts` (routes filtered by missing
+   `deleted_at` → pickup auto-attach created a duplicate route per
+   invocation).
+3. **`dispatch_order_delivery` RPC only accepted
+   `stop_status='pending'`** — a value nothing ever writes; the
+   schema default and `add_stop_to_route` both write `'assigned'`.
+   Send Delivery had been dead-on-arrival for every
+   normally-attached stop. Fixed by migration
+   `20260610_010000_dispatch_accepts_assigned_stops.sql`.
+
+Defensive layer added so this bug class can't hide again:
+`lib/data/query-error.ts` routes loader failures to
+`app_error_logs` + Sentry, the routing card renders "Couldn't load
+routing info" instead of a fake empty state, and the orders list
+shows an error banner (`PaginatedResult.loadFailed`) instead of
+"no orders yet" when the query fails.
 
 ## Cross-cutting concerns (one walk covers all verticals)
 
