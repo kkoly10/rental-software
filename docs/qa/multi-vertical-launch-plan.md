@@ -105,7 +105,33 @@ double-booked crew.
 
 ---
 
-## PR-2 — Multi-vertical revenue health (target: ~3-4 days)
+## PR-2 — Stripe Connect Express (decision: Option A)
+
+Re-scoped 2026-06-10: the user chose Connect Express for operator
+payments (subscription-only, no per-booking platform fee — see the
+decision record in `docs/marketplace/master-plan.md`). Direct
+charges: payments, refunds, and disputes live on the operator's
+connected account; Korent is never in the funds flow. The original
+PR-2 scope moves to PR-2b below; saved-card explicitly DEPENDS on
+Connect landing first (cards must be saved on the connected
+account's Customers, not the platform's).
+
+### Connect Express integration
+
+- [x] Migration: `organizations.stripe_connect_account_id` + `charges_enabled` / `payouts_enabled` / `details_submitted` mirrors + `onboarded_at`, unique index on acct id
+- [x] `lib/stripe/connect.ts` — pure status state machine (`not_connected → onboarding_incomplete → pending_verification → ready`) shared by card, banner, and checkout gate
+- [x] `lib/stripe/connect-actions.ts` — owner/admin-gated onboarding start (account create + account link), Express dashboard login link, manual status refresh
+- [x] `/api/stripe/connect/return` — syncs account state from Stripe on onboarding return
+- [x] `/api/stripe/connect/refresh` — mints a fresh account link when the old one expires
+- [x] Webhook: `account.updated` mirrors verification state onto the org (metadata org-id lookup with acct-id spoof guard + fallback)
+- [x] Checkout: deposits now created as DIRECT charges (`{stripeAccount}`); online payment gated on `charges_enabled`, falls back to deposit-due-on-delivery until onboarding completes
+- [x] Refund action: issues on the connected account with platform fallback for pre-Connect payments (`resource_missing` retry)
+- [x] Readiness banner: warns until Connect is ready, links to Settings → Billing
+- [x] Settings → Billing: Connect status card (4 states) + onboarding/resume/check-status/dashboard buttons, i18n'd en/es/fr/pt
+- [x] 9-test unit suite pins the status mapping; full suite 387/387
+- [ ] **Deployment config (manual)**: Stripe webhook endpoint must enable "listen to events on connected accounts" (direct-charge events arrive with `event.account`); verify `account.updated` is in the subscribed events
+
+## PR-2b — Multi-vertical revenue health (target: ~3-4 days)
 
 Goal: non-inflatable verticals stop bleeding revenue and don't
 over-promise on cancellation terms they can't honor.

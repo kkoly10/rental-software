@@ -566,7 +566,8 @@ export const pt: Messages = {
       noServiceAreaCta: "Adicionar zona de serviço",
       depositsOffTitle: "Os depósitos online não estão configurados",
       depositsOffBody:
-        "O Stripe não está configurado: os clientes podem enviar pedidos de reserva mas não podem pagar um depósito online. As reservas chegam como pedidos sem depósito até configurar os pagamentos.",
+        "A sua conta Stripe ainda não está conectada: os clientes podem enviar pedidos de reserva mas não podem pagar um depósito online. As reservas chegam como pedidos sem depósito até concluir a configuração de pagamentos.",
+      connectStripeCta: "Configurar pagamentos",
     },
     nav: {
       dashboard: "Painel",
@@ -1170,6 +1171,30 @@ export const pt: Messages = {
         { q: "Existe teste gratuito?", a: "Sim — todos os planos pagos incluem 14 dias grátis. Não é necessário cartão para começar." },
         { q: "Que métodos de pagamento aceitam?", a: "Todos os cartões principais (Visa, Mastercard, Amex, Discover) via Stripe. Faturação por fatura está disponível nos planos Growth." },
       ],
+    },
+    stripeConnect: {
+      kicker: "Pagamentos de clientes",
+      title: "Conta de pagamentos Stripe",
+      statusNotConnected: "Não conectada",
+      statusIncomplete: "Ação necessária",
+      statusPending: "Em verificação",
+      statusReady: "A aceitar pagamentos",
+      bodyNotConnected:
+        "Conecte uma conta Stripe para cobrar depósitos e saldos online. Os pagamentos dos clientes vão diretamente para o seu banco — a Korent nunca retém o seu dinheiro nem cobra comissão pelas suas reservas.",
+      bodyIncomplete:
+        "O seu registo no Stripe não está concluído. Continue de onde parou para começar a aceitar pagamentos online.",
+      bodyPending:
+        "Os seus dados foram enviados e o Stripe está a verificar a sua conta. Normalmente demora alguns minutos — volte em breve.",
+      bodyReady:
+        "A sua loja cobra depósitos online e os pagamentos chegam à sua conta bancária.",
+      bodyReadyPayoutsPending:
+        "Pode aceitar pagamentos, mas as transferências aguardam a verificação bancária. Abra o seu painel Stripe para concluir.",
+      ctaConnect: "Conectar com Stripe",
+      ctaResume: "Retomar o registo",
+      ctaOpening: "A abrir o Stripe…",
+      ctaCheckStatus: "Verificar estado",
+      ctaChecking: "A verificar…",
+      ctaOpenDashboard: "Abrir painel Stripe",
     },
     pricingRules: {
       title: "Regras de preços",

@@ -1165,9 +1165,27 @@ export async function createCheckoutOrder(
   const deposit = depositCents / 100;
   const balance = (totalCents - depositCents) / 100;
 
+  // Connect Express — deposits are charged DIRECTLY on the operator's
+  // connected account (Korent never holds operator funds; see the
+  // decision record in docs/marketplace/master-plan.md). Online
+  // payment therefore requires a charges_enabled connected account,
+  // not just the platform STRIPE_SECRET_KEY. When the org isn't
+  // connected yet, the order falls through to the no-Stripe path
+  // (deposit recorded as due, operator collects manually) and the
+  // dashboard readiness banner tells them to finish onboarding.
+  const { canAcceptStripePayments, fieldsFromOrgRow, ORG_CONNECT_COLUMNS } = await import("@/lib/stripe/connect");
+  const { data: connectRow } = await supabase
+    .from("organizations")
+    .select(`${ORG_CONNECT_COLUMNS}, default_currency`)
+    .eq("id", orgId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const connectReady = canAcceptStripePayments(fieldsFromOrgRow(connectRow ?? null));
+  const stripeAccountId = connectRow?.stripe_connect_account_id ?? null;
+
   // Check Stripe plan gate before creating any records — fail early if org can't accept
   // online payments but a deposit is required.
-  if (hasStripeEnv() && deposit > 0) {
+  if (hasStripeEnv() && connectReady && deposit > 0) {
     const { checkFeatureAccess } = await import("@/lib/stripe/gate");
     const stripeGate = await checkFeatureAccess("stripe_payments");
     if (!stripeGate.allowed) {
@@ -1365,7 +1383,7 @@ export async function createCheckoutOrder(
 
   // Use a temporary checkout_hold only when Stripe payment is expected (webhook will convert it).
   // If Stripe isn't configured, use a permanent hold since there's no webhook to convert it.
-  const willUseStripe = hasStripeEnv() && deposit > 0;
+  const willUseStripe = hasStripeEnv() && connectReady && deposit > 0;
 
   if (productId && eventDate) {
     const reserveResult = await reserveProductAvailabilityBlock({
@@ -1479,7 +1497,7 @@ export async function createCheckoutOrder(
   // Send order confirmation email only when no Stripe deposit is required.
   // When Stripe handles the deposit, the webhook sends a payment confirmation
   // after checkout.session.completed to avoid emailing before the customer pays.
-  const stripeWillHandlePayment = hasStripeEnv() && deposit > 0;
+  const stripeWillHandlePayment = hasStripeEnv() && connectReady && deposit > 0;
   if (!stripeWillHandlePayment) {
     try {
       const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
@@ -1535,8 +1553,11 @@ export async function createCheckoutOrder(
     }
   }
 
-  // Attempt Stripe Checkout for deposit payment
-  if (hasStripeEnv() && deposit > 0) {
+  // Attempt Stripe Checkout for deposit payment — created as a DIRECT
+  // charge on the operator's connected account (Connect Express).
+  // The customer pays the operator; the operator pays Stripe's fees;
+  // Korent takes no application fee (Option A — subscription only).
+  if (willUseStripe && stripeAccountId) {
     try {
       // Verify the org's plan allows Stripe payments before creating a session
       const { checkFeatureAccess } = await import("@/lib/stripe/gate");
@@ -1556,41 +1577,43 @@ export async function createCheckoutOrder(
 
       // Resolve org currency so non-USD operators charge in their currency.
       // Falls back to "usd" if the column is null/missing. The helper
-      // applies zero-decimal handling for currencies like JPY.
-      const { data: orgCurrencyRow } = await supabase
-        .from("organizations")
-        .select("default_currency")
-        .eq("id", orgId)
-        .is("deleted_at", null)
-        .maybeSingle();
+      // applies zero-decimal handling for currencies like JPY. The row
+      // was already fetched alongside the connect columns above.
       const { normalizeCurrency, toStripeMinorUnits } = await import("@/lib/money/currency");
-      const orgCurrency = normalizeCurrency(orgCurrencyRow?.default_currency);
+      const orgCurrency = normalizeCurrency(connectRow?.default_currency);
 
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: orgCurrency,
-              product_data: {
-                name: `Deposit — ${productName}`,
-                description: `Order ${orderNumber} deposit`,
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: orgCurrency,
+                product_data: {
+                  name: `Deposit — ${productName}`,
+                  description: `Order ${orderNumber} deposit`,
+                },
+                unit_amount: toStripeMinorUnits(deposit, orgCurrency),
               },
-              unit_amount: toStripeMinorUnits(deposit, orgCurrency),
+              quantity: 1,
             },
-            quantity: 1,
-          },
-        ],
-        customer_email: email,
-        success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}`,
-        metadata: {
-          organization_id: orgId,
-          order_id: order.id,
-          order_number: orderNumber,
-          payment_type: "deposit",
-        }
-      });
+          ],
+          customer_email: email,
+          success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}`,
+          metadata: {
+            organization_id: orgId,
+            order_id: order.id,
+            order_number: orderNumber,
+            payment_type: "deposit",
+          }
+        },
+        // Direct charge: the session (and its payment_intent, refunds,
+        // disputes) lives on the connected account. Webhook events for
+        // it arrive with event.account set — the endpoint must have
+        // "listen to events on connected accounts" enabled.
+        { stripeAccount: stripeAccountId }
+      );
 
       if (session.url) {
         const fmt = (n: number) => `$${n.toFixed(2)}`;

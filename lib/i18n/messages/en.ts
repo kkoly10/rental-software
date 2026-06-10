@@ -567,7 +567,8 @@ const enValues = {
       noServiceAreaCta: "Add a service area",
       depositsOffTitle: "Online deposits are not configured",
       depositsOffBody:
-        "Stripe isn't set up, so customers can submit booking requests but can't pay a deposit online. Bookings arrive as $0-deposit requests until payments are configured.",
+        "Your Stripe account isn't connected yet, so customers can submit booking requests but can't pay a deposit online. Bookings arrive as $0-deposit requests until you finish payment setup.",
+      connectStripeCta: "Set up payments",
     },
     nav: {
       dashboard: "Dashboard",
@@ -1171,6 +1172,30 @@ const enValues = {
         { q: "Is there a free trial?", a: "Yes — every paid plan includes a 14-day free trial. No credit card required to start." },
         { q: "What payment methods do you accept?", a: "All major cards (Visa, Mastercard, Amex, Discover) via Stripe. Invoiced billing is available on Growth plans." },
       ],
+    },
+    stripeConnect: {
+      kicker: "Customer payments",
+      title: "Stripe payment account",
+      statusNotConnected: "Not connected",
+      statusIncomplete: "Action required",
+      statusPending: "Under review",
+      statusReady: "Accepting payments",
+      bodyNotConnected:
+        "Connect a Stripe account to collect deposits and balances online. Customer payments go straight to your bank — Korent never holds your money and takes no fee on your bookings.",
+      bodyIncomplete:
+        "Your Stripe onboarding isn't finished. Pick up where you left off to start accepting online payments.",
+      bodyPending:
+        "Your details are submitted and Stripe is verifying your account. This usually takes a few minutes — check back shortly.",
+      bodyReady:
+        "Your storefront collects deposits online and payouts go to your bank account.",
+      bodyReadyPayoutsPending:
+        "You can accept payments, but payouts are still pending bank verification. Open your Stripe dashboard to finish.",
+      ctaConnect: "Connect with Stripe",
+      ctaResume: "Resume onboarding",
+      ctaOpening: "Opening Stripe…",
+      ctaCheckStatus: "Check status",
+      ctaChecking: "Checking…",
+      ctaOpenDashboard: "Open Stripe dashboard",
     },
     pricingRules: {
       title: "Pricing Rules",
