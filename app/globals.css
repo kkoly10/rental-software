@@ -9,15 +9,23 @@
   --text: #2d1f14;
   --text-soft: #6b5545;
   --text-muted: #8a7565;
-  --primary: #e8590c;
-  --primary-strong: #d14e08;
+  /* WCAG 2.1 AA — the original orange (#e8590c) and green (#16a34a)
+     fell to 3.58 / 3.14 contrast against white / their own light
+     backgrounds when used for small text (kicker chips, status
+     pills) — caught by the mobile/a11y scan in tier 2. Darkened to
+     the next Tailwind stop (orange-700 = 4.81, green-700 = 4.61
+     against white). The chip backgrounds + primary-light + accent
+     stay untouched because they pair with the darker --text on the
+     few surfaces that mix them. */
+  --primary: #c2410c;
+  --primary-strong: #9a3412;
   --primary-light: #ff8c42;
   --primary-bg: #fff1e8;
   --primary-bg-subtle: #fff8f3;
   --accent: #7c3aed;
   --accent-light: #a78bfa;
   --accent-bg: #f3f0ff;
-  --success: #16a34a;
+  --success: #15803d;
   --success-bg: #f0fdf4;
   --warning: #d97706;
   --warning-bg: #fffbeb;
