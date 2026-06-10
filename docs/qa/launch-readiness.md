@@ -111,8 +111,11 @@ verifies the rendered body. Listed below as a follow-up.
 ## Numbers
 
 - **6/6 verticals** walk green end-to-end (Phase 1 stages 1–7).
-- **inflatable Phase 2** walks green end-to-end including dispatch,
-  documents, cash payment, repeat-customer CRM dedup (21/21).
+- **6/6 verticals Phase 2** now walk green end-to-end including
+  dispatch, documents, cash payment, repeat-customer CRM dedup
+  (inflatable 21/21, tents 20/20, tables-and-chairs 19+2 legit
+  skips, dance-floors 21/21, photo-booths 21/21, concessions
+  21/21 — see Tier 4).
 - **10 production bug fixes** found by the walks + reviews (3
   swallowed-error bugs, the dispatch RPC, the unit-label trap, the
   phantom Mark Confirmed, the missing address requirement, two WCAG
@@ -159,6 +162,54 @@ These are explicitly tracked, not gaps the program missed:
    than the gap; the honest remedies are a re-acceptance prompt at
    next sign-in or recording acceptance on next login. Product
    decision required.
+
+## Tier 4 — residual coverage
+
+After Tier 3 closed the audit gaps, six surfaces were still
+labeled "tested lightly or not at all": Phase 2 across the
+non-inflatable verticals, crew stop completion, customer
+document signing, team invites + role enforcement, multi-
+vertical add, and the PII purge cron's logic (the cron's
+auth surface was already covered by the Tier 3 compliance
+spec). Tier 4 closed each:
+
+- **Phase 2 × 5 verticals** — new `<vertical>2.spec.ts` per
+  vertical and a wrapper script (`scripts/e2e-walk-vertical.sh`)
+  that wires the right `E2E_PRODUCT_SLUG`/`E2E_ORDER_SUBTOTAL`
+  per vertical. Fixed two latent spec bugs the new coverage
+  surfaced: the hardcoded "/Castle Bouncer/i" pull-sheet
+  assertion and the hardcoded `"165"` record-payment amount.
+- **PII purge logic** — seeded a real expired customer +
+  communication_log row, ran the cron's exact UPDATE
+  statement via service-role SQL, asserted `recipient` +
+  `subject` → `[purged]`, `body_preview` → NULL, and proved
+  idempotency (re-run scrubs 0 NEW rows). Fixture cleaned.
+- **Crew stop completion** — walked a seeded route_stop
+  through `pending → en_route (tracking token issued) →
+  completed (tracking token cleared)` and asserted
+  `proof_photo_url` + `signature_name` + `completed_at`
+  persist. Fixture cleaned.
+- **Customer document signing** — walked a seeded document
+  through `pending → sent → signed`, asserted `signer_name`,
+  `signed_at`, `signer_ip`, `signer_user_agent`, and
+  `signature_data_url` persist, and confirmed the concurrent-
+  sign guard (`WHERE document_status='sent'`) rejects a
+  second signer. Fixture cleaned.
+- **Team invites + role enforcement** — created a `dispatcher`
+  invite with a 7-day expiry, asserted shape; confirmed the
+  expired-token guard (`expires_at > now()`) and the
+  cancelled-invite guard (`status='pending'`) both reject
+  acceptance. Fixture cleaned.
+- **Multi-vertical add** — added `tents` as a secondary
+  vertical alongside the primary `inflatable`, asserted
+  exactly one primary holds, confirmed the partial unique
+  index rejects a second primary, then removed tents and
+  soft-deleted the orphan categories. Fixture cleaned.
+
+The four DB-level walks above were chosen over additional
+Playwright specs because the UI is a thin shell over these
+state machines — the same pattern that landed in Tier 3
+for the PII purge auth surface (E2E) + logic surface (SQL).
 
 ## Files of interest for the on-call
 

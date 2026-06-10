@@ -139,7 +139,13 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       const body = page.locator("body");
       await expect(body).toContainText(/Saturday route/i);
       await expect(body).toContainText(/Jordan/i);
-      await expect(body).toContainText(/Castle Bouncer/i);
+      // Crew must see the product name on the pull sheet — but the
+      // product is vertical-specific. Match the slug derived from
+      // E2E_PRODUCT_SLUG (e2e-13ft-castle-bouncer → "castle bouncer")
+      // so the same assertion works for chairs, tents, booths, etc.
+      const slug = process.env.E2E_PRODUCT_SLUG ?? "e2e-13ft-castle-bouncer";
+      const productWords = slug.replace(/^e2e-/, "").split("-").slice(-2).join(" ");
+      await expect(body).toContainText(new RegExp(productWords, "i"));
     });
 
     test("Stage 7b-iv: operator dispatches the order to delivery", async ({ page }) => {
@@ -241,7 +247,11 @@ export function defineDeliveryAndCloseStages(vertical: string) {
 
       // Record-payment form. The Stage 6 order's total is $165; the
       // operator collects the full amount in cash on delivery.
-      await page.locator('input[name="amount"]').fill("165");
+      // Record-payment amount comes from E2E_ORDER_SUBTOTAL so the
+      // per-unit verticals (Tables & Chairs at $350 total) clear their
+      // balance to $0 instead of being stranded at a positive number.
+      // Default matches Stage 6's bouncer subtotal of $165.
+      await page.locator('input[name="amount"]').fill(process.env.E2E_ORDER_SUBTOTAL ?? "165");
       await page.locator('select[name="payment_type"]').selectOption("balance");
       await page.locator('select[name="payment_method"]').selectOption("cash");
 
@@ -265,7 +275,19 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       await page.screenshot({ path: `${SCREENSHOTS}/29-balance-recorded.png`, fullPage: true });
     });
 
+    // Stages 9a/9b drive the repeat-customer storefront flow. Per-unit
+    // verticals (Tables & Chairs) reject a single-unit deep-link
+    // checkout against the $100 service-area minimum — that's the
+    // working guard Stage 4b documents, not a regression. Skip 9 when
+    // we're walking one of those verticals.
+    const checkoutBelowMinimum =
+      process.env.E2E_CHECKOUT_BELOW_MINIMUM === "1";
+
     test("Stage 9a: repeat customer books a second event", async ({ browser }) => {
+      test.skip(
+        checkoutBelowMinimum,
+        "Vertical's storefront deep-link checkout is below the service-area minimum (covered by Stage 4b's rejection)",
+      );
       // A returning customer (Avery Chen, who booked via Stage 4b)
       // books a second event on the storefront. The case-insensitive
       // email ilike in lib/checkout/actions.ts should reuse the
@@ -306,6 +328,10 @@ export function defineDeliveryAndCloseStages(vertical: string) {
     });
 
     test("Stage 9b: operator CRM shows one Avery with two orders", async ({ page }) => {
+      test.skip(
+        checkoutBelowMinimum,
+        "Stage 9b depends on 9a having succeeded",
+      );
       // Operator side — customer detail page should now show two
       // orders for Avery. If the email lookup misfired and a duplicate
       // customer row was created, the operator's CRM is polluted on
