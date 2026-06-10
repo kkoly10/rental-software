@@ -901,24 +901,41 @@ export async function createCheckoutOrder(
     }
   }
 
-  if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
-    await logAppEvent({
-      organizationId: orgId,
-      source: "checkout.website",
-      action: "minimum_order_blocked",
-      status: "warning",
-      metadata: {
-        subtotal,
-        minimumOrderAmount: serviceArea.minimumOrderAmount,
-        serviceAreaId: serviceArea?.id ?? null,
-      }
-    });
+  // PR-3b — per-category minimum OVERRIDES the service-area minimum
+  // when set, so a Tables & Chairs operator can publish "$30 minimum
+  // per chair order" without inheriting their inflatable side's $100
+  // service-area floor. When the category min is null, fall back to
+  // the service-area min — the historical behavior.
+  if (serviceArea) {
+    const effectiveMin =
+      typeof productMinimumOrderCents === "number" && productMinimumOrderCents > 0
+        ? productMinimumOrderCents / 100
+        : serviceArea.minimumOrderAmount;
+    if (subtotal < effectiveMin) {
+      const source =
+        typeof productMinimumOrderCents === "number" && productMinimumOrderCents > 0
+          ? "category"
+          : "service_area";
+      await logAppEvent({
+        organizationId: orgId,
+        source: "checkout.website",
+        action: "minimum_order_blocked",
+        status: "warning",
+        metadata: {
+          subtotal,
+          effectiveMinimum: effectiveMin,
+          minimumSource: source,
+          serviceAreaId: serviceArea?.id ?? null,
+        }
+      });
 
-    return fail({
-      message: `This service area requires a minimum order of $${serviceArea.minimumOrderAmount.toFixed(
-        2
-      )}.`,
-    });
+      return fail({
+        message:
+          source === "category"
+            ? `This category requires a minimum order of $${effectiveMin.toFixed(2)}.`
+            : `This service area requires a minimum order of $${effectiveMin.toFixed(2)}.`,
+      });
+    }
   }
 
   // Event date is required when a specific product is being booked
