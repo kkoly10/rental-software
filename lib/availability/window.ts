@@ -12,12 +12,20 @@ export type AvailabilityWindow = {
  *
  * When times are not provided, the window spans midnight-to-midnight UTC
  * for the given date (full-day block).
+ *
+ * Setup / breakdown buffers (Sprint 5.5 + PR-1): the window extends
+ * backwards by `setupMinutesBefore` and forwards by
+ * `breakdownMinutesAfter`. A Saturday tent with 4h setup blocks
+ * Friday afternoon. Defaults are 0 — calls without product metadata
+ * preserve the original behavior.
  */
 export function getAvailabilityWindowForDate(
   eventDate?: string | null,
   startTime?: string | null,
   endTime?: string | null,
-  endDate?: string | null
+  endDate?: string | null,
+  setupMinutesBefore?: number | null,
+  breakdownMinutesAfter?: number | null
 ): AvailabilityWindow | null {
   if (!eventDate) {
     return null;
@@ -28,6 +36,13 @@ export function getAvailabilityWindowForDate(
     return null;
   }
 
+  const setupMs = Math.max(0, setupMinutesBefore ?? 0) * 60_000;
+  const breakdownMs = Math.max(0, breakdownMinutesAfter ?? 0) * 60_000;
+  const applyBuffer = (startIso: string, endIso: string) => ({
+    startsAt: setupMs ? new Date(new Date(startIso).getTime() - setupMs).toISOString() : startIso,
+    endsAt: breakdownMs ? new Date(new Date(endIso).getTime() + breakdownMs).toISOString() : endIso,
+  });
+
   // Multi-day rental: span from the start day's midnight through the day AFTER
   // the end date, so every day in the range is reserved/checked (not just day 1).
   if (endDate && endDate > eventDate) {
@@ -35,10 +50,7 @@ export function getAvailabilityWindowForDate(
     if (!Number.isNaN(endDayStart.getTime())) {
       const end = new Date(endDayStart);
       end.setUTCDate(end.getUTCDate() + 1);
-      return {
-        startsAt: dayStart.toISOString(),
-        endsAt: end.toISOString(),
-      };
+      return applyBuffer(dayStart.toISOString(), end.toISOString());
     }
   }
 
@@ -58,10 +70,7 @@ export function getAvailabilityWindowForDate(
         // not "fall back to a full-day block."
         return null;
       }
-      return {
-        startsAt: start.toISOString(),
-        endsAt: end.toISOString(),
-      };
+      return applyBuffer(start.toISOString(), end.toISOString());
     }
   }
 
@@ -69,8 +78,5 @@ export function getAvailabilityWindowForDate(
   const end = new Date(dayStart);
   end.setUTCDate(end.getUTCDate() + 1);
 
-  return {
-    startsAt: dayStart.toISOString(),
-    endsAt: end.toISOString(),
-  };
+  return applyBuffer(dayStart.toISOString(), end.toISOString());
 }

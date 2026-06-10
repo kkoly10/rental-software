@@ -85,18 +85,21 @@ double-booked crew.
 
 ### #3 Setup/breakdown buffer in availability check
 
-- [ ] Migration: `products.breakdown_minutes_after integer`
-- [ ] `lib/availability/window.ts` — extend window by `setup_minutes_before` + `breakdown_minutes_after`
-- [ ] `lib/availability/check.ts` — use extended window when counting blocks
-- [ ] `lib/availability/actions.ts:94` — when reserving, write the extended window into `availability_blocks.starts_at/ends_at`
-- [ ] Operator UI: product form fields for setup + breakdown minutes
-- [ ] Test: spec asserts a Sat 10am event with 4h setup blocks Fri 11pm
-- [ ] Test: spec asserts a Sat 10pm event with 2h breakdown blocks Sun 12am
+- [x] Migration: `products.breakdown_minutes_after integer` with nonneg constraint
+- [x] `lib/availability/window.ts` — extend window by `setup_minutes_before` + `breakdown_minutes_after`; preserved original behavior when args omitted
+- [x] `lib/availability/check.ts` — fetch product's setup/breakdown, pass through; conflict check now uses the extended window
+- [x] `lib/availability/blocks.ts` — reserve writes the extended window into `availability_blocks.starts_at/ends_at`
+- [x] Operator UI: product form `<SetupWindowField>` now has both setup + breakdown inputs with vertical-specific guidance
+- [x] Validation: `breakdownMinutesAfter` in `lib/validation/products.ts` zod shape, 0-24h bounds
+- [x] Persistence wired through `lib/products/actions.ts` (create + update paths)
+- [x] 9-test unit suite pins the buffer math: setup before, breakdown after, midnight-crossing, multi-day, negative-clamp, no-buffer fallback
+- [x] Full suite green (378/378)
 
 ### PR-1 sign-off
 
-- [ ] `npm test` green
-- [ ] One full vertical walk green on preview (inflatable)
+- [x] `npm test` green (378/378, +16 new tests across PR-1)
+- [x] `npx tsc --noEmit` clean
+- [ ] One full vertical walk green on preview (inflatable) — pending preview deploy
 - [ ] Update `docs/qa/launch-readiness.md` with PR-1 status
 - [ ] Open PR, request review
 
