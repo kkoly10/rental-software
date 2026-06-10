@@ -90,19 +90,19 @@ Each sprint ends with a gate; don't start the next until it passes or is explici
 *Gate: registry boot-validates like the verticals registry; a renter can create an account; lint rule fails a deliberate cross-boundary import.*
 
 **M1 — Supply + demand sensing (week 3-5)**
-Seller store pages (`market.seller_profiles`, served at `/store/{slug}` on the marketplace domain — not subdomains); listing model + draft→pending→published workflow with moderation flag; Korent-operator "list on marketplace" path reading from their existing `products` (ID reference only); **all 7 worlds browsable** — hosting-and-events bookable later, other 6 in smoke-test mode with search logging, waitlists, draft pre-listings (§31).
+Seller store pages (`market.seller_profiles`, served at `/store/{slug}` on the marketplace domain — not subdomains); Seller Hub v1 (spec §32): listings manager + Connect onboarding status at `/selling/*`; listing model + draft→pending→published workflow with moderation flag; Korent-operator "list on marketplace" path reading from their existing `products` (ID reference only); **all 7 worlds browsable** — hosting-and-events bookable later, other 6 in smoke-test mode with search logging, waitlists, draft pre-listings (§31).
 *Gate: a seller can publish a listing in hosting-and-events; smoke-test worlds record searches + waitlist joins; demand dashboard query works.*
 
 **M2 — Reservations + booking (week 6-8)**
-§10 hold state machine + standby queue + 5-min cleanup cron; §13 booking state machine; §14 turnaround buffers; serialized + quantity inventory modes (bundles deferred unless a launch seller needs them).
+§10 hold state machine + standby queue + 5-min cleanup cron; §13 booking state machine; §14 turnaround buffers; Seller Hub: requests approve/decline with 24h SLA countdown + calendar/blackouts (§32); serialized + quantity inventory modes (bundles deferred unless a launch seller needs them).
 *Gate: two concurrent checkouts on the last unit — one holds, one lands in standby; expiry promotes standby; buffers block adjacent bookings.*
 
 **M3 — Money (week 9-11)**
-Stripe Connect Express onboarding for sellers; booking payment + platform fee (12%/8%, $4 min); deposit engine (§9) — `captured_refundable` strategy first, auth-holds added once handoff timing data exists; booking + settlement ledgers; separate Connect webhook endpoint with its own idempotency ledger; payout release on completion.
+Stripe Connect Express onboarding for sellers; booking payment + platform fee (12%/8%, $4 min); deposit engine (§9) — `captured_refundable` strategy first, auth-holds added once handoff timing data exists; booking + settlement ledgers; Seller Hub: earnings & payouts view (§32); separate Connect webhook endpoint with its own idempotency ledger; payout release on completion.
 *Gate: end-to-end sandbox booking — renter pays, fee split correct in ledger, deposit captured and refunded on clean return, seller payout releases.*
 
 **M4 — Trust during the rental (week 12-14)**
-Pickup/return evidence (§16); marketplace conversations with phase model + hard-block/soft-warn moderation rules (§18, §20, §26); §24 notification matrix on existing dispatch infra; ID verification before first booking (provider choice is a flagged decision — spec §30).
+Pickup/return evidence (§16); marketplace conversations with phase model + hard-block/soft-warn moderation rules (§18, §20, §26) including the Seller Hub inbox (§32); §24 notification matrix on existing dispatch infra; ID verification before first booking (provider choice is a flagged decision — spec §30).
 *Gate: full lifecycle with evidence at both ends; a message containing a phone number pre-booking is blocked and logged.*
 
 **M5 — When things go wrong (week 15-17)**
@@ -110,7 +110,7 @@ Disputes/claims (§17) with evidence linkage and deposit allocation; admin/trust
 *Gate: a dispute resolves with partial deposit allocation; admin can freeze a payout.*
 
 **M6 — Bridge + ranking, then launch (week 18-20)**
-Outbox/inbox bridge + operator fulfillment projection (§27) for Korent-operator sellers; ranking v1 (availability, distance, completeness, response metrics — §21); launch-readiness pass against §31 gates in the 1–2 launch metros.
+Outbox/inbox bridge + operator fulfillment projection (§27) for Korent-operator sellers; ranking v1 (availability, distance, completeness, response metrics — §21) with the Seller Hub performance panel exposing the same metrics to sellers (§32); launch-readiness pass against §31 gates in the 1–2 launch metros.
 *Gate: marketplace booking by an operator-seller produces a fulfillment projection without any synchronous operator call; killing the consumer delays but never loses projections (idempotent replay).*
 
 **Deferred post-launch**: benchmark ingestion pipeline (§11 — launch on curated manual inputs), auto-pricing, bundle inventory mode (unless needed in M2), additional trust queues, world #2 graduation (§31 gates decide).

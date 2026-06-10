@@ -504,6 +504,12 @@ time, do not hard-hold inventory; place the renter in standby and
 notify when verification clears. verification_hold covers only fast
 synchronous re-checks for already-verified users.
 
+TTL provenance: these defaults are deliberate industry-standard
+picks — 15-min checkout holds (ticketing/e-commerce norm), 24h
+seller approval window (Airbnb standard), auto-capture on approval
+(Airbnb/Turo standard). Treat them as the baseline; change only with
+evidence from real funnel data, not taste.
+
 Add standby queue concept:
 - one active hard hold on inventory slot
 - additional interest can sit in standby
@@ -1159,3 +1165,61 @@ everywhere, and shows renters empty search results in 6 worlds. Smoke-test
 mode preserves the 7-world experiment at a fraction of the cost: it tests
 intent (searches, waitlists, pre-listings) instead of operations, and
 measured demand — not guesswork — picks which world goes live next.
+
+==================================================
+32. SELLER HUB
+==================================================
+
+The seller-side management surface. Industry-standard model
+(eBay Seller Hub / Airbnb host dashboard): a hub INSIDE the
+marketplace app, not a separate application and not a website.
+Marketplace-only sellers never touch the operator SaaS.
+
+Routes live under the marketplace domain (e.g., /selling/*).
+Access: any verified seller (organization with a seller profile).
+
+Hub areas (industry-standard composition):
+
+1. Listings manager
+- create / edit / publish / pause listings
+- publication status incl. moderation state and rejection reasons
+- per-listing performance (views, inquiries, conversion)
+
+2. Requests & bookings
+- approve / decline booking requests (24h SLA countdown visible)
+- upcoming handoffs and returns, today-first ordering
+- extension requests
+- evidence capture entry points at handoff/return (section 16)
+
+3. Calendar & availability
+- per-listing calendar with confirmed bookings, holds, buffers
+- blackout dates (manual blocks)
+- turnaround buffer settings within policy-registry limits
+
+4. Earnings & payouts
+- balance, pending payouts, payout history
+- per-booking fee breakdown (price, platform fee, deposit status)
+- Stripe Connect onboarding/KYC status with resume link
+- tax document access (1099-K etc. when applicable)
+
+5. Messages
+- the marketplace conversation inbox (section 18) filtered to
+  the seller's threads
+
+6. Performance & trust
+- response time / response rate / completion rate / dispute rate
+- the same metrics ranking uses (section 21) — sellers must be able
+  to SEE the numbers that rank them
+- verification badge status and how to improve standing
+
+Korent operator sellers:
+- use the same Seller Hub for marketplace-facing actions (listings,
+  requests, messages, payouts) — one consistent surface
+- their FULFILLMENT remains in the operator app via the bridge
+  projection (section 27): routes, crew, prep tasks never duplicate
+  into the Seller Hub
+
+Build note: Seller Hub ships incrementally with the engines it
+fronts — listings manager with the listing model, requests/calendar
+with the booking engine, earnings with payouts, inbox with messaging,
+performance with ranking. It is not a single late-phase deliverable.
