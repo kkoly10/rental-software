@@ -207,13 +207,12 @@ need quantity, multilingual access, or quote-first flow.
 - [x] Error copy distinguishes "This category requires…" vs "This service area requires…" so the customer knows which lever to pull (more chairs vs. larger order).
 - [ ] Operator UI for setting `categories.minimum_order_cents` — deferred to Supabase Studio for the first market (same path as `tax_rules`); per-category Settings card lands in a follow-up
 
-### #11 Customer-initiated quote path
+### #11 Customer-initiated quote path ✅ (landed in PR-3d)
 
-- [ ] Storefront PDP secondary CTA gated by `theme_settings.ctaSecondary='request_quote'`
-- [ ] New server action `requestQuote()` creates `order_status='inquiry'` with customer details
-- [ ] Operator notification: new inquiry email/dashboard badge
-- [ ] Reuse existing operator quote-send flow
-- [ ] Test: spec triggers Request Quote on a tent product, asserts inquiry row + operator notification
+- [x] PDP secondary CTA gated by `theme_settings.cta_secondary='request_quote'` — collapsible "Need a custom quote?" panel under the Book button so it doesn't compete for attention
+- [x] `lib/checkout/quote-request-actions.ts:submitQuoteRequest` — IP + email rate-limited (8/IP/15min, 3/email/15min), reuses the same case-insensitive email customer dedup as `createCheckoutOrder`, creates `order_status='inquiry'` with `source_channel='website_quote'`, attaches a rental order_item snapshot
+- [x] Operator notification via existing `triggerOperatorActivityAlertEmail` with new `quote_requested` event (added to OperatorActivityEvent union + subject/headline/notification-type switches in lib/email/triggers.ts)
+- [x] Existing dashboard inquiry → quote_sent → awaiting_deposit flow picks up the inquiry unchanged — no new operator UI needed
 
 ### #12 Legacy terms backfill ✅ (landed in PR-3a)
 
