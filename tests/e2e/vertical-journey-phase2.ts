@@ -89,9 +89,14 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       if (!isOnRoute) {
         await expect(attachBtn.first()).toBeVisible({ timeout: 10_000 });
         await attachBtn.first().click();
-        await page.waitForLoadState("networkidle", { timeout: 15_000 });
-        await page.reload();
-        await expect(onRouteText.first()).toBeVisible({ timeout: 10_000 });
+        // The server action commits asynchronously and an immediate
+        // reload can race it (an empty toast container also defeats
+        // any naive badge-wait). Poll: reload until the routing card
+        // flips to "On route:" — exactly what a real operator does.
+        await expect(async () => {
+          await page.reload();
+          await expect(onRouteText.first()).toBeVisible({ timeout: 3_000 });
+        }).toPass({ timeout: 30_000 });
       }
       await page.screenshot({ path: `${SCREENSHOTS}/23-order-attached.png`, fullPage: true });
     });
@@ -154,24 +159,23 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       await page.waitForLoadState("networkidle", { timeout: 10_000 });
       const sendBtn = page.getByRole("button", { name: /^send delivery$/i });
       await expect(sendBtn).toBeVisible({ timeout: 10_000 });
+      // Server actions POST back to the page URL. Arm the wait BEFORE
+      // clicking, and only reload after the POST completes — reloading
+      // mid-flight aborts the action and the dispatch never happens.
+      const dispatchResponse = page.waitForResponse(
+        (r) => r.request().method() === "POST",
+        { timeout: 20_000 },
+      );
       await sendBtn.click();
+      await dispatchResponse;
 
-      // Capture the action's badge before reload — if it returned ok=false
-      // (route stop missing, wrong role, etc.) we lose the message on reload.
-      const badge = page.locator(".badge.success, .badge.warning").last();
-      await expect(badge).toBeVisible({ timeout: 10_000 });
-      const badgeText = await badge.innerText();
-      test.info().annotations.push({
-        type: "result",
-        description: `Send-delivery badge: ${JSON.stringify(badgeText)}`,
-      });
-
-      await page.waitForLoadState("networkidle", { timeout: 15_000 });
-      await page.reload();
-      // Durable post-state — order status shows "Out for delivery".
-      await expect(page.getByText(/out for delivery/i).first()).toBeVisible({
-        timeout: 10_000,
-      });
+      // Then poll-reload until the durable post-state renders.
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByText(/out for delivery/i).first()).toBeVisible({
+          timeout: 3_000,
+        });
+      }).toPass({ timeout: 30_000 });
       await page.screenshot({ path: `${SCREENSHOTS}/26-dispatched.png`, fullPage: true });
     });
 
@@ -206,15 +210,21 @@ export function defineDeliveryAndCloseStages(vertical: string) {
         .getByRole("button", { name: /create documents|generate documents/i })
         .first();
       await expect(createDocsBtn).toBeVisible({ timeout: 10_000 });
+      const docsResponse = page.waitForResponse(
+        (r) => r.request().method() === "POST",
+        { timeout: 20_000 },
+      );
       await createDocsBtn.click();
-      await page.waitForLoadState("networkidle", { timeout: 15_000 });
-      await page.reload();
+      await docsResponse;
       // After creation the operator should see at least the rental
       // agreement document row. If only a generic empty state shows,
       // either the action errored or the page didn't refresh.
-      await expect(page.getByText(/rental agreement/i).first()).toBeVisible({
-        timeout: 10_000,
-      });
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByText(/rental agreement/i).first()).toBeVisible({
+          timeout: 3_000,
+        });
+      }).toPass({ timeout: 30_000 });
       await page.screenshot({ path: `${SCREENSHOTS}/28-documents.png`, fullPage: true });
     });
 
@@ -238,18 +248,24 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       const submit = page
         .locator('form:has(input[name="amount"]) button[type="submit"]')
         .first();
+      const paymentResponse = page.waitForResponse(
+        (r) => r.request().method() === "POST",
+        { timeout: 20_000 },
+      );
       await submit.click();
-      await page.waitForLoadState("networkidle", { timeout: 15_000 });
-      await page.reload();
-      await page.screenshot({ path: `${SCREENSHOTS}/29-balance-recorded.png`, fullPage: true });
+      await paymentResponse;
 
       // Outstanding balance label should now be $0.00. If the action
       // failed or the RPC silently dropped the payment, the previous
       // $165 number would persist.
-      await expect(page.getByText(/\$0\.00/).first()).toBeVisible({ timeout: 10_000 });
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByText(/\$0\.00/).first()).toBeVisible({ timeout: 3_000 });
+      }).toPass({ timeout: 30_000 });
+      await page.screenshot({ path: `${SCREENSHOTS}/29-balance-recorded.png`, fullPage: true });
     });
 
-    test("Stage 9: repeat customer reuses the existing record", async ({ browser, page }) => {
+    test("Stage 9a: repeat customer books a second event", async ({ browser }) => {
       // A returning customer (Avery Chen, who booked via Stage 4b)
       // books a second event on the storefront. The case-insensitive
       // email ilike in lib/checkout/actions.ts should reuse the
@@ -257,8 +273,12 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       const customerCtx = await browser.newContext({ ignoreHTTPSErrors: true });
       const customer = await customerCtx.newPage();
 
+      // Jitter the event date (+30..+49 days) so a re-run against
+      // un-reset data doesn't collide with the previous run's booking
+      // — the availability guard correctly rejects "already reserved
+      // for the selected date" (verified: that's how we found it).
       const future = new Date();
-      future.setDate(future.getDate() + 35);
+      future.setDate(future.getDate() + 30 + (Date.now() % 20));
       const eventDate = future.toISOString().slice(0, 10);
       const params = new URLSearchParams({
         product: process.env.E2E_PRODUCT_SLUG ?? "e2e-13ft-castle-bouncer",
@@ -278,10 +298,14 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       await customer.fill('input[name="postal_code"]', process.env.E2E_SERVICE_AREA_ZIP ?? "22554");
       await customer.locator('input[name="terms_accepted"]').check();
       await customer.locator('button[type="submit"]').first().click();
-      await customer.waitForLoadState("networkidle", { timeout: 20_000 });
-      await expect(customer.getByText(/booking submitted/i)).toBeVisible({ timeout: 10_000 });
+      // No networkidle on the storefront — the Vercel Live feedback
+      // widget keeps sockets open and the wait burns its full timeout.
+      // The success banner appearing IS the settle signal.
+      await expect(customer.getByText(/booking submitted/i)).toBeVisible({ timeout: 20_000 });
       await customerCtx.close();
+    });
 
+    test("Stage 9b: operator CRM shows one Avery with two orders", async ({ page }) => {
       // Operator side — customer detail page should now show two
       // orders for Avery. If the email lookup misfired and a duplicate
       // customer row was created, the operator's CRM is polluted on
@@ -289,7 +313,12 @@ export function defineDeliveryAndCloseStages(vertical: string) {
       await page.goto("/dashboard/customers");
       await page.screenshot({ path: `${SCREENSHOTS}/30-customers-list.png`, fullPage: true });
 
-      const averyLink = page.getByRole("link", { name: /avery/i }).first();
+      // Customer rows render the name in a nested div, so the link has
+      // no accessible name — match by href + contained text instead.
+      const averyLink = page
+        .locator('a[href^="/dashboard/customers/"]')
+        .filter({ hasText: /avery/i })
+        .first();
       await expect(averyLink).toBeVisible({ timeout: 10_000 });
       await page.goto((await averyLink.getAttribute("href"))!);
       await page.waitForLoadState("networkidle", { timeout: 10_000 });

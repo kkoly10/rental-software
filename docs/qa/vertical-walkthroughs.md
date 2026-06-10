@@ -44,9 +44,9 @@ registry's defaultCategorySeeds).
 | 5. Customer checkout + Stripe deposit | ❌ Stripe not configured | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 6. Operator receives order | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 7. Order management (confirm + DB truth) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 7b. Delivery + crew + pull sheet | ⚠️ partial | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 8. Balance + documents + close | ⏳ blocked | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| 9. Repeat customer / CRM | ⏳ blocked | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 7b. Delivery + crew + pull sheet | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 8. Balance + documents + close | ✅ (close UI still missing) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| 9. Repeat customer / CRM | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
 Tables & Chairs Stage 4b note: a single $3.50 Chiavari chair sits
 below the org's $100 service-area minimum, and the storefront
@@ -78,18 +78,53 @@ Phase 1 spec, with the org reset between (the same
 | Cross-write read staleness on order detail | **intermittent, real** | After Stage 7b-i creates a route, Stage 7b-ii's order-detail page intermittently renders *"No routes exist for this date yet"* even though the DB has the matching `route_date` row visible to the operator's RLS-scoped queries. Same shape as the Mark Confirmed bug — defensive write-then-read isn't enough; the next *page render* sometimes lags. Needs Vercel server-side logs to root-cause. |
 | Stage 7b-v crew today empty for future-dated order | low | Expected behaviour — the test event date is +14 days, so the crew "today" view won't carry it. Worth re-running on the event-date itself to confirm a stop renders with customer, address, and product. |
 
-### Stage results — inflatable Phase 2
+### Stage results — inflatable Phase 2 (final: 21/21 green)
 
 | Stage | Result | Note |
 |---|---|---|
 | 7b-i — Create delivery route | ✅ | |
-| 7b-ii — Order on route (auto or manual) | ⚠️ intermittent | Read staleness; passes in isolation, fails inside the same-run flow. |
-| 7b-iii — Pull sheet renders with name + customer + product | ⏳ blocked | Reachable via "View route" link on the order detail; gated by 7b-ii. |
-| 7b-iv — Dispatch (Send delivery) | ⏳ blocked | Click fires but observed staleness in the same session. |
+| 7b-ii — Order on route (auto or manual) | ✅ | After the order-routing `created_at` fix the card lists candidate routes for the first time; manual attach verified. |
+| 7b-iii — Pull sheet renders with name + customer + product | ✅ | Via the order's "View route" link. |
+| 7b-iv — Dispatch (Send delivery) | ✅ | After the dispatch-RPC `assigned` fix (below). |
 | 7b-v — Crew today renders without 500 | ✅ | |
-| 8a — Create rental documents | ⏳ blocked | Gated by 7b-iv to reach `out_for_delivery`. |
-| 8b — Record cash balance payment | ⏳ blocked | Same. |
-| 9 — Repeat customer reuses record | ⏳ blocked | Same. |
+| 8a — Create rental documents | ✅ | Rental agreement + safety waiver rows render. |
+| 8b — Record cash balance payment | ✅ | Balance drops to $0.00 via record_manual_payment RPC. |
+| 9a — Repeat customer books again | ✅ | Date-jittered so re-runs don't trip the (working) double-booking guard. |
+| 9b — CRM dedupes under one customer | ✅ | One Avery row, two ORD-* entries on her detail page. |
+
+### The "staleness" post-mortem — it was never staleness
+
+The intermittent "0 orders in your pipeline" / "No routes exist"
+failures had three real causes, all now fixed:
+
+1. **Test ordering, not the app.** Playwright runs spec files
+   alphabetically and `inflatable-phase2.spec.ts` sorts *before*
+   `inflatable.spec.ts` (`-` < `.`) — Phase 2 ran first against a
+   freshly-reset empty org, and "0 orders" was simply true. The
+   file is now `inflatable2.spec.ts`.
+2. **`order-routing.ts` ordered `routes` by `created_at`, a column
+   that table doesn't have.** PostgREST 400'd on every call, the
+   error was discarded, and the card rendered the no-routes empty
+   state 100% of the time. Manual attach had never worked in
+   production. Two sibling instances of the same class:
+   `maintenance/actions.ts` (assets ordered by missing
+   `created_at` → every maintenance action created a duplicate
+   asset) and `routes/auto-attach.ts` (routes filtered by missing
+   `deleted_at` → pickup auto-attach created a duplicate route per
+   invocation).
+3. **`dispatch_order_delivery` RPC only accepted
+   `stop_status='pending'`** — a value nothing ever writes; the
+   schema default and `add_stop_to_route` both write `'assigned'`.
+   Send Delivery had been dead-on-arrival for every
+   normally-attached stop. Fixed by migration
+   `20260610_010000_dispatch_accepts_assigned_stops.sql`.
+
+Defensive layer added so this bug class can't hide again:
+`lib/data/query-error.ts` routes loader failures to
+`app_error_logs` + Sentry, the routing card renders "Couldn't load
+routing info" instead of a fake empty state, and the orders list
+shows an error banner (`PaginatedResult.loadFailed`) instead of
+"no orders yet" when the query fails.
 
 ## Cross-cutting concerns (one walk covers all verticals)
 
