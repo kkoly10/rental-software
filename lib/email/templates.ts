@@ -183,6 +183,7 @@ export type OperatorActivityEvent =
   | "payment_received"
   | "document_signed"
   | "quote_accepted"
+  | "quote_requested"
   | "order_cancelled"
   | "portal_message";
 
@@ -210,6 +211,10 @@ const EVENT_COPY: Record<OperatorActivityEvent, { headline: string; lead: string
   quote_accepted: {
     headline: "Quote accepted",
     lead: "The customer accepted the quote and is being routed to deposit.",
+  },
+  quote_requested: {
+    headline: "Quote requested",
+    lead: "A customer asked for a quote from your storefront — review the details and send your pricing.",
   },
   order_cancelled: {
     headline: "Order cancelled by customer",
