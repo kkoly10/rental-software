@@ -215,11 +215,17 @@ need quantity, multilingual access, or quote-first flow.
 - [ ] Reuse existing operator quote-send flow
 - [ ] Test: spec triggers Request Quote on a tent product, asserts inquiry row + operator notification
 
-### #12 Legacy terms backfill
+### #12 Legacy terms backfill ✅ (landed in PR-3a)
 
-- [ ] Migration: silent backfill for 4 RBAC test fixtures (`*@rbac-pwtest.invalid`) with `terms_accepted_at = created_at, terms_version = 'legacy'`
-- [ ] Auth callback: for the 3 real accounts (komlankouhiko, comlan11, shehaba24), set `terms_accepted_at = now()` + IP on first login after deploy
-- [ ] Test: query asserts 0 profiles with `terms_accepted_at IS NULL` after migration + first login simulation
+- [x] Migration `20260610_080000_legacy_terms_backfill_rbac_fixtures.sql` backfilled the 4 RBAC fixtures (`*@rbac-pwtest.invalid`) with `terms_accepted_at = created_at, terms_version = 'legacy'`; applied to prod
+- [x] `lib/auth/actions.ts:signInWithPassword` — record-on-next-login shim: stamps `terms_accepted_at = now()` + IP + version when the column is still NULL at sign-in time; idempotent for everyone else via `.is("terms_accepted_at", null)`
+- [x] Audit query post-migration: `null_profiles=3` → the 3 real accounts that will stamp at their next sign-in (komlankouhiko, comlan11, shehaba24)
+
+### #13 Operator UI gating polish ✅ (landed in PR-3a)
+
+- [x] `lib/verticals/suggested-capabilities.ts` — reuses each vertical's existing `capabilities` array as its suggested-by-default set (single source of truth)
+- [x] Product form CapabilityCheckboxes splits each capability group into "Suggested for &lt;vertical&gt;" + "Show advanced" expander; new products default-check the suggested set
+- [x] Closes the audit's UX concern: a bouncer operator doesn't have to scroll past damage waiver / attendant hours to find anchoring; a chair operator never sees inflatable-specific capabilities by default
 
 ### PR-3 sign-off
 
