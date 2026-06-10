@@ -36,7 +36,7 @@ This marketplace should feel:
 
 The marketplace must support:
 - verified renters and sellers
-- seller storefronts
+- seller store pages (inside the marketplace — NOT standalone websites)
 - listing publication
 - pricing intelligence
 - deposits/holds
@@ -98,7 +98,7 @@ SHARED CORE:
 - audit/event infrastructure
 
 MARKETPLACE-ONLY:
-- seller storefronts
+- seller store pages
 - marketplace listings
 - category/risk-based listing publication
 - booking reservations
@@ -771,12 +771,39 @@ Ranking inputs should include:
 Do not rank purely by price.
 
 ==================================================
-22. SELLER STOREFRONTS
+22. SELLER STORE PAGES (NOT WEBSITES)
 ==================================================
 
-Each seller should have:
+CRITICAL DISTINCTION — do not confuse the two "storefront" concepts
+in this repo:
+
+1. The operator SaaS sells white-label STOREFRONT WEBSITES
+   (own subdomain + custom domain). That is a SaaS product feature
+   and stays exactly as it is.
+2. The MARKETPLACE is one single destination site (eBay/Amazon model).
+   Marketplace sellers get a STORE PAGE inside the marketplace —
+   a profile page at a path like /store/{slug} — NOT a website,
+   NOT a subdomain, NOT a custom domain.
+
+Rules:
+- All browsing, search, listing pages, store pages, booking, and
+  checkout happen on the one marketplace domain.
+- Marketplace sellers do NOT get standalone websites from the
+  marketplace. Demand must aggregate into shared search — per-seller
+  websites fragment liquidity and defeat the marketplace.
+- Store pages must NOT link out to a seller's own website, social
+  profiles, or contact channels. An external link is an off-platform
+  leakage channel (see sections 18 and 20) — same policy eBay/Amazon
+  enforce.
+- A Korent SaaS operator may run their own white-label website (their
+  SaaS product) AND sell on the marketplace. The two surfaces stay
+  separate: their marketplace presence is their store page; their
+  website is never embedded in, linked from, or merged with the
+  marketplace.
+
+Each seller store page should show:
 - store name
-- slug
+- slug (marketplace path segment, e.g. /store/{slug})
 - logo / banner
 - description
 - service radius
@@ -784,7 +811,7 @@ Each seller should have:
 - ratings and review count
 - verification badges
 - response-time indicators
-- live inventory
+- live inventory (their published listings)
 
 Korent operators and marketplace-only sellers should both fit the organization model, but marketplace-only sellers can have lighter operator tooling.
 
@@ -915,7 +942,7 @@ Phase 1
 - policy registry
 - world/category/risk-family config
 - restricted item policy
-- seller storefront model
+- seller store page model
 - marketplace listing model
 
 Phase 2

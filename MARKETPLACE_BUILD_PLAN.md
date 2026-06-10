@@ -69,7 +69,7 @@ A confirmed marketplace booking does NOT call operator code or insert operator r
 
 ### Extend (the two real schema-level changes to shared tables)
 - **Renter auth**: today only operators have accounts. Marketplace renters become Supabase Auth users with `profiles` rows and **no org membership** — verification state lives in `market.user_verification`. This is the largest accounts-model change in the plan.
-- **Seller = organization**: marketplace-only sellers are lightweight `organizations` rows (spec §22 already calls for this). Storefront identity (name, slug, badges, response metrics) lives in `market.seller_storefronts` keyed by org id — no changes to operator org columns.
+- **Seller = organization**: marketplace-only sellers are lightweight `organizations` rows (spec §22 already calls for this). Store-page identity (name, slug, badges, response metrics) lives in `market.seller_profiles` keyed by org id — no changes to operator org columns. Per spec §22, marketplace sellers get a store *page* on the marketplace domain (`/store/{slug}`), never a subdomain or website — the SaaS white-label storefront product is a separate surface and is untouched.
 
 ### Build new (no operator counterpart exists)
 Listings + publication workflow, booking state machine (§13), Stripe **Connect** onboarding/payouts/ledgers (§15), deposit engine (§9), reviews, search/ranking (§21), marketplace conversations + moderation (§18, §20, §26 — the existing `messages` table is the wrong shape and stays untouched), disputes/claims (§17), verification workflows (§12, provider TBD), benchmarks (§11, curated-manual at launch), bridge outbox/inbox (§27), admin/trust surfaces, smoke-test world pages + waitlist + demand logging (§31).
@@ -90,7 +90,7 @@ Each sprint ends with a gate; don't start the next until it passes or is explici
 *Gate: registry boot-validates like the verticals registry; a renter can create an account; lint rule fails a deliberate cross-boundary import.*
 
 **M1 — Supply + demand sensing (week 3-5)**
-Seller storefronts (`market.seller_storefronts`); listing model + draft→pending→published workflow with moderation flag; Korent-operator "list on marketplace" path reading from their existing `products` (ID reference only); **all 7 worlds browsable** — hosting-and-events bookable later, other 6 in smoke-test mode with search logging, waitlists, draft pre-listings (§31).
+Seller store pages (`market.seller_profiles`, served at `/store/{slug}` on the marketplace domain — not subdomains); listing model + draft→pending→published workflow with moderation flag; Korent-operator "list on marketplace" path reading from their existing `products` (ID reference only); **all 7 worlds browsable** — hosting-and-events bookable later, other 6 in smoke-test mode with search logging, waitlists, draft pre-listings (§31).
 *Gate: a seller can publish a listing in hosting-and-events; smoke-test worlds record searches + waitlist joins; demand dashboard query works.*
 
 **M2 — Reservations + booking (week 6-8)**
