@@ -97,16 +97,27 @@ verifies the rendered body. Listed below as a follow-up.
 - **Terms acceptance audit trail surface check** — `/login` boots
   cleanly; audit-column existence is exercised by the runtime
   cron paths.
+- **Terms-acceptance write was dead in production — fixed.** The
+  closing review queried the live DB: ZERO of 7 profiles carried
+  `terms_accepted_at` despite 6 signing up after the feature
+  shipped. Root cause: the signup action called
+  `supabase.auth.getUser()` right after `signUp`, but with email
+  confirmation required signUp creates NO session, so the guard
+  was always null and the write silently never ran. Fixed to use
+  the user id from the signUp response itself, with loud
+  `logAppError` on every miss path so an empty audit trail can
+  never be silent again.
 
 ## Numbers
 
 - **6/6 verticals** walk green end-to-end (Phase 1 stages 1–7).
 - **inflatable Phase 2** walks green end-to-end including dispatch,
   documents, cash payment, repeat-customer CRM dedup (21/21).
-- **9 production bug fixes** found by the walks (3 swallowed-error
-  bugs, the dispatch RPC, the unit-label trap, the phantom Mark
-  Confirmed, the missing address requirement, two WCAG contrast
-  failures).
+- **10 production bug fixes** found by the walks + reviews (3
+  swallowed-error bugs, the dispatch RPC, the unit-label trap, the
+  phantom Mark Confirmed, the missing address requirement, two WCAG
+  contrast failures, and the dead terms-acceptance write — see
+  Tier 3).
 - **362 unit tests** including 9 new for the webhook state machine.
 - **Cross-org isolation** verified end-to-end: 6 foreign resources
   (order/product/customer/route + invoice/quote PDFs), 6 refused.
@@ -142,6 +153,12 @@ These are explicitly tracked, not gaps the program missed:
    the webhook secret + cron secret are configured. Verify
    `STRIPE_WEBHOOK_SECRET` and `CRON_SECRET` are present in the
    production env vars.
+7. **Legacy profiles have no recorded terms acceptance** — the 7
+   existing accounts predate the terms-write fix and carry empty
+   audit fields. Backfilling fabricated timestamps would be worse
+   than the gap; the honest remedies are a re-acceptance prompt at
+   next sign-in or recording acceptance on next login. Product
+   decision required.
 
 ## Files of interest for the on-call
 
