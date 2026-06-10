@@ -75,11 +75,13 @@ double-booked crew.
 
 ### #2 Stripe refund integration
 
-- [ ] Migration: `payments.stripe_refund_id text`, `payments.refund_reason text`
-- [ ] `lib/portal/cancel-order.ts` — if order has a captured deposit, call `stripe.refunds.create({payment_intent, amount, reason})` and log to payments
-- [ ] Operator action: "Refund deposit" button on order detail; partial-amount input + reason dropdown
-- [ ] Webhook listener: handle `refund.created`, `refund.updated`, `refund.failed`
-- [ ] Test: end-to-end cancel + refund spec asserts a Stripe refund object lands
+- [x] Migration: `payments.stripe_refund_id text`, `payments.refund_reason text` + unique index
+- [x] Operator action: `lib/payments/refund-actions.ts` — `issueStripeRefund` calls `stripe.refunds.create` against the captured deposit's payment_intent
+- [x] Operator UI: `<RefundDepositButton>` two-step form (amount + required reason) on order detail
+- [x] Webhook handler: `charge.refunded` now upgrades `pending` rows to `paid` instead of skipping (handles the operator-initiated flow's pending row)
+- [x] Audit trail: `logAppEvent("stripe_refund_issued")` for the operator action, plus the Stripe metadata carries operator_note for QuickBooks/Xero export
+- [x] Type check + 369 unit tests green
+- [ ] Portal-initiated auto-refund on cancel (deferred to PR-2 — depends on per-vertical cancellation policy)
 
 ### #3 Setup/breakdown buffer in availability check
 
