@@ -11,25 +11,27 @@
  */
 
 :root:not(:has(.sidebar-layout)) {
-  /* ── Brand color tokens (defaults — overridden by BrandStyleInjector) ── */
-  --st-primary: var(--primary, #0f766e);
-  --st-primary-dim: color-mix(in srgb, var(--st-primary) 82%, #000);
-  --st-primary-soft: color-mix(in srgb, var(--st-primary) 14%, #fff);
-  --st-accent: var(--accent, #f97316);
+  /* ── Brand color tokens — Carnival theme defaults (overridden by BrandStyleInjector) ── */
+  --st-primary: var(--primary, #e8590c);
+  --st-primary-dim: color-mix(in srgb, var(--st-primary) 86%, #000);
+  --st-primary-soft: #fff1e8;
+  --st-primary-light: #ff8c42;
+  --st-accent: var(--accent, #7c3aed);
   --st-accent-dim: color-mix(in srgb, var(--st-accent) 86%, #000);
-  --st-accent-soft: color-mix(in srgb, var(--st-accent) 18%, #fff);
+  --st-accent-soft: #f3f0ff;
 
-  /* ── Neutral tokens ── */
-  --st-text: #0c1322;
-  --st-muted: #64748b;
-  --st-muted-2: #94a3b8;
-  --st-bg: #fffbf5;
-  --st-bg-warm: linear-gradient(135deg, #fef3e6 0%, #fff9ef 100%);
+  /* ── Neutral tokens — warm-tinted (carnival) ── */
+  --st-text: #2d1f14;
+  --st-muted: #6b5545;
+  --st-muted-2: #8a7565;
+  --st-bg: #fffaf5;
+  --st-bg-alt: #fff3e8;
+  --st-bg-warm: linear-gradient(135deg, #fff3e8 0%, #fffaf5 100%);
   --st-card: #ffffff;
-  --st-line: #f1ece1;
-  --st-line-strong: #e8e0d0;
+  --st-line: #f0e0d0;
+  --st-line-strong: #e0cdbf;
   --st-success: #16a34a;
-  --st-success-soft: rgba(22, 163, 74, 0.08);
+  --st-success-soft: #f0fdf4;
 
   /* ── Spacing scale ── */
   --st-space-1: 4px;
@@ -57,8 +59,9 @@
   --st-shadow-cta-accent: 0 10px 24px -8px color-mix(in srgb, var(--st-accent) 55%, transparent);
   --st-shadow-cta-primary: 0 6px 16px -4px color-mix(in srgb, var(--st-primary) 35%, transparent);
 
-  /* ── Typography ── */
-  --st-font: var(--brand-font, "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  /* ── Typography — Carnival uses Sora for display, Plus Jakarta Sans for body ── */
+  --st-font: var(--brand-font, "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  --st-font-display: "Sora", var(--st-font);
   --st-text-12: 12px;
   --st-text-13: 13px;
   --st-text-14: 14px;
@@ -177,10 +180,10 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
  * Hero
  * ────────────────────────────────────────────────────────────────── */
 .st-hero {
-  padding: 36px 0 32px;
+  padding: 64px 0 56px;
   display: grid;
-  grid-template-columns: 1fr 1.15fr;
-  gap: 36px;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
   align-items: center;
 }
 .st-hero-text { display: flex; flex-direction: column; gap: 22px; }
@@ -209,35 +212,59 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
   50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--st-success) 5%, transparent); }
 }
 .st-h1 {
-  font-size: var(--st-text-60);
-  line-height: 0.96;
+  font-family: var(--st-font-display);
+  font-size: 56px;
+  line-height: 1.05;
   letter-spacing: -0.035em;
   font-weight: 700;
   margin: 0;
   color: var(--st-text);
 }
-.st-h1 .st-h1-accent {
-  color: var(--st-accent);
-  font-style: italic;
-}
+.st-h1 .st-h1-accent { color: var(--st-text); font-style: normal; }
 .st-hero-sub {
   font-size: var(--st-text-17);
   color: var(--st-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
-  max-width: 480px;
+  max-width: 460px;
 }
 
-/* Availability card */
+/* Hero stats row — three vertical metric blocks under the sub-headline */
+.st-hero-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+.st-hero-stat-value {
+  font-family: var(--st-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--st-primary);
+  line-height: 1.2;
+}
+.st-hero-stat-label { font-size: 13px; color: var(--st-muted-2); }
+
+/* Availability card — Carnival theme floats this OVER the hero photo,
+   overhanging the photo's bottom edge by 28px. On mobile we drop it
+   back inline (see media query at the bottom of the hero block). */
 .st-av-card {
   background: var(--st-card);
-  border-radius: var(--st-radius-xl);
+  border-radius: var(--st-radius-md);
   box-shadow: var(--st-shadow-lg);
   border: 1px solid var(--st-line);
-  padding: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+}
+.st-av-card-title {
+  font-family: var(--st-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--st-text);
+}
+.st-hero-visual .st-av-card {
+  position: absolute;
+  bottom: -28px;
+  left: 24px;
+  right: 24px;
+  z-index: 2;
 }
 .st-av-row { display: flex; gap: 10px; }
 .st-av-field {
@@ -271,20 +298,28 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
 .st-av-actions { display: flex; gap: 10px; }
 .st-av-go {
   flex: 1;
-  background: var(--st-accent);
+  background: var(--st-primary);
   color: white;
   border: none;
-  border-radius: var(--st-radius-md);
+  border-radius: var(--st-radius-sm);
   padding: 15px 22px;
-  font-size: 15.5px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--st-shadow-cta-accent);
+  box-shadow: var(--st-shadow-cta-primary);
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: transform 0.15s;
+  font-family: inherit;
 }
 .st-av-go:hover { transform: translateY(-1px); }
 .st-av-go svg { width: 18px; height: 18px; }
+/* When the search button sits inline in the row (Carnival hero), it's
+   icon-only and self-stretching rather than full-width. */
+.st-av-row > .st-av-go {
+  flex: 0 0 auto;
+  padding: 0 22px;
+  align-self: stretch;
+}
 .st-av-quote {
   background: white;
   border: 1px solid var(--st-line-strong);
@@ -308,14 +343,22 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
 .st-stars strong { color: var(--st-text); font-size: var(--st-text-14); }
 .st-dot { width: 4px; height: 4px; background: var(--st-line-strong); border-radius: 50%; }
 
-/* Hero visual */
+/* Hero visual — the .st-av-card overhang means we need spacing room
+   below for the floating booking card. The actual photo lives in
+   .st-hero-photo-frame so .st-hero-visual can host the floating card. */
 .st-hero-visual {
   position: relative;
-  border-radius: var(--st-radius-2xl);
+  /* Leave room below the photo for the floating booking card overhang. */
+  padding-bottom: 32px;
+}
+.st-hero-photo-frame {
+  position: relative;
+  border-radius: var(--st-radius-lg);
   overflow: hidden;
   aspect-ratio: 5/4;
   box-shadow: var(--st-shadow-xl);
   background-color: #f3eedd;
+  border: 1px solid var(--st-line);
 }
 .st-hero-photo {
   position: absolute; inset: 0;
@@ -350,11 +393,17 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
 @media (max-width: 980px) {
   .st-hero {
     grid-template-columns: 1fr;
-    padding: 18px 0 28px;
-    gap: 22px;
+    padding: 28px 0 40px;
+    gap: 28px;
   }
-  .st-hero-visual { aspect-ratio: 4/3; order: -1; border-radius: var(--st-radius-lg); }
-  .st-h1 { font-size: var(--st-text-38); }
+  .st-hero-visual { order: -1; padding-bottom: 0; }
+  .st-hero-photo-frame { aspect-ratio: 4/3; border-radius: var(--st-radius-md); }
+  .st-hero-visual .st-av-card {
+    position: static;
+    bottom: auto; left: auto; right: auto;
+    margin-top: 16px;
+  }
+  .st-h1 { font-size: 36px; line-height: 1.1; }
   .st-hero-sub { font-size: var(--st-text-15); }
   .st-av-actions { flex-direction: column; }
   .st-av-quote { width: 100%; }
@@ -366,34 +415,43 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
  * Trust strip
  * ────────────────────────────────────────────────────────────────── */
 .st-trust {
-  background: var(--st-bg-warm);
+  background: var(--st-card);
   border-top: 1px solid var(--st-line);
   border-bottom: 1px solid var(--st-line);
-  padding: 44px 0;
+  padding: 48px 0 40px;
+  margin-top: 28px;
 }
 .st-trust-inner {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  max-width: 960px;
+  margin: 0 auto;
 }
 .st-trust-item { display: flex; gap: 14px; align-items: flex-start; }
 .st-trust-icon {
   width: 44px; height: 44px;
-  background: white;
+  background: var(--st-primary-soft);
   border-radius: var(--st-radius-md);
   display: grid; place-items: center;
   color: var(--st-primary);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.1);
+  font-size: 20px;
 }
 .st-trust-icon svg { width: 22px; height: 22px; }
-.st-trust-title { font-weight: 700; font-size: var(--st-text-15); margin-bottom: 3px; }
-.st-trust-sub { color: var(--st-muted); font-size: var(--st-text-13); line-height: 1.45; }
+.st-trust-title {
+  font-family: var(--st-font-display);
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 3px;
+  color: var(--st-text);
+}
+.st-trust-sub { color: var(--st-muted); font-size: var(--st-text-14); line-height: 1.55; }
 @media (max-width: 980px) {
   .st-trust { padding: 32px 0; }
-  .st-trust-inner { grid-template-columns: 1fr 1fr; gap: 16px; }
-  .st-trust-title { font-size: var(--st-text-14); }
-  .st-trust-sub { font-size: 12.5px; }
+  .st-trust-inner { grid-template-columns: 1fr; gap: 20px; }
+  .st-trust-title { font-size: 15px; }
+  .st-trust-sub { font-size: 13px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -435,37 +493,63 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Section headers (shared)
+ * Section headers (shared) — Carnival theme uses a colored UPPERCASE
+ * kicker above the headline and a serif-free Sora display face.
  * ────────────────────────────────────────────────────────────────── */
-.st-section { padding: 56px 0 40px; }
+.st-section { padding: 72px 0 56px; }
+.st-section-soft { background: var(--st-bg); }
+.st-section-card { background: var(--st-card); }
 .st-section-head {
-  display: flex; justify-content: space-between; align-items: end;
-  margin-bottom: 24px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  margin-bottom: 36px;
   gap: 18px;
 }
-.st-section-title {
-  font-size: var(--st-text-32);
+.st-section-head-center { justify-content: center; text-align: center; margin-bottom: 48px; }
+.st-section-kicker {
+  display: block;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 0 0 4px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--st-primary);
+  margin-bottom: 8px;
+}
+.st-section-title {
+  font-family: var(--st-font-display);
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--st-text);
 }
 .st-section-sub {
   color: var(--st-muted);
-  font-size: 15.5px;
-  margin: 0;
-  max-width: 460px;
+  font-size: 16px;
+  margin: 8px 0 0;
+  max-width: 480px;
 }
 .st-section-link {
+  background: transparent;
   color: var(--st-primary);
-  font-size: 14.5px;
-  font-weight: 700;
+  border: 1.5px solid var(--st-primary);
+  border-radius: var(--st-radius-md);
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+.st-section-link:hover { background: var(--st-primary-soft); }
 @media (max-width: 980px) {
-  .st-section { padding: 36px 0 28px; }
-  .st-section-head { margin-bottom: 16px; flex-direction: column; align-items: flex-start; }
-  .st-section-title { font-size: 24px; }
-  .st-section-sub { font-size: var(--st-text-14); }
+  .st-section { padding: 48px 0 36px; }
+  .st-section-head { margin-bottom: 24px; flex-direction: column; align-items: flex-start; }
+  .st-section-title { font-size: 28px; }
+  .st-section-sub { font-size: 14.5px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -683,3 +767,396 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
   .st-service-card { grid-template-columns: 1fr; padding: 24px; gap: 20px; }
   .st-service-map { height: 200px; }
 }
+
+/* ──────────────────────────────────────────────────────────────────
+ * Product card — Carnival theme
+ * Big image up top with corner pills (category + availability),
+ * name + description, price + soft CTA at the bottom.
+ * ────────────────────────────────────────────────────────────────── */
+.st-products-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+.st-product-card {
+  background: var(--st-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-line);
+  overflow: hidden;
+  box-shadow: var(--st-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.st-product-card:hover { transform: translateY(-2px); box-shadow: var(--st-shadow-md); }
+.st-product-card-unavailable { opacity: 0.72; }
+.st-product-media {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  background: var(--st-bg-alt);
+}
+.st-product-media img,
+.st-product-media-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.st-product-pill-cat {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: var(--st-card);
+  color: var(--st-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--st-radius-pill);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.st-product-pill-status {
+  position: absolute;
+  top: 12px; right: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--st-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.st-product-pill-status.is-available {
+  background: var(--st-success-soft);
+  color: var(--st-success);
+}
+.st-product-pill-status.is-available::before {
+  content: ""; width: 6px; height: 6px; border-radius: 99px; background: var(--st-success);
+}
+.st-product-pill-status.is-limited {
+  background: #fffbeb; color: #d97706;
+}
+.st-product-pill-status.is-unavailable {
+  background: #fef2f2; color: #dc2626;
+}
+.st-product-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 6px;
+}
+.st-product-name {
+  font-family: var(--st-font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--st-text);
+  margin: 0;
+}
+.st-product-desc {
+  font-size: 14px;
+  color: var(--st-muted);
+  line-height: 1.55;
+  margin: 0;
+  flex: 1;
+  /* Clamp to two lines so cards stay equal height */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.st-product-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.st-product-price {
+  font-family: var(--st-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--st-text);
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.st-product-price-period {
+  font-size: 14px;
+  color: var(--st-muted-2);
+  font-weight: 500;
+}
+.st-product-cta {
+  background: var(--st-primary-soft);
+  color: var(--st-primary);
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--st-radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+.st-product-cta:hover { background: color-mix(in srgb, var(--st-primary) 18%, #fff); }
+@media (max-width: 980px) {
+  .st-products-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .st-product-media { height: 160px; }
+  .st-product-body { padding: 16px; }
+}
+@media (max-width: 540px) {
+  .st-products-grid { grid-template-columns: 1fr; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * How-it-works — three numbered cards on a warm bg
+ * ────────────────────────────────────────────────────────────────── */
+.st-hiw {
+  background: var(--st-card);
+}
+.st-hiw-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.st-hiw-card {
+  background: var(--st-bg);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-line);
+  padding: 28px;
+}
+.st-hiw-num {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--st-radius-pill);
+  background: var(--st-primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--st-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+.st-hiw-title {
+  font-family: var(--st-font-display);
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--st-text);
+  margin: 0 0 8px;
+}
+.st-hiw-desc { font-size: 15px; color: var(--st-muted); line-height: 1.6; margin: 0; }
+@media (max-width: 980px) {
+  .st-hiw-grid { grid-template-columns: 1fr; gap: 16px; }
+  .st-hiw-card { padding: 22px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Combined service-area + FAQ row
+ * ────────────────────────────────────────────────────────────────── */
+.st-svc-faq {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 56px;
+  align-items: start;
+}
+.st-svc-faq .st-zip-grid { flex-direction: column; gap: 10px; }
+.st-svc-faq .st-zip-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--st-bg);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-radius-md);
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.st-svc-faq .st-zip-pill::before {
+  content: "📍";
+  width: 36px;
+  height: 36px;
+  border-radius: var(--st-radius-sm);
+  background: var(--st-primary-soft);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.st-svc-faq-faq-list { display: flex; flex-direction: column; gap: 10px; }
+.st-svc-faq-item {
+  background: var(--st-bg);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-radius-md);
+  padding: 16px 20px;
+}
+.st-svc-faq-trigger {
+  display: flex;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  font-family: inherit;
+  text-align: left;
+}
+.st-svc-faq-q {
+  font-weight: 600;
+  font-size: 15.5px;
+  color: var(--st-text);
+}
+.st-svc-faq-toggle {
+  color: var(--st-primary);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.st-svc-faq-a {
+  font-size: 14.5px;
+  color: var(--st-muted);
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+@media (max-width: 980px) {
+  .st-svc-faq { grid-template-columns: 1fr; gap: 36px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * CTA banner — orange gradient with white button
+ * ────────────────────────────────────────────────────────────────── */
+.st-cta-banner-wrap { padding: 48px 0; background: var(--st-bg); }
+.st-cta-banner {
+  background: linear-gradient(135deg, var(--st-primary) 0%, var(--st-primary-light) 100%);
+  border-radius: var(--st-radius-lg);
+  padding: 48px 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  box-shadow: var(--st-shadow-lg);
+}
+.st-cta-banner-title {
+  font-family: var(--st-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin: 0;
+}
+.st-cta-banner-sub {
+  font-size: 17px;
+  color: rgba(255,255,255,0.92);
+  margin: 8px 0 0;
+}
+.st-cta-banner-btn {
+  background: #fff;
+  color: var(--st-primary);
+  border: none;
+  padding: 16px 36px;
+  border-radius: var(--st-radius-md);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  text-decoration: none;
+  display: inline-block;
+}
+.st-cta-banner-btn:hover { transform: translateY(-1px); }
+@media (max-width: 980px) {
+  .st-cta-banner { flex-direction: column; align-items: flex-start; padding: 32px 28px; gap: 20px; }
+  .st-cta-banner-title { font-size: 26px; }
+  .st-cta-banner-sub { font-size: 15px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Reviews — Carnival treatment (kept compatible with existing JSX)
+ * ────────────────────────────────────────────────────────────────── */
+.st-reviews-section { background: var(--st-bg); }
+.st-review-card {
+  background: var(--st-card);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-radius-lg);
+  padding: 26px;
+  box-shadow: var(--st-shadow-sm);
+}
+.st-review-avatar {
+  background: linear-gradient(135deg, var(--st-primary) 0%, var(--st-primary-light) 100%);
+  color: #fff;
+  font-family: var(--st-font-display);
+}
+.st-review-stars {
+  color: #f59e0b;
+  letter-spacing: 2px;
+}
+.st-review-text { font-size: 15px; color: var(--st-muted); line-height: 1.65; }
+.st-review-name { font-family: inherit; color: var(--st-text); font-weight: 600; }
+
+/* ──────────────────────────────────────────────────────────────────
+ * Header tweaks — add tagline under business name + a CTA button
+ * ────────────────────────────────────────────────────────────────── */
+.st-header { padding: 4px 0; }
+.st-nav { padding: 16px 0; }
+.st-logo-mark {
+  background: linear-gradient(135deg, var(--st-primary), var(--st-primary-light));
+  font-size: 18px;
+}
+.st-logo-text {
+  display: flex;
+  flex-direction: column;
+  max-width: 280px;
+  line-height: 1.1;
+}
+.st-logo-name {
+  font-family: var(--st-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--st-text);
+}
+.st-logo-tagline {
+  font-size: 12px;
+  color: var(--st-muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.st-nav-cta {
+  background: var(--st-primary);
+  color: #fff;
+  border: none;
+  padding: 11px 22px;
+  border-radius: var(--st-radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(232, 89, 12, 0.22);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.st-nav-cta:hover { background: var(--st-primary-dim); }
+
+/* ──────────────────────────────────────────────────────────────────
+ * Hero rating chip — small pill above the H1
+ * ────────────────────────────────────────────────────────────────── */
+.st-hero-rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--st-card);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-radius-pill);
+  padding: 6px 14px;
+  font-size: 13px;
+  align-self: flex-start;
+}
+.st-hero-rating-chip-stars { color: #f59e0b; letter-spacing: 1px; }
+.st-hero-rating-chip strong { color: var(--st-text); font-weight: 700; }
+.st-hero-rating-chip-meta { color: var(--st-muted-2); }

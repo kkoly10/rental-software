@@ -2,17 +2,14 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ProductCard } from "@/components/public/product-card";
 import { HowItWorks } from "@/components/public/how-it-works";
-import { FaqSection } from "@/components/public/faq-section";
-import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { StorefrontShell } from "@/components/public/themes/party-classic/storefront-shell";
 import { PartyClassicHeader } from "@/components/public/themes/party-classic/header";
 import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
 import { PartyClassicTrustStrip } from "@/components/public/themes/party-classic/trust-strip";
-import { PartyClassicPressRow } from "@/components/public/themes/party-classic/press-row";
-import { PartyClassicCategoryTiles } from "@/components/public/themes/party-classic/category-tiles";
 import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
-import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
+import { PartyClassicServiceAreaFaq } from "@/components/public/themes/party-classic/service-area-faq";
+import { PartyClassicCtaBanner } from "@/components/public/themes/party-classic/cta-banner";
 import { SaasLanding } from "@/components/marketing/saas-landing";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
@@ -21,6 +18,7 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { isTenantHost } from "@/lib/auth/org-context";
 import { getContentSettings } from "@/lib/data/content-settings";
+import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
@@ -58,12 +56,13 @@ export default async function HomePage() {
 
   await requirePublicOrg();
 
-  const [featured, settings, contentSettings, isDemo, origin, { messages }] = await Promise.all([
+  const [featured, settings, contentSettings, isDemo, origin, areas, { messages }] = await Promise.all([
     getFeaturedCatalogList(),
     getOrganizationSettings(),
     getContentSettings(),
     isCurrentTenantDemo(),
     getRequestOrigin(),
+    getServiceAreasGeo(),
     getTranslator(),
   ]);
 
@@ -85,27 +84,22 @@ export default async function HomePage() {
       <main>
         <PartyClassicHero />
 
-        <PartyClassicPressRow />
-
         {vis.trust_bar !== false && <PartyClassicTrustStrip />}
 
-        {vis.category_grid !== false && <PartyClassicCategoryTiles />}
-
-        {/* Popular rentals — kept on the existing CSS classes for now;
-             the tile-style version comes in a follow-up. */}
-        <section className="section storefront-section-soft">
-          <div className="container">
-            <div className="section-header">
+        {/* Popular Rentals — Carnival theme */}
+        <section className="st-section">
+          <div className="st-container">
+            <div className="st-section-head">
               <div>
-                <div className="kicker">{m.storefront.popularRentals.kicker}</div>
-                <h2>{m.storefront.popularRentals.title}</h2>
-                <div className="muted">{m.storefront.popularRentals.description}</div>
+                <span className="st-section-kicker">{m.storefront.popularRentals.kicker}</span>
+                <h2 className="st-section-title">{m.storefront.popularRentals.title}</h2>
+                <p className="st-section-sub">{m.storefront.popularRentals.description}</p>
               </div>
-              <Link href="/inventory" className="ghost-btn">
-                {m.storefront.popularRentals.browseAll}
+              <Link href="/inventory" className="st-section-link">
+                {m.storefront.popularRentals.browseAll} →
               </Link>
             </div>
-            <div className="grid grid-4">
+            <div className="st-products-grid">
               {featured.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -128,19 +122,18 @@ export default async function HomePage() {
           </div>
         )}
 
-        {vis.service_area_map !== false && (
+        {vis.testimonials && <PartyClassicReviewsCards />}
+
+        {(vis.service_area_map !== false || vis.faq_section !== false) && (
           <div id="service-area">
-            <PartyClassicServiceArea />
+            <PartyClassicServiceAreaFaq
+              areas={vis.service_area_map !== false ? areas : []}
+              faqs={vis.faq_section !== false ? faqItems : []}
+            />
           </div>
         )}
 
-        {vis.about_section !== false && (
-          <AboutSection text={contentSettings.aboutText} />
-        )}
-
-        {vis.testimonials && <PartyClassicReviewsCards />}
-
-        {vis.faq_section !== false && <FaqSection customFaqs={faqItems} />}
+        <PartyClassicCtaBanner />
 
         <PublicFooter />
       </main>

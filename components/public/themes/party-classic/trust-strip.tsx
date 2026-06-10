@@ -2,26 +2,27 @@ import { getContentSettings } from "@/lib/data/content-settings";
 import { getTranslator } from "@/lib/i18n/server";
 
 const DEFAULT_ICONS: Array<(props: { className?: string }) => React.ReactNode> = [
-  // Insured / shield
+  // Shield (insured)
   () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
     </svg>
   ),
-  // Cleaned / checkmark
-  () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  ),
-  // On-time / clock
+  // Clock (on-time)
   () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 3" />
     </svg>
   ),
-  // Pricing / lines
+  // Sparkles (loved by families)
+  () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
+      <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z" />
+    </svg>
+  ),
+  // Pricing / lines (fallback)
   () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <path d="M3 12h18M3 6h18M3 18h12" />
@@ -35,17 +36,20 @@ export async function PartyClassicTrustStrip() {
     getTranslator(),
   ]);
 
-  // Use operator-overridden badges if they've curated their own; otherwise
-  // fall back to the i18n default set.
   const badges =
     contentSettings.trustBadges.length > 0
       ? contentSettings.trustBadges
       : m.storefront.trust.defaults;
 
+  // Carnival theme shows three trust pillars (mockup design).
+  // If the operator curated more, the extras are dropped from the
+  // homepage — they remain visible on dedicated trust pages.
+  const displayed = badges.slice(0, 3);
+
   return (
     <section className="st-trust">
       <div className="st-container st-trust-inner">
-        {badges.slice(0, 4).map((badge, i) => {
+        {displayed.map((badge, i) => {
           const Icon = DEFAULT_ICONS[i] ?? DEFAULT_ICONS[0];
           return (
             <div key={`${badge.title}-${i}`} className="st-trust-item">
