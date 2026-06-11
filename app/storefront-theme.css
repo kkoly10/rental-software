@@ -987,10 +987,12 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   text-shadow: 0 1px 16px rgba(0, 0, 0, 0.35);
 }
 /* Same specificity trap as the hero H1 (#346): .st-cat-tile-name is an
- * h3, and the body-scoped `h3 { color: var(--st-ink) }` rule (0,2,2)
- * outranks the single class (0,1,0) — rendering the tile caption in
- * near-black against the photo. Anchor through .st-shell to win. */
-.st-shell .st-cat-tile-name {
+ * h3, and the body-scoped `h3 { color: var(--st-ink) }` rule computes
+ * to (0,2,2) — two pseudo-class args + body + h3. A two-class override
+ * (0,2,0) ties on classes and LOSES on elements, so three class
+ * selectors are required to actually win. (Codex review on #368
+ * caught that the first attempt fell one class short.) */
+.st-shell .st-cat-tile .st-cat-tile-name {
   color: #fff;
 }
 .st-cat-tile-sub {
