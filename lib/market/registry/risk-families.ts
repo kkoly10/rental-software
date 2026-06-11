@@ -67,6 +67,9 @@ export const riskFamilies: readonly RiskFamily[] = [
   family("electronics-standard", "Electronics standard", {
     depositPct: 25,
     depositFloorCents: 10_000,
+    // Founder call (2026-06-11): instant book is the seller's choice
+    // for electronics — deposits/ID checks still apply either way.
+    instantBookAllowed: true,
     proofOfFunctionRequired: true,
     accessoriesChecklistRequired: true,
     prepBufferMinutes: 60,
@@ -78,6 +81,9 @@ export const riskFamilies: readonly RiskFamily[] = [
   family("high-value-electronics", "High-value electronics", {
     depositPct: 35,
     depositFloorCents: 25_000,
+    // Seller's choice here too; full-ID verification, the 35% deposit
+    // and listing review keep guarding the fraud-heavy tier.
+    instantBookAllowed: true,
     proofOfFunctionRequired: true,
     accessoriesChecklistRequired: true,
     listingReviewRequired: true,
