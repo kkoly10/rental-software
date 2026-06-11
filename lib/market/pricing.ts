@@ -114,3 +114,55 @@ export function suggestPricing(input: {
     explanation,
   };
 }
+
+/**
+ * Rate selection at booking time (Codex review on PR #381): once a
+ * seller advertises weekend/weekly rates, checkout must honor them.
+ * Deterministic and renter-favoring — the result NEVER exceeds plain
+ * daily × days:
+ *  - weekly: each full 7-day block bills the weekly rate when that's
+ *    cheaper; the remainder bills daily, capped at one more weekly
+ *    block (an 8-day rental never costs more than two weeks).
+ *  - weekend: a 2–3 day rental whose window covers both Saturday and
+ *    Sunday may bill the weekend rate (+ daily for a 3rd day) when
+ *    cheaper.
+ */
+export function computeRentalSubtotalCents(input: {
+  rentalDays: number;
+  quantity: number;
+  dailyCents: number;
+  weekendCents?: number | null;
+  weeklyCents?: number | null;
+  /** Rental start, used only for the Sat+Sun weekend test. */
+  startsAt?: Date | null;
+}): number {
+  const days = Math.max(1, Math.trunc(input.rentalDays));
+  const qty = Math.max(1, Math.trunc(input.quantity));
+  const daily = Math.max(0, Math.trunc(input.dailyCents));
+  let best = daily * days;
+
+  const weekly = input.weeklyCents ? Math.trunc(input.weeklyCents) : null;
+  if (weekly && weekly > 0 && days >= 7) {
+    const fullWeeks = Math.floor(days / 7);
+    const remainderDays = days % 7;
+    const remainder = Math.min(remainderDays * daily, weekly);
+    best = Math.min(best, fullWeeks * weekly + remainder);
+  }
+
+  const weekend = input.weekendCents ? Math.trunc(input.weekendCents) : null;
+  if (weekend && weekend > 0 && days >= 2 && days <= 3 && input.startsAt) {
+    // Window covers both Saturday and Sunday?
+    let coversSat = false;
+    let coversSun = false;
+    for (let i = 0; i < days; i++) {
+      const dow = new Date(input.startsAt.getTime() + i * 86_400_000).getUTCDay();
+      if (dow === 6) coversSat = true;
+      if (dow === 0) coversSun = true;
+    }
+    if (coversSat && coversSun) {
+      best = Math.min(best, weekend + (days - 2) * daily);
+    }
+  }
+
+  return best * qty;
+}

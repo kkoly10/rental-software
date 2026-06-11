@@ -98,3 +98,37 @@ test("unknown family falls back to 5%; tiny values return null", () => {
     null,
   );
 });
+
+test("booking subtotal honors weekly rate for 7+ day rentals, never above daily", async () => {
+  const { computeRentalSubtotalCents } = await import("../lib/market/pricing.ts");
+  const base = { quantity: 1, dailyCents: 4_000, weeklyCents: 16_000, weekendCents: null };
+  // 7 days: weekly $160 beats 7×$40=$280
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 7 }), 16_000);
+  // 8 days: $160 + 1×$40 = $200
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 8 }), 20_000);
+  // 13 days: remainder (6×$40=$240) caps at one weekly → $160+$160=$320
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 13 }), 32_000);
+  // expensive weekly never selected: weekly $400 > 7×$40
+  assert.equal(
+    computeRentalSubtotalCents({ ...base, weeklyCents: 40_000, rentalDays: 7 }),
+    28_000,
+  );
+  // quantity multiplies
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 7, quantity: 3 }), 48_000);
+});
+
+test("booking subtotal honors weekend rate only when window covers Sat+Sun", async () => {
+  const { computeRentalSubtotalCents } = await import("../lib/market/pricing.ts");
+  const base = { quantity: 1, dailyCents: 4_000, weeklyCents: null, weekendCents: 6_000 };
+  const sat = new Date("2026-06-13T00:00:00Z"); // Saturday
+  const mon = new Date("2026-06-15T00:00:00Z"); // Monday
+  // Sat→Sun (2 days): weekend $60 beats 2×$40=$80
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 2, startsAt: sat }), 6_000);
+  // Mon→Tue: no Sat+Sun coverage → daily
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 2, startsAt: mon }), 8_000);
+  // Fri→Sun (3 days incl Sat+Sun): $60 + 1×$40 = $100 < $120
+  const fri = new Date("2026-06-12T00:00:00Z");
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 3, startsAt: fri }), 10_000);
+  // 4+ days: weekend rate not applicable
+  assert.equal(computeRentalSubtotalCents({ ...base, rentalDays: 4, startsAt: fri }), 16_000);
+});
