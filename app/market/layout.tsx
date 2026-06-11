@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Sora, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./market.css";
 import { metroBySlug, DEFAULT_METRO_SLUG } from "@/lib/market/registry";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const sora = Sora({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--mk-font-display" });
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--mk-font-body" });
+// Self-hosted variable fonts (SIL OFL; latin subset, vendored in
+// app/market/fonts). next/font/google would refetch from
+// fonts.googleapis.com on EVERY build, so an egress-restricted CI or a
+// Google Fonts outage could block deploys (Codex review, PR #374).
+const sora = localFont({
+  src: "./fonts/sora-latin-var.woff2",
+  weight: "100 800",
+  variable: "--mk-font-display",
+});
+const jakarta = localFont({
+  src: "./fonts/jakarta-latin-var.woff2",
+  weight: "200 800",
+  variable: "--mk-font-body",
+});
 
 export const metadata: Metadata = {
   title: {
