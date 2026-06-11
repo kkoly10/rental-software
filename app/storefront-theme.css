@@ -1034,3 +1034,238 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
 .st-status[data-state="available"]   { color: var(--st-success); }
 .st-status[data-state="limited"]     { color: var(--st-warning); }
 .st-status[data-state="unavailable"] { color: var(--st-danger); }
+
+/* ──────────────────────────────────────────────────────────────────
+ * Skip-to-content link — a11y. Visually hidden until focused.
+ * ────────────────────────────────────────────────────────────────── */
+.st-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--st-ink);
+  color: var(--st-bg);
+  padding: 12px 18px;
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: var(--st-radius-2);
+  z-index: 100;
+}
+.st-skip-link:focus,
+.st-skip-link:focus-visible {
+  left: var(--st-container-pad);
+  top: 16px;
+  outline: none;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * How it works — three editorial blocks with italic serif numerals.
+ * ────────────────────────────────────────────────────────────────── */
+.st-how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 56px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.st-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.st-step-num {
+  font-family: var(--st-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--st-text-38);
+  color: var(--st-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.st-step-title {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: var(--st-text-22);
+  letter-spacing: -0.015em;
+  color: var(--st-ink);
+  line-height: 1.25;
+}
+.st-step-body {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-15);
+  line-height: 1.6;
+  color: var(--st-muted);
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .st-how-grid { grid-template-columns: 1fr; gap: 28px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Pull-quote review — one centered testimonial. Replaces the
+ * 3-card row.
+ * ────────────────────────────────────────────────────────────────── */
+.st-quote-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+.st-quote-stars {
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  color: var(--st-primary);
+  margin-bottom: 28px;
+}
+.st-quote-text {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: var(--st-text-32);
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--st-ink);
+  margin: 0;
+}
+.st-quote-text em { font-style: italic; }
+.st-quote-attr {
+  margin-top: 28px;
+  font-family: var(--st-font-body);
+  font-size: 12.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--st-muted-2);
+}
+.st-quote-link { margin-top: 22px; }
+@media (max-width: 760px) {
+  .st-quote-text { font-size: 24px; line-height: 1.3; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Coverage / service area — plain ZIP entries (no pills) + minimal
+ * warm-gradient map with olive dots.
+ * ────────────────────────────────────────────────────────────────── */
+.st-coverage-grid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 64px;
+  align-items: start;
+}
+.st-coverage-text { display: flex; flex-direction: column; gap: 24px; }
+.st-coverage-text .st-section-head { margin-bottom: 0; }
+.st-zip-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  column-gap: 28px;
+  row-gap: 14px;
+}
+.st-zip-entry {
+  display: flex;
+  flex-direction: column;
+}
+.st-zip-entry strong {
+  font-family: var(--st-font-display);
+  font-weight: 500;
+  font-size: var(--st-text-17);
+  color: var(--st-ink);
+  letter-spacing: -0.01em;
+}
+.st-zip-entry span {
+  font-family: var(--st-font-body);
+  font-size: 13.5px;
+  color: var(--st-muted);
+}
+.st-zip-more strong { color: var(--st-primary); }
+.st-coverage-footnote {
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  color: var(--st-muted-2);
+  font-style: italic;
+  margin: 0;
+}
+.st-coverage-map {
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--st-line);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 38% 52%, color-mix(in srgb, var(--st-primary) 12%, transparent) 0%, transparent 38%),
+    radial-gradient(circle at 62% 38%, color-mix(in srgb, var(--st-primary) 9%, transparent) 0%, transparent 38%),
+    linear-gradient(135deg, var(--st-bg-alt) 0%, var(--st-bg) 100%);
+}
+.st-coverage-pin {
+  position: absolute;
+  width: 9px; height: 9px;
+  background: var(--st-primary);
+  border: 2px solid var(--st-bg);
+  border-radius: 99px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--st-primary) 12%, transparent);
+  transform: translate(-50%, -50%);
+}
+@media (max-width: 760px) {
+  .st-coverage-grid { grid-template-columns: 1fr; gap: 32px; }
+  .st-coverage-map { aspect-ratio: 16 / 11; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * FAQ — two-column on desktop, hairline-separated single-column
+ * accordion list, minus/plus glyph (no chevron SVG).
+ * ────────────────────────────────────────────────────────────────── */
+.st-faq-grid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 80px;
+  align-items: start;
+}
+.st-faq-title { margin-top: 12px; }
+.st-faq-list {
+  display: flex;
+  flex-direction: column;
+}
+.st-faq-item {
+  border-top: 1px solid var(--st-line);
+  padding: 22px 0;
+}
+.st-faq-item:last-child { border-bottom: 1px solid var(--st-line); }
+.st-faq-trigger {
+  display: flex;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  font-family: inherit;
+  text-align: left;
+}
+.st-faq-q {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: var(--st-text-22);
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--st-ink);
+}
+.st-faq-toggle {
+  font-family: var(--st-font-display);
+  font-size: 22px;
+  color: var(--st-muted-2);
+  line-height: 1;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+.st-faq-a {
+  margin: 14px 0 0;
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-15);
+  line-height: 1.6;
+  color: var(--st-muted);
+  max-width: 56ch;
+}
+@media (max-width: 760px) {
+  .st-faq-grid { grid-template-columns: 1fr; gap: 28px; }
+  .st-faq-q { font-size: 18px; }
+}

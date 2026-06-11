@@ -1,24 +1,7 @@
+import Link from "next/link";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { getTranslator } from "@/lib/i18n/server";
 
-function initialsFor(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((p) => p.charAt(0).toUpperCase())
-    .slice(0, 2)
-    .join("");
-}
-
-function starString(rating: number): string {
-  const safe = Math.max(1, Math.min(5, Math.round(rating || 5)));
-  return "★".repeat(safe);
-}
-
-// The testimonial shape is intentionally backward-compatible with the existing
-// content-settings type — location, eventType, and date are all optional, so
-// operators with the prior shape keep working and the new fields just enrich
-// the card when present.
 type ExtendedTestimonial = {
   name: string;
   text: string;
@@ -28,59 +11,93 @@ type ExtendedTestimonial = {
   date?: string;
 };
 
+/**
+ * Picks the testimonial used in the editorial pull-quote. Highest
+ * rating first; ties broken by longest body so we surface the
+ * testimonial with the most substance. We DON'T pick by recency —
+ * a sharper quote from a year ago beats a flat quote from last week.
+ */
+function pickFeatured(all: ExtendedTestimonial[]): ExtendedTestimonial | null {
+  if (all.length === 0) return null;
+  return [...all].sort((a, b) => {
+    const ra = Math.max(0, Math.min(5, a.rating || 0));
+    const rb = Math.max(0, Math.min(5, b.rating || 0));
+    if (rb !== ra) return rb - ra;
+    return (b.text?.length ?? 0) - (a.text?.length ?? 0);
+  })[0];
+}
+
+/**
+ * Splits the quote body into {lead, italic, tail} for editorial
+ * emphasis. Heuristic: take the shortest comma-separated fragment
+ * between 8 and 60 chars; italicize it. Returns lead+tail with empty
+ * italic when no good fragment exists.
+ */
+function splitForEmphasis(text: string): { lead: string; italic: string; tail: string } {
+  const trimmed = text.trim().replace(/^[“"”]/, "").replace(/[“"”]$/, "");
+  const parts = trimmed.split(/([,\.\!\?] )/g);
+  // parts[i] alternates: phrase, delim, phrase, delim, ...
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (!p || /[,\.\!\?] /.test(p)) continue;
+    if (p.length >= 8 && p.length <= 60 && /\w/.test(p)) {
+      const lead = parts.slice(0, i).join("");
+      const italic = p;
+      const tail = parts.slice(i + 1).join("");
+      // Don't italicize when it would swallow the whole quote.
+      if (lead.length > 0 || tail.length > 0) {
+        return { lead, italic, tail };
+      }
+    }
+  }
+  return { lead: trimmed, italic: "", tail: "" };
+}
+
+function starString(rating: number): string {
+  const safe = Math.max(1, Math.min(5, Math.round(rating || 5)));
+  return "★ ".repeat(safe).trim();
+}
+
+/**
+ * Editorial reviews — ONE centered pull-quote, not three chip cards.
+ * Picks the highest-rated, most substantive testimonial. Renders only
+ * when content_settings.testimonials has at least one entry.
+ *
+ * Per spec §5.7.
+ */
 export async function PartyClassicReviewsCards() {
-  const [contentSettings, { messages: m, t }] = await Promise.all([
+  const [contentSettings, { messages: m }] = await Promise.all([
     getContentSettings(),
     getTranslator(),
   ]);
   const all = (contentSettings.testimonials as ExtendedTestimonial[]) ?? [];
-  if (all.length === 0) return null;
+  const featured = pickFeatured(all);
+  if (!featured) return null;
 
-  // Display three cards; if the operator has more, the "Read 500+ reviews"
-  // link points at the wider proof — for now just /contact.
-  const display = all.slice(0, 3);
+  const { lead, italic, tail } = splitForEmphasis(featured.text);
+
+  const attrPieces: string[] = [featured.name];
+  if (featured.location) attrPieces.push(featured.location);
+  if (featured.date) attrPieces.push(featured.date);
+  const attr = attrPieces.join(" · ");
 
   return (
-    <section className="st-container st-section">
-      <div className="st-section-head">
-        <div>
-          <h2 className="st-section-title">{m.storefront.testimonials.titleVertical}</h2>
-          <p className="st-section-sub">{m.storefront.testimonials.subtitleVertical}</p>
+    <section className="st-section st-section-rule st-quote">
+      <div className="st-container st-quote-inner">
+        <div className="st-quote-stars" aria-hidden="true">
+          {starString(featured.rating)}
         </div>
-        {all.length > 3 && (
-          <a href="/contact" className="st-section-link">
-            {m.storefront.testimonials.readMoreLink}
-          </a>
+        <p className="st-quote-text">
+          &ldquo;{lead}
+          {italic && <em>{italic}</em>}
+          {tail}&rdquo;
+        </p>
+        <div className="st-quote-attr">{attr}</div>
+        {all.length > 1 && (
+          <Link href="/contact" className="st-text-link st-quote-link">
+            {m.storefront.testimonials.readMoreLink} →
+          </Link>
         )}
-      </div>
-
-      <div className="st-reviews-grid">
-        {display.map((r, i) => {
-          const meta = t(m.storefront.testimonials.eventInline, {
-            location: r.location ?? "",
-            eventType: r.eventType ?? "",
-            date: r.date ?? "none",
-          });
-          // The compiled meta string can still have leading/trailing
-          // separators when location/eventType are missing — collapse them.
-          const cleanedMeta = meta
-            .replace(/^[\s·]+/, "")
-            .replace(/[\s·]+$/, "")
-            .replace(/ ·  ·/g, " ·");
-          return (
-            <div key={`${r.name}-${i}`} className="st-review-card">
-              <div className="st-review-stars">{starString(r.rating)}</div>
-              <p className="st-review-text">&ldquo;{r.text}&rdquo;</p>
-              <div className="st-review-author">
-                <div className="st-review-avatar">{initialsFor(r.name)}</div>
-                <div>
-                  <div className="st-review-name">{r.name}</div>
-                  {cleanedMeta && <div className="st-review-meta">{cleanedMeta}</div>}
-                </div>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </section>
   );
