@@ -433,98 +433,143 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
 .st-mobile-phone svg { display: none; }
 
 /* ──────────────────────────────────────────────────────────────────
- * Hero — editorial: asymmetric 5fr / 7fr, photo right. No carousel,
- * no overlay gradients, no floating booking card.
+ * Hero — full-bleed editorial. The photograph fills the viewport;
+ * the headline + lede overlay it via a subtle dark legibility scrim
+ * along the bottom. The availability bar sits directly below on
+ * cream, full-width inside the container.
+ *
+ * Mobile: photo tightens to 4:5, headline scales down, availability
+ * bar STACKS vertically with a full-width black submit.
  * ────────────────────────────────────────────────────────────────── */
 .st-hero {
-  padding: 88px 0 112px;
-  display: grid;
-  grid-template-columns: 5fr 7fr;
-  gap: 80px;
-  align-items: center;
+  position: relative;
+  width: 100%;
+  /* Viewport-anchored on desktop; aspect-based on tablets and mobile
+     to avoid awkward scaling at narrow widths. */
+  height: clamp(560px, 78vh, 820px);
+  overflow: hidden;
+  background: var(--st-ink);
+  color: #fff;
 }
-.st-hero-copy {
+.st-hero-photo {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.st-hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Dark legibility scrim — bottom-up linear fade. Functionally identical
+ * to the text-shadow trick on .st-vibe-caption: a typographic tool, not
+ * brand chrome. Hence not a violation of anti-pattern #1 (saturated
+ * brand-color gradient banners are still forbidden). */
+.st-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0)      0%,
+    rgba(0, 0, 0, 0)     45%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  pointer-events: none;
+}
+.st-hero-content {
+  position: relative;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  justify-content: flex-end;
+  gap: 22px;
+  padding-top: 64px;
+  padding-bottom: 64px;
 }
-.st-h1 {
+
+.st-hero .st-h1 {
   font-family: var(--st-font-display);
   font-weight: 400;
-  font-size: var(--st-text-72);
+  font-size: clamp(40px, 6.4vw, var(--st-text-72));
   line-height: 1.04;
   letter-spacing: -0.025em;
-  color: var(--st-ink);
+  color: #fff;
   margin: 0;
+  max-width: 18ch;
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.30);
 }
-.st-h1 em {
-  font-style: italic;
-  /* Same ink color — italic alone carries the accent. */
-}
-.st-lede {
+.st-hero .st-h1 em { font-style: italic; }
+
+.st-hero .st-lede {
   font-family: var(--st-font-body);
-  font-size: var(--st-text-17);
+  font-size: clamp(15px, 1.4vw, var(--st-text-17));
   line-height: 1.6;
-  color: var(--st-muted);
+  color: rgba(255, 255, 255, 0.92);
   margin: 0;
-  max-width: 38ch;
+  max-width: 44ch;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.30);
 }
+
 .st-hero-rating-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--st-card);
-  border: 1px solid var(--st-line);
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 13px;
-  color: var(--st-muted-2);
+  color: rgba(255, 255, 255, 0.92);
   align-self: flex-start;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.st-hero-rating-chip-star {
-  color: var(--st-warning);
-}
-.st-hero-rating-chip strong {
-  color: var(--st-ink);
-  font-weight: 600;
-}
+.st-hero-rating-chip-star { color: #f6c64a; }
+.st-hero-rating-chip strong { color: #fff; font-weight: 600; }
 
-/* Flat hairline availability bar — three cells in a single 1px-border
- * rectangle. No drop shadow, no pill, no fill until interaction. */
+/* Availability bar lives below the hero on cream. Three cells in a
+ * single hairline rectangle on desktop. Stacks at mobile with the
+ * submit going full-width. */
+.st-hero-actions {
+  padding-top: 28px;
+  padding-bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .st-avail {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 0;
   border: 1px solid var(--st-line-strong);
   border-radius: var(--st-radius-2);
-  max-width: 460px;
   background: var(--st-card);
+  max-width: 560px;
 }
 .st-avail-field {
-  padding: 14px 18px;
+  padding: 16px 20px;
   border-right: 1px solid var(--st-line-strong);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-.st-avail-field:last-of-type {
-  /* When the form omits the submit button (it won't, but just in case). */
-  border-right: 0;
+  gap: 6px;
+  min-width: 0;
 }
 .st-avail-input {
   border: 0;
   background: transparent;
   font-family: var(--st-font-body);
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--st-ink);
   padding: 0;
   width: 100%;
   outline: none;
+  min-width: 0;
 }
 .st-avail-input::placeholder { color: var(--st-muted-2); font-weight: 400; }
 .st-avail-go {
-  padding: 0 22px;
+  padding: 0 28px;
   background: var(--st-ink);
   color: var(--st-bg);
   border: 0;
@@ -534,6 +579,7 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+  white-space: nowrap;
   transition: background var(--st-duration-1) var(--st-ease);
 }
 .st-avail-go:hover { background: var(--st-primary); }
@@ -542,31 +588,48 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
-}
-
-/* Photo frame — sharp rectangle, no border-radius, no shadow. */
-.st-hero-photo {
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  background: var(--st-line);
-}
-.st-hero-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+  margin-top: 4px;
 }
 
 @media (max-width: 760px) {
   .st-hero {
-    grid-template-columns: 1fr;
-    gap: 28px;
-    padding: 48px 0 64px;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    min-height: 460px;
   }
-  .st-hero-photo { order: -1; aspect-ratio: 4 / 3; }
-  .st-h1 { font-size: 40px; line-height: 1.10; }
-  .st-lede { font-size: var(--st-text-15); max-width: 28ch; }
-  .st-avail { max-width: 100%; }
+  .st-hero-scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0)      0%,
+      rgba(0, 0, 0, 0)     38%,
+      rgba(0, 0, 0, 0.62) 100%
+    );
+  }
+  .st-hero-content {
+    padding-top: 32px;
+    padding-bottom: 32px;
+    gap: 16px;
+  }
+  .st-hero .st-h1 { max-width: 14ch; font-size: 36px; line-height: 1.10; }
+  .st-hero .st-lede { font-size: 14.5px; max-width: 32ch; }
+
+  /* Availability bar stacks: date row, ZIP row, full-width black CTA. */
+  .st-hero-actions { padding-top: 20px; padding-bottom: 40px; }
+  .st-avail {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+  .st-avail-field {
+    border-right: 0;
+    border-bottom: 1px solid var(--st-line-strong);
+    padding: 14px 18px;
+  }
+  .st-avail-go {
+    width: 100%;
+    padding: 16px 22px;
+    font-size: 13px;
+  }
+  .st-hero-cta-row { gap: 16px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────
