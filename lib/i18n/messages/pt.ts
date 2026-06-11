@@ -591,6 +591,7 @@ export const pt: Messages = {
       team: "Equipa",
       helpCenter: "Centro de ajuda",
       marketplace: "Marketplace",
+      unlockToolkit: "Desbloquear kit completo",
       crewMobile: "Móvel da equipa",
       publicSite: "Site público",
       signOut: "Sair",

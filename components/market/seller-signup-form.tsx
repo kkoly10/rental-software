@@ -15,7 +15,7 @@ export function SellerSignupForm() {
     return (
       <div>
         <p className="mk-msg ok">✓ {state.message}</p>
-        <a className="mk-btn" href="/dashboard/marketplace" style={{ marginTop: 10 }}>
+        <a className="mk-btn" href="/market/hub" style={{ marginTop: 10 }}>
           Open Seller Hub →
         </a>
       </div>

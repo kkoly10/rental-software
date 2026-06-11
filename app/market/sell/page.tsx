@@ -37,7 +37,7 @@ export default async function MarketSellPage() {
             <p className="mk-sub" style={{ margin: "8px 0 12px" }}>
               Manage your store page and listings from the Seller Hub.
             </p>
-            <a className="mk-btn" href="/dashboard/marketplace">
+            <a className="mk-btn" href="/market/hub">
               Open Seller Hub →
             </a>
           </>

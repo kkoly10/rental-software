@@ -591,6 +591,7 @@ export const es: Messages = {
       team: "Equipo",
       helpCenter: "Centro de ayuda",
       marketplace: "Marketplace",
+      unlockToolkit: "Desbloquear suite completa",
       crewMobile: "Móvil del equipo",
       publicSite: "Sitio público",
       signOut: "Cerrar sesión",

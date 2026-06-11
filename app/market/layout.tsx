@@ -40,6 +40,7 @@ export default async function MarketLayout({ children }: { children: React.React
   const metro = metroBySlug.get(DEFAULT_METRO_SLUG);
   let signedIn = false;
   let initial = "";
+  let isSeller = false;
   if (hasSupabaseEnv()) {
     try {
       const supabase = await createSupabaseServerClient();
@@ -50,6 +51,12 @@ export default async function MarketLayout({ children }: { children: React.React
       const name =
         (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "";
       initial = name.trim().charAt(0).toUpperCase();
+      if (user) {
+        // Seller context switcher (Amazon model): org members get a
+        // "Seller Hub" door in the marketplace nav.
+        const { getOrgContext } = await import("@/lib/auth/org-context");
+        isSeller = Boolean(await getOrgContext());
+      }
     } catch {
       // header degrades to signed-out links
     }
@@ -77,6 +84,11 @@ export default async function MarketLayout({ children }: { children: React.React
         <div className="mk-navlinks">
           {signedIn ? (
             <>
+              {isSeller ? (
+                <Link href="/market/hub" className="mk-navlink strong">
+                  Seller Hub
+                </Link>
+              ) : null}
               <Link href="/market/rentals" className="mk-navlink">
                 My rentals
               </Link>
@@ -132,7 +144,7 @@ export default async function MarketLayout({ children }: { children: React.React
           <div>
             <b>Sell</b>
             <Link href="/market/sell">Become a seller</Link>
-            <Link href="/dashboard/marketplace">Seller hub</Link>
+            <Link href="/market/hub">Seller hub</Link>
             <a href="/pricing">Operator plans</a>
             <Link href="/market/support">Support</Link>
           </div>

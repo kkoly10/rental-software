@@ -273,6 +273,14 @@ export async function signInWithPassword(
   }
 
   if (!membership) {
+    // Account-model fix: marketplace renters (korent_role metadata set
+    // by /market/join) belong on the marketplace, not in operator
+    // onboarding — landing them there silently provisioned operator
+    // orgs. They can still opt into a business account from /onboarding
+    // explicitly.
+    if (user.user_metadata?.korent_role === "renter") {
+      redirect("/market/rentals");
+    }
     redirect("/onboarding");
   }
 
