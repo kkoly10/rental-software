@@ -40,6 +40,16 @@ export function computeOrderFinancials(
     const amtCents = Math.round(Number(p.amount ?? 0) * 100);
     if (p.payment_type === "refund") {
       totalRefundedCents += amtCents;
+    } else if (p.payment_type === "damage_charge" || p.payment_type === "damage_refund") {
+      // PR-2c — post-event damage charges are bookkeeping against
+      // the customer, not a payment against the rental balance.
+      // Counting them in totalPaid would inflate "amount paid" on
+      // the order detail (and falsely flip depositFulfilled / clear
+      // remainingBalance) by every post-event charge. PR-3e review
+      // fix — damage_refund is the symmetric unwind: the webhook
+      // sets this type when charge.refunded refers to a payment
+      // intent we recognize as a damage_charge.
+      continue;
     } else {
       totalPaidCents += amtCents;
     }

@@ -566,7 +566,8 @@ export const es: Messages = {
       noServiceAreaCta: "Añadir zona de servicio",
       depositsOffTitle: "Los depósitos en línea no están configurados",
       depositsOffBody:
-        "Stripe no está configurado: los clientes pueden enviar solicitudes de reserva pero no pueden pagar un depósito en línea. Las reservas llegan como solicitudes sin depósito hasta configurar los pagos.",
+        "Tu cuenta de Stripe aún no está conectada: los clientes pueden enviar solicitudes de reserva pero no pueden pagar un depósito en línea. Las reservas llegan como solicitudes sin depósito hasta completar la configuración de pagos.",
+      connectStripeCta: "Configurar pagos",
     },
     nav: {
       dashboard: "Panel",
@@ -1171,6 +1172,30 @@ export const es: Messages = {
         { q: "¿Qué métodos de pago aceptan?", a: "Todas las tarjetas principales (Visa, Mastercard, Amex, Discover) vía Stripe. La facturación por factura está disponible en planes Growth." },
       ],
     },
+    stripeConnect: {
+      kicker: "Pagos de clientes",
+      title: "Cuenta de pagos Stripe",
+      statusNotConnected: "No conectada",
+      statusIncomplete: "Acción requerida",
+      statusPending: "En revisión",
+      statusReady: "Aceptando pagos",
+      bodyNotConnected:
+        "Conecta una cuenta de Stripe para cobrar depósitos y saldos en línea. Los pagos de los clientes van directamente a tu banco — Korent nunca retiene tu dinero ni cobra comisión por tus reservas.",
+      bodyIncomplete:
+        "Tu registro en Stripe no está terminado. Continúa donde lo dejaste para empezar a aceptar pagos en línea.",
+      bodyPending:
+        "Tus datos están enviados y Stripe está verificando tu cuenta. Suele tardar unos minutos — vuelve a comprobarlo en breve.",
+      bodyReady:
+        "Tu tienda cobra depósitos en línea y los pagos llegan a tu cuenta bancaria.",
+      bodyReadyPayoutsPending:
+        "Puedes aceptar pagos, pero las transferencias siguen pendientes de la verificación bancaria. Abre tu panel de Stripe para terminar.",
+      ctaConnect: "Conectar con Stripe",
+      ctaResume: "Continuar el registro",
+      ctaOpening: "Abriendo Stripe…",
+      ctaCheckStatus: "Comprobar estado",
+      ctaChecking: "Comprobando…",
+      ctaOpenDashboard: "Abrir panel de Stripe",
+    },
     pricingRules: {
       title: "Reglas de precios",
       description: "Configura ajustes de precios dinámicos y estacionales para tus alquileres.",
@@ -1456,6 +1481,9 @@ export const es: Messages = {
       phone: "Teléfono",
       email: "Correo",
       smsOptIn: "Envíame avisos por SMS (confirmación, recordatorios de entrega, estado). Pueden aplicarse tarifas. Responde STOP para cancelar.",
+      damageWaiverTitle: "Añadir cobertura por daños",
+      damageWaiverBody:
+        "Limita tu responsabilidad por daños accidentales a los artículos alquilados al {rate}% del subtotal (+${amount}).",
       eventDate: "Fecha del evento",
       startTime: "Hora de inicio",
       endTime: "Hora de fin",
@@ -2468,6 +2496,7 @@ export const es: Messages = {
     deliveryFee: "Tarifa de entrega",
     deliveryTBD: "Por determinar",
     deliveryFree: "Gratis",
+    tax: "Impuesto",
     total: "Total",
     depositDue: "Depósito a pagar",
     enterZipMessage: "Introduce un código postal de entrega para ver tu total con la tarifa de envío.",

@@ -229,6 +229,49 @@ export async function signInWithPassword(
     status: "success",
   });
 
+  // PR-3a — record-on-next-login terms backfill. Three real accounts
+  // pre-date the signup terms-write fix and carry terms_accepted_at
+  // = NULL. Stamping a fabricated date would lie to the audit; the
+  // honest path is to record acceptance the next time they actually
+  // sign in (which is now — they re-authenticated with the current
+  // terms version live on the site). The WHERE clause makes this a
+  // no-op for everyone else: once stamped, the column stays stamped.
+  try {
+    const hdrs = await headers();
+    const { getTrustedClientIp } = await import("@/lib/security/request-client");
+    const trustedIp = getTrustedClientIp(hdrs);
+    const clientIp = trustedIp === "unknown" ? null : trustedIp;
+    // PR-3e review fix — use the admin client (mirrors the signup
+    // action at line ~388 which writes the same columns the same
+    // way). The session-bound supabase client at the top of this
+    // function was created BEFORE signInWithPassword established the
+    // session cookies; an RLS-gated UPDATE through it can silently
+    // fail when the new session hasn't propagated, and the
+    // catch-and-log below would swallow the failure — leaving the
+    // backfill unfired for the very 3 real accounts it exists to
+    // serve. Admin client bypasses RLS for this single write.
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createSupabaseAdminClient();
+    // Same version constant the signup action stamps — keeping them
+    // in sync until a versioned-terms registry lands as its own change.
+    await admin
+      .from("profiles")
+      .update({
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: "2026-03-30",
+        terms_ip: clientIp,
+      })
+      .eq("id", user.id)
+      .is("terms_accepted_at", null);
+  } catch (err) {
+    await logAppError({
+      userId: user.id,
+      source: "auth.signin.terms_backfill",
+      message: "Terms record-on-login backfill failed",
+      context: { reason: err instanceof Error ? err.message : String(err) },
+    });
+  }
+
   if (!membership) {
     redirect("/onboarding");
   }

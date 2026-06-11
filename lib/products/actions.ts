@@ -126,8 +126,10 @@ function reconcilePerUnitCents(
  */
 function readSetupWindowFields(formData: FormData) {
   const raw = String(formData.get("setup_minutes_before") ?? "").trim();
+  const breakdownRaw = String(formData.get("breakdown_minutes_after") ?? "").trim();
   return {
     setupMinutesBefore: raw === "" ? undefined : Number(raw),
+    breakdownMinutesAfter: breakdownRaw === "" ? undefined : Number(breakdownRaw),
   };
 }
 
@@ -159,14 +161,37 @@ function readOrderMinimumFields(formData: FormData) {
   };
 }
 
+function readDamageWaiverFields(formData: FormData) {
+  // Operator inputs a %; convert to basis points for the DB so cents
+  // round predictably across the codebase. 8.5% → 850 bps.
+  const raw = String(formData.get("damage_waiver_rate_pct") ?? "").trim();
+  if (raw === "") return { damageWaiverRateBps: undefined };
+  const pct = Number(raw);
+  if (!Number.isFinite(pct)) return { damageWaiverRateBps: undefined };
+  return { damageWaiverRateBps: Math.round(pct * 100) };
+}
+
 function reconcileSetupWindow(
   capabilitySlugs: readonly string[],
   setupMinutesBefore: number | undefined,
+  breakdownMinutesAfter: number | undefined,
 ) {
+  // Both columns are gated symmetrically by the setup.setup-window
+  // capability. Earlier, breakdown persisted regardless of the slug
+  // — meaning a bouncer operator could leak setup buffer into the
+  // availability check without opting in to the capability. Closing
+  // that hole here matches the rest of the form's gating pattern
+  // (per-hour, per-unit, attendant, etc.).
   if (!capabilitySlugs.includes("setup.setup-window")) {
-    return { setup_minutes_before: null };
+    return {
+      setup_minutes_before: null,
+      breakdown_minutes_after: null,
+    };
   }
-  return { setup_minutes_before: setupMinutesBefore ?? null };
+  return {
+    setup_minutes_before: setupMinutesBefore ?? null,
+    breakdown_minutes_after: breakdownMinutesAfter ?? null,
+  };
 }
 
 function reconcileOnsiteAttendant(
@@ -211,6 +236,29 @@ function reconcileOrderMinimum(
     return { minimum_order_quantity: null };
   }
   return { minimum_order_quantity: minimumOrderQuantity ?? null };
+}
+
+/**
+ * PR-2c follow-up — damage waiver gated by capability slug so the
+ * column nulls out when the operator hasn't opted into the feature,
+ * even if they typed a value in the form panel. Matches the rest of
+ * the form's gating pattern (per-hour, per-unit, attendant, etc.)
+ * and prevents a bouncer operator from inadvertently offering a
+ * waiver they don't intend.
+ *
+ * PR-1 follow-up — breakdown_minutes_after rides the existing
+ * setup.setup-window capability so it's gated symmetrically with
+ * setup_minutes_before. The previous shape persisted breakdown
+ * regardless of the slug.
+ */
+function reconcileDamageWaiver(
+  capabilitySlugs: readonly string[],
+  damageWaiverRateBps: number | undefined,
+) {
+  if (!capabilitySlugs.includes("order.damage-waiver")) {
+    return { damage_waiver_rate_bps: null };
+  }
+  return { damage_waiver_rate_bps: damageWaiverRateBps ?? null };
 }
 
 export type ProductActionState = {
@@ -277,6 +325,7 @@ export async function createProduct(
     ...readOnsiteAttendantFields(formData),
     ...readCapacityFields(formData),
     ...readOrderMinimumFields(formData),
+    ...readDamageWaiverFields(formData),
   });
 
   if (!parsed.success) {
@@ -308,11 +357,13 @@ export async function createProduct(
     unitPrice,
     unitLabel,
     setupMinutesBefore,
+    breakdownMinutesAfter,
     attendantIncludedHours,
     attendantOverageRate,
     capacityMetric,
     capacityValue,
     minimumOrderQuantity,
+    damageWaiverRateBps,
   } = parsed.data;
 
   const perHourCents = reconcilePerHourCents(
@@ -322,7 +373,7 @@ export async function createProduct(
     idleHourRate,
   );
   const perUnitCents = reconcilePerUnitCents(capabilitySlugs, unitPrice, unitLabel);
-  const setupWindow = reconcileSetupWindow(capabilitySlugs, setupMinutesBefore);
+  const setupWindow = reconcileSetupWindow(capabilitySlugs, setupMinutesBefore, breakdownMinutesAfter);
   const attendant = reconcileOnsiteAttendant(
     capabilitySlugs,
     attendantIncludedHours,
@@ -330,6 +381,7 @@ export async function createProduct(
   );
   const capacity = reconcileCapacity(capabilitySlugs, capacityMetric, capacityValue);
   const orderMin = reconcileOrderMinimum(capabilitySlugs, minimumOrderQuantity);
+  const waiver = reconcileDamageWaiver(capabilitySlugs, damageWaiverRateBps);
 
   const wetUpchargeCents = reconcileWetUpcharge(supportsModes, wetUpcharge);
 
@@ -445,11 +497,13 @@ export async function createProduct(
     unit_price_cents: perUnitCents.unit_price_cents,
     unit_label: perUnitCents.unit_label,
     setup_minutes_before: setupWindow.setup_minutes_before,
+    breakdown_minutes_after: setupWindow.breakdown_minutes_after,
     attendant_included_hours: attendant.attendant_included_hours,
     attendant_overage_cents_per_hour: attendant.attendant_overage_cents_per_hour,
     capacity_metric: capacity.capacity_metric,
     capacity_value: capacity.capacity_value,
     minimum_order_quantity: orderMin.minimum_order_quantity,
+    damage_waiver_rate_bps: waiver.damage_waiver_rate_bps,
   }).select("id").single();
 
   if (error) {
@@ -533,6 +587,7 @@ export async function updateProduct(
     ...readOnsiteAttendantFields(formData),
     ...readCapacityFields(formData),
     ...readOrderMinimumFields(formData),
+    ...readDamageWaiverFields(formData),
   });
 
   if (!parsed.success) {
@@ -557,6 +612,7 @@ export async function updateProduct(
   const updateSetupWindow = reconcileSetupWindow(
     parsed.data.capabilitySlugs,
     parsed.data.setupMinutesBefore,
+    parsed.data.breakdownMinutesAfter,
   );
   const updateAttendant = reconcileOnsiteAttendant(
     parsed.data.capabilitySlugs,
@@ -571,6 +627,10 @@ export async function updateProduct(
   const updateOrderMin = reconcileOrderMinimum(
     parsed.data.capabilitySlugs,
     parsed.data.minimumOrderQuantity,
+  );
+  const updateWaiver = reconcileDamageWaiver(
+    parsed.data.capabilitySlugs,
+    parsed.data.damageWaiverRateBps,
   );
 
   if (!hasSupabaseEnv()) {
@@ -666,12 +726,14 @@ export async function updateProduct(
       unit_price_cents: updatePerUnitCents.unit_price_cents,
       unit_label: updatePerUnitCents.unit_label,
       setup_minutes_before: updateSetupWindow.setup_minutes_before,
+      breakdown_minutes_after: updateSetupWindow.breakdown_minutes_after,
       attendant_included_hours: updateAttendant.attendant_included_hours,
       attendant_overage_cents_per_hour:
         updateAttendant.attendant_overage_cents_per_hour,
       capacity_metric: updateCapacity.capacity_metric,
       capacity_value: updateCapacity.capacity_value,
       minimum_order_quantity: updateOrderMin.minimum_order_quantity,
+      damage_waiver_rate_bps: updateWaiver.damage_waiver_rate_bps,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)

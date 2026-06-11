@@ -14,6 +14,14 @@ export type CheckoutPricing = {
    *  multiple days. Surfaced so the summary can label "× N days". */
   rentalDays: number;
   deliveryFee: number | null;
+  /** Sales/rental tax computed from the operator's per-jurisdiction
+   *  tax_rules row matching the delivery address. 0 when no rule
+   *  matches or when this is a pickup order. Null while the
+   *  jurisdiction is still indeterminate (e.g. ZIP not entered). */
+  tax: number | null;
+  /** Operator-facing label from the matched tax rule (e.g. "Florida
+   *  sales tax"). Used to label the tax line on the receipt. */
+  taxLabel: string | null;
   total: number | null;
   deposit: number | null;
 };
@@ -103,6 +111,14 @@ export async function CheckoutSummaryCard({
                       : `$${pricing.deliveryFee.toFixed(2)}`}
                 </span>
               </div>
+              {pricing.tax !== null && pricing.tax > 0 && (
+                <div className="order-row">
+                  <span className="muted">
+                    {pricing.taxLabel ?? m.checkoutSummary.tax}
+                  </span>
+                  <span>${pricing.tax.toFixed(2)}</span>
+                </div>
+              )}
               {pricing.total !== null && (
                 <div
                   className="order-row"

@@ -79,7 +79,7 @@ export async function cancelOrderFromPortal(
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, order_status, portal_access_token_created_at, order_number, customers(first_name, last_name)"
+      "id, order_status, portal_access_token_created_at, order_number, event_date, customers(first_name, last_name)"
     )
     .eq("organization_id", orgId)
     .eq("portal_access_token_hash", tokenHash)
@@ -134,6 +134,96 @@ export async function cancelOrderFromPortal(
     });
   }
 
+  // PR-2b — per-vertical cancellation policy + auto-refund.
+  //
+  // The vertical (via the order's first rental item → product →
+  // category) sets the refund window and forfeit: a tent cancelled
+  // 5 days out forfeits 50% of the deposit, a bouncer cancelled the
+  // same way refunds in full. When a Stripe deposit was captured,
+  // the computed refund is issued automatically through the shared
+  // refund core (connected-account routing + ledger insert). Cash
+  // deposits stay an operator-side conversation — nothing to wire.
+  //
+  // Failures here never un-cancel the order: the cancellation stands
+  // and the operator sees the logged error + an un-refunded deposit
+  // on the order page, which the manual Refund button can fix.
+  let refundNote = "";
+  try {
+    const { hasStripeEnv } = await import("@/lib/stripe/config");
+    if (hasStripeEnv()) {
+      const { data: depositRow } = await supabase
+        .from("payments")
+        .select("amount")
+        .eq("order_id", order.id)
+        .eq("provider", "stripe")
+        .eq("payment_type", "deposit")
+        .eq("payment_status", "paid")
+        .order("paid_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const depositPaid = Number(depositRow?.amount ?? 0);
+
+      if (depositPaid > 0) {
+        const { data: item } = await supabase
+          .from("order_items")
+          .select("products(categories(vertical))")
+          .eq("order_id", order.id)
+          .eq("line_type", "rental")
+          .limit(1)
+          .maybeSingle();
+        const productsJoin = (item as { products?: unknown } | null)?.products;
+        const productRow = Array.isArray(productsJoin) ? productsJoin[0] : productsJoin;
+        const categoryJoin = (productRow as { categories?: unknown } | null)?.categories;
+        const categoryRow = Array.isArray(categoryJoin) ? categoryJoin[0] : categoryJoin;
+        const verticalSlug =
+          typeof (categoryRow as { vertical?: unknown } | null)?.vertical === "string"
+            ? ((categoryRow as { vertical: string }).vertical)
+            : null;
+
+        const { resolveVerticalPolicies, computeCancellationOutcome } = await import(
+          "@/lib/verticals/policies"
+        );
+        const outcome = computeCancellationOutcome({
+          depositPaid,
+          eventDate: (order as { event_date?: string | null }).event_date ?? null,
+          policies: resolveVerticalPolicies(verticalSlug),
+        });
+
+        if (outcome.refundAmount > 0) {
+          const { executeStripeRefundForOrder } = await import("@/lib/payments/refund-core");
+          const refund = await executeStripeRefundForOrder(supabase, {
+            organizationId: orgId,
+            orderId: order.id,
+            amount: outcome.refundAmount,
+            reason:
+              outcome.forfeitAmount > 0
+                ? `Customer self-cancel inside the cancellation window — $${outcome.forfeitAmount.toFixed(2)} deposit forfeited per policy`
+                : "Customer self-cancel — full deposit refund per policy",
+            source: "portal_cancel",
+          });
+          if (refund.ok) {
+            refundNote =
+              outcome.forfeitAmount > 0
+                ? ` Your deposit refund of $${outcome.refundAmount.toFixed(2)} is on its way ($${outcome.forfeitAmount.toFixed(2)} was retained under the cancellation policy).`
+                : ` Your deposit of $${outcome.refundAmount.toFixed(2)} will be refunded to your card.`;
+          } else {
+            refundNote = " Your deposit refund will be processed by the operator shortly.";
+          }
+        } else if (outcome.forfeitAmount > 0) {
+          refundNote = " Per the cancellation policy, the deposit for this booking is non-refundable this close to the event.";
+        }
+      }
+    }
+  } catch (err) {
+    await logAppError({
+      organizationId: orgId,
+      source: "portal.cancel.auto_refund",
+      message: "Cancellation auto-refund failed (order remains cancelled)",
+      context: { orderId: order.id, reason: err instanceof Error ? err.message : String(err) },
+    });
+    refundNote = " Your deposit refund will be processed by the operator shortly.";
+  }
+
   // Trigger the customer-facing cancellation email (round-5 #353 wired
   // refunded/cancelled into EMAIL_WORTHY_STATUSES) — the cron flow already
   // proved this template works end-to-end.
@@ -167,5 +257,8 @@ export async function cancelOrderFromPortal(
   revalidatePath("/dashboard");
   revalidatePath("/inventory", "layout");
 
-  return { ok: true, message: "Your booking has been cancelled. We've sent you a confirmation email." };
+  return {
+    ok: true,
+    message: `Your booking has been cancelled.${refundNote} We've sent you a confirmation email.`,
+  };
 }

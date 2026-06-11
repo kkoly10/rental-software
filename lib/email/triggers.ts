@@ -848,6 +848,8 @@ function subjectForEvent(event: OperatorActivityEvent, orderNumber: string, busi
       return `Document signed on order #${orderNumber} — ${businessName}`;
     case "quote_accepted":
       return `Quote accepted on order #${orderNumber} — ${businessName}`;
+    case "quote_requested":
+      return `Quote requested — order #${orderNumber} — ${businessName}`;
     case "order_cancelled":
       return `Order #${orderNumber} cancelled by customer — ${businessName}`;
     case "portal_message":
@@ -863,6 +865,8 @@ function headlineForEvent(event: OperatorActivityEvent): string {
       return "Document signed";
     case "quote_accepted":
       return "Quote accepted";
+    case "quote_requested":
+      return "Quote requested";
     case "order_cancelled":
       return "Order cancelled";
     case "portal_message":
@@ -878,6 +882,8 @@ function notificationTypeForEvent(event: OperatorActivityEvent) {
       return "new_order" as const; // closest available notification type today
     case "quote_accepted":
       return "order_confirmed" as const;
+    case "quote_requested":
+      return "new_order" as const;
     case "order_cancelled":
       return "new_order" as const;
     case "portal_message":

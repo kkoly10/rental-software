@@ -21,18 +21,30 @@ export async function reserveProductAvailabilityBlock(options: {
   rentalEndDate?: string | null;
   source?: "checkout" | "dashboard";
 }) {
+  const isCheckout = options.source === "checkout";
+  const supabase = await createSupabaseServerClient();
+
+  // PR-1 #3 — match the check path: the reserved block must extend
+  // by the product's setup/breakdown minutes so a future check on
+  // an overlapping window correctly rejects.
+  const { data: productMeta } = await supabase
+    .from("products")
+    .select("setup_minutes_before, breakdown_minutes_after")
+    .eq("id", options.productId)
+    .eq("organization_id", options.organizationId)
+    .maybeSingle();
+
   const window = getAvailabilityWindowForDate(
     options.eventDate,
     options.startTime,
     options.endTime,
-    options.rentalEndDate
+    options.rentalEndDate,
+    productMeta?.setup_minutes_before ?? 0,
+    productMeta?.breakdown_minutes_after ?? 0
   );
   if (!window) {
     return { ok: true } as const;
   }
-
-  const isCheckout = options.source === "checkout";
-  const supabase = await createSupabaseServerClient();
 
   // Checkout holds expire after 30 minutes; dashboard holds are permanent
   const expiresAt = isCheckout

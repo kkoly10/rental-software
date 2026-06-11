@@ -11,6 +11,7 @@ import { structuredSpecs } from "./display/structured-specs.ts";
 import { variantGallery } from "./display/variant-gallery.ts";
 import { onsiteAttendant } from "./service/onsite-attendant.ts";
 import { minimumOrder } from "./order/minimum-order.ts";
+import { damageWaiver } from "./order/damage-waiver.ts";
 import { addOnsComposition } from "./composition/add-ons.ts";
 
 /**
@@ -39,6 +40,7 @@ const all: readonly Capability[] = [
   variantGallery,
   onsiteAttendant,
   minimumOrder,
+  damageWaiver,
   addOnsComposition,
 ];
 

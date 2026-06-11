@@ -33,6 +33,7 @@ export function CheckoutForm({
   initialUnits,
   selectedVariantId,
   initialAddons,
+  damageWaiver,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -59,6 +60,16 @@ export function CheckoutForm({
   // parses + validates each entry against the parent product's
   // configured add-ons before inserting child order_items rows.
   initialAddons?: string;
+  /** PR-2c — when the product offers a damage waiver, the PDP passes
+   *  the rate so the checkout form can render an opt-in checkbox.
+   *  Null when the product doesn't offer one. */
+  damageWaiver?: {
+    rateBps: number;
+    /** Live cents preview of the surcharge based on the subtotal the
+     *  pricing engine returned for this checkout — purely cosmetic;
+     *  the server recomputes from the product row at submit time. */
+    previewAmountCents: number;
+  } | null;
 }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(
@@ -100,6 +111,7 @@ export function CheckoutForm({
   // marketing-consent choice doesn't silently flip back to false after
   // a failed submit.
   const [smsOptIn, setSmsOptIn] = useState(false);
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Re-hydrate the local state whenever the server action returns a
@@ -211,6 +223,12 @@ export function CheckoutForm({
                 <span className="muted">{m.checkout.review.deliveryFee}</span>
                 <span>{s.deliveryFee}</span>
               </div>
+              {s.tax && (
+                <div className="order-row">
+                  <span className="muted">{s.taxLabel ?? m.checkoutSummary.tax}</span>
+                  <span>{s.tax}</span>
+                </div>
+              )}
               <div className="order-row" style={{ fontWeight: 600 }}>
                 <span>{m.checkout.review.total}</span>
                 <span>{s.total}</span>
@@ -380,6 +398,41 @@ export function CheckoutForm({
           {m.checkout.form.smsOptIn}
         </span>
       </label>
+
+      {damageWaiver && damageWaiver.rateBps > 0 && (
+        <label
+          className="order-card"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            cursor: "pointer",
+            padding: "12px 14px",
+            marginTop: 8,
+          }}
+        >
+          <input
+            type="checkbox"
+            name="damage_waiver"
+            value="on"
+            checked={waiverAccepted}
+            onChange={(e) => setWaiverAccepted(e.target.checked)}
+            style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+            <strong>{m.checkout.form.damageWaiverTitle}</strong>
+            <br />
+            <span className="muted">
+              {m.checkout.form.damageWaiverBody
+                .replace("{rate}", (damageWaiver.rateBps / 100).toFixed(2))
+                .replace(
+                  "{amount}",
+                  (damageWaiver.previewAmountCents / 100).toFixed(2)
+                )}
+            </span>
+          </span>
+        </label>
+      )}
 
       <label className="order-card">
         <strong>{m.checkout.form.email}</strong>

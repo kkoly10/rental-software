@@ -50,6 +50,31 @@ export type VerticalMarketing = {
   features: ReadonlyArray<{ title: string; body: string }>;
 };
 
+/**
+ * Per-vertical booking/cancellation policy defaults. One uniform
+ * policy across verticals either over-promises (a tent operator
+ * can't restock a cancelled 30-day build) or over-penalizes (a
+ * bouncer can re-rent with a day's notice). Org-level settings may
+ * override these later; the registry values are the launch defaults.
+ */
+export type VerticalPolicies = {
+  /**
+   * Days before the event inside which a cancellation forfeits
+   * `forfeitPct` of the paid deposit. Cancelling EARLIER than this
+   * window refunds the deposit in full.
+   */
+  refundWindowDays: number;
+  /** Percent (0-100) of the paid deposit forfeited when cancelling
+   *  inside the refund window. 0 = always fully refundable. */
+  forfeitPct: number;
+  /**
+   * Vertical floor for booking lead time, in hours. The effective
+   * lead time at checkout is max(org policy, this) — an org can be
+   * stricter than the vertical, never looser.
+   */
+  minLeadTimeHours: number;
+};
+
 export type VerticalConfig = {
   /** Stable slug used in DB rows + registry lookup. e.g. "inflatable" */
   slug: string;
@@ -62,6 +87,9 @@ export type VerticalConfig = {
   capabilities: string[];
   /** Default category names seeded when an org picks this vertical at signup. */
   defaultCategorySeeds: string[];
+  /** Booking/cancellation policy defaults — required so adding a
+   *  vertical forces an explicit policy decision. */
+  policies: VerticalPolicies;
   /** Marketing-page configuration. */
   marketing: VerticalMarketing;
   /** Image asset paths (typically under /public/). */

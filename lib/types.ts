@@ -133,7 +133,15 @@ export type OrderDetail = {
   documentObjects: { id: string; type: string; status: string }[];
   subtotal: string;
   deliveryFee: string;
+  tax: string;
   depositPaid: string;
+  /** Raw deposit-paid amount as a number — used by the refund flow
+   *  to suggest a default refund and cap the input. Mirrors
+   *  `depositPaid` (which is the formatted display string). */
+  depositPaidAmount: number;
+  /** Used to scope the saved-card picker to this customer's
+   *  payment_methods. Null on the demo fallback row. */
+  customerId: string | null;
   depositDue?: string;
   balanceDue: string;
   total: string;
@@ -228,6 +236,7 @@ export type CatalogDetail = {
   unitPriceCents?: number | null;
   unitLabel?: string | null;
   minimumOrderQuantity?: number | null;
+  damageWaiverRateBps?: number | null;
   // Phase 1c — capacity calculator fields surfaced on the PDP as
   // an interactive guest-count → recommendation widget.
   capacityMetric?: "guests" | "sq_ft" | "dancers" | "servings" | null;

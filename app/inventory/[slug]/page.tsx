@@ -9,6 +9,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { getThemeSettings } from "@/lib/data/theme-settings";
+import { RequestQuoteForm } from "@/components/public/request-quote-form";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
@@ -49,10 +51,11 @@ export default async function ProductDetailPage({
 
   const { slug } = await params;
   const { date, zip } = await searchParams;
-  const [product, origin, { messages: m, t }] = await Promise.all([
+  const [product, origin, { messages: m, t }, theme] = await Promise.all([
     getCatalogDetail(slug),
     getRequestOrigin(),
     getTranslator(),
+    getThemeSettings(),
   ]);
 
   // Enrich with real availability for the selected date/zip
@@ -296,6 +299,27 @@ export default async function ProductDetailPage({
                     : undefined
                 }
               />
+              {theme.ctaSecondary === "request_quote" && (
+                <details
+                  className="order-card"
+                  style={{ marginTop: 14, padding: 14 }}
+                >
+                  <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                    Need a custom quote?
+                  </summary>
+                  <p className="muted" style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6 }}>
+                    Use this for events that need site review or itemized pricing — the
+                    operator will email you a tailored quote.
+                  </p>
+                  <div style={{ marginTop: 10 }}>
+                    <RequestQuoteForm
+                      productSlug={product.slug}
+                      initialDate={date}
+                      initialZip={zip}
+                    />
+                  </div>
+                </details>
+              )}
             </aside>
           </div>
 

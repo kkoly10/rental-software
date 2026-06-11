@@ -63,7 +63,7 @@ export async function GET(
       .from("orders")
       .select(`
         id, order_number, event_date, order_status,
-        subtotal_amount, delivery_fee_amount, total_amount,
+        subtotal_amount, delivery_fee_amount, tax_amount, total_amount,
         deposit_due_amount, balance_due_amount,
         customer_id, delivery_address_id
       `)
@@ -155,6 +155,8 @@ export async function GET(
     })),
     subtotal: Number(order.subtotal_amount ?? 0),
     deliveryFee: Number(order.delivery_fee_amount ?? 0),
+    tax: Number(order.tax_amount ?? 0),
+    taxLabel: null,
     total: totalAmount,
     depositPaid,
     balanceDue,

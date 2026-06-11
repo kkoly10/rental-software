@@ -307,6 +307,10 @@ export async function getProductById(productId: string) {
       typeof data.setup_minutes_before === "number"
         ? data.setup_minutes_before
         : null,
+    breakdownMinutesAfter:
+      typeof data.breakdown_minutes_after === "number"
+        ? data.breakdown_minutes_after
+        : null,
     attendantIncludedHours:
       typeof data.attendant_included_hours === "number"
         ? data.attendant_included_hours
@@ -322,6 +326,10 @@ export async function getProductById(productId: string) {
     minimumOrderQuantity:
       typeof data.minimum_order_quantity === "number"
         ? data.minimum_order_quantity
+        : null,
+    damageWaiverRateBps:
+      typeof data.damage_waiver_rate_bps === "number"
+        ? data.damage_waiver_rate_bps
         : null,
   };
 }

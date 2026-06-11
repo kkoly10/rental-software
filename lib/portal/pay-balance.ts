@@ -58,6 +58,33 @@ export async function createBalancePaymentSession(
     : await createSupabaseServerClient();
   const tokenHash = hashPortalAccessToken(token);
 
+  // PR-3e review fix — Connect Express gate. Storefront checkout
+  // gates on charges_enabled (PR-2 lib/checkout/actions.ts), but the
+  // portal balance-payment path skipped this check. If an operator
+  // ships a quote, then begins Connect onboarding but doesn't reach
+  // charges_enabled before the customer accepts, the session-create
+  // below would 500 (no connected account) or land funds on the
+  // wrong account. Refuse early with the same "set up payments"
+  // message the dashboard banner shows.
+  const { canAcceptStripePayments, fieldsFromOrgRow, ORG_CONNECT_COLUMNS } = await import(
+    "@/lib/stripe/connect"
+  );
+  const { data: connectOrg } = await supabase
+    .from("organizations")
+    .select(ORG_CONNECT_COLUMNS)
+    .eq("id", orgId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const connectReady = canAcceptStripePayments(fieldsFromOrgRow(connectOrg ?? null));
+  if (!connectReady) {
+    return {
+      ok: false,
+      message:
+        "Online payments aren't set up yet. Please contact the operator to pay your balance.",
+    };
+  }
+  const stripeAccountId = connectOrg?.stripe_connect_account_id ?? null;
+
   const { data: order } = await supabase
     .from("orders")
     .select("id, order_number, total_amount, portal_access_token_created_at, customers!inner(email, first_name, last_name)")
@@ -103,31 +130,37 @@ export async function createBalancePaymentSession(
   // Catch and return a stable ok:false instead.
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
   try {
-    session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: orgCurrency,
-            product_data: {
-              name: `Balance — Order ${order.order_number}`,
-              description: "Remaining rental balance",
+    // PR-3e review fix — DIRECT charge on the connected account, same
+    // shape as the storefront deposit session. The connectReady gate
+    // above guarantees stripeAccountId is non-null here.
+    session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: orgCurrency,
+              product_data: {
+                name: `Balance — Order ${order.order_number}`,
+                description: "Remaining rental balance",
+              },
+              unit_amount: toStripeMinorUnits(balance, orgCurrency),
             },
-            unit_amount: toStripeMinorUnits(balance, orgCurrency),
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        customer_email: customer.email ?? undefined,
+        success_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}&paid=1`,
+        cancel_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}`,
+        metadata: {
+          organization_id: orgId,
+          order_id: order.id,
+          order_number: order.order_number,
+          payment_type: "balance",
         },
-      ],
-      customer_email: customer.email ?? undefined,
-      success_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}&paid=1`,
-      cancel_url: `${siteUrl}/order-status?token=${encodeURIComponent(token)}`,
-      metadata: {
-        organization_id: orgId,
-        order_id: order.id,
-        order_number: order.order_number,
-        payment_type: "balance",
       },
-    });
+      stripeAccountId ? { stripeAccount: stripeAccountId } : undefined
+    );
   } catch (err) {
     console.error("[pay-balance] Stripe session create failed:", err instanceof Error ? err.message : err);
     return { ok: false, message: "Payments are temporarily unavailable. Please try again in a moment." };

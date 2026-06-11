@@ -18,6 +18,7 @@ import { reserveProductAvailabilityBlock } from "@/lib/availability/blocks";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
 import { hasStripeEnv, getStripe } from "@/lib/stripe/config";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
+import { computeOrderTax } from "@/lib/checkout/tax";
 import { calculatePrice } from "@/lib/pricing/engine";
 import type { PricingRule } from "@/lib/pricing/types";
 
@@ -71,6 +72,14 @@ export type CheckoutActionState = {
     address: string;
     subtotal: string;
     deliveryFee: string;
+    /** Sales/rental tax line — present only when the operator's
+     *  tax_rules matched the delivery jurisdiction and produced a
+     *  non-zero amount. Undefined for pickup orders or unmatched
+     *  jurisdictions. */
+    tax?: string;
+    /** Operator-facing label from the matched tax_rule. Shown next
+     *  to the tax amount on the review screen. */
+    taxLabel?: string;
     total: string;
     depositDue: string;
     balanceDue: string;
@@ -437,12 +446,20 @@ export async function createCheckoutOrder(
   // the eventual order_items insert has a value for selected_mode.
   let productSupportsModes: string[] = ["dry"];
   let productWetUpchargeCents: number | null = null;
+  // PR-2b — the product's vertical (via its category) drives the
+  // per-vertical lead-time floor checked in the date-policy block
+  // below. Null for category-less products → org policy alone.
+  let productVerticalSlug: string | null = null;
+  // PR-2c — damage waiver opt-in surcharge rate (bps). null/0 → not
+  // offered. The customer's accept-checkbox arrives as form field
+  // `damage_waiver` ("on" when checked).
+  let productDamageWaiverBps: number | null = null;
 
   if (productSlug) {
     const { data: product } = await supabase
       .from("products")
       .select(
-        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, categories(minimum_order_cents)",
+        "id, name, base_price, pricing_model, supports_modes, wet_upcharge_cents, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, minimum_order_quantity, attendant_included_hours, attendant_overage_cents_per_hour, damage_waiver_rate_bps, categories(minimum_order_cents, vertical)",
       )
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
@@ -452,6 +469,21 @@ export async function createCheckoutOrder(
       .maybeSingle();
 
     if (product) {
+      // PR-2b — vertical via the category embed (single or array
+      // shape depending on the PostgREST relationship inference).
+      const categoryJoin = (product as { categories?: unknown }).categories;
+      const categoryRow = Array.isArray(categoryJoin) ? categoryJoin[0] : categoryJoin;
+      productVerticalSlug =
+        typeof (categoryRow as { vertical?: unknown } | null)?.vertical === "string"
+          ? ((categoryRow as { vertical: string }).vertical)
+          : null;
+
+      // PR-2c — damage waiver rate (bps).
+      productDamageWaiverBps =
+        typeof (product as { damage_waiver_rate_bps?: unknown }).damage_waiver_rate_bps === "number"
+          ? ((product as { damage_waiver_rate_bps: number }).damage_waiver_rate_bps)
+          : null;
+
       // Phase 2e.13 — capability slugs read before the pricing
       // validity check so per-unit products (which carry their rate
       // on unit_price_cents, not base_price) aren't rejected by the
@@ -788,6 +820,20 @@ export async function createCheckoutOrder(
     subtotal += wetUpchargeApplied;
   }
 
+  // PR-2c — damage waiver opt-in surcharge. Computed off the rental
+  // subtotal (excludes delivery fee + tax). The customer's accept
+  // checkbox arrives as form field `damage_waiver` ("on" when ticked).
+  const waiverAccepted = String(formData.get("damage_waiver") ?? "").toLowerCase() === "on";
+  const { computeDamageWaiver } = await import("@/lib/checkout/damage-waiver");
+  const waiver = computeDamageWaiver({
+    rentalSubtotal: subtotal,
+    rateBps: productDamageWaiverBps,
+    accepted: waiverAccepted,
+  });
+  if (waiver.amount > 0) {
+    subtotal = Number((subtotal + waiver.amount).toFixed(2));
+  }
+
   // Decision 2.9 — reject zero-total bookings instead of letting them through
   // and surprising the operator with a $0 order. Hit when no productSlug was
   // provided AND the wet upcharge path didn't fire.
@@ -855,24 +901,41 @@ export async function createCheckoutOrder(
     }
   }
 
-  if (serviceArea && subtotal < serviceArea.minimumOrderAmount) {
-    await logAppEvent({
-      organizationId: orgId,
-      source: "checkout.website",
-      action: "minimum_order_blocked",
-      status: "warning",
-      metadata: {
-        subtotal,
-        minimumOrderAmount: serviceArea.minimumOrderAmount,
-        serviceAreaId: serviceArea?.id ?? null,
-      }
-    });
+  // PR-3b — per-category minimum OVERRIDES the service-area minimum
+  // when set, so a Tables & Chairs operator can publish "$30 minimum
+  // per chair order" without inheriting their inflatable side's $100
+  // service-area floor. When the category min is null, fall back to
+  // the service-area min — the historical behavior.
+  if (serviceArea) {
+    const effectiveMin =
+      typeof productMinimumOrderCents === "number" && productMinimumOrderCents > 0
+        ? productMinimumOrderCents / 100
+        : serviceArea.minimumOrderAmount;
+    if (subtotal < effectiveMin) {
+      const source =
+        typeof productMinimumOrderCents === "number" && productMinimumOrderCents > 0
+          ? "category"
+          : "service_area";
+      await logAppEvent({
+        organizationId: orgId,
+        source: "checkout.website",
+        action: "minimum_order_blocked",
+        status: "warning",
+        metadata: {
+          subtotal,
+          effectiveMinimum: effectiveMin,
+          minimumSource: source,
+          serviceAreaId: serviceArea?.id ?? null,
+        }
+      });
 
-    return fail({
-      message: `This service area requires a minimum order of $${serviceArea.minimumOrderAmount.toFixed(
-        2
-      )}.`,
-    });
+      return fail({
+        message:
+          source === "category"
+            ? `This category requires a minimum order of $${effectiveMin.toFixed(2)}.`
+            : `This service area requires a minimum order of $${effectiveMin.toFixed(2)}.`,
+      });
+    }
   }
 
   // Event date is required when a specific product is being booked
@@ -897,9 +960,21 @@ export async function createCheckoutOrder(
   // of "today" is in the past once the day has started.
   if (eventDate) {
     const bookingPolicies = await getBookingPolicies();
+    // PR-2b — vertical lead-time floor: a tent build needs weeks of
+    // notice regardless of the org's generic 24h setting. Effective
+    // lead time = max(org policy, vertical floor); the org can be
+    // stricter than the vertical, never looser.
+    const { resolveVerticalPolicies, effectiveLeadTimeHours } = await import(
+      "@/lib/verticals/policies"
+    );
+    const verticalPolicies = resolveVerticalPolicies(productVerticalSlug);
+    const leadTimeHours = effectiveLeadTimeHours(
+      bookingPolicies.bookingLeadTimeHours,
+      verticalPolicies
+    );
     const eventDateMs = new Date(`${eventDate}T00:00:00Z`).getTime();
     const nowMs = Date.now();
-    const leadTimeMs = bookingPolicies.bookingLeadTimeHours * 60 * 60 * 1000;
+    const leadTimeMs = leadTimeHours * 60 * 60 * 1000;
     const earliestMs = nowMs + leadTimeMs;
     // Round earliestMs down to the start of that UTC day so a calendar-day
     // comparison vs eventDateMs (also at 00:00 UTC) is fair.
@@ -908,9 +983,11 @@ export async function createCheckoutOrder(
 
     if (eventDateMs < earliestDayMs) {
       const friendly =
-        bookingPolicies.bookingLeadTimeHours === 0
+        leadTimeHours === 0
           ? "This event date has already passed."
-          : `Bookings require at least ${bookingPolicies.bookingLeadTimeHours} hours advance notice.`;
+          : leadTimeHours >= 48
+            ? `Bookings for this item require at least ${Math.round(leadTimeHours / 24)} days advance notice.`
+            : `Bookings require at least ${leadTimeHours} hours advance notice.`;
       return fail({ message: friendly });
     }
 
@@ -1097,6 +1174,21 @@ export async function createCheckoutOrder(
 
   const deliveryFee = serviceArea?.deliveryFee ?? 0;
 
+  // Tax is computed off the taxable base (subtotal + delivery_fee) by
+  // looking up the operator's per-jurisdiction rule for the delivery
+  // address. A missing rule returns 0 — operators opt in by configuring
+  // jurisdictions they actually collect tax in. Pickup orders without
+  // a delivery address fall through to 0 as well.
+  const taxableBaseCents = Math.round((subtotal + deliveryFee) * 100);
+  const taxResult = await computeOrderTax(supabase, {
+    organizationId: orgId,
+    state: fulfillmentType === "delivery" ? state ?? null : null,
+    postalCode: fulfillmentType === "delivery" ? postalCode ?? null : null,
+    taxableBaseCents,
+  });
+  const taxCents = taxResult.taxCents;
+  const taxAmount = taxCents / 100;
+
   // Compute deposit + balance in cents-integers to avoid the accumulated
   // toFixed(2) rounding drift that the previous chain — subtotal+fee
   // rounded, then *percentage rounded — could produce on multi-line
@@ -1104,7 +1196,7 @@ export async function createCheckoutOrder(
   // previously yielded deposit 59.99 + balance 140.00 = 199.99 (≠ 200).
   // Working in cents until the final boundary keeps deposit+balance
   // equal to total to the penny.
-  const totalCents = Math.round((subtotal + deliveryFee) * 100);
+  const totalCents = taxableBaseCents + taxCents;
   const total = totalCents / 100;
 
   const policies = await getBookingPolicies();
@@ -1141,9 +1233,27 @@ export async function createCheckoutOrder(
   const deposit = depositCents / 100;
   const balance = (totalCents - depositCents) / 100;
 
+  // Connect Express — deposits are charged DIRECTLY on the operator's
+  // connected account (Korent never holds operator funds; see the
+  // decision record in docs/marketplace/master-plan.md). Online
+  // payment therefore requires a charges_enabled connected account,
+  // not just the platform STRIPE_SECRET_KEY. When the org isn't
+  // connected yet, the order falls through to the no-Stripe path
+  // (deposit recorded as due, operator collects manually) and the
+  // dashboard readiness banner tells them to finish onboarding.
+  const { canAcceptStripePayments, fieldsFromOrgRow, ORG_CONNECT_COLUMNS } = await import("@/lib/stripe/connect");
+  const { data: connectRow } = await supabase
+    .from("organizations")
+    .select(`${ORG_CONNECT_COLUMNS}, default_currency`)
+    .eq("id", orgId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const connectReady = canAcceptStripePayments(fieldsFromOrgRow(connectRow ?? null));
+  const stripeAccountId = connectRow?.stripe_connect_account_id ?? null;
+
   // Check Stripe plan gate before creating any records — fail early if org can't accept
   // online payments but a deposit is required.
-  if (hasStripeEnv() && deposit > 0) {
+  if (hasStripeEnv() && connectReady && deposit > 0) {
     const { checkFeatureAccess } = await import("@/lib/stripe/gate");
     const stripeGate = await checkFeatureAccess("stripe_payments");
     if (!stripeGate.allowed) {
@@ -1184,6 +1294,7 @@ export async function createCheckoutOrder(
       fulfillment_type: fulfillmentType,
       subtotal_amount: subtotal,
       delivery_fee_amount: deliveryFee,
+      tax_amount: taxAmount,
       total_amount: total,
       deposit_due_amount: deposit,
       balance_due_amount: balance,
@@ -1336,11 +1447,38 @@ export async function createCheckoutOrder(
         });
       }
     }
+
+    // PR-2c — damage waiver as its own line so invoices and exports
+    // show the customer agreed to the surcharge (rather than burying
+    // it in the rental's unit_price). Best-effort like the add-ons:
+    // the waiver dollars already live on orders.subtotal_amount, so
+    // a failed insert is a reporting gap, not a billing error.
+    if (parentItem?.id && waiver.amount > 0) {
+      const { error: waiverItemError } = await supabase
+        .from("order_items")
+        .insert({
+          order_id: order.id,
+          parent_order_item_id: parentItem.id,
+          line_type: "damage_waiver",
+          quantity: 1,
+          unit_price: waiver.amount,
+          line_total: waiver.amount,
+          item_name_snapshot: `Damage waiver (${(waiver.rateBps / 100).toFixed(2)}%)`,
+        });
+      if (waiverItemError) {
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website",
+          message: "Failed to insert damage waiver line item",
+          context: { parentItemId: parentItem.id, waiverAmount: waiver.amount },
+        });
+      }
+    }
   }
 
   // Use a temporary checkout_hold only when Stripe payment is expected (webhook will convert it).
   // If Stripe isn't configured, use a permanent hold since there's no webhook to convert it.
-  const willUseStripe = hasStripeEnv() && deposit > 0;
+  const willUseStripe = hasStripeEnv() && connectReady && deposit > 0;
 
   if (productId && eventDate) {
     const reserveResult = await reserveProductAvailabilityBlock({
@@ -1454,7 +1592,7 @@ export async function createCheckoutOrder(
   // Send order confirmation email only when no Stripe deposit is required.
   // When Stripe handles the deposit, the webhook sends a payment confirmation
   // after checkout.session.completed to avoid emailing before the customer pays.
-  const stripeWillHandlePayment = hasStripeEnv() && deposit > 0;
+  const stripeWillHandlePayment = hasStripeEnv() && connectReady && deposit > 0;
   if (!stripeWillHandlePayment) {
     try {
       const { triggerOrderConfirmationEmail } = await import("@/lib/email/triggers");
@@ -1510,8 +1648,11 @@ export async function createCheckoutOrder(
     }
   }
 
-  // Attempt Stripe Checkout for deposit payment
-  if (hasStripeEnv() && deposit > 0) {
+  // Attempt Stripe Checkout for deposit payment — created as a DIRECT
+  // charge on the operator's connected account (Connect Express).
+  // The customer pays the operator; the operator pays Stripe's fees;
+  // Korent takes no application fee (Option A — subscription only).
+  if (willUseStripe && stripeAccountId) {
     try {
       // Verify the org's plan allows Stripe payments before creating a session
       const { checkFeatureAccess } = await import("@/lib/stripe/gate");
@@ -1531,41 +1672,96 @@ export async function createCheckoutOrder(
 
       // Resolve org currency so non-USD operators charge in their currency.
       // Falls back to "usd" if the column is null/missing. The helper
-      // applies zero-decimal handling for currencies like JPY.
-      const { data: orgCurrencyRow } = await supabase
-        .from("organizations")
-        .select("default_currency")
-        .eq("id", orgId)
-        .is("deleted_at", null)
-        .maybeSingle();
+      // applies zero-decimal handling for currencies like JPY. The row
+      // was already fetched alongside the connect columns above.
       const { normalizeCurrency, toStripeMinorUnits } = await import("@/lib/money/currency");
-      const orgCurrency = normalizeCurrency(orgCurrencyRow?.default_currency);
+      const orgCurrency = normalizeCurrency(connectRow?.default_currency);
 
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: orgCurrency,
-              product_data: {
-                name: `Deposit — ${productName}`,
-                description: `Order ${orderNumber} deposit`,
-              },
-              unit_amount: toStripeMinorUnits(deposit, orgCurrency),
+      // PR-2c — saved card flow. Create / reuse a connected-account
+      // Customer for the renter so `setup_future_usage='on_session'`
+      // attaches the payment method to a stable id the operator can
+      // charge against post-event for damage. Customer rows are
+      // org-scoped (one renter who rents from two operators ends up
+      // with two acct-scoped customer ids — the right model for
+      // direct charges).
+      let customerStripeId: string | null = null;
+      try {
+        const { data: customerRow } = await supabase
+          .from("customers")
+          .select("stripe_customer_id")
+          .eq("id", customerId)
+          .eq("organization_id", orgId)
+          .maybeSingle();
+        customerStripeId = customerRow?.stripe_customer_id ?? null;
+        if (!customerStripeId) {
+          const created = await stripe.customers.create(
+            {
+              email: email ?? undefined,
+              name: [firstName, lastName].filter(Boolean).join(" ") || undefined,
+              phone: phone ?? undefined,
+              metadata: { organization_id: orgId, customer_id: customerId },
             },
-            quantity: 1,
-          },
-        ],
-        customer_email: email,
-        success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}`,
-        metadata: {
-          organization_id: orgId,
-          order_id: order.id,
-          order_number: orderNumber,
-          payment_type: "deposit",
+            { stripeAccount: stripeAccountId }
+          );
+          customerStripeId = created.id;
+          await supabase
+            .from("customers")
+            .update({ stripe_customer_id: customerStripeId })
+            .eq("id", customerId)
+            .eq("organization_id", orgId)
+            .is("stripe_customer_id", null);
         }
-      });
+      } catch (custErr) {
+        // Non-fatal — checkout proceeds without saving the card. The
+        // operator can still issue manual damage invoices via cash /
+        // direct billing.
+        await logAppError({
+          organizationId: orgId,
+          source: "checkout.website.stripe_customer",
+          message: "Connected-account customer create failed",
+          context: { orderNumber, reason: custErr instanceof Error ? custErr.message : String(custErr) },
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: orgCurrency,
+                product_data: {
+                  name: `Deposit — ${productName}`,
+                  description: `Order ${orderNumber} deposit`,
+                },
+                unit_amount: toStripeMinorUnits(deposit, orgCurrency),
+              },
+              quantity: 1,
+            },
+          ],
+          customer_email: customerStripeId ? undefined : email,
+          customer: customerStripeId ?? undefined,
+          // setup_future_usage=on_session attaches the payment method
+          // used here to the customer so the operator can charge it
+          // for damage after the event without re-collecting a card.
+          payment_intent_data: customerStripeId
+            ? { setup_future_usage: "on_session" }
+            : undefined,
+          success_url: `${siteUrl}/order-confirmation?order=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${siteUrl}/order-confirmation?order=${orderNumber}`,
+          metadata: {
+            organization_id: orgId,
+            order_id: order.id,
+            order_number: orderNumber,
+            payment_type: "deposit",
+          }
+        },
+        // Direct charge: the session (and its payment_intent, refunds,
+        // disputes) lives on the connected account. Webhook events for
+        // it arrive with event.account set — the endpoint must have
+        // "listen to events on connected accounts" enabled.
+        { stripeAccount: stripeAccountId }
+      );
 
       if (session.url) {
         const fmt = (n: number) => `$${n.toFixed(2)}`;
@@ -1586,6 +1782,8 @@ export async function createCheckoutOrder(
             // this is purely for human-readable display arithmetic.
             subtotal: fmt(subtotal - wetUpchargeApplied),
             deliveryFee: fmt(deliveryFee),
+            tax: taxAmount > 0 ? fmt(taxAmount) : undefined,
+            taxLabel: taxResult.label ?? undefined,
             total: fmt(total),
             depositDue: fmt(deposit),
             balanceDue: fmt(balance),
@@ -1642,6 +1840,8 @@ export async function createCheckoutOrder(
       // without the wet upcharge so the line items sum to the total.
       subtotal: fmt(subtotal - wetUpchargeApplied),
       deliveryFee: fmt(deliveryFee),
+      tax: taxAmount > 0 ? fmt(taxAmount) : undefined,
+      taxLabel: taxResult.label ?? undefined,
       total: fmt(total),
       depositDue: fmt(deposit),
       balanceDue: fmt(balance),

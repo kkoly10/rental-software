@@ -7,6 +7,7 @@ import { calculatePrice } from "@/lib/pricing/engine";
 import { computeRentalDays } from "@/lib/pricing/rental-days";
 import { computePerHourLineTotal } from "@/lib/capabilities/pricing/per-hour";
 import { computePerUnitLineTotal } from "@/lib/capabilities/pricing/per-unit";
+import { computeOrderTax } from "@/lib/checkout/tax";
 import type { PricingRule } from "@/lib/pricing/types";
 
 export type CheckoutPricingData = {
@@ -23,8 +24,20 @@ export type CheckoutPricingData = {
    *  summary can label "$300 × 3 days = $900". */
   rentalDays: number;
   deliveryFee: number | null;
+  /** Per-jurisdiction sales/rental tax computed from the operator's
+   *  tax_rules. Null while the ZIP isn't known yet; 0 when no rule
+   *  matches the resolved state+postal_code (operator opts in by
+   *  configuring jurisdictions). */
+  tax: number | null;
+  /** Label from the matched tax_rule for the receipt — null when no
+   *  rule matched or pricing is still indeterminate. */
+  taxLabel: string | null;
   total: number | null;
   deposit: number | null;
+  /** PR-2c — damage waiver opt-in. Null when the product doesn't
+   *  offer one; otherwise carries the rate the operator configured.
+   *  The form computes the live preview against the current subtotal. */
+  damageWaiverRateBps: number | null;
 };
 
 /** Parsed selections coming from the PDP query string. The page reads
@@ -57,8 +70,11 @@ export async function getCheckoutPricing(
       wetUpcharge: 0,
       rentalDays: 1,
       deliveryFee: null,
+      tax: null,
+      taxLabel: null,
       total: null,
       deposit: null,
+      damageWaiverRateBps: null,
     };
   }
 
@@ -70,7 +86,7 @@ export async function getCheckoutPricing(
   const [{ data: product }, { data: org }] = await Promise.all([
     supabase
       .from("products")
-      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents")
+      .select("base_price, supports_modes, wet_upcharge_cents, pricing_model, capability_slugs, hourly_rate_cents, minimum_hours, unit_price_cents, damage_waiver_rate_bps")
       .eq("slug", productSlug)
       .eq("organization_id", orgId)
       .is("deleted_at", null)
@@ -276,8 +292,13 @@ export async function getCheckoutPricing(
       : 0;
   subtotal = Number((subtotal + wetUpcharge).toFixed(2));
 
+  const damageWaiverRateBps =
+    typeof product.damage_waiver_rate_bps === "number" && product.damage_waiver_rate_bps > 0
+      ? product.damage_waiver_rate_bps
+      : null;
+
   if (!zip) {
-    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null, damageWaiverRateBps };
   }
 
   const serviceArea = await resolveServiceAreaForAddress({
@@ -286,11 +307,26 @@ export async function getCheckoutPricing(
   });
 
   if (!serviceArea) {
-    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, total: null, deposit: null };
+    return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee: null, tax: null, taxLabel: null, total: null, deposit: null, damageWaiverRateBps };
   }
 
   const deliveryFee = serviceArea.deliveryFee;
-  const total = Number((subtotal + deliveryFee).toFixed(2));
+
+  // Tax preview uses the service area's configured state — the
+  // customer hasn't typed their full address yet on the preview
+  // page, but the operator's service-area row already carries the
+  // state for this ZIP, so the same per-jurisdiction lookup runs.
+  const taxableBaseCents = Math.round((subtotal + deliveryFee) * 100);
+  const taxResult = await computeOrderTax(supabase, {
+    organizationId: orgId,
+    state: serviceArea.state ?? null,
+    postalCode: zip,
+    taxableBaseCents,
+  });
+  const tax = taxResult.taxCents / 100;
+  const taxLabel = taxResult.label;
+
+  const total = Number(((taxableBaseCents + taxResult.taxCents) / 100).toFixed(2));
 
   const policies = await getBookingPolicies();
   let deposit = Number((total * (policies.depositPercentage / 100)).toFixed(2));
@@ -298,5 +334,5 @@ export async function getCheckoutPricing(
     deposit = Math.min(policies.depositMinimum, total);
   }
 
-  return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee, total, deposit };
+  return { basePrice, adjustments, subtotal, wetUpcharge, rentalDays, deliveryFee, tax, taxLabel, total, deposit, damageWaiverRateBps };
 }

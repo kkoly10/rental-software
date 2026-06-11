@@ -64,11 +64,36 @@ async function resolvePaymentStatus(
     return { status: "paid", orderNumber };
   }
 
-  // If a Stripe checkout session ID was provided, verify with the Stripe API
+  // If a Stripe checkout session ID was provided, verify with the Stripe API.
+  // Connect: deposit sessions are direct charges on the operator's
+  // connected account, so the retrieve must be scoped there — a
+  // platform-key call 404s and the customer would see "unpaid" right
+  // after paying. Legacy (pre-Connect) sessions live on the platform;
+  // fall back on resource_missing so old confirmation links keep
+  // resolving.
   if (sessionId && hasStripeEnv()) {
     try {
       const stripe = getStripe();
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const { data: connectOrg } = await supabase
+        .from("organizations")
+        .select("stripe_connect_account_id")
+        .eq("id", orgId)
+        .maybeSingle();
+      const connectAccountId = connectOrg?.stripe_connect_account_id ?? null;
+
+      let session;
+      if (connectAccountId) {
+        try {
+          session = await stripe.checkout.sessions.retrieve(sessionId, {
+            stripeAccount: connectAccountId,
+          });
+        } catch (connectErr) {
+          if ((connectErr as { code?: string })?.code !== "resource_missing") throw connectErr;
+          session = await stripe.checkout.sessions.retrieve(sessionId);
+        }
+      } else {
+        session = await stripe.checkout.sessions.retrieve(sessionId);
+      }
 
       if (session.payment_status === "paid") {
         // Stripe confirms payment, but our webhook may not have fired yet.

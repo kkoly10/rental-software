@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { hasStripeEnv } from "@/lib/stripe/config";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/auth/org-context";
+import { canAcceptStripePayments, fieldsFromOrgRow, ORG_CONNECT_COLUMNS } from "@/lib/stripe/connect";
 import { getMessages } from "@/lib/i18n/server";
 
 /**
@@ -28,7 +32,26 @@ export async function StorefrontReadinessBanner({
   const t = m.dashboard.storefrontReadiness;
 
   const storefrontDead = productsCount > 0 && serviceAreasCount === 0;
-  const depositsOff = !hasStripeEnv();
+
+  // Connect Express: deposits charge the operator's connected account
+  // directly, so "deposits on" needs BOTH the platform key AND a
+  // charges_enabled connected account. Until onboarding completes,
+  // checkout falls back to deposit-due-on-delivery and this banner
+  // is the loud signal that online payments aren't live yet.
+  let connectReady = false;
+  if (hasStripeEnv() && hasSupabaseEnv()) {
+    const ctx = await getOrgContext();
+    if (ctx) {
+      const supabase = await createSupabaseServerClient();
+      const { data: org } = await supabase
+        .from("organizations")
+        .select(ORG_CONNECT_COLUMNS)
+        .eq("id", ctx.organizationId)
+        .maybeSingle();
+      connectReady = canAcceptStripePayments(fieldsFromOrgRow(org ?? null));
+    }
+  }
+  const depositsOff = !hasStripeEnv() || !connectReady;
 
   if (!storefrontDead && !depositsOff) return null;
 
@@ -68,6 +91,17 @@ export async function StorefrontReadinessBanner({
           <div className="muted" style={{ marginTop: 6, lineHeight: 1.6 }}>
             {t.depositsOffBody}
           </div>
+          {hasStripeEnv() && (
+            <div style={{ marginTop: 10 }}>
+              <Link
+                href="/dashboard/settings/billing"
+                className="primary-btn"
+                style={{ fontSize: 13 }}
+              >
+                {t.connectStripeCta}
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

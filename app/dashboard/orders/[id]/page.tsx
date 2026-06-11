@@ -2,6 +2,9 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getOrderDetail } from "@/lib/data/order-detail";
+import { getCustomerPaymentMethods } from "@/lib/data/customer-payment-methods";
+import { getOrgContext } from "@/lib/auth/org-context";
+import { DamageChargeButton } from "@/components/orders/damage-charge-button";
 import { RecordPaymentForm } from "@/components/payments/record-payment-form";
 import { CreateDocumentsButton } from "@/components/documents/document-actions";
 import { WeatherAlert } from "@/components/weather/weather-alert";
@@ -9,6 +12,7 @@ import { CommunicationList } from "@/components/communications/communication-lis
 import { getOrderCommunications } from "@/lib/data/communication-history";
 import { SendQuoteButton } from "@/components/orders/send-quote-button";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
+import { RefundDepositButton } from "@/components/orders/refund-deposit-button";
 import { RevokePortalTokenButton } from "@/components/orders/revoke-portal-token-button";
 import { ConfirmOrderButton } from "@/components/orders/confirm-order-button";
 import { MarkCompletedButton } from "@/components/orders/mark-completed-button";
@@ -46,7 +50,7 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [order, communications, routingState, qbStatus, xeroStatus, seriesSummary, conditionRows, m] = await Promise.all([
+  const [order, communications, routingState, qbStatus, xeroStatus, seriesSummary, conditionRows, m, ctx] = await Promise.all([
     getOrderDetail(id),
     getOrderCommunications(id),
     getOrderRoutingState(id),
@@ -55,7 +59,11 @@ export default async function OrderDetailPage({
     getOrderSeriesSummary(id),
     getOrderConditionRows(id),
     getMessages(),
+    getOrgContext(),
   ]);
+  const savedPaymentMethods = ctx
+    ? await getCustomerPaymentMethods(ctx.organizationId, order.customerId)
+    : [];
   const qboConnected = qbStatus.configured && qbStatus.connected;
   const xeroConnected = xeroStatus.configured && xeroStatus.connected;
   // Sprint 5.5 — Equipment Condition card. Hide when no stops have
@@ -238,6 +246,14 @@ export default async function OrderDetailPage({
                 <strong>{order.deliveryFee}</strong>
               </div>
             </div>
+            {order.tax !== "$0.00" && order.tax !== "$0" && (
+              <div className="order-card">
+                <div className="order-row">
+                  <span className="muted">{m.checkoutSummary.tax}</span>
+                  <strong>{order.tax}</strong>
+                </div>
+              </div>
+            )}
             <div className="order-card">
               <div className="order-row">
                 <span className="muted">{m.common.total}</span>
@@ -275,6 +291,12 @@ export default async function OrderDetailPage({
               hasRouteStop={routingState?.kind === "already_assigned"}
             />
             <MarkCompletedButton orderId={id} currentStatus={order.status} />
+            <RefundDepositButton
+              orderId={id}
+              depositPaidAmount={order.depositPaidAmount}
+              status={order.status}
+            />
+            <DamageChargeButton orderId={id} paymentMethods={savedPaymentMethods} />
             {qboConnected && <SyncQuickBooksButton orderId={id} />}
             {xeroConnected && <SyncXeroButton orderId={id} />}
             <MakeRecurringForm

@@ -14,6 +14,8 @@ export type QuotePdfData = {
   items: { name: string; quantity: number; unitPrice: number; lineTotal: number }[];
   subtotal: number;
   deliveryFee: number;
+  tax: number;
+  taxLabel: string | null;
   total: number;
   depositRequired: number;
   portalUrl: string;
@@ -163,6 +165,12 @@ export function generateQuotePdf(data: QuotePdfData): Uint8Array {
   y += 18;
   doc.text("Delivery", totalsX, y);
   doc.text(formatMoney(data.deliveryFee), margin + contentWidth - 12, y, { align: "right" });
+
+  if (data.tax > 0) {
+    y += 18;
+    doc.text(data.taxLabel ?? "Tax", totalsX, y);
+    doc.text(formatMoney(data.tax), margin + contentWidth - 12, y, { align: "right" });
+  }
 
   y += 18;
   doc.setFont("helvetica", "bold");

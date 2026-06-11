@@ -31,7 +31,17 @@ export const photoBoothsVertical: VerticalConfig = {
     "display.variant-gallery",
     "display.structured-specs",
     "composition.add-ons",
+    "order.damage-waiver",
   ],
+  /**
+   * Booth + attendant are committed per event date — 50% forfeit
+   * inside 14 days; 72h notice to staff an attendant.
+   */
+  policies: {
+    refundWindowDays: 14,
+    forfeitPct: 50,
+    minLeadTimeHours: 72,
+  },
   defaultCategorySeeds: [
     "Open-Air Photo Booth",
     "Enclosed Photo Booth",

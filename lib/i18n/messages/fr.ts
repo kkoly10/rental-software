@@ -566,7 +566,8 @@ export const fr: Messages = {
       noServiceAreaCta: "Ajouter une zone de service",
       depositsOffTitle: "Les acomptes en ligne ne sont pas configurés",
       depositsOffBody:
-        "Stripe n'est pas configuré : les clients peuvent envoyer des demandes de réservation mais ne peuvent pas payer d'acompte en ligne. Les réservations arrivent sans acompte tant que les paiements ne sont pas configurés.",
+        "Votre compte Stripe n'est pas encore connecté : les clients peuvent envoyer des demandes de réservation mais ne peuvent pas payer d'acompte en ligne. Les réservations arrivent sans acompte tant que la configuration des paiements n'est pas terminée.",
+      connectStripeCta: "Configurer les paiements",
     },
     nav: {
       dashboard: "Tableau de bord",
@@ -1171,6 +1172,30 @@ export const fr: Messages = {
         { q: "Quels moyens de paiement acceptez-vous ?", a: "Toutes les cartes principales (Visa, Mastercard, Amex, Discover) via Stripe. La facturation est disponible sur les forfaits Growth." },
       ],
     },
+    stripeConnect: {
+      kicker: "Paiements clients",
+      title: "Compte de paiement Stripe",
+      statusNotConnected: "Non connecté",
+      statusIncomplete: "Action requise",
+      statusPending: "En cours de vérification",
+      statusReady: "Paiements actifs",
+      bodyNotConnected:
+        "Connectez un compte Stripe pour encaisser les acomptes et soldes en ligne. Les paiements des clients vont directement sur votre compte bancaire — Korent ne détient jamais votre argent et ne prélève aucune commission sur vos réservations.",
+      bodyIncomplete:
+        "Votre inscription Stripe n'est pas terminée. Reprenez là où vous vous êtes arrêté pour commencer à accepter les paiements en ligne.",
+      bodyPending:
+        "Vos informations sont soumises et Stripe vérifie votre compte. Cela prend généralement quelques minutes — revenez bientôt.",
+      bodyReady:
+        "Votre vitrine encaisse les acomptes en ligne et les virements arrivent sur votre compte bancaire.",
+      bodyReadyPayoutsPending:
+        "Vous pouvez accepter des paiements, mais les virements attendent la vérification bancaire. Ouvrez votre tableau de bord Stripe pour terminer.",
+      ctaConnect: "Connecter avec Stripe",
+      ctaResume: "Reprendre l'inscription",
+      ctaOpening: "Ouverture de Stripe…",
+      ctaCheckStatus: "Vérifier le statut",
+      ctaChecking: "Vérification…",
+      ctaOpenDashboard: "Ouvrir le tableau de bord Stripe",
+    },
     pricingRules: {
       title: "Règles tarifaires",
       description: "Configurez les ajustements tarifaires dynamiques et saisonniers.",
@@ -1456,6 +1481,9 @@ export const fr: Messages = {
       phone: "Téléphone",
       email: "E-mail",
       smsOptIn: "Envoyez-moi des SMS de suivi (confirmation, rappels, statut). Frais SMS et données possibles. Répondez STOP pour vous désinscrire.",
+      damageWaiverTitle: "Ajouter la garantie dommages",
+      damageWaiverBody:
+        "Plafonne votre responsabilité en cas de dommages accidentels aux articles loués à {rate}% du sous-total (+{amount}$).",
       eventDate: "Date de l’événement",
       startTime: "Heure de début",
       endTime: "Heure de fin",
@@ -2468,6 +2496,7 @@ export const fr: Messages = {
     deliveryFee: "Frais de livraison",
     deliveryTBD: "À déterminer",
     deliveryFree: "Gratuit",
+    tax: "Taxe",
     total: "Total",
     depositDue: "Acompte dû",
     enterZipMessage: "Saisissez un code postal de livraison pour voir votre total avec les frais de livraison.",

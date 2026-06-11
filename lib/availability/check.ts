@@ -23,21 +23,6 @@ export async function checkProductAvailability(options: {
   endTime?: string | null;
   rentalEndDate?: string | null;
 }): Promise<AvailabilityCheckResult> {
-  const window = getAvailabilityWindowForDate(
-    options.eventDate,
-    options.startTime,
-    options.endTime,
-    options.rentalEndDate
-  );
-
-  if (!window) {
-    return {
-      available: true,
-      assetCapacity: 0,
-      reservedCount: 0,
-    };
-  }
-
   // Use the admin client when available. The customer-facing checkout path
   // calls this with no authenticated session, so the cookie-bound RLS-scoped
   // client returns 0 for assets (the "Org members can manage assets" policy
@@ -48,6 +33,34 @@ export async function checkProductAvailability(options: {
   const supabase = hasSupabaseServiceRoleEnv()
     ? createSupabaseAdminClient()
     : await createSupabaseServerClient();
+
+  // PR-1 #3 — pull setup/breakdown buffer so the window extends to
+  // cover crew + inventory time around the event itself. Without
+  // this, a Saturday tent with 4h setup_minutes_before doesn't
+  // block Friday evening, letting the operator double-book crew.
+  const { data: productMeta } = await supabase
+    .from("products")
+    .select("setup_minutes_before, breakdown_minutes_after")
+    .eq("id", options.productId)
+    .eq("organization_id", options.organizationId)
+    .maybeSingle();
+
+  const window = getAvailabilityWindowForDate(
+    options.eventDate,
+    options.startTime,
+    options.endTime,
+    options.rentalEndDate,
+    productMeta?.setup_minutes_before ?? 0,
+    productMeta?.breakdown_minutes_after ?? 0
+  );
+
+  if (!window) {
+    return {
+      available: true,
+      assetCapacity: 0,
+      reservedCount: 0,
+    };
+  }
 
   const now = new Date().toISOString();
 

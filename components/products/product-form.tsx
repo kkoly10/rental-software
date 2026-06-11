@@ -8,6 +8,7 @@ import {
   listCapabilitiesByGroup,
 } from "@/lib/capabilities/registry";
 import type { CapabilityGroup } from "@/lib/capabilities/types";
+import { getSuggestedCapabilities } from "@/lib/verticals/suggested-capabilities";
 
 const initialState = { ok: false, message: "" };
 
@@ -50,11 +51,13 @@ export function ProductForm({
     unitLabel?: string | null;
     // Phase 2e.5 — setup-window, onsite-attendant, capacity, order-minimum.
     setupMinutesBefore?: number | null;
+    breakdownMinutesAfter?: number | null;
     attendantIncludedHours?: number | null;
     attendantOverageCentsPerHour?: number | null;
     capacityMetric?: string | null;
     capacityValue?: number | null;
     minimumOrderQuantity?: number | null;
+    damageWaiverRateBps?: number | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -315,7 +318,11 @@ export function ProductForm({
           section sets product.capability_slugs only — the inflatable
           wet/dry + anchoring sections above stay independent until
           the migration to capability-driven fields lands. */}
-      <CapabilityCheckboxes initialSlugs={product?.capabilitySlugs ?? []} />
+      <CapabilityCheckboxes
+        initialSlugs={product?.capabilitySlugs ?? []}
+        verticalSlug={selectedCategoryVertical}
+        isNewProduct={!product?.id}
+      />
 
       {/* Phase 2e.3 — per-hour pricing fields. Always present in the
           DOM; the server action ignores them unless the product
@@ -337,6 +344,7 @@ export function ProductForm({
       {/* Phase 2e.5 — remaining capability field sets. */}
       <SetupWindowField
         initialSetupMinutesBefore={product?.setupMinutesBefore ?? null}
+        initialBreakdownMinutesAfter={product?.breakdownMinutesAfter ?? null}
       />
       <OnsiteAttendantFields
         initialIncludedHours={product?.attendantIncludedHours ?? null}
@@ -350,6 +358,9 @@ export function ProductForm({
       />
       <OrderMinimumField
         initialMinimumOrderQuantity={product?.minimumOrderQuantity ?? null}
+      />
+      <DamageWaiverField
+        initialDamageWaiverRateBps={product?.damageWaiverRateBps ?? null}
       />
 
       {state.message && (
@@ -383,7 +394,15 @@ export function ProductForm({
  * title-case the last segment). An i18n pass can localize these once
  * the marketing content settles.
  */
-function CapabilityCheckboxes({ initialSlugs }: { initialSlugs: string[] }) {
+function CapabilityCheckboxes({
+  initialSlugs,
+  verticalSlug,
+  isNewProduct,
+}: {
+  initialSlugs: string[];
+  verticalSlug: string | null;
+  isNewProduct: boolean;
+}) {
   const all = listCapabilities();
   const groups: CapabilityGroup[] = [
     "pricing",
@@ -395,10 +414,26 @@ function CapabilityCheckboxes({ initialSlugs }: { initialSlugs: string[] }) {
     "composition",
   ];
 
-  const checkedSet = new Set(initialSlugs);
+  // PR-3a — the vertical's registry capability list IS its
+  // "suggested by default" set. A new product seeded into a tents
+  // category should default to setup-window + damage-waiver +
+  // capacity-calc on; a chair product shouldn't even see
+  // anchoring/wet-dry without expanding the advanced group. This
+  // closes the UX gap the audit flagged: a bouncer operator
+  // shouldn't be presented with damage-waiver fields they don't
+  // understand, even though the schema permits them.
+  const suggestedSet = new Set(
+    verticalSlug ? getSuggestedCapabilities(verticalSlug) : []
+  );
+
+  // On a NEW product the suggested set is the default-checked set;
+  // on EDIT the operator's saved slugs win.
+  const checkedSet = new Set(
+    isNewProduct && initialSlugs.length === 0 ? [...suggestedSet] : initialSlugs
+  );
 
   return (
-    <details className="order-card" style={{ padding: 16 }}>
+    <details className="order-card" style={{ padding: 16 }} open>
       <summary style={{ cursor: "pointer", fontWeight: 600 }}>
         Capabilities ({checkedSet.size}/{all.length} selected)
       </summary>
@@ -407,53 +442,97 @@ function CapabilityCheckboxes({ initialSlugs }: { initialSlugs: string[] }) {
         style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
       >
         Choose which features apply to this product. Each capability surfaces
-        its own pricing, display, or operational fields elsewhere in the form
-        (coming in follow-up releases).
+        its own pricing, display, or operational fields elsewhere in the form.
+        {verticalSlug && suggestedSet.size > 0 && (
+          <>
+            {" "}
+            We've pre-selected the features <strong>{verticalSlug}</strong>{" "}
+            operators typically use; tap <em>Show advanced</em> for the rest.
+          </>
+        )}
       </p>
       <div style={{ display: "grid", gap: 16 }}>
         {groups.map((group) => {
           const inGroup = listCapabilitiesByGroup(group);
           if (inGroup.length === 0) return null;
+          const groupSuggested = inGroup.filter((c) => suggestedSet.has(c.slug));
+          const groupAdvanced = inGroup.filter((c) => !suggestedSet.has(c.slug));
+          // No vertical → no split; render the old flat list.
+          const renderRow = (c: { slug: string }) => (
+            <label
+              key={c.slug}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: "0.92rem",
+              }}
+            >
+              <input
+                type="checkbox"
+                name="capability_slugs"
+                value={c.slug}
+                defaultChecked={checkedSet.has(c.slug)}
+              />
+              <span>{slugToLabel(c.slug)}</span>
+            </label>
+          );
+          if (suggestedSet.size === 0) {
+            return (
+              <div key={group}>
+                <CapabilityGroupHeader label={group} />
+                <div style={{ display: "grid", gap: 6 }}>
+                  {inGroup.map(renderRow)}
+                </div>
+              </div>
+            );
+          }
           return (
             <div key={group}>
-              <strong
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  color: "var(--text-muted, #6b7280)",
-                  marginBottom: 8,
-                }}
-              >
-                {group}
-              </strong>
-              <div style={{ display: "grid", gap: 6 }}>
-                {inGroup.map((c) => (
-                  <label
-                    key={c.slug}
+              <CapabilityGroupHeader label={group} />
+              {groupSuggested.length > 0 && (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {groupSuggested.map(renderRow)}
+                </div>
+              )}
+              {groupAdvanced.length > 0 && (
+                <details style={{ marginTop: groupSuggested.length > 0 ? 8 : 0 }}>
+                  <summary
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      fontSize: "0.92rem",
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      color: "var(--text-muted, #6b7280)",
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      name="capability_slugs"
-                      value={c.slug}
-                      defaultChecked={checkedSet.has(c.slug)}
-                    />
-                    <span>{slugToLabel(c.slug)}</span>
-                  </label>
-                ))}
-              </div>
+                    Show advanced ({groupAdvanced.length})
+                  </summary>
+                  <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                    {groupAdvanced.map(renderRow)}
+                  </div>
+                </details>
+              )}
             </div>
           );
         })}
       </div>
     </details>
+  );
+}
+
+function CapabilityGroupHeader({ label }: { label: string }) {
+  return (
+    <strong
+      style={{
+        display: "block",
+        fontSize: "0.78rem",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        color: "var(--text-muted, #6b7280)",
+        marginBottom: 8,
+      }}
+    >
+      {label}
+    </strong>
   );
 }
 
@@ -639,37 +718,59 @@ function PerUnitPricingFields({
  */
 function SetupWindowField({
   initialSetupMinutesBefore,
+  initialBreakdownMinutesAfter,
 }: {
   initialSetupMinutesBefore: number | null;
+  initialBreakdownMinutesAfter: number | null;
 }) {
   return (
     <details className="order-card" style={{ padding: 16 }}>
       <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-        Setup window
+        Setup &amp; breakdown window
       </summary>
       <p
         className="muted"
         style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
       >
-        Used when the product carries the <code>setup.setup-window</code>{" "}
-        capability. Pull sheet shows arrival = event start − this many
-        minutes. Tents typically 120-240, dance floors 60-120, photo booths 60.
+        Pull sheet shows arrival = event start − setup minutes. The
+        availability check also extends each booking by these buffers
+        on both sides so a Saturday tent with 4h setup blocks Friday
+        evening for the crew + inventory.
+        Tents typically 120-240 setup / 60-120 breakdown; dance floors
+        60-120 / 60; photo booths 60 / 30.
       </p>
-      <label>
-        <strong style={{ display: "block", marginBottom: 6 }}>
-          Minutes before event start
-        </strong>
-        <input
-          type="number"
-          name="setup_minutes_before"
-          min="0"
-          max="1440"
-          step="15"
-          defaultValue={initialSetupMinutesBefore ?? ""}
-          placeholder="60"
-          style={{ width: 220 }}
-        />
-      </label>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Minutes before event start
+          </strong>
+          <input
+            type="number"
+            name="setup_minutes_before"
+            min="0"
+            max="1440"
+            step="15"
+            defaultValue={initialSetupMinutesBefore ?? ""}
+            placeholder="60"
+            style={{ width: 220 }}
+          />
+        </label>
+        <label>
+          <strong style={{ display: "block", marginBottom: 6 }}>
+            Minutes after event end
+          </strong>
+          <input
+            type="number"
+            name="breakdown_minutes_after"
+            min="0"
+            max="1440"
+            step="15"
+            defaultValue={initialBreakdownMinutesAfter ?? ""}
+            placeholder="60"
+            style={{ width: 220 }}
+          />
+        </label>
+      </div>
     </details>
   );
 }
@@ -833,6 +934,52 @@ function OrderMinimumField({
           step="1"
           defaultValue={initialMinimumOrderQuantity ?? ""}
           placeholder="50"
+          style={{ width: 220 }}
+        />
+      </label>
+    </details>
+  );
+}
+
+/**
+ * PR-2c — optional damage waiver (per-product opt-in surcharge).
+ * Stored as basis points on the product so cents round predictably.
+ * Operator inputs a percentage; we convert on save.
+ */
+function DamageWaiverField({
+  initialDamageWaiverRateBps,
+}: {
+  initialDamageWaiverRateBps: number | null;
+}) {
+  const initialPct =
+    initialDamageWaiverRateBps !== null
+      ? (initialDamageWaiverRateBps / 100).toString()
+      : "";
+  return (
+    <details className="order-card" style={{ padding: 16 }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+        Damage waiver
+      </summary>
+      <p
+        className="muted"
+        style={{ marginTop: 8, marginBottom: 16, fontSize: "0.88rem" }}
+      >
+        Optional surcharge customers can opt into at checkout to cap their
+        liability for accidental damage. Industry standard is 8–12% of the
+        rental subtotal. Leave blank to not offer it.
+      </p>
+      <label>
+        <strong style={{ display: "block", marginBottom: 6 }}>
+          Waiver rate (%)
+        </strong>
+        <input
+          type="number"
+          name="damage_waiver_rate_pct"
+          min="0"
+          max="50"
+          step="0.25"
+          defaultValue={initialPct}
+          placeholder="10"
           style={{ width: 220 }}
         />
       </label>

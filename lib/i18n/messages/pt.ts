@@ -566,7 +566,8 @@ export const pt: Messages = {
       noServiceAreaCta: "Adicionar zona de serviço",
       depositsOffTitle: "Os depósitos online não estão configurados",
       depositsOffBody:
-        "O Stripe não está configurado: os clientes podem enviar pedidos de reserva mas não podem pagar um depósito online. As reservas chegam como pedidos sem depósito até configurar os pagamentos.",
+        "A sua conta Stripe ainda não está conectada: os clientes podem enviar pedidos de reserva mas não podem pagar um depósito online. As reservas chegam como pedidos sem depósito até concluir a configuração de pagamentos.",
+      connectStripeCta: "Configurar pagamentos",
     },
     nav: {
       dashboard: "Painel",
@@ -1171,6 +1172,30 @@ export const pt: Messages = {
         { q: "Que métodos de pagamento aceitam?", a: "Todos os cartões principais (Visa, Mastercard, Amex, Discover) via Stripe. Faturação por fatura está disponível nos planos Growth." },
       ],
     },
+    stripeConnect: {
+      kicker: "Pagamentos de clientes",
+      title: "Conta de pagamentos Stripe",
+      statusNotConnected: "Não conectada",
+      statusIncomplete: "Ação necessária",
+      statusPending: "Em verificação",
+      statusReady: "A aceitar pagamentos",
+      bodyNotConnected:
+        "Conecte uma conta Stripe para cobrar depósitos e saldos online. Os pagamentos dos clientes vão diretamente para o seu banco — a Korent nunca retém o seu dinheiro nem cobra comissão pelas suas reservas.",
+      bodyIncomplete:
+        "O seu registo no Stripe não está concluído. Continue de onde parou para começar a aceitar pagamentos online.",
+      bodyPending:
+        "Os seus dados foram enviados e o Stripe está a verificar a sua conta. Normalmente demora alguns minutos — volte em breve.",
+      bodyReady:
+        "A sua loja cobra depósitos online e os pagamentos chegam à sua conta bancária.",
+      bodyReadyPayoutsPending:
+        "Pode aceitar pagamentos, mas as transferências aguardam a verificação bancária. Abra o seu painel Stripe para concluir.",
+      ctaConnect: "Conectar com Stripe",
+      ctaResume: "Retomar o registo",
+      ctaOpening: "A abrir o Stripe…",
+      ctaCheckStatus: "Verificar estado",
+      ctaChecking: "A verificar…",
+      ctaOpenDashboard: "Abrir painel Stripe",
+    },
     pricingRules: {
       title: "Regras de preços",
       description: "Configure ajustes de preços dinâmicos e sazonais para os seus alugueres.",
@@ -1456,6 +1481,9 @@ export const pt: Messages = {
       phone: "Telefone",
       email: "E-mail",
       smsOptIn: "Envie-me atualizações por SMS (confirmação, lembretes, estado). Podem aplicar-se tarifas. Responda STOP para cancelar.",
+      damageWaiverTitle: "Adicionar cobertura de danos",
+      damageWaiverBody:
+        "Limita a sua responsabilidade por danos acidentais nos artigos alugados a {rate}% do subtotal (+${amount}).",
       eventDate: "Data do evento",
       startTime: "Hora de início",
       endTime: "Hora de fim",
@@ -2468,6 +2496,7 @@ export const pt: Messages = {
     deliveryFee: "Taxa de entrega",
     deliveryTBD: "A definir",
     deliveryFree: "Grátis",
+    tax: "Imposto",
     total: "Total",
     depositDue: "Caução devida",
     enterZipMessage: "Introduza um código postal de entrega para ver o total com a taxa de entrega.",

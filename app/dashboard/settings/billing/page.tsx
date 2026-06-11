@@ -1,5 +1,6 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { SubscriptionStatusCard } from "@/components/settings/subscription-status-card";
+import { StripeConnectCard } from "@/components/settings/stripe-connect-card";
 import { PlanSelector } from "@/components/settings/plan-selector";
 import { getSubscriptionInfo } from "@/lib/stripe/subscription";
 import { getGuidanceState } from "@/lib/guidance/actions";
@@ -30,6 +31,7 @@ export default async function BillingPage() {
       <div className="dashboard-grid">
         <section>
           <SubscriptionStatusCard subscription={subscription} />
+          <StripeConnectCard />
           <div style={{ marginTop: 18 }}>
             <PlanSelector currentPlan={subscription.plan} interval="monthly" />
           </div>
