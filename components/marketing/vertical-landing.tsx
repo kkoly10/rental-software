@@ -40,7 +40,11 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
   const v = vertical.marketing;
   const copy = getVerticalLandingCopy(vertical.slug);
   const verticalLabel = vertical.label.en.toLowerCase();
-  const storefrontShot = vertical.storefrontDefaults?.heroImagePath;
+  // Real screenshot of the demo storefront UI — one honest product shot
+  // beats six per-vertical stock photos posing as storefronts. The
+  // per-vertical storefrontDefaults hero photo still serves as the OG
+  // image (see app/[vertical]/page.tsx).
+  const storefrontShot = "/marketing/product/storefront-demo.jpg";
   const bannerImage = vertical.imageSlugs.transitionBanner;
   const crewImage = vertical.imageSlugs.crew;
 
@@ -135,7 +139,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
                 <span className="mk-product-shot">
                   <Image
                     src={storefrontShot}
-                    alt={`A Korent ${verticalLabel} storefront`}
+                    alt="A live Korent storefront — editorial hero, real-time availability, and online booking"
                     fill
                     sizes="(max-width: 920px) 100vw, 880px"
                   />
