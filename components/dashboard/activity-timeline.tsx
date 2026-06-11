@@ -9,7 +9,7 @@ import type { Notification, NotificationType } from "@/lib/data/notifications";
  */
 
 const DOT_COLOR: Record<NotificationType, string> = {
-  new_order: "var(--primary)",
+  new_order: "var(--secondary)",
   payment_received: "var(--success)",
   payment_failed: "var(--danger)",
   payment_dispute: "var(--danger)",
@@ -24,7 +24,7 @@ export function ActivityTimeline({ items }: { items: Notification[] }) {
   return (
     <div className="activity">
       {items.map((n, i) => {
-        const dot = DOT_COLOR[n.type] ?? "var(--primary)";
+        const dot = DOT_COLOR[n.type] ?? "var(--secondary)";
         const isLast = i === items.length - 1;
         const row = (
           <div className="activity__item" style={{ paddingBottom: isLast ? 0 : 18 }}>

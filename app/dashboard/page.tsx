@@ -116,7 +116,7 @@ export default async function DashboardPage() {
             label={m.dashboard.overview.stats.todayBookings}
             value={String(summary.todayBookings)}
             meta={m.dashboard.overview.stats.todayBookingsMeta}
-            accent="var(--primary)"
+            accent="var(--secondary)"
             spark={summary.bookingsSeries}
             icon={
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5l6.5 3.5v8L9 16.5 2.5 13V5L9 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M2.5 5L9 8.5 15.5 5M9 8.5v8" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>

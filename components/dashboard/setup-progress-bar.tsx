@@ -80,7 +80,7 @@ export function SetupProgressBar({
           style={{
             height: "100%",
             width: `${percent}%`,
-            background: percent === 100 ? "#059669" : "var(--primary)",
+            background: percent === 100 ? "#059669" : "var(--secondary)",
             borderRadius: 999,
             transition: "width 0.3s ease",
           }}

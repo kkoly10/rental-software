@@ -1,14 +1,18 @@
 :root {
-  /* Carnival Theme — warm orange-red brand */
-  --bg: #fffaf5;
-  --bg-alt: #fff3e8;
+  /* Editorial dashboard palette — warm paper neutrals shared with the
+     storefront theme. Orange (--primary) is reserved for primary CTAs,
+     interactive cues (links/hovers/focus), and the brand mark. Olive
+     (--secondary) carries the supporting roles: kickers, selected
+     states, progress, and soft tinted surfaces. */
+  --bg: #f7f4ee;
+  --bg-alt: #f2ede3;
   --surface: #ffffff;
-  --surface-muted: #fff1e8;
-  --border: #f0e0d0;
-  --border-strong: #e0cdbf;
-  --text: #2d1f14;
-  --text-soft: #6b5545;
-  --text-muted: #8a7565;
+  --surface-muted: #f0ebe0;
+  --border: #e4ded3;
+  --border-strong: #cfc7b7;
+  --text: #1f1c17;
+  --text-soft: #5c5651;
+  --text-muted: #8a847c;
   /* WCAG 2.1 AA — the original orange (#e8590c) and green (#16a34a)
      fell to 3.58 / 3.14 contrast against white / their own light
      backgrounds when used for small text (kicker chips, status
@@ -20,8 +24,16 @@
   --primary: #c2410c;
   --primary-strong: #9a3412;
   --primary-light: #ff8c42;
-  --primary-bg: #fff1e8;
-  --primary-bg-subtle: #fff8f3;
+  /* Soft tint surfaces (sidebar active/hover, Ask AI, etc.) — now
+     olive-soft. Names kept for compatibility; treat as "secondary-bg". */
+  --primary-bg: #e9edde;
+  --primary-bg-subtle: #f3f5ec;
+  /* Olive secondary — the supportive color that contrasts the orange. */
+  --secondary: #3f4a33;
+  --secondary-strong: #333d29;
+  --secondary-light: #6b7a52;
+  --secondary-bg: #e9edde;
+  --secondary-bg-subtle: #f3f5ec;
   --accent: #7c3aed;
   --accent-light: #a78bfa;
   --accent-bg: #f3f0ff;
@@ -367,7 +379,7 @@ a:focus-visible {
 
 /* Typography */
 .kicker {
-  color: var(--primary);
+  color: var(--secondary);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -477,8 +489,8 @@ a:focus-visible {
   gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #fdeee3;
-  color: var(--primary);
+  background: var(--secondary-bg);
+  color: var(--secondary);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -645,8 +657,8 @@ a:focus-visible {
 }
 
 .dashboard-mobile-drawer .mobile-menu-nav a.active {
-  color: var(--primary);
-  background: var(--surface-muted);
+  color: var(--secondary-strong);
+  background: var(--secondary-bg);
 }
 
 .dashboard-nav-badge {
@@ -723,8 +735,8 @@ a:focus-visible {
 }
 
 .sidebar a.active {
-  background: var(--primary-bg, #fff1e8);
-  color: var(--primary, #e8590c);
+  background: var(--secondary-bg, #e9edde);
+  color: var(--secondary-strong, #333d29);
   font-weight: 600;
 }
 
@@ -779,10 +791,10 @@ a:focus-visible {
   width: 100%;
   margin: 0 0 18px;
   padding: 11px 14px;
-  border: 1px solid rgba(232, 89, 12, 0.35);
+  border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);
   border-radius: 12px;
-  background: var(--primary-bg, #fff1e8);
-  color: var(--primary, #e8590c);
+  background: var(--secondary-bg, #e9edde);
+  color: var(--secondary-strong, #333d29);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -793,8 +805,8 @@ a:focus-visible {
 
 .sidebar-ask-ai:hover,
 .sidebar-ask-ai:focus-visible {
-  background: rgba(232, 89, 12, 0.18);
-  border-color: rgba(232, 89, 12, 0.55);
+  background: color-mix(in srgb, var(--secondary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--secondary) 50%, transparent);
   outline: none;
 }
 
@@ -980,7 +992,7 @@ a:focus-visible {
 
 .map-card {
   min-height: 420px;
-  background: linear-gradient(180deg, #fff1e8 0%, #fdeee3 100%);
+  background: linear-gradient(180deg, var(--surface-muted) 0%, var(--bg-alt) 100%);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 18px;
@@ -2187,10 +2199,10 @@ textarea[aria-invalid="true"] {
 /* Setup Checklist */
 .checklist-card {
   background: var(--surface);
-  border: 2px solid var(--primary);
+  border: 2px solid var(--secondary);
   border-radius: var(--radius);
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(232, 89, 12, 0.1);
+  box-shadow: 0 8px 24px rgba(63, 74, 51, 0.1);
 }
 
 .checklist-header {
@@ -2211,7 +2223,7 @@ textarea[aria-invalid="true"] {
 
 .checklist-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+  background: var(--secondary);
   border-radius: 999px;
   transition: width 0.4s ease;
 }
@@ -2282,8 +2294,8 @@ textarea[aria-invalid="true"] {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: linear-gradient(135deg, #fdeee3, #fff8f3);
-  border: 1px solid rgba(232, 89, 12, 0.15);
+  background: var(--secondary-bg-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -2326,12 +2338,12 @@ textarea[aria-invalid="true"] {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #e8590c, #ff8c42);
+  background: linear-gradient(135deg, var(--secondary-strong), var(--secondary-light));
   color: white;
   border: none;
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(232, 89, 12, 0.35);
+  box-shadow: 0 8px 24px rgba(63, 74, 51, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   align-items: center;
@@ -2340,7 +2352,7 @@ textarea[aria-invalid="true"] {
 
 .copilot-fab:hover {
   transform: scale(1.08);
-  box-shadow: 0 12px 32px rgba(232, 89, 12, 0.45);
+  box-shadow: 0 12px 32px rgba(63, 74, 51, 0.45);
 }
 
 /* Copilot Panel */
@@ -2717,7 +2729,7 @@ textarea[aria-invalid="true"] {
 
 .cmd-palette-item:hover,
 .cmd-palette-item-active {
-  background: rgba(232, 89, 12, 0.08);
+  background: rgba(63, 74, 51, 0.08);
 }
 
 .cmd-palette-item-label {
@@ -2872,11 +2884,11 @@ textarea[aria-invalid="true"] {
 }
 
 .notif-item-unread {
-  background: rgba(232, 89, 12, 0.04);
+  background: rgba(63, 74, 51, 0.05);
 }
 
 .notif-item-unread:hover {
-  background: rgba(232, 89, 12, 0.08);
+  background: rgba(63, 74, 51, 0.09);
 }
 
 .notif-item-icon {
@@ -2896,11 +2908,11 @@ textarea[aria-invalid="true"] {
 }
 
 .notif-icon-order {
-  color: var(--primary);
+  color: var(--secondary);
 }
 
 .notif-item-icon:has(.notif-icon-order) {
-  background: #fdeee3;
+  background: var(--secondary-bg);
 }
 
 .notif-icon-payment {
@@ -2928,11 +2940,11 @@ textarea[aria-invalid="true"] {
 }
 
 .notif-icon-customer {
-  color: var(--primary);
+  color: var(--secondary);
 }
 
 .notif-item-icon:has(.notif-icon-customer) {
-  background: #fdeee3;
+  background: var(--secondary-bg);
 }
 
 .notif-icon-inventory {
@@ -2977,7 +2989,7 @@ textarea[aria-invalid="true"] {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--secondary);
   margin-top: 6px;
 }
 
@@ -3100,7 +3112,7 @@ textarea[aria-invalid="true"] {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--primary);
+  color: var(--secondary);
   margin-bottom: 6px;
 }
 
@@ -3443,8 +3455,8 @@ textarea[aria-invalid="true"] {
 }
 
 .route-stop-badge[data-tone="default"] {
-  background: rgba(232, 89, 12, 0.1);
-  color: var(--primary);
+  background: rgba(63, 74, 51, 0.1);
+  color: var(--secondary);
 }
 
 .route-stop-address {
@@ -3636,7 +3648,7 @@ textarea[aria-invalid="true"] {
 
 .pricing-final {
   background: var(--surface-muted);
-  border: 2px solid var(--primary);
+  border: 2px solid var(--secondary);
   border-radius: var(--radius);
   padding: 14px 18px;
   margin-top: 8px;
@@ -3710,7 +3722,7 @@ textarea[aria-invalid="true"] {
 }
 
 .sms-toggle input:checked + .sms-toggle-slider {
-  background: var(--primary);
+  background: var(--secondary);
 }
 
 .sms-toggle input:checked + .sms-toggle-slider::before {
@@ -3997,9 +4009,9 @@ textarea[aria-invalid="true"] {
   padding: 10px 18px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary);
-  background: rgba(232, 89, 12, 0.06);
-  border: 1px dashed rgba(232, 89, 12, 0.3);
+  color: var(--secondary);
+  background: rgba(63, 74, 51, 0.06);
+  border: 1px dashed rgba(63, 74, 51, 0.3);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -4009,8 +4021,8 @@ textarea[aria-invalid="true"] {
 }
 
 .content-editor-add-btn:hover {
-  background: rgba(232, 89, 12, 0.12);
-  border-color: var(--primary);
+  background: rgba(63, 74, 51, 0.12);
+  border-color: var(--secondary);
 }
 
 .content-editor-star {
@@ -5163,7 +5175,7 @@ textarea[aria-invalid="true"] {
   font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--text-muted);
 }
-.eyebrow--accent { color: var(--primary); }
+.eyebrow--accent { color: var(--secondary); }
 .eyebrow--tick::before {
   content: ""; width: 16px; height: 2px; border-radius: 2px;
   background: currentColor; display: inline-block;
@@ -5238,7 +5250,7 @@ textarea[aria-invalid="true"] {
 /* Segmented progress — pip bar (setup checklist) */
 .segmented-progress { display: flex; gap: 4px; }
 .segmented-progress__seg { flex: 1; height: 6px; border-radius: 3px; background: var(--bg-alt); }
-.segmented-progress__seg--on { background: var(--primary); }
+.segmented-progress__seg--on { background: var(--secondary); }
 
 /* Activity timeline */
 .activity { position: relative; }
@@ -5281,8 +5293,8 @@ textarea[aria-invalid="true"] {
 .catalog-tile__ph {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
-  color: color-mix(in srgb, var(--primary) 42%, transparent);
-  background: linear-gradient(135deg, var(--primary-bg), var(--bg-alt));
+  color: color-mix(in srgb, var(--secondary) 42%, transparent);
+  background: linear-gradient(135deg, var(--secondary-bg), var(--bg-alt));
 }
 .catalog-tile__status { position: absolute; top: 10px; left: 10px; }
 .catalog-tile__body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
@@ -5296,7 +5308,7 @@ textarea[aria-invalid="true"] {
 
 /* AI Copilot card — home command-center gradient panel */
 .ai-copilot-card {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 8%, var(--surface)), color-mix(in srgb, var(--accent) 9%, var(--surface)));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--secondary) 7%, var(--surface)), color-mix(in srgb, var(--accent) 9%, var(--surface)));
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 22px;
@@ -5304,7 +5316,7 @@ textarea[aria-invalid="true"] {
 .ai-copilot-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .ai-copilot-card__badge {
   width: 30px; height: 30px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; flex-shrink: 0;
 }
@@ -5328,7 +5340,7 @@ textarea[aria-invalid="true"] {
 /* Hero band — tinted command-center header with subtle warm dot texture */
 .hero-band {
   background:
-    radial-gradient(rgba(232, 89, 12, 0.06) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    radial-gradient(rgba(63, 74, 51, 0.07) 1px, transparent 1.4px) 0 0 / 22px 22px,
     linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
   border-bottom: 1px solid var(--border);
 }
@@ -5344,7 +5356,7 @@ textarea[aria-invalid="true"] {
 /* ── Page hero (list-tab / command-center headers) ── */
 .page-hero {
   background:
-    radial-gradient(rgba(232, 89, 12, 0.05) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    radial-gradient(rgba(63, 74, 51, 0.06) 1px, transparent 1.4px) 0 0 / 22px 22px,
     linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -5367,7 +5379,7 @@ textarea[aria-invalid="true"] {
   place-items: center;
   padding: 40px 20px;
   background:
-    radial-gradient(rgba(232, 89, 12, 0.06) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    radial-gradient(rgba(63, 74, 51, 0.07) 1px, transparent 1.4px) 0 0 / 22px 22px,
     linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
 }
 .auth-card {
