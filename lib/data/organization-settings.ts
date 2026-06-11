@@ -90,8 +90,12 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
       : fallbackSettings.depositPolicy,
     publicBookingLabel: fallbackSettings.publicBookingLabel,
     featuredInventoryLabel: fallbackSettings.featuredInventoryLabel,
-    websiteMessage:
-      (orgSettings.hero_message as string) || fallbackSettings.websiteMessage,
+    // Empty string when the operator hasn't set hero_message — that way
+    // the per-vertical default lede in storefrontDefaults takes over
+    // instead of being clobbered by a generic platform fallback. The
+    // SEO / opengraph callers below intentionally check for empty
+    // strings and substitute their own defaults.
+    websiteMessage: (orgSettings.hero_message as string) || "",
     heroHeadline:
       (orgSettings.hero_headline as string) || "",
     heroImageUrl:

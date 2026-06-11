@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { ProductCard } from "@/components/public/product-card";
 import { HowItWorks } from "@/components/public/how-it-works";
 import { FaqSection } from "@/components/public/faq-section";
+import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { StorefrontShell } from "@/components/public/themes/party-classic/storefront-shell";
 import { PartyClassicHeader } from "@/components/public/themes/party-classic/header";
 import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
 import { PartyClassicTrustStrip } from "@/components/public/themes/party-classic/trust-strip";
 import { PartyClassicBrowseTiles } from "@/components/public/themes/party-classic/browse-tiles";
+import { PartyClassicPressRow } from "@/components/public/themes/party-classic/press-row";
 import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
 import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
 import { PartyClassicClosing } from "@/components/public/themes/party-classic/closing";
@@ -86,6 +88,11 @@ export default async function HomePage() {
 
         {vis.trust_bar !== false && <PartyClassicTrustStrip />}
 
+        {/* Operator-curated press logos — quiet "as seen on" row,
+            hidden when no logos configured or operator turned off
+            theme.pressRowVisible. */}
+        <PartyClassicPressRow />
+
         {vis.category_grid !== false && <PartyClassicBrowseTiles />}
 
         {/* Featured rentals — editorial 3-up grid. Render at most three so
@@ -128,6 +135,13 @@ export default async function HomePage() {
           <div id="service-area">
             <PartyClassicServiceArea />
           </div>
+        )}
+
+        {/* Operator-written about copy. Default off (vis.about_section
+            = false); renders only when the operator turns it on AND
+            has written an aboutText. */}
+        {vis.about_section !== false && (
+          <AboutSection text={contentSettings.aboutText} />
         )}
 
         {vis.faq_section !== false && <FaqSection customFaqs={faqItems} />}
