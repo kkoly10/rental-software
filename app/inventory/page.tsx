@@ -154,6 +154,11 @@ export default async function InventoryPage({
                 marginBottom: 8,
                 fontSize: 14,
                 display: "block",
+                /* Override the global .badge { white-space: nowrap } —
+                 * this badge holds a full sentence that needs to wrap
+                 * inside a 390px viewport, not blow out the container. */
+                whiteSpace: "normal",
+                lineHeight: 1.5,
               }}
             >
               {m.inventory.pickDateHint}
