@@ -9,15 +9,19 @@ export async function GET() {
   const ctx = await getOrgContext();
 
   let organizationName: string | null = null;
+  let fullToolkit = false;
   if (ctx?.organizationId && hasSupabaseEnv()) {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
       .from("organizations")
-      .select("name")
+      .select("name, settings")
       .eq("id", ctx.organizationId)
       .is("deleted_at", null)
       .maybeSingle();
     organizationName = data?.name ?? null;
+    fullToolkit = Boolean(
+      (data?.settings as Record<string, unknown> | null)?.full_toolkit,
+    );
   }
 
   // Memberships list drives the sidebar org-switcher dropdown (decision
@@ -34,9 +38,17 @@ export async function GET() {
     getPrimaryVerticalSlug(),
   ]);
 
+  // Marketplace mode: a marketplace_seller org sees the trimmed seller
+  // nav until it explicitly unlocks the full toolkit (settings flag set
+  // by /dashboard/unlock) — after which we report the vertical (or ""
+  // = unverticalised full nav) instead.
+  const rawType = primaryVertical ?? ctx?.businessType ?? "inflatable";
+  const effectiveType =
+    rawType === "marketplace_seller" && fullToolkit ? (primaryVertical ?? "") : rawType;
+
   return NextResponse.json(
     {
-      businessType: primaryVertical ?? ctx?.businessType ?? "inflatable",
+      businessType: effectiveType,
       organizationId: ctx?.organizationId ?? null,
       organizationName,
       memberships,

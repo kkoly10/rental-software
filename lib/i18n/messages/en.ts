@@ -592,6 +592,7 @@ const enValues = {
       team: "Team",
       helpCenter: "Help Center",
       marketplace: "Marketplace",
+      unlockToolkit: "Unlock full toolkit",
       crewMobile: "Crew Mobile",
       publicSite: "Public Site",
       signOut: "Sign Out",

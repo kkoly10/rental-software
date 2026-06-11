@@ -591,6 +591,7 @@ export const fr: Messages = {
       team: "Équipe",
       helpCenter: "Centre d’aide",
       marketplace: "Place de marché",
+      unlockToolkit: "Débloquer la suite complète",
       crewMobile: "Mobile équipe",
       publicSite: "Site public",
       signOut: "Se déconnecter",

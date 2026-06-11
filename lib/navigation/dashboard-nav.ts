@@ -73,6 +73,30 @@ export const NAV_GROUP_ORDER: readonly NavGroup[] = [
 ] as const;
 
 export function getNavItemsForVertical(businessType: string): NavItem[] {
+  // Marketplace mode (Amazon model): marketplace-only sellers see the
+  // seller surface, not the full operator toolkit. /dashboard/unlock
+  // flips organizations.settings.full_toolkit, after which
+  // /api/org-type stops reporting "marketplace_seller" and the full
+  // nav returns.
+  if (businessType === "marketplace_seller") {
+    const allow = new Set([
+      "/dashboard/marketplace",
+      "/dashboard/messages",
+      "/dashboard/settings",
+      "/dashboard/settings/billing",
+      "/dashboard/help",
+    ]);
+    return [
+      ...ALL_NAV_ITEMS.filter((item) => allow.has(item.href)),
+      {
+        href: "/dashboard/unlock",
+        label: "Unlock full toolkit",
+        tourId: undefined,
+        key: "unlockToolkit",
+        group: "admin",
+      },
+    ];
+  }
   return ALL_NAV_ITEMS.filter(
     (item) => !item.verticals || item.verticals.includes(businessType)
   );

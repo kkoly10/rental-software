@@ -1,9 +1,60 @@
 import Link from "next/link";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { getMessages } from "@/lib/i18n/server";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ business?: string }>;
+}) {
   const m = await getMessages();
+  const { business } = await searchParams;
+
+  // Account-model fix: a marketplace renter who lands here (old links,
+  // direct URL) gets an explicit chooser instead of silently being
+  // walked into operator-org creation. ?business=1 is the deliberate
+  // "yes, I also want a business account" ceremony.
+  let isRenter = false;
+  if (hasSupabaseEnv() && business !== "1") {
+    try {
+      const supabase = await createSupabaseServerClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      isRenter = user?.user_metadata?.korent_role === "renter";
+    } catch {
+      // fall through to the normal onboarding form
+    }
+  }
+
+  if (isRenter) {
+    return (
+      <main className="page">
+        <div className="container" style={{ maxWidth: 560 }}>
+          <section className="panel" style={{ textAlign: "center", padding: "36px 28px" }}>
+            <h1 style={{ margin: "0 0 8px" }}>You have a renter account</h1>
+            <p className="muted" style={{ margin: "0 0 22px" }}>
+              Your Korent account is set up for renting on the marketplace.
+              Were you looking for your rentals — or do you want to start a
+              business account too (sell on the marketplace or run a rental
+              operation)?
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <Link href="/market/rentals" className="primary-btn">
+                Go to my rentals
+              </Link>
+              <Link href="/onboarding?business=1" className="secondary-btn">
+                Start a business account
+              </Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="page">
       <div className="container" style={{ maxWidth: 820 }}>
