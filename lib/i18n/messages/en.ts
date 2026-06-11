@@ -147,7 +147,9 @@ const enValues = {
       description: "Browse by type before diving into specific rentals.",
       startingPrice: "Starting ${amount}",
       optionCount: "{count} options",
+      optionCountOne: "1 option",
       viewAllWithCount: "View all {count} →",
+      viewAll: "View all →",
     },
     themeChips: {
       all: "All categories",

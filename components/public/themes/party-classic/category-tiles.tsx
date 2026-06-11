@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { getThemeSettings } from "@/lib/data/theme-settings";
-import { getPlaceholderImage } from "@/lib/utils/placeholders";
+import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-images";
+import { prettifyCategoryName } from "@/lib/utils/prettify-category";
 import { getTranslator } from "@/lib/i18n/server";
 
 export async function PartyClassicCategoryTiles() {
@@ -13,7 +14,7 @@ export async function PartyClassicCategoryTiles() {
 
   if (categories.length === 0) return null;
 
-  // Cap displayed tiles at 6 (D-style 3-up rows on desktop, 2-up on mobile);
+  // Cap displayed tiles at 6 (3-up rows on desktop);
   // operators with bigger catalogs see the "View all" link.
   const display = categories.slice(0, 6);
   const showChipRail = theme.themeChipRailVisible && theme.themeChipsEnabled;
@@ -26,7 +27,11 @@ export async function PartyClassicCategoryTiles() {
           <p className="st-section-sub">{m.storefront.categoryGrid.description}</p>
         </div>
         <Link href="/inventory" className="st-section-link">
-          {t(m.storefront.categoryGrid.viewAllWithCount, { count: categories.length })}
+          {/* "View all 2 →" reads silly for tiny catalogs — only surface
+              the count when there are more categories than we render. */}
+          {categories.length > display.length
+            ? t(m.storefront.categoryGrid.viewAllWithCount, { count: categories.length })
+            : m.storefront.categoryGrid.viewAll}
         </Link>
       </div>
 
@@ -35,21 +40,29 @@ export async function PartyClassicCategoryTiles() {
           <Link href="/inventory" className="st-chip active">
             {m.storefront.themeChips.all}
           </Link>
-          {display.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/inventory?category=${cat.slug}`}
-              className="st-chip"
-            >
-              {cat.themeEmoji ? `${cat.themeEmoji} ${cat.name}` : cat.name}
-            </Link>
-          ))}
+          {display.map((cat) => {
+            const label = prettifyCategoryName(cat.name);
+            return (
+              <Link
+                key={cat.slug}
+                href={`/inventory?category=${cat.slug}`}
+                className="st-chip"
+              >
+                {cat.themeEmoji ? `${cat.themeEmoji} ${label}` : label}
+              </Link>
+            );
+          })}
         </div>
       )}
 
       <div className="st-cat-grid">
         {display.map((cat) => {
-          const imageUrl = cat.imageUrl ?? getPlaceholderImage(cat.slug);
+          const label = prettifyCategoryName(cat.name);
+          // Same curated fallback chain the product cards use — per-category
+          // Unsplash imagery keyed off slug + name, so two categories never
+          // collapse onto the same generic local placeholder PNG.
+          const imageUrl =
+            cat.imageUrl ?? getStorefrontFallbackImage(cat.slug, label);
           // Pill at top-left already conveys the option count; show the
           // starting price (or omit) in the bottom subtext so the two
           // never duplicate the same metric.
@@ -69,10 +82,12 @@ export async function PartyClassicCategoryTiles() {
               />
               <div className="st-cat-tile-overlay" />
               <div className="st-cat-tile-pill">
-                {t(m.storefront.categoryGrid.optionCount, { count: cat.productCount })}
+                {cat.productCount === 1
+                  ? m.storefront.categoryGrid.optionCountOne
+                  : t(m.storefront.categoryGrid.optionCount, { count: cat.productCount })}
               </div>
               <div className="st-cat-tile-content">
-                <h3 className="st-cat-tile-name">{cat.name}</h3>
+                <h3 className="st-cat-tile-name">{label}</h3>
                 {subText && <div className="st-cat-tile-sub">{subText}</div>}
               </div>
             </Link>

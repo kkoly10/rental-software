@@ -146,7 +146,9 @@ export const pt: Messages = {
       description: "Explore por tipo antes de escolher alugueres específicos.",
       startingPrice: "A partir de ${amount}",
       optionCount: "{count} opções",
+      optionCountOne: "1 opção",
       viewAllWithCount: "Ver {count} →",
+      viewAll: "Ver tudo →",
     },
     themeChips: {
       all: "Todas as categorias",

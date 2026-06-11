@@ -1,4 +1,5 @@
 import { getMessages } from "@/lib/i18n/server";
+import { prettifyCategoryName } from "@/lib/utils/prettify-category";
 
 type CategoryOption = {
   value: string;
@@ -53,7 +54,7 @@ export async function CatalogFilterForm({
             <option value="">{m.storefront.popularRentals.browseAll}</option>
             {categories.map((cat) => (
               <option key={cat.value} value={cat.value}>
-                {cat.label}
+                {prettifyCategoryName(cat.label)}
               </option>
             ))}
           </select>
