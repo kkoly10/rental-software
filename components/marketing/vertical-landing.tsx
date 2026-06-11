@@ -3,22 +3,28 @@ import Image from "next/image";
 import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getTranslator } from "@/lib/i18n/server";
+import { getVerticalLandingCopy } from "@/lib/verticals/landing-copy";
 import type { VerticalConfig } from "@/lib/verticals/types";
 
 /**
- * Vertical landing — Phase 2b template that any vertical's marketing
- * URL renders. Pulls hero / kicker / features from VerticalConfig.
- * Pricing, trust bar, FAQ, and final CTA come from i18n so they stay
- * consistent across verticals (the operator pain points are the same
- * whether you rent bounce houses or tents).
+ * Vertical landing — the SEO page each "<vertical> rental software"
+ * query lands on. Section order follows the 2026 research synthesis
+ * (Booqable + Goodshuffle Pro vertical-page teardowns + CRO consensus,
+ * see lib/verticals/landing-copy.ts):
  *
- * Sections are intentionally fewer + tighter than the root SaaS
- * landing — this page exists to convert a Google searcher who typed
- * "<vertical> rental software", not to walk a curious visitor
- * through the entire product story.
+ *   1. Hero — exact-match H1, outcome subhead, dual CTA (trial-first)
+ *   2. Trust strip directly under the hero (proof at the decision moment)
+ *   3. Product visual — the vertical's real storefront + live demo link
+ *   4. "The hard way vs the Korent way" comparison
+ *   5. Vertical-specific feature grid (from VerticalConfig.marketing)
+ *   6. How it works (shared workflow)
+ *   7. Pricing teaser — transparent from-price (competitors hide theirs)
+ *   8. Per-vertical FAQ (People-Also-Ask intent + product questions)
+ *   9. Final CTA with seasonal-urgency closer
  *
- * Phase 2c (next) registers tents / tables-and-chairs / dance-floors
- * verticals — each one renders the same template with its own config.
+ * Deliberately no testimonial section yet: we have no named operators
+ * to quote and will not fabricate social proof. Slot it between 6 and
+ * 7 when real quotes exist.
  */
 export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }) {
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app";
@@ -27,6 +33,9 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
   const { locale, messages: m } = await getTranslator();
   const s = m.saasLanding;
   const v = vertical.marketing;
+  const copy = getVerticalLandingCopy(vertical.slug);
+  const verticalLabel = vertical.label.en.toLowerCase();
+  const storefrontShot = vertical.storefrontDefaults?.heroImagePath;
 
   return (
     <>
@@ -68,28 +77,28 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
       </header>
 
       <main>
-        {/* ── Hero ───────────────────────────────────────────────── */}
+        {/* ── 1. Hero — exact-match H1, outcome subhead, dual CTA ── */}
         <section className="saas-hero-grid">
           <div className="saas-hero-copy">
             <div className="kicker">{v.heroKicker}</div>
-            <h1>{v.heroHeadline}</h1>
-            <p className="muted">{v.heroSubhead}</p>
+            <h1>{copy.h1}</h1>
+            <p className="muted">{copy.sub}</p>
 
-            <Link
-              href="/signup"
-              className="primary-btn"
-              style={{ fontSize: "1.1rem", padding: "14px 36px", display: "inline-block" }}
-            >
-              {s.hero.ctaPrimary}
-            </Link>
-
-            <div style={{ marginTop: 14 }}>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+              <Link
+                href="/signup"
+                className="primary-btn"
+                style={{ fontSize: "1.1rem", padding: "14px 36px", display: "inline-block" }}
+              >
+                {s.hero.ctaPrimary}
+              </Link>
               <a
                 href={demoUrl}
                 rel="noopener noreferrer"
-                style={{ color: "var(--primary, #2563eb)", fontWeight: 500, fontSize: "0.95rem" }}
+                className="secondary-btn"
+                style={{ fontSize: "1rem", padding: "13px 24px", display: "inline-block" }}
               >
-                {s.hero.demoLink}
+                See a live demo storefront →
               </a>
             </div>
           </div>
@@ -97,7 +106,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           <div className="saas-hero-image">
             <Image
               src={vertical.imageSlugs.hero}
-              alt={`Rental operator using Korent for ${vertical.label.en.toLowerCase()} rentals`}
+              alt={`Rental operator using Korent for ${verticalLabel} rentals`}
               fill
               priority
               sizes="(max-width: 860px) 100vw, 540px"
@@ -105,7 +114,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           </div>
         </section>
 
-        {/* ── Trust bar ──────────────────────────────────────────── */}
+        {/* ── 2. Trust strip — proof at the decision moment ──────── */}
         <section
           style={{
             borderTop: "1px solid var(--border, #e5e7eb)",
@@ -133,18 +142,141 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           </div>
         </section>
 
-        {/* ── Vertical-specific features ─────────────────────────── */}
+        {/* ── 3. Product visual — show the storefront, link the demo ── */}
+        {storefrontShot && (
+          <section
+            style={{
+              padding: "72px 24px 64px",
+              maxWidth: 1000,
+              margin: "0 auto",
+              textAlign: "center",
+            }}
+          >
+            <div className="kicker">Your storefront, not ours</div>
+            <h2 style={{ margin: "8px 0 12px" }}>
+              A booking site your customers use without calling you
+            </h2>
+            <p className="muted" style={{ maxWidth: 560, margin: "0 auto 32px" }}>
+              Every Korent plan includes a branded storefront on your own
+              subdomain — real-time availability, online deposits, and
+              checkout built for {verticalLabel}.
+            </p>
+            <a
+              href={demoUrl}
+              rel="noopener noreferrer"
+              aria-label="Open the live demo storefront"
+              style={{ display: "block", maxWidth: 880, margin: "0 auto" }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  border: "1px solid var(--border, #e5e7eb)",
+                  boxShadow: "0 18px 50px -24px rgba(15, 31, 51, 0.35)",
+                  position: "relative",
+                  aspectRatio: "16 / 9",
+                }}
+              >
+                <Image
+                  src={storefrontShot}
+                  alt={`A Korent ${verticalLabel} storefront`}
+                  fill
+                  sizes="(max-width: 920px) 100vw, 880px"
+                  style={{ objectFit: "cover" }}
+                />
+              </span>
+            </a>
+            <p style={{ marginTop: 16 }}>
+              <a
+                href={demoUrl}
+                rel="noopener noreferrer"
+                style={{ color: "var(--primary, #2563eb)", fontWeight: 600, fontSize: "0.95rem" }}
+              >
+                Click around the live demo — no signup needed →
+              </a>
+            </p>
+          </section>
+        )}
+
+        {/* ── 4. The hard way vs the Korent way ──────────────────── */}
         <section
-          id="features"
           style={{
-            padding: "72px 24px",
-            maxWidth: 1100,
+            padding: "56px 24px 72px",
+            maxWidth: 1000,
             margin: "0 auto",
           }}
         >
+          <div style={{ textAlign: "center", marginBottom: 36 }}>
+            <div className="kicker">{copy.hardWayTitle}</div>
+            <h2>The hard way vs. the Korent way</h2>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {copy.rows.map((row) => (
+              <div
+                key={row.hard}
+                className="grid grid-2 stat-grid-responsive"
+                style={{ gap: 14 }}
+              >
+                <div
+                  className="panel"
+                  style={{
+                    padding: 20,
+                    background: "var(--surface-soft, #f8f9fa)",
+                    borderStyle: "dashed",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--text-muted, #6b7280)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    The hard way
+                  </span>
+                  <p className="muted" style={{ margin: 0, fontSize: "0.92rem" }}>
+                    {row.hard}
+                  </p>
+                </div>
+                <div className="panel" style={{ padding: 20 }}>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--primary, #2563eb)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    The Korent way
+                  </span>
+                  <p style={{ margin: 0, fontSize: "0.92rem" }}>{row.korent}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── 5. Vertical-specific feature grid ──────────────────── */}
+        <section
+          id="features"
+          style={{
+            padding: "64px 24px 72px",
+            maxWidth: 1100,
+            margin: "0 auto",
+            borderTop: "1px solid var(--border, #e5e7eb)",
+          }}
+        >
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div className="kicker">Built for {vertical.label.en.toLowerCase()} operators</div>
-            <h2>Why {vertical.label.en.toLowerCase()} businesses pick Korent</h2>
+            <div className="kicker">Built for {verticalLabel} operators</div>
+            <h2>Why {verticalLabel} businesses pick Korent</h2>
           </div>
 
           <div className="grid grid-3 stat-grid-responsive" style={{ gap: 20 }}>
@@ -159,7 +291,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           </div>
         </section>
 
-        {/* ── How it works (shared, generic) ─────────────────────── */}
+        {/* ── 6. How it works (shared workflow) ──────────────────── */}
         <section
           style={{
             padding: "60px 24px",
@@ -200,11 +332,33 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           </div>
         </section>
 
-        {/* ── FAQ (shared) ───────────────────────────────────────── */}
+        {/* ── 7. Pricing teaser — transparency competitors avoid ─── */}
+        <section
+          style={{
+            padding: "64px 24px",
+            maxWidth: 680,
+            margin: "0 auto",
+            textAlign: "center",
+          }}
+        >
+          <div className="kicker">{s.nav.pricing}</div>
+          <h2 style={{ margin: "8px 0 12px" }}>From $49/month. No per-booking fees.</h2>
+          <p className="muted" style={{ marginBottom: 24 }}>
+            Every plan includes the booking storefront, online payments,
+            inventory holds, crew scheduling, and waivers. Card processing
+            by Stripe at standard rates — Korent doesn&rsquo;t take a cut of
+            your bookings.
+          </p>
+          <Link href="/pricing" className="secondary-btn" style={{ display: "inline-block" }}>
+            See full pricing →
+          </Link>
+        </section>
+
+        {/* ── 8. Per-vertical FAQ (PAA intent + product) ─────────── */}
         <section
           id="faq"
           style={{
-            padding: "60px 24px",
+            padding: "24px 24px 60px",
             maxWidth: 720,
             margin: "0 auto",
           }}
@@ -215,7 +369,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {s.faq.items.map((item) => (
+            {copy.faqs.map((item) => (
               <details
                 key={item.q}
                 style={{
@@ -248,7 +402,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           </div>
         </section>
 
-        {/* ── Final CTA ──────────────────────────────────────────── */}
+        {/* ── 9. Final CTA — seasonal urgency closer ─────────────── */}
         <section
           style={{
             textAlign: "center",
@@ -258,7 +412,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           }}
         >
           <h2 style={{ fontSize: "clamp(1.6rem, 4vw, 2.4rem)", margin: "0 0 16px" }}>
-            {s.finalCta.title}
+            {copy.closer}
           </h2>
           <p className="muted" style={{ fontSize: "1.05rem", marginBottom: 32 }}>
             {s.finalCta.subtitle}
