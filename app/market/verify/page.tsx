@@ -35,9 +35,10 @@ export default async function MarketVerifyPage() {
     <main className="mk-wrap" style={{ maxWidth: 520 }}>
       <h1>Verify your account</h1>
       <p className="mk-sub">
-        A verified phone is required to book. High-value categories (cameras,
-        trailers) also ask for your ID + a live selfie — Turo-style. Identity
-        photos are stored privately and only ever reviewed if a dispute arises.
+        A verified phone AND your ID + live selfie are required to book — on
+        every rental, the seller confirms it's you at pickup (Turo-style).
+        Identity photos are stored privately; the seller sees them only at
+        handoff, and support only if a dispute arises.
       </p>
 
       <div className="mk-panel" style={{ marginBottom: 16 }}>
@@ -48,7 +49,7 @@ export default async function MarketVerifyPage() {
       </div>
 
       <div className="mk-panel">
-        <b>2 · Identity (only for high-value categories)</b>
+        <b>2 · Identity (required to book — verified by the seller at pickup)</b>
         <div style={{ marginTop: 10 }}>
           <IdentityUploadForm onFile={status.idOnFile} />
         </div>

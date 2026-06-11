@@ -174,8 +174,11 @@ export async function requestBooking(
   if (!verification.phoneVerified) {
     return { ok: false, message: "Verify your phone number first — it takes 30 seconds on the Verify page (/market/verify)." };
   }
-  if (defaults.identityVerification === "full_id" && !verification.idOnFile) {
-    return { ok: false, message: "This category requires ID verification (photo + live selfie) — add it on the Verify page (/market/verify)." };
+  // Turo model (founder decision): ID + live selfie are required for
+  // EVERY rental — the seller confirms the match at handoff before the
+  // item leaves their hands.
+  if (!verification.idOnFile) {
+    return { ok: false, message: "Add your ID + live selfie on the Verify page (/market/verify) — sellers confirm it's you at pickup, on every rental." };
   }
 
   const subtotal = listing.daily_price_cents * rentalDays * parsed.data.quantity;

@@ -12,7 +12,7 @@ import {
   approveBookingRequest,
   declineBookingRequest,
 } from "@/lib/market/booking-actions";
-import { advanceBooking } from "@/lib/market/lifecycle-actions";
+import { advanceBooking, confirmRenterIdentity } from "@/lib/market/lifecycle-actions";
 import { EvidenceForm } from "@/components/market/evidence-form";
 import {
   RenterNoShowButton,
@@ -51,6 +51,8 @@ type RequestRow = {
   subtotal_cents: number;
   seller_payout_cents: number;
   renter_message: string | null;
+  renter_profile_id: string;
+  identity_verified_at: string | null;
   created_at: string;
   market_listings: { title: string } | null;
 };
@@ -73,7 +75,7 @@ export default async function MarketplaceSellerHubPage() {
     const requestsPromise = supabase
       .from("market_bookings")
       .select(
-        "id, state, starts_at, ends_at, quantity, subtotal_cents, seller_payout_cents, renter_message, created_at, market_listings ( title )",
+        "id, state, starts_at, ends_at, quantity, subtotal_cents, seller_payout_cents, renter_message, renter_profile_id, identity_verified_at, created_at, market_listings ( title )",
       )
       .eq("organization_id", ctx.organizationId)
       .in("state", [
@@ -115,6 +117,34 @@ export default async function MarketplaceSellerHubPage() {
 
   const pendingRequests = requests.filter((r) => r.state === "pending_seller_approval");
   const activeBookings = requests.filter((r) => r.state !== "pending_seller_approval");
+
+  // Turo-model handoff check: for bookings awaiting identity
+  // confirmation, the seller sees the renter's ID + live selfie via
+  // short-lived signed URLs (private bucket; org-scoped bookings only).
+  const identityChecks = new Map<string, { idUrl: string | null; selfieUrl: string | null }>();
+  const needsIdentity = activeBookings.filter(
+    (r) => r.state === "ready_for_handoff" && !r.identity_verified_at,
+  );
+  if (needsIdentity.length > 0) {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
+    const adminClient = createSupabaseAdminClient();
+    for (const r of needsIdentity) {
+      const { data: v } = await adminClient
+        .from("market_renter_verifications")
+        .select("id_photo_path, selfie_path")
+        .eq("profile_id", r.renter_profile_id)
+        .maybeSingle();
+      const sign = async (path: string | null) =>
+        path
+          ? (await adminClient.storage.from("market-identity").createSignedUrl(path, 600)).data
+              ?.signedUrl ?? null
+          : null;
+      identityChecks.set(r.id, {
+        idUrl: await sign(v?.id_photo_path ?? null),
+        selfieUrl: await sign(v?.selfie_path ?? null),
+      });
+    }
+  }
 
   const NEXT_STEP: Record<string, { step: string; label: string } | undefined> = {
     confirmed: { step: "ready", label: "Mark ready for handoff" },
@@ -228,7 +258,7 @@ export default async function MarketplaceSellerHubPage() {
                           </span>
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                          {next ? (
+                          {next && !(r.state === "ready_for_handoff" && !r.identity_verified_at) ? (
                             <form action={advanceBooking}>
                               <input type="hidden" name="booking_id" value={r.id} />
                               <input type="hidden" name="step" value={next.step} />
@@ -246,6 +276,44 @@ export default async function MarketplaceSellerHubPage() {
                           ) : null}
                         </div>
                       </div>
+                      {r.state === "ready_for_handoff" && !r.identity_verified_at ? (
+                        <div className="order-card" style={{ marginTop: 10, padding: 12, background: "#fef3e2" }}>
+                          <strong style={{ fontSize: 13 }}>🪪 Verify the renter before handoff</strong>
+                          <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                            Check that the person in front of you matches their ID and
+                            live selfie (links expire in 10 minutes — refresh for new
+                            ones). Required on every rental. If it doesn't match, cancel
+                            the booking or report a no-show — never hand over the item.
+                          </div>
+                          <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
+                            {identityChecks.get(r.id)?.idUrl ? (
+                              <a href={identityChecks.get(r.id)!.idUrl!} target="_blank" rel="noreferrer">
+                                View ID photo
+                              </a>
+                            ) : (
+                              <span className="muted">No ID on file</span>
+                            )}
+                            {identityChecks.get(r.id)?.selfieUrl ? (
+                              <a href={identityChecks.get(r.id)!.selfieUrl!} target="_blank" rel="noreferrer">
+                                View live selfie
+                              </a>
+                            ) : (
+                              <span className="muted">No selfie on file</span>
+                            )}
+                            <form action={confirmRenterIdentity}>
+                              <input type="hidden" name="booking_id" value={r.id} />
+                              <button type="submit" className="primary-btn" style={{ fontSize: 13 }}>
+                                ✓ Identity matches — unlock handoff
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      ) : null}
+                      {r.state === "ready_for_handoff" && r.identity_verified_at ? (
+                        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                          🪪 Identity confirmed {new Date(r.identity_verified_at).toLocaleString()}
+                        </div>
+                      ) : null}
                       {r.state === "ready_for_handoff" || r.state === "checked_out" ? (
                         <EvidenceForm bookingId={r.id} phase="handoff" />
                       ) : null}

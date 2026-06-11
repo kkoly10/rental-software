@@ -72,7 +72,7 @@ export async function advanceBooking(formData: FormData): Promise<void> {
   const { data: booking } = await admin
     .from("market_bookings")
     .select(
-      "id, state, hold_id, organization_id, deposit_status, stripe_deposit_intent_id",
+      "id, state, hold_id, organization_id, deposit_status, stripe_deposit_intent_id, identity_verified_at",
     )
     .eq("id", bookingId)
     .eq("organization_id", ctx.organizationId)
@@ -81,6 +81,18 @@ export async function advanceBooking(formData: FormData): Promise<void> {
 
   const from = booking.state as BookingState;
   if (!canTransition(from, step.to)) return;
+
+  // Turo-model handoff gate: the item never checks out until the
+  // seller has confirmed the renter's selfie matches their ID.
+  if (step.to === "checked_out" && !booking.identity_verified_at) {
+    await admin.from("market_booking_events").insert({
+      booking_id: booking.id,
+      event: "lifecycle.blocked_identity_unverified",
+      actor: "system",
+    });
+    revalidatePath(SELLER_HUB_PATH);
+    return;
+  }
 
   const { data: updated } = await admin
     .from("market_bookings")
@@ -96,6 +108,24 @@ export async function advanceBooking(formData: FormData): Promise<void> {
     event: step.event,
     actor: "seller",
   });
+
+  if (step.to === "ready_for_handoff" || step.to === "completed") {
+    try {
+      const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+      const party = await getBookingPartyEmails(booking.id);
+      if (party) {
+        void notifyMarketEmail({
+          kind: step.to === "ready_for_handoff" ? "ready_for_handoff" : "booking_completed",
+          to: party.renterEmail,
+          listingTitle: party.listingTitle,
+          startsAt: party.startsAt,
+          endsAt: party.endsAt,
+        });
+      }
+    } catch {
+      // best-effort
+    }
+  }
 
   if (step.evidencePhase && note) {
     await admin.from("market_handoff_evidence").insert({
@@ -153,5 +183,41 @@ export async function advanceBooking(formData: FormData): Promise<void> {
     }
   }
 
+  revalidatePath(SELLER_HUB_PATH);
+}
+
+/**
+ * Turo-model identity check: the seller views the renter's ID + live
+ * selfie (signed URLs rendered in the Seller Hub for ready_for_handoff
+ * bookings) and confirms the person in front of them matches. Required
+ * before EVERY checkout. A mismatch → the seller cancels (full refund)
+ * or reports a no-show instead.
+ */
+export async function confirmRenterIdentity(formData: FormData): Promise<void> {
+  if (!hasSupabaseEnv()) return;
+  const bookingId = String(formData.get("booking_id") ?? "");
+  if (!z.string().uuid().safeParse(bookingId).success) return;
+
+  const ctx = await getOrgContext();
+  if (!ctx) return;
+
+  const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
+  const admin = createSupabaseAdminClient();
+  const { data: updated } = await admin
+    .from("market_bookings")
+    .update({ identity_verified_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", bookingId)
+    .eq("organization_id", ctx.organizationId)
+    .in("state", ["confirmed", "ready_for_handoff"])
+    .is("identity_verified_at", null)
+    .select("id")
+    .maybeSingle();
+  if (updated) {
+    await admin.from("market_booking_events").insert({
+      booking_id: bookingId,
+      event: "identity.confirmed_by_seller",
+      actor: "seller",
+    });
+  }
   revalidatePath(SELLER_HUB_PATH);
 }
