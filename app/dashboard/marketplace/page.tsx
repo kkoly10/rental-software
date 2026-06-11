@@ -13,6 +13,7 @@ import {
   declineBookingRequest,
 } from "@/lib/market/booking-actions";
 import { advanceBooking } from "@/lib/market/lifecycle-actions";
+import { EvidenceForm } from "@/components/market/evidence-form";
 
 export const dynamic = "force-dynamic";
 
@@ -231,6 +232,12 @@ export default async function MarketplaceSellerHubPage() {
                           </form>
                         ) : null}
                       </div>
+                      {r.state === "ready_for_handoff" || r.state === "checked_out" ? (
+                        <EvidenceForm bookingId={r.id} phase="handoff" />
+                      ) : null}
+                      {["checked_out", "overdue", "returned_pending_review"].includes(r.state) ? (
+                        <EvidenceForm bookingId={r.id} phase="return" />
+                      ) : null}
                     </article>
                   );
                 })}

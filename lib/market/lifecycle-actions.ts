@@ -71,7 +71,9 @@ export async function advanceBooking(formData: FormData): Promise<void> {
 
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, hold_id, organization_id")
+    .select(
+      "id, state, hold_id, organization_id, deposit_status, stripe_deposit_intent_id",
+    )
     .eq("id", bookingId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
@@ -104,11 +106,41 @@ export async function advanceBooking(formData: FormData): Promise<void> {
     });
   }
 
-  if (step.to === "completed" && booking.hold_id) {
-    await admin
-      .from("market_reservation_holds")
-      .update({ state: "released", updated_at: new Date().toISOString() })
-      .eq("id", booking.hold_id);
+  if (step.to === "completed") {
+    if (booking.hold_id) {
+      await admin
+        .from("market_reservation_holds")
+        .update({ state: "released", updated_at: new Date().toISOString() })
+        .eq("id", booking.hold_id);
+    }
+
+    // §9: completing the booking after return inspection RELEASES the
+    // deposit auth hold. Disputes (later) capture it instead — that
+    // path goes through the dispute domain, never this one.
+    if (booking.deposit_status === "held" && booking.stripe_deposit_intent_id) {
+      try {
+        const { getStripe, hasStripeEnv } = await import("@/lib/stripe/config");
+        if (hasStripeEnv()) {
+          await getStripe().paymentIntents.cancel(booking.stripe_deposit_intent_id);
+        }
+        await admin
+          .from("market_bookings")
+          .update({ deposit_status: "released", updated_at: new Date().toISOString() })
+          .eq("id", booking.id)
+          .eq("deposit_status", "held");
+        await admin.from("market_booking_events").insert({
+          booking_id: booking.id,
+          event: "deposit.released",
+          actor: "system",
+        });
+      } catch {
+        await admin.from("market_booking_events").insert({
+          booking_id: booking.id,
+          event: "deposit.release_failed",
+          actor: "system",
+        });
+      }
+    }
   }
 
   revalidatePath(SELLER_HUB_PATH);

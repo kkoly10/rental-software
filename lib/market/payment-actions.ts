@@ -103,7 +103,11 @@ export async function payForBooking(formData: FormData): Promise<void> {
     payment_intent_data: {
       application_fee_amount: booking.platform_fee_cents,
       transfer_data: { destination: org.stripe_connect_account_id },
+      // §9: save the card so the deposit can be AUTHORIZED off-session
+      // at handoff−96h (never charged at booking time).
+      setup_future_usage: "off_session",
     },
+    customer_creation: "always",
     metadata: {
       surface: "marketplace",
       market_booking_id: booking.id,
@@ -133,7 +137,7 @@ export async function confirmPaidBooking(input: {
 
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, hold_id")
+    .select("id, state, hold_id, deposit_cents")
     .eq("id", input.bookingId)
     .maybeSingle();
   if (!booking) return "skipped";
@@ -142,11 +146,32 @@ export async function confirmPaidBooking(input: {
   if (from === "confirmed") return "skipped"; // duplicate delivery
   if (!canTransition(from, "confirmed")) return "skipped";
 
+  // Pull the saved card + customer off the payment intent so the §9
+  // deposit hold can run off-session later.
+  let customerId: string | null = null;
+  let paymentMethodId: string | null = null;
+  if (input.paymentIntentId && hasStripeEnv()) {
+    try {
+      const pi = await getStripe().paymentIntents.retrieve(input.paymentIntentId);
+      customerId = typeof pi.customer === "string" ? pi.customer : (pi.customer?.id ?? null);
+      paymentMethodId =
+        typeof pi.payment_method === "string"
+          ? pi.payment_method
+          : (pi.payment_method?.id ?? null);
+    } catch {
+      // Deposit scheduling degrades to 'failed' later if these stay
+      // null — payment confirmation itself must not fail on this.
+    }
+  }
+
   await admin
     .from("market_bookings")
     .update({
       state: "confirmed",
       stripe_payment_intent_id: input.paymentIntentId,
+      stripe_customer_id: customerId,
+      stripe_payment_method_id: paymentMethodId,
+      deposit_status: booking.deposit_cents > 0 ? "scheduled" : "none",
       updated_at: new Date().toISOString(),
     })
     .eq("id", booking.id)
