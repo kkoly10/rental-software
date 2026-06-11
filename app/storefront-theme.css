@@ -11,64 +11,110 @@
  */
 
 :root:not(:has(.sidebar-layout)) {
-  /* ── Brand color tokens (defaults — overridden by BrandStyleInjector) ── */
-  --st-primary: var(--primary, #0f766e);
-  --st-primary-dim: color-mix(in srgb, var(--st-primary) 82%, #000);
-  --st-primary-soft: color-mix(in srgb, var(--st-primary) 14%, #fff);
-  --st-accent: var(--accent, #f97316);
+  /* ── Brand color tokens — Editorial direction defaults.
+   *    BrandStyleInjector still wins via --primary / --accent / --brand-font. ── */
+  --st-primary: var(--primary, #3F4A33);                                /* deep olive */
+  --st-primary-dim: color-mix(in srgb, var(--st-primary) 88%, #000);
+  --st-primary-soft: color-mix(in srgb, var(--st-primary) 8%, #F7F4EE);
+  --st-accent: var(--accent, var(--st-primary));                        /* collapses to primary by default */
   --st-accent-dim: color-mix(in srgb, var(--st-accent) 86%, #000);
-  --st-accent-soft: color-mix(in srgb, var(--st-accent) 18%, #fff);
+  --st-accent-soft: color-mix(in srgb, var(--st-accent) 8%, #F7F4EE);
 
-  /* ── Neutral tokens ── */
-  --st-text: #0c1322;
-  --st-muted: #64748b;
-  --st-muted-2: #94a3b8;
-  --st-bg: #fffbf5;
-  --st-bg-warm: linear-gradient(135deg, #fef3e6 0%, #fff9ef 100%);
-  --st-card: #ffffff;
-  --st-line: #f1ece1;
-  --st-line-strong: #e8e0d0;
-  --st-success: #16a34a;
-  --st-success-soft: rgba(22, 163, 74, 0.08);
+  /* ── Neutral tokens — warm editorial palette ── */
+  --st-ink: #1A1A1A;
+  --st-ink-2: #3D3935;
+  --st-text: var(--st-ink);                                             /* alias for legacy code */
+  --st-muted: #5C5651;
+  --st-muted-2: #8A847C;
+  --st-bg: #F7F4EE;                                                     /* warm off-white */
+  --st-bg-alt: #F2EDE3;                                                 /* one tick warmer for tinted sections */
+  --st-bg-warm: linear-gradient(135deg, #F2EDE3 0%, #F7F4EE 100%);      /* kept for legacy refs */
+  --st-card: #FFFFFF;                                                   /* product cards only */
+  --st-line: #E4DED3;                                                   /* hairlines */
+  --st-line-strong: #CFC7B7;                                            /* form-field borders */
+  --st-line-2: var(--st-line-strong);
+  --st-success: #4C6B3A;
+  --st-success-soft: color-mix(in srgb, var(--st-success) 8%, var(--st-bg));
+  --st-warning: #B3811F;
+  --st-warning-soft: color-mix(in srgb, var(--st-warning) 8%, var(--st-bg));
+  --st-danger: #8E3838;
+  --st-danger-soft: color-mix(in srgb, var(--st-danger) 8%, var(--st-bg));
 
-  /* ── Spacing scale ── */
+  /* ── Spacing scale — 4px-rooted ── */
   --st-space-1: 4px;
   --st-space-2: 8px;
   --st-space-3: 12px;
   --st-space-4: 16px;
-  --st-space-5: 22px;
+  --st-space-5: 24px;
   --st-space-6: 32px;
   --st-space-7: 48px;
   --st-space-8: 64px;
+  --st-space-9: 96px;
+  --st-space-10: 128px;
 
-  /* ── Radius scale ── */
-  --st-radius-sm: 10px;
-  --st-radius-md: 14px;
-  --st-radius-lg: 18px;
-  --st-radius-xl: 22px;
-  --st-radius-2xl: 28px;
-  --st-radius-pill: 999px;
+  /* ── Vertical section rhythm ── */
+  --st-section-pad-y: 96px;
+  --st-section-pad-y-large: 128px;
+  --st-section-pad-y-mobile: 64px;
 
-  /* ── Shadow scale ── */
-  --st-shadow-sm: 0 1px 0 var(--st-line), 0 4px 12px -6px rgba(15, 31, 51, 0.12);
-  --st-shadow-md: 0 1px 0 var(--st-line), 0 18px 38px -22px rgba(15, 31, 51, 0.18);
-  --st-shadow-lg: 0 1px 0 var(--st-line), 0 22px 60px -28px rgba(15, 31, 51, 0.25);
-  --st-shadow-xl: 0 30px 60px -20px rgba(0, 0, 0, 0.25);
-  --st-shadow-cta-accent: 0 10px 24px -8px color-mix(in srgb, var(--st-accent) 55%, transparent);
-  --st-shadow-cta-primary: 0 6px 16px -4px color-mix(in srgb, var(--st-primary) 35%, transparent);
+  /* ── Container ── */
+  --st-container-max: 1280px;
+  --st-container-pad: 40px;
+  --st-container-pad-mobile: 20px;
 
-  /* ── Typography ── */
-  --st-font: var(--brand-font, "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  /* ── Radius — only 0/2/4 in the editorial theme. No pill token exported
+   *    so it can't sneak back onto buttons. Legacy aliases left for the
+   *    components PR 2/3 will rewrite. ── */
+  --st-radius-0: 0;
+  --st-radius-2: 2px;
+  --st-radius-4: 4px;
+  --st-radius-sm: 2px;
+  --st-radius-md: 4px;
+  --st-radius-lg: 4px;
+  --st-radius-xl: 4px;
+  --st-radius-2xl: 4px;
+  /* --st-radius-pill intentionally not defined. Anything still referencing it
+   * (legacy CSS classes) will fall back to its declared value at the usage site
+   * — most of those usages are getting removed in PR 2 / PR 3. */
+
+  /* ── Shadow scale — the editorial theme uses none. Tokens kept as no-ops
+   *    so legacy classes that reference them in PR 1 don't break. They will
+   *    be removed wholesale when their consumers are rewritten. ── */
+  --st-shadow-sm: 0 0 0 transparent;
+  --st-shadow-md: 0 0 0 transparent;
+  --st-shadow-lg: 0 0 0 transparent;
+  --st-shadow-xl: 0 0 0 transparent;
+  --st-shadow-cta-accent: 0 0 0 transparent;
+  --st-shadow-cta-primary: 0 0 0 transparent;
+
+  /* ── Focus ring — the single allowed shadow ── */
+  --st-focus-ring: 0 0 0 3px color-mix(in srgb, var(--st-primary) 28%, transparent);
+
+  /* ── Motion — single curve, two durations ── */
+  --st-ease: cubic-bezier(0.16, 0.84, 0.32, 1);
+  --st-duration-1: 150ms;
+  --st-duration-2: 400ms;
+
+  /* ── Typography — Fraunces display + Inter Tight body ── */
+  --st-font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --st-font-body: var(--brand-font, "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  --st-font: var(--st-font-body);                                       /* legacy alias */
+  --st-text-eyebrow: 11px;
   --st-text-12: 12px;
   --st-text-13: 13px;
   --st-text-14: 14px;
   --st-text-15: 15px;
+  --st-text-16: 16px;
   --st-text-17: 17px;
-  --st-text-22: 22px;
-  --st-text-26: 26px;
-  --st-text-32: 32px;
-  --st-text-38: 38px;
-  --st-text-60: 60px;
+  /* Display sizes */
+  --st-text-22: 22px;       /* H3 */
+  --st-text-26: 26px;       /* brand mark */
+  --st-text-32: 32px;       /* pull-quote desktop */
+  --st-text-38: 38px;       /* step numerals */
+  --st-text-40: 40px;       /* H2 desktop */
+  --st-text-56: 56px;       /* closing statement desktop */
+  --st-text-60: 60px;       /* legacy alias for older H1 references */
+  --st-text-72: 72px;       /* H1 desktop */
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -86,92 +132,305 @@
  * ────────────────────────────────────────────────────────────────── */
 body:has(.st-header):not(:has(.sidebar-layout)) {
   background: var(--st-bg);
-  color: var(--st-text);
-  font-family: var(--st-font);
+  color: var(--st-ink);
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-16);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body:has(.st-header):not(:has(.sidebar-layout)) h1,
+body:has(.st-header):not(:has(.sidebar-layout)) h2,
+body:has(.st-header):not(:has(.sidebar-layout)) h3 {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--st-ink);
 }
 .st-shell { min-height: 100vh; }
 .st-shell * { box-sizing: border-box; }
 .st-shell a { color: inherit; text-decoration: none; }
-.st-container { max-width: 1240px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-@media (max-width: 980px) {
-  .st-container { padding-left: 16px; padding-right: 16px; }
+.st-container {
+  max-width: var(--st-container-max);
+  margin: 0 auto;
+  padding-left: var(--st-container-pad);
+  padding-right: var(--st-container-pad);
+}
+@media (max-width: 760px) {
+  .st-container {
+    padding-left: var(--st-container-pad-mobile);
+    padding-right: var(--st-container-pad-mobile);
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Header
+ * Editorial utilities — shared across PR 1/2/3 components.
+ * ────────────────────────────────────────────────────────────────── */
+.st-eyebrow {
+  display: inline-block;
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--st-muted-2);
+  line-height: 1.2;
+}
+
+.st-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--st-font-body);
+  font-size: 14.5px;
+  color: var(--st-ink);
+  border-bottom: 1px solid var(--st-ink);
+  padding-bottom: 2px;
+  text-decoration: none;
+  transition: color var(--st-duration-1) var(--st-ease),
+              border-color var(--st-duration-1) var(--st-ease);
+}
+.st-text-link:hover {
+  color: var(--st-primary);
+  border-color: var(--st-primary);
+}
+
+.st-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--st-font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--st-ink);
+  background: transparent;
+  border: 1px solid var(--st-ink);
+  border-radius: var(--st-radius-2);
+  padding: 12px 22px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--st-duration-1) var(--st-ease),
+              color var(--st-duration-1) var(--st-ease);
+}
+.st-ghost-btn:hover {
+  background: var(--st-ink);
+  color: var(--st-bg);
+}
+
+/* Section frame — every editorial section gets this. */
+.st-section {
+  padding: var(--st-section-pad-y) 0;
+}
+.st-section-large {
+  padding: var(--st-section-pad-y-large) 0;
+}
+.st-section-soft   { background: var(--st-bg); }
+.st-section-card   { background: var(--st-card); }
+.st-section-rule   { border-top: 1px solid var(--st-line); }
+@media (max-width: 760px) {
+  .st-section       { padding: var(--st-section-pad-y-mobile) 0; }
+  .st-section-large { padding: var(--st-section-pad-y-mobile) 0; }
+}
+
+/* Section head: left-aligned by default (kicker + h2 + link-right),
+ * `.st-section-head--center` for centered single-column section heads. */
+.st-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 44px;
+}
+.st-section-head--center {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 48px;
+}
+.st-section-head .st-eyebrow { margin-bottom: 12px; }
+.st-section-title {
+  font-family: var(--st-font-display);
+  font-size: var(--st-text-40);
+  line-height: 1.10;
+  letter-spacing: -0.022em;
+  font-weight: 400;
+  margin: 0;
+  color: var(--st-ink);
+}
+.st-section-sub {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-16);
+  line-height: 1.6;
+  color: var(--st-muted);
+  margin: 8px 0 0;
+  max-width: 56ch;
+}
+@media (max-width: 760px) {
+  .st-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .st-section-title { font-size: 28px; line-height: 1.15; }
+}
+
+/* Closing display sentence — used by the new Closing component. */
+.st-display {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: var(--st-text-56);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--st-ink);
+  max-width: 14ch;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+.st-display em {
+  font-style: italic;
+  color: var(--st-primary);
+}
+@media (max-width: 760px) {
+  .st-display { font-size: 36px; line-height: 1.10; }
+}
+
+/* Universal focus ring — the one allowed shadow. */
+.st-shell :focus-visible {
+  outline: none;
+  box-shadow: var(--st-focus-ring);
+  border-radius: var(--st-radius-2);
+}
+
+/* 3-up editorial product grid wrapper used by the homepage. The card
+ * itself stays on its current legacy classes (PR 2 rewrites the card). */
+.st-products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+@media (max-width: 1024px) {
+  .st-products-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+}
+@media (max-width: 640px) {
+  .st-products-grid { grid-template-columns: 1fr; gap: 20px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Header — editorial: business mark + small uppercase tagline left,
+ * 4-link nav + "Inquire" text-link right. No sticky, no logo gradient
+ * tile, no pill-shaped phone chip, no drop shadow.
  * ────────────────────────────────────────────────────────────────── */
 .st-header {
-  position: sticky; top: 0; z-index: 10;
-  background: color-mix(in srgb, var(--st-bg) 92%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--st-bg);
   border-bottom: 1px solid var(--st-line);
 }
 .st-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 14px 0;
+  gap: 32px;
+  padding: 22px 0;
 }
 .st-logo {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--st-text);
-  display: flex; align-items: center; gap: 10px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  color: var(--st-ink);
+  text-decoration: none;
 }
 .st-logo-img { max-height: 36px; width: auto; display: block; }
 .st-logo-mark {
-  width: 34px; height: 34px;
-  background: linear-gradient(135deg, var(--st-primary) 0%, var(--st-primary-dim) 100%);
-  border-radius: var(--st-radius-sm);
-  display: grid; place-items: center;
-  color: white;
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: -0.04em;
-  box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--st-primary) 35%, transparent);
+  font-family: var(--st-font-display);
+  font-weight: 500;
+  font-size: var(--st-text-26);
+  letter-spacing: -0.025em;
+  color: var(--st-ink);
+  /* No background, no border-radius, no shadow. The mark is the wordmark. */
+}
+.st-logo-tagline {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 36ch;
 }
 .st-nav-links {
-  display: flex; gap: 4px; align-items: center;
+  display: flex;
+  gap: 32px;
+  align-items: center;
 }
 .st-nav-links a {
-  color: var(--st-text);
+  color: var(--st-ink);
+  font-family: var(--st-font-body);
   font-size: var(--st-text-14);
-  font-weight: 500;
-  padding: 8px 13px;
-  border-radius: var(--st-radius-sm);
-  transition: background 0.15s;
+  font-weight: 400;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  text-decoration: none;
+  transition: color var(--st-duration-1) var(--st-ease);
 }
-.st-nav-links a:hover { background: rgba(0, 0, 0, 0.05); }
+.st-nav-links a:hover { color: var(--st-primary); background: transparent; }
 .st-nav-phone {
-  color: var(--st-primary) !important;
-  font-weight: 700 !important;
-  background: var(--st-primary-soft);
-  border-radius: var(--st-radius-pill) !important;
-  display: inline-flex !important; align-items: center; gap: 6px;
+  /* Plain text, NOT a pill. */
+  color: var(--st-ink) !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 0 !important;
+  font-size: var(--st-text-14);
 }
-.st-nav-phone svg { width: 14px; height: 14px; }
+.st-nav-phone svg { display: none; }
+.st-nav-cta {
+  font-family: var(--st-font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-ink);
+  border-bottom: 1px solid var(--st-ink);
+  padding: 0 0 2px;
+  background: transparent;
+  text-decoration: none;
+  transition: color var(--st-duration-1) var(--st-ease),
+              border-color var(--st-duration-1) var(--st-ease);
+}
+.st-nav-cta:hover {
+  color: var(--st-primary);
+  border-color: var(--st-primary);
+}
 .st-nav-mobile { display: none; gap: 8px; align-items: center; }
-@media (max-width: 980px) {
+@media (max-width: 760px) {
   .st-nav-links { display: none; }
   .st-nav-mobile { display: flex; }
-  .st-nav { padding: 12px 0; }
+  .st-nav { padding: 18px 0; }
+  .st-logo { gap: 10px; }
+  .st-logo-mark { font-size: 22px; }
+  .st-logo-tagline { max-width: 16ch; }
 }
 .st-mobile-phone {
   display: inline-flex;
-  align-items: center; gap: 6px;
-  color: var(--st-primary);
-  background: var(--st-primary-soft);
-  padding: 8px 12px;
-  border-radius: var(--st-radius-pill);
+  align-items: center;
+  gap: 6px;
+  color: var(--st-ink);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   text-decoration: none;
 }
-.st-mobile-phone svg { width: 13px; height: 13px; }
+.st-mobile-phone svg { display: none; }
 
 /* ──────────────────────────────────────────────────────────────────
  * Hero

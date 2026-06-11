@@ -1,18 +1,16 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { ProductCard } from "@/components/public/product-card";
 import { HowItWorks } from "@/components/public/how-it-works";
 import { FaqSection } from "@/components/public/faq-section";
-import { AboutSection } from "@/components/public/about-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { StorefrontShell } from "@/components/public/themes/party-classic/storefront-shell";
 import { PartyClassicHeader } from "@/components/public/themes/party-classic/header";
 import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
 import { PartyClassicTrustStrip } from "@/components/public/themes/party-classic/trust-strip";
-import { PartyClassicPressRow } from "@/components/public/themes/party-classic/press-row";
-import { PartyClassicCategoryTiles } from "@/components/public/themes/party-classic/category-tiles";
 import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
 import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
+import { PartyClassicClosing } from "@/components/public/themes/party-classic/closing";
+import { SectionHead } from "@/components/public/themes/party-classic/section-head";
 import { SaasLanding } from "@/components/marketing/saas-landing";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
@@ -85,28 +83,21 @@ export default async function HomePage() {
       <main>
         <PartyClassicHero />
 
-        <PartyClassicPressRow />
-
         {vis.trust_bar !== false && <PartyClassicTrustStrip />}
 
-        {vis.category_grid !== false && <PartyClassicCategoryTiles />}
-
-        {/* Popular rentals — kept on the existing CSS classes for now;
-             the tile-style version comes in a follow-up. */}
-        <section className="section storefront-section-soft">
-          <div className="container">
-            <div className="section-header">
-              <div>
-                <div className="kicker">{m.storefront.popularRentals.kicker}</div>
-                <h2>{m.storefront.popularRentals.title}</h2>
-                <div className="muted">{m.storefront.popularRentals.description}</div>
-              </div>
-              <Link href="/inventory" className="ghost-btn">
-                {m.storefront.popularRentals.browseAll}
-              </Link>
-            </div>
-            <div className="grid grid-4">
-              {featured.map((product) => (
+        {/* Featured rentals — editorial 3-up grid. Render at most three so
+             the layout stays calm; tenants with more featured products see
+             a "View the catalog →" link to the full inventory. */}
+        <section className="st-section">
+          <div className="st-container">
+            <SectionHead
+              kicker={m.storefront.popularRentals.kicker}
+              title={m.storefront.popularRentals.title}
+              sub={m.storefront.popularRentals.description}
+              link={{ label: `${m.storefront.popularRentals.browseAll} →`, href: "/inventory" }}
+            />
+            <div className="st-products-grid">
+              {featured.slice(0, 3).map((product) => (
                 <ProductCard
                   key={product.id}
                   name={product.name}
@@ -128,19 +119,17 @@ export default async function HomePage() {
           </div>
         )}
 
+        {vis.testimonials && <PartyClassicReviewsCards />}
+
         {vis.service_area_map !== false && (
           <div id="service-area">
             <PartyClassicServiceArea />
           </div>
         )}
 
-        {vis.about_section !== false && (
-          <AboutSection text={contentSettings.aboutText} />
-        )}
-
-        {vis.testimonials && <PartyClassicReviewsCards />}
-
         {vis.faq_section !== false && <FaqSection customFaqs={faqItems} />}
+
+        <PartyClassicClosing />
 
         <PublicFooter />
       </main>
