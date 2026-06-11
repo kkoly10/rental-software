@@ -46,12 +46,12 @@ taken for an unpayable seller.
   seller messaging.
 
 **Checklist:**
-- [ ] `payouts_ready` (derived: charges_enabled && details_submitted) persisted on the seller's Connect record
-- [ ] `account.updated` webhook recomputes the flag (+ auto-pause when it drops)
-- [ ] Listing pages: booking form replaced with "completing payout setup" notice when not ready
-- [ ] Booking/instant-book actions re-check the flag server-side (reject with friendly message)
-- [ ] Seller Hub: "X of 3 steps to go live" checklist (store page · payout setup · first listing) with fresh onboarding link
-- [ ] Pay-button silent no-op replaced with an explanatory state (closes the e2e finding)
+- [x] `payouts_ready` (derived: charges_enabled && details_submitted) persisted on the seller's Connect record
+- [x] `account.updated` webhook recomputes the flag (+ auto-pause when it drops)
+- [x] Listing pages: booking form replaced with "completing payout setup" notice when not ready
+- [x] Booking/instant-book actions re-check the flag server-side (reject with friendly message)
+- [x] Seller Hub: "X of 3 steps to go live" checklist (store page · payout setup · first listing) with fresh onboarding link
+- [x] Pay-button silent no-op replaced with an explanatory state (closes the e2e finding)
 
 ## 2. Seller pricing calculator (master plan §8, launch slice)
 
@@ -75,10 +75,10 @@ function (a16z) and the master plan specifies the exact bands.
   benchmark/booking data exists (§11 pipeline is post-launch).
 
 **Checklist:**
-- [ ] `lib/market/pricing.ts` — deterministic engine: (risk family, replacement value, age, condition) → low/recommended/premium daily band + weekend/weekly suggestions + payout after fee + recover-cost estimate (unit-tested)
-- [ ] Live suggestion panel in the create-listing form (appears once category + replacement value are set)
-- [ ] One-tap "use suggested" fills daily/weekend/weekly fields (seller can override)
-- [ ] Deterministic explanation line + pre-benchmark confidence label
+- [x] `lib/market/pricing.ts` — deterministic engine: (risk family, replacement value, age, condition) → low/recommended/premium daily band + weekend/weekly suggestions + payout after fee + recover-cost estimate (unit-tested)
+- [x] Live suggestion panel in the create-listing form (appears once category + replacement value are set)
+- [x] One-tap "use suggested" fills daily/weekend/weekly fields (seller can override)
+- [x] Deterministic explanation line + pre-benchmark confidence label
 - [ ] ~ Benchmark library + comps-based anchors (§11 — post-launch, once listing density exists)
 - [ ] ~ Auto-pricing mode (explicitly deferred; the research says don't)
 
@@ -98,10 +98,10 @@ experience we have.
   expected — keep them strictly event-tied.
 
 **Checklist:**
-- [ ] Reminder cron (hourly): day-before-pickup email (logistics + "bring your verified ID")
-- [ ] Morning-of-return email
-- [ ] Grace-expiry nudge (aligned with the 2h grace before `overdue`)
-- [ ] Sent-flags on bookings so reminders are exactly-once (`reminder_*_sent_at`)
+- [x] Reminder cron (hourly): day-before-pickup email (logistics + "bring your verified ID")
+- [x] Morning-of-return email
+- [x] Grace-expiry nudge (aligned with the 2h grace before `overdue`)
+- [x] Sent-flags on bookings so reminders are exactly-once (`reminder_*_sent_at`)
 - [ ] Extension approvals reschedule the return reminder (see §4)
 - [ ] ~ SMS channel for the time-critical nudges (post-launch)
 
@@ -197,4 +197,11 @@ not parity.
 
 ## Done log
 
-*(move shipped items here with PR numbers as we go)*
+- **2026-06-11 — Wave 1 (items 1–3):** KYC-bookable gate (flags read at
+  decision time from the webhook-synced org columns; PDP notice;
+  request-action guard; Pay no-op fixed with renter banner; go-live
+  checklist + Stripe onboarding button in the Hub), seller pricing
+  calculator (engine + 6 tests, live panel, one-tap fill, weekend/
+  weekly listing fields added end-to-end), reminder cron (pickup
+  day-before / return morning-of / grace nudge, exactly-once flags,
+  migration applied to prod).

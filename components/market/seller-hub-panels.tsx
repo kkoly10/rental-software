@@ -18,6 +18,7 @@ import {
   RenterNoShowButton,
   SellerCancelButton,
 } from "@/components/market/cancel-buttons";
+import { GoLiveChecklist } from "@/components/market/go-live-checklist";
 
 /**
  * Seller Hub panels — the single source of truth for the seller
@@ -78,8 +79,17 @@ export async function SellerHubPanels() {
   let requests: RequestRow[] = [];
   let sellerFollowedUp = new Set<string>();
 
+  let connectReady = false;
   if (ctx) {
     const supabase = await createSupabaseServerClient();
+    const { data: orgRow } = await supabase
+      .from("organizations")
+      .select("stripe_connect_charges_enabled, stripe_connect_details_submitted")
+      .eq("id", ctx.organizationId)
+      .maybeSingle();
+    connectReady = Boolean(
+      orgRow?.stripe_connect_charges_enabled && orgRow?.stripe_connect_details_submitted,
+    );
     const requestsPromise = supabase
       .from("market_bookings")
       .select(
@@ -182,10 +192,19 @@ export async function SellerHubPanels() {
       worldSlug: w.slug,
       slug: c.slug,
       label: c.label,
+      riskFamilySlug: c.riskFamilySlug,
     })),
   );
 
+  const hasPublishedListing = listings.some((l) => l.status === "published");
+
   return (
+    <>
+    <GoLiveChecklist
+      hasProfile={Boolean(profile)}
+      connectReady={connectReady}
+      hasPublishedListing={hasPublishedListing}
+    />
     <div
         className="dashboard-grid"
         style={{ gridTemplateColumns: "1.4fr 1fr", alignItems: "start" }}
@@ -414,6 +433,7 @@ export async function SellerHubPanels() {
               worlds={worldOptions}
               categories={categoryOptions}
               products={products}
+              sellerKind={ctx?.businessType === "marketplace_seller" ? "marketplace" : "korent_operator"}
             />
           </div>
         </section>
@@ -450,5 +470,6 @@ export async function SellerHubPanels() {
           </div>
         </section>
       </div>
+    </>
   );
 }

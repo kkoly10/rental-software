@@ -144,6 +144,8 @@ const listingSchema = z.object({
   acquiredYear: z.coerce.number().int().min(1990).max(2100).optional(),
   replacementValue: z.coerce.number().min(0).max(500_000),
   dailyPrice: z.coerce.number().min(1, "Daily price is required.").max(100_000),
+  weekendPrice: z.coerce.number().min(1).max(200_000).optional().or(z.literal("")),
+  weeklyPrice: z.coerce.number().min(1).max(500_000).optional().or(z.literal("")),
   quantity: z.coerce.number().int().min(1).max(10_000).default(1),
   offersDelivery: z.coerce.boolean(),
   offersPickup: z.coerce.boolean(),
@@ -216,6 +218,8 @@ export async function createMarketListing(
     acquiredYear: formData.get("acquired_year") || undefined,
     replacementValue: formData.get("replacement_value") || 0,
     dailyPrice: formData.get("daily_price"),
+    weekendPrice: formData.get("weekend_price") || "",
+    weeklyPrice: formData.get("weekly_price") || "",
     quantity: formData.get("quantity") || 1,
     offersDelivery: formData.get("offers_delivery") === "on",
     offersPickup: formData.get("offers_pickup") === "on",
@@ -304,6 +308,14 @@ export async function createMarketListing(
     acquired_year: parsed.data.acquiredYear ?? null,
     replacement_value_cents: replacementCents || null,
     daily_price_cents: Math.round(parsed.data.dailyPrice * 100),
+    weekend_price_cents:
+      typeof parsed.data.weekendPrice === "number"
+        ? Math.round(parsed.data.weekendPrice * 100)
+        : null,
+    weekly_price_cents:
+      typeof parsed.data.weeklyPrice === "number"
+        ? Math.round(parsed.data.weeklyPrice * 100)
+        : null,
     deposit_cents: deposit,
     inventory_mode: parsed.data.quantity > 1 ? "quantity" : "serialized",
     quantity: parsed.data.quantity,

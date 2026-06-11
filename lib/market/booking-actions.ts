@@ -145,7 +145,7 @@ export async function requestBooking(
   const { data: listing } = await supabase
     .from("market_listings")
     .select(
-      "id, organization_id, world_slug, category_slug, status, is_prelist, daily_price_cents, deposit_cents, quantity, prep_buffer_minutes, recovery_buffer_minutes, instant_book",
+      "id, organization_id, world_slug, category_slug, status, is_prelist, daily_price_cents, weekend_price_cents, weekly_price_cents, deposit_cents, quantity, prep_buffer_minutes, recovery_buffer_minutes, instant_book",
     )
     .eq("id", parsed.data.listingId)
     .eq("status", "published")
@@ -157,6 +157,19 @@ export async function requestBooking(
   }
   if (listing.organization_id == null) {
     return { ok: false, message: "This listing is misconfigured." };
+  }
+  // §12 gate (roadmap item 1): never take a booking for a seller who
+  // can't be paid. Read at decision time so a Stripe restriction
+  // auto-pauses bookability.
+  {
+    const { sellerBookable } = await import("@/lib/market/bookability");
+    if (!(await sellerBookable(listing.organization_id))) {
+      return {
+        ok: false,
+        message:
+          "This seller is finishing payout verification — booking opens once it's done. Message them in the meantime.",
+      };
+    }
   }
   if (parsed.data.quantity > listing.quantity) {
     return { ok: false, message: `Only ${listing.quantity} available.` };
@@ -194,7 +207,17 @@ export async function requestBooking(
     return { ok: false, message: "Add your ID + live selfie on the Verify page (/market/verify) — sellers confirm it's you at pickup, on every rental." };
   }
 
-  const subtotal = listing.daily_price_cents * rentalDays * parsed.data.quantity;
+  // Honor advertised weekend/weekly rates (Codex review, PR #381) —
+  // renter-favoring rate selection, never above daily × days.
+  const { computeRentalSubtotalCents } = await import("@/lib/market/pricing");
+  const subtotal = computeRentalSubtotalCents({
+    rentalDays,
+    quantity: parsed.data.quantity,
+    dailyCents: listing.daily_price_cents,
+    weekendCents: listing.weekend_price_cents,
+    weeklyCents: listing.weekly_price_cents,
+    startsAt: new Date(startMs),
+  });
   if (subtotal < defaults.minBookingSubtotalCents) {
     return {
       ok: false,

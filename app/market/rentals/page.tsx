@@ -88,9 +88,9 @@ function Stepper({ state }: { state: string }) {
 export default async function MyRentalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ paid?: string }>;
+  searchParams: Promise<{ paid?: string; pay?: string }>;
 }) {
-  const { paid } = await searchParams;
+  const { paid, pay } = await searchParams;
 
   let bookings: BookingRow[] = [];
   let signedIn = false;
@@ -146,6 +146,14 @@ export default async function MyRentalsPage({
       <h1>My rentals</h1>
       <p className="mk-sub">Every request, booking and payment in one place.</p>
 
+      {pay === "unavailable" ? (
+        <p className="mk-msg err" style={{ marginBottom: 16 }}>
+          We couldn&rsquo;t start checkout — the seller&rsquo;s payout account
+          isn&rsquo;t fully verified yet. You haven&rsquo;t been charged;
+          we&rsquo;ll hold your approval and you can pay as soon as
+          they&rsquo;re verified.
+        </p>
+      ) : null}
       {paid ? (
         <p className="mk-msg ok" style={{ marginBottom: 16 }}>
           ✓ Payment received — your booking is confirmed (it may take a few

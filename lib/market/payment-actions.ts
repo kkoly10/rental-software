@@ -49,6 +49,10 @@ export async function payForBooking(formData: FormData): Promise<void> {
 
   const url = await createCheckoutUrlForBooking(bookingId, user.id);
   if (url) redirect(url);
+  // Roadmap item 1: no more silent no-op. The dominant null cause is
+  // the seller's Connect account losing/never reaching charges_enabled
+  // — tell the renter instead of doing nothing.
+  redirect("/market/rentals?pay=unavailable");
 }
 
 /**

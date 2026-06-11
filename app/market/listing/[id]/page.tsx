@@ -10,6 +10,7 @@ import {
 import { logDemandEvent } from "@/lib/market/actions";
 import { cancellationPresetForFamily } from "@/lib/market/cancellation";
 import { categoryIcon } from "@/lib/market/icons";
+import { sellerBookable } from "@/lib/market/bookability";
 import { BookingRequestForm } from "@/components/market/booking-request-form";
 import { MessageForm } from "@/components/market/message-form";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -56,6 +57,11 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
     metroSlug: listing.metroSlug,
     listingId: listing.id,
   });
+
+  // §12 gate: a listing only takes bookings when the seller's payout
+  // account is verified — otherwise we keep the page visible and swap
+  // the CTA (roadmap item 1).
+  const bookable = await sellerBookable(listing.organizationId);
 
   let signedIn = false;
   if (hasSupabaseEnv()) {
@@ -163,7 +169,18 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
             </>
           ) : (
             <>
-              {signedIn ? (
+              {!bookable ? (
+                <>
+                  <p className="mk-note warn" style={{ marginTop: 14 }}>
+                    ⏳ <b>This seller is finishing payout setup.</b> Booking
+                    opens as soon as it&rsquo;s verified — usually within a
+                    day. You can message them in the meantime.
+                  </p>
+                  <button className="mk-btn" style={{ width: "100%", marginTop: 12 }} disabled>
+                    Booking opens after seller verification
+                  </button>
+                </>
+              ) : signedIn ? (
                 <BookingRequestForm listingId={listing.id} maxQuantity={listing.quantity} instant={listing.instantBook} />
               ) : (
                 <>
