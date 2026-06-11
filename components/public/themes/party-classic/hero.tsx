@@ -5,13 +5,21 @@ import { getStorefrontDefaults, withArea } from "@/lib/verticals/storefront-defa
 import { getTranslator } from "@/lib/i18n/server";
 
 /**
- * Editorial hero — asymmetric grid (5fr text / 7fr photo) on desktop,
- * stacked on mobile. One specific headline (vertical-default unless
- * the operator overrides), one lede, a flat hairline availability bar,
- * one underlined text-link CTA. NO carousel, NO stats row, NO floating
- * card overlay, NO orange gradient anywhere.
+ * Full-bleed editorial hero — the photo fills the viewport width with
+ * white headline + lede overlaid on a subtle dark legibility gradient.
+ * The availability bar lives directly below on cream, full-width within
+ * the container. On mobile the photo aspect tightens to 4:5 and the
+ * availability bar stacks (date / ZIP / full-width black CTA).
  *
- * Per the spec at docs/design/storefront-editorial.md §5.2.
+ * Replaces the previous asymmetric 5fr/7fr split. The user-suggested
+ * full-bleed pattern matches Peerspace, RH, Found Rentals — the
+ * premium reference points in docs/design/storefront-editorial.md §10.
+ *
+ * The dark bottom-fade overlay is the one explicit revision to the
+ * spec's #1 anti-pattern ("no overlay gradient"): a neutral dark
+ * vignette for typography legibility is categorically different from
+ * a saturated brand gradient banner. Same exemption that lets
+ * .st-vibe-caption use text-shadow on the browse tiles.
  */
 export async function PartyClassicHero() {
   const [settings, content, theme, defaults, { messages: m }] = await Promise.all([
@@ -22,9 +30,6 @@ export async function PartyClassicHero() {
     getTranslator(),
   ]);
 
-  // Headline + italic accent. Operator override (settings.heroHeadline)
-  // wins entirely (renders as a single non-italic phrase). Otherwise we
-  // split into a lead + italic accent per vertical defaults.
   const operatorHeadline = settings.heroHeadline?.trim() ?? "";
   const headlineLead = operatorHeadline || defaults.headlineLead;
   const headlineItalic = operatorHeadline ? "" : defaults.headlineItalic;
@@ -35,7 +40,6 @@ export async function PartyClassicHero() {
 
   const heroImage = settings.heroImageUrl?.trim() || defaults.heroImagePath;
 
-  // Rating chip surfaces only with credible signal — same gate as before.
   const testimonialCount = content.testimonials.length;
   const ratingSum = content.testimonials.reduce(
     (sum, t) => sum + (typeof t.rating === "number" ? Math.max(0, Math.min(5, t.rating)) : 0),
@@ -47,29 +51,44 @@ export async function PartyClassicHero() {
   const showSecondaryCta = theme.ctaSecondary === "request_quote";
 
   return (
-    <section className="st-container st-hero">
-      <div className="st-hero-copy">
-        {showRating && (
-          <span className="st-hero-rating-chip">
-            <span className="st-hero-rating-chip-star">★</span>
-            <strong>{avgRating.toFixed(1)}</strong>
-            <span>· {testimonialCount}+ reviews</span>
-          </span>
-        )}
+    <>
+      <section className="st-hero" aria-label={`${settings.businessName || "Korent"} storefront hero`}>
+        <div className="st-hero-photo">
+          <img
+            src={heroImage}
+            alt={`${settings.businessName || "Korent"} event setup`}
+            width={2400}
+            height={1500}
+            fetchPriority="high"
+          />
+          <div className="st-hero-scrim" aria-hidden="true" />
+        </div>
 
-        <h1 className="st-h1">
-          {headlineLead}
-          {headlineItalic && (
-            <>
-              {" "}
-              <em>{headlineItalic}</em>
-            </>
+        <div className="st-container st-hero-content">
+          {showRating && (
+            <span className="st-hero-rating-chip">
+              <span className="st-hero-rating-chip-star" aria-hidden="true">★</span>
+              <strong>{avgRating.toFixed(1)}</strong>
+              <span>· {testimonialCount}+ reviews</span>
+            </span>
           )}
-        </h1>
 
-        <p className="st-lede">{lede}</p>
+          <h1 className="st-h1">
+            {headlineLead}
+            {headlineItalic && (
+              <>
+                {" "}
+                <em>{headlineItalic}</em>
+              </>
+            )}
+          </h1>
 
-        <form action="/inventory" className="st-avail" aria-label="Check availability">
+          <p className="st-lede">{lede}</p>
+        </div>
+      </section>
+
+      <section className="st-container st-hero-actions" aria-label="Check availability">
+        <form action="/inventory" className="st-avail" role="search">
           <label className="st-avail-field">
             <span className="st-eyebrow">{m.storefront.hero.eventDate}</span>
             <input name="date" type="date" className="st-avail-input" />
@@ -99,20 +118,7 @@ export async function PartyClassicHero() {
             </a>
           )}
         </div>
-      </div>
-
-      <div className="st-hero-photo">
-        {/* Inline <img> not next/image — these are vendored, ≤500 KB
-            files served from /public; next/image's optimizer adds
-            cost we don't need for a single hero per page. */}
-        <img
-          src={heroImage}
-          alt={`${settings.businessName || "Korent"} event setup`}
-          width={1600}
-          height={2000}
-          fetchPriority="high"
-        />
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
