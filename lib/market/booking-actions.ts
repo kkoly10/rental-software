@@ -377,53 +377,5 @@ export async function declineBookingRequest(formData: FormData): Promise<void> {
   revalidatePath(SELLER_HUB_PATH);
 }
 
-// ── Renter: cancel a pending request ─────────────────────────────────
-
-export async function cancelBookingRequest(formData: FormData): Promise<void> {
-  const bookingId = String(formData.get("booking_id") ?? "");
-  if (!z.string().uuid().safeParse(bookingId).success) return;
-  if (!hasSupabaseEnv()) return;
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-  if (await rateLimited("market:booking-cancel")) return;
-
-  const admin = await getAdminClient();
-  const { data: booking } = await admin
-    .from("market_bookings")
-    .select("id, state, hold_id, renter_profile_id, organization_id")
-    .eq("id", bookingId)
-    .eq("renter_profile_id", user.id)
-    .maybeSingle();
-  if (!booking) return;
-
-  const from = booking.state as BookingState;
-  if (!canTransition(from, "cancelled")) return;
-
-  await admin
-    .from("market_bookings")
-    .update({ state: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", booking.id)
-    .eq("state", from);
-  if (booking.hold_id) {
-    await admin
-      .from("market_reservation_holds")
-      .update({ state: "released", updated_at: new Date().toISOString() })
-      .eq("id", booking.hold_id);
-  }
-  await logBookingEvent(admin, booking.id, "booking.cancelled", "renter");
-  // §27: a cancelled-after-confirmation booking must cancel its
-  // operator fulfillment projection too.
-  if (from === "confirmed") {
-    const { emitBridgeEvent } = await import("@/lib/market/bridge");
-    await emitBridgeEvent({
-      event: "marketplace.booking.cancelled",
-      bookingId: booking.id,
-      organizationId: booking.organization_id,
-    });
-  }
-  revalidatePath("/market");
-}
+// Renter/seller cancellation, refunds and no-shows live in
+// lib/market/cancel-actions.ts (policy engine: lib/market/cancellation.ts).

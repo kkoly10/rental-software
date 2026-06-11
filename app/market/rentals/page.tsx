@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { payForBooking } from "@/lib/market/payment-actions";
-import { cancelBookingRequest } from "@/lib/market/booking-actions";
+import {
+  RenterCancelButton,
+  SellerNoShowButton,
+} from "@/components/market/cancel-buttons";
 import { EvidenceForm } from "@/components/market/evidence-form";
 import { DisputeForm } from "@/components/market/dispute-form";
 import { ReviewForm } from "@/components/market/review-form";
@@ -139,13 +142,12 @@ export default async function MyRentalsPage({
                       </button>
                     </form>
                   ) : null}
-                  {["pending_seller_approval", "awaiting_payment", "confirmed"].includes(b.state) ? (
-                    <form action={cancelBookingRequest}>
-                      <input type="hidden" name="booking_id" value={b.id} />
-                      <button type="submit" className="mk-btn ghost">
-                        Cancel
-                      </button>
-                    </form>
+                  {["pending_seller_approval", "awaiting_payment", "confirmed", "ready_for_handoff"].includes(b.state) ? (
+                    <RenterCancelButton bookingId={b.id} />
+                  ) : null}
+                  {["confirmed", "ready_for_handoff"].includes(b.state) &&
+                  new Date(b.starts_at).getTime() + 30 * 60 * 1000 < Date.now() ? (
+                    <SellerNoShowButton bookingId={b.id} />
                   ) : null}
                 </div>
                 {b.state === "ready_for_handoff" || b.state === "checked_out" ? (

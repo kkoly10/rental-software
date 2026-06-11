@@ -8,7 +8,15 @@ const stats = (s: Partial<SellerStats>): SellerStats => ({
   reviewCount: 0,
   completedBookings: 0,
   disputes: 0,
+  sellerCancellations: 0,
   ...s,
+});
+
+test("seller-fault cancellations cost ranking (decision 2026-06-11)", () => {
+  const clean = sellerScore(stats({ avgRating: 4.5 }));
+  const flaky = sellerScore(stats({ avgRating: 4.5, sellerCancellations: 2 }));
+  assert.ok(flaky < clean);
+  assert.equal(clean - flaky, 3); // 1.5 per cancellation
 });
 
 test("§21: higher-rated seller outranks; price is not an input", () => {

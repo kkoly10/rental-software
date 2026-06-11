@@ -14,6 +14,10 @@ import {
 } from "@/lib/market/booking-actions";
 import { advanceBooking } from "@/lib/market/lifecycle-actions";
 import { EvidenceForm } from "@/components/market/evidence-form";
+import {
+  RenterNoShowButton,
+  SellerCancelButton,
+} from "@/components/market/cancel-buttons";
 
 export const dynamic = "force-dynamic";
 
@@ -223,15 +227,24 @@ export default async function MarketplaceSellerHubPage() {
                             {r.state === "awaiting_payment" ? "awaiting renter payment" : r.state.replaceAll("_", " ")}
                           </span>
                         </div>
-                        {next ? (
-                          <form action={advanceBooking}>
-                            <input type="hidden" name="booking_id" value={r.id} />
-                            <input type="hidden" name="step" value={next.step} />
-                            <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
-                              {next.label}
-                            </button>
-                          </form>
-                        ) : null}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                          {next ? (
+                            <form action={advanceBooking}>
+                              <input type="hidden" name="booking_id" value={r.id} />
+                              <input type="hidden" name="step" value={next.step} />
+                              <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                                {next.label}
+                              </button>
+                            </form>
+                          ) : null}
+                          {["awaiting_payment", "confirmed", "ready_for_handoff"].includes(r.state) ? (
+                            <SellerCancelButton bookingId={r.id} />
+                          ) : null}
+                          {["confirmed", "ready_for_handoff"].includes(r.state) &&
+                          new Date(r.starts_at).getTime() + 30 * 60 * 1000 < Date.now() ? (
+                            <RenterNoShowButton bookingId={r.id} />
+                          ) : null}
+                        </div>
                       </div>
                       {r.state === "ready_for_handoff" || r.state === "checked_out" ? (
                         <EvidenceForm bookingId={r.id} phase="handoff" />

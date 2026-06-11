@@ -13,6 +13,9 @@ export type SellerStats = {
   reviewCount: number;
   completedBookings: number;
   disputes: number;
+  /** Seller-fault cancellations incl. no-shows (decision 2026-06-11):
+   *  renter is always made whole, the seller pays in ranking. */
+  sellerCancellations: number;
 };
 
 export type Rankable = {
@@ -27,9 +30,11 @@ export function sellerScore(stats: SellerStats | undefined): number {
   const rating = stats?.avgRating ?? NEUTRAL_RATING;
   const completions = Math.min(stats?.completedBookings ?? 0, 20);
   const disputes = stats?.disputes ?? 0;
+  const sellerCancels = stats?.sellerCancellations ?? 0;
   // Rating dominates (2pts per star), completions add up to +2,
-  // each dispute costs a full star equivalent.
-  return rating * 2 + completions * 0.1 - disputes * 2;
+  // each dispute costs a full star equivalent, each seller-fault
+  // cancellation costs three quarters of one.
+  return rating * 2 + completions * 0.1 - disputes * 2 - sellerCancels * 1.5;
 }
 
 /**
