@@ -35,9 +35,16 @@ export function DisputeResolveForm({
           name="capture_cents"
           min={0}
           max={depositCents}
-          placeholder={`capture (cents, max ${depositCents})`}
-          style={{ fontSize: 13, padding: 8, borderRadius: 8, border: "1px solid #e5e0d8", width: 220 }}
+          placeholder={`capture from deposit (cents, max ${depositCents})`}
+          style={{ fontSize: 13, padding: 8, borderRadius: 8, border: "1px solid #e5e0d8", width: 230 }}
           disabled={depositStatus !== "held"}
+        />
+        <input
+          type="number"
+          name="refund_cents"
+          min={0}
+          placeholder="refund renter (cents)"
+          style={{ fontSize: 13, padding: 8, borderRadius: 8, border: "1px solid #e5e0d8", width: 180 }}
         />
       </div>
       <textarea

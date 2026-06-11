@@ -163,33 +163,17 @@ export async function advanceBooking(formData: FormData): Promise<void> {
         .eq("id", booking.hold_id);
     }
 
-    // §9: completing the booking after return inspection RELEASES the
-    // deposit auth hold. Disputes (later) capture it instead — that
-    // path goes through the dispute domain, never this one.
-    if (booking.deposit_status === "held" && booking.stripe_deposit_intent_id) {
-      try {
-        const { getStripe, hasStripeEnv } = await import("@/lib/stripe/config");
-        if (hasStripeEnv()) {
-          await getStripe().paymentIntents.cancel(booking.stripe_deposit_intent_id);
-        }
-        await admin
-          .from("market_bookings")
-          .update({ deposit_status: "released", updated_at: new Date().toISOString() })
-          .eq("id", booking.id)
-          .eq("deposit_status", "held");
-        await admin.from("market_booking_events").insert({
-          booking_id: booking.id,
-          event: "deposit.released",
-          actor: "system",
-        });
-      } catch {
-        await admin.from("market_booking_events").insert({
-          booking_id: booking.id,
-          event: "deposit.release_failed",
-          actor: "system",
-        });
-      }
-    }
+    // Turo-style claim window (decision 2026-06-11): the deposit no
+    // longer releases instantly — the hourly cron releases it 24h
+    // after completion, and either party can still open a dispute
+    // inside that window. Capture stays dispute-resolution-only.
+    await admin
+      .from("market_bookings")
+      .update({
+        claim_window_ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", booking.id);
   }
 
   revalidatePath(SELLER_HUB_PATH);

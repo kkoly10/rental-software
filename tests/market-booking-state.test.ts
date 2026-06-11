@@ -42,9 +42,15 @@ test("state machine: auto-capture failure fallback path (§10)", () => {
 test("state machine: illegal jumps are rejected", () => {
   assert.equal(canTransition("draft", "completed"), false);
   assert.equal(canTransition("confirmed", "checked_out"), false); // must pass ready_for_handoff
-  assert.equal(canTransition("completed", "disputed"), false); // terminal
   assert.equal(canTransition("cancelled", "confirmed"), false); // terminal
   assert.throws(() => assertTransition("draft", "completed"));
+});
+
+test("claim window: completed can re-enter disputed (and only disputed)", () => {
+  assert.ok(canTransition("completed", "disputed"));
+  for (const to of BOOKING_STATES) {
+    if (to !== "disputed") assert.equal(canTransition("completed", to), false, to);
+  }
 });
 
 test("state machine: disputes open post-checkout and resolve to completed", () => {

@@ -189,6 +189,44 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── Claim-window deposit release (decision 2026-06-11) ────────────
+  // Completed bookings keep their deposit auth for 24h so post-return
+  // damage discoveries still have a money lever; after the window the
+  // hold cancels automatically.
+  let released = 0;
+  const { data: releasable } = await admin
+    .from("market_bookings")
+    .select("id, stripe_deposit_intent_id")
+    .eq("state", "completed")
+    .eq("deposit_status", "held")
+    .lt("claim_window_ends_at", now.toISOString())
+    .limit(50);
+  for (const b of releasable ?? []) {
+    try {
+      if (b.stripe_deposit_intent_id) {
+        await stripe.paymentIntents.cancel(b.stripe_deposit_intent_id).catch(() => {});
+      }
+      await admin
+        .from("market_bookings")
+        .update({ deposit_status: "released", updated_at: new Date().toISOString() })
+        .eq("id", b.id)
+        .eq("deposit_status", "held");
+      await admin.from("market_booking_events").insert({
+        booking_id: b.id,
+        event: "deposit.released",
+        actor: "system",
+        payload: { reason: "claim_window_elapsed" },
+      });
+      released++;
+    } catch {
+      await admin.from("market_booking_events").insert({
+        booking_id: b.id,
+        event: "deposit.release_failed",
+        actor: "system",
+      });
+    }
+  }
+
   // ── Late fees (decision record 2026-06-11, Turo model) ────────────
   // Per started late day: 1x daily rate + $20 flat, charged off-session
   // to the saved card as a destination charge (seller gets the daily
@@ -303,5 +341,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, placed, failed, reauthed, lateCharges, escalated });
+  return NextResponse.json({ ok: true, placed, failed, reauthed, released, lateCharges, escalated });
 }
