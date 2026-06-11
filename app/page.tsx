@@ -7,6 +7,7 @@ import { StorefrontShell } from "@/components/public/themes/party-classic/storef
 import { PartyClassicHeader } from "@/components/public/themes/party-classic/header";
 import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
 import { PartyClassicTrustStrip } from "@/components/public/themes/party-classic/trust-strip";
+import { PartyClassicBrowseTiles } from "@/components/public/themes/party-classic/browse-tiles";
 import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
 import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
 import { PartyClassicClosing } from "@/components/public/themes/party-classic/closing";
@@ -80,15 +81,17 @@ export default async function HomePage() {
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}
 
-      <main>
+      <main id="main">
         <PartyClassicHero />
 
         {vis.trust_bar !== false && <PartyClassicTrustStrip />}
 
+        {vis.category_grid !== false && <PartyClassicBrowseTiles />}
+
         {/* Featured rentals — editorial 3-up grid. Render at most three so
              the layout stays calm; tenants with more featured products see
              a "View the catalog →" link to the full inventory. */}
-        <section className="st-section">
+        <section id="catalog" className="st-section">
           <div className="st-container">
             <SectionHead
               kicker={m.storefront.popularRentals.kicker}

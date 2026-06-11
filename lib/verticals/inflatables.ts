@@ -86,4 +86,21 @@ export const inflatableVertical: VerticalConfig = {
     transitionBanner: "/home/event-setup.jpg",
     customerPhone: "/home/customer-booking-phone.jpg",
   },
+  storefrontDefaults: {
+    heroImagePath: "/storefront-defaults/hero/inflatable.jpg",
+    headlineLead: "Bounce houses and water slides,",
+    headlineItalic: "delivered with care.",
+    lede: "Backyard birthdays, school events, and neighborhood celebrations across {area}. Every unit commercially insured, inspected, and set up before guests arrive.",
+    taglineLabel: "Party rentals",
+    trustBadges: [
+      { kicker: "Insured", statement: "Commercial liability insurance on every unit, every event." },
+      { kicker: "On time", statement: "Crews arrive within a one-hour delivery window, set up before guests." },
+      { kicker: "Trusted", statement: "More than 500 events delivered across {area}." },
+    ],
+    vibeTiles: [
+      { kicker: "For the kids", label: "Backyard birthdays", imagePath: "/storefront-defaults/hero/inflatable.jpg", href: "/inventory?vibe=birthdays" },
+      { kicker: "For the school", label: "Field-day events", imagePath: "/storefront-defaults/hero/dance-floors.jpg", href: "/inventory?vibe=school" },
+      { kicker: "For the block", label: "Neighborhood parties", imagePath: "/storefront-defaults/hero/concessions.jpg", href: "/inventory?vibe=neighborhood" },
+    ],
+  },
 };

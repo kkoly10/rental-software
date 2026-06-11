@@ -93,4 +93,21 @@ export const tentsVertical: VerticalConfig = {
     crew: "/home/crew-loading-trailer.jpg",
     inventory: "/home/inventory-warehouse.jpg",
   },
+  storefrontDefaults: {
+    heroImagePath: "/storefront-defaults/hero/tents.jpg",
+    headlineLead: "Tents, tabletop, and dance floors",
+    headlineItalic: "for the moments that matter.",
+    lede: "Weddings, corporate dinners, and milestone celebrations across {area}. Tents sized and styled to your guest count, with crew setup and breakdown included.",
+    taglineLabel: "Event rentals",
+    trustBadges: [
+      { kicker: "Insured", statement: "Commercial liability coverage on every install, plus permit assistance when required." },
+      { kicker: "On time", statement: "Crews arrive in the install window — never after dark on a wedding day." },
+      { kicker: "Sized right", statement: "Site visits available across {area} to confirm guest count, layout, and surface." },
+    ],
+    vibeTiles: [
+      { kicker: "For the couple", label: "Garden weddings", imagePath: "/storefront-defaults/hero/tents.jpg", href: "/inventory?vibe=weddings" },
+      { kicker: "For the company", label: "Corporate dinners", imagePath: "/storefront-defaults/hero/dance-floors.jpg", href: "/inventory?vibe=corporate" },
+      { kicker: "For the family", label: "Backyard dinners", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory?vibe=backyard" },
+    ],
+  },
 };

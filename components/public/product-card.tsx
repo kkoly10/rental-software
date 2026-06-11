@@ -2,16 +2,28 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { getPlaceholderImage } from "@/lib/utils/placeholders";
 import { useI18n } from "@/lib/i18n/provider";
 
+/**
+ * Editorial product card. Photo at 4:5 with hover scale, tracked
+ * uppercase category, serif product name, price + status dot beneath
+ * a hairline divider, single underlined text-link CTA.
+ *
+ * Explicit absences (per spec anti-patterns §3):
+ *   • no box-shadow on the card
+ *   • no pill-shaped status chip — small dot + label
+ *   • no soft-orange "View Details" button — text-link
+ *   • no description rendered (PDP handles longform copy)
+ *
+ * The `description` prop is kept for backward compatibility but
+ * intentionally unused in the card body.
+ */
 export function ProductCard({
   name,
   slug,
   price,
   category,
-  description,
   status,
   imageUrl,
   date,
@@ -29,46 +41,54 @@ export function ProductCard({
 }) {
   const { messages: m } = useI18n();
   const isUnavailable = status.startsWith("Unavailable");
-
-  const tone =
-    isUnavailable
-      ? "danger"
-      : status === "Available"
-        ? "success"
-        : status === "Limited"
-          ? "warning"
-          : "default";
+  const isLimited = status === "Limited";
+  const statusState = isUnavailable ? "unavailable" : isLimited ? "limited" : "available";
 
   const displayImage = imageUrl || getPlaceholderImage(category);
 
+  // Split "$175/day" → "$175" + " / day" so the period typesets
+  // smaller in muted color.
+  const priceMatch = /^(.*?)(\s*\/\s*\w+.*)$/.exec(price);
+  const priceAmount = priceMatch ? priceMatch[1].trim() : price;
+  const pricePeriod = priceMatch ? priceMatch[2] : "";
+
+  const detailHref =
+    `/inventory/${slug}` +
+    (date || zip
+      ? `?${new URLSearchParams({
+          ...(date ? { date } : {}),
+          ...(zip ? { zip } : {}),
+        }).toString()}`
+      : "");
+
   return (
-    <article
-      className={`product-card${isUnavailable ? " product-card-unavailable" : ""}`}
-    >
-      <div className="product-media" style={{ position: "relative" }}>
+    <article className={`st-rental${isUnavailable ? " st-rental--unavailable" : ""}`}>
+      <Link href={detailHref} className="st-rental-photo" aria-label={name}>
         <Image
           src={displayImage}
           alt={name}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="product-media-img"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="st-rental-photo-img"
         />
-      </div>
-      <div className="product-copy">
-        <div className="price-row card-header-wrap" style={{ marginTop: 0 }}>
-          <div className="kicker">{category}</div>
-          <StatusBadge label={status} tone={tone} />
+      </Link>
+      <div className="st-rental-body">
+        <span className="st-eyebrow st-rental-cat">{category}</span>
+        <Link href={detailHref} className="st-rental-name">
+          {name}
+        </Link>
+        <div className="st-rental-meta">
+          <span className="st-rental-price">
+            {priceAmount}
+            {pricePeriod && <small>{pricePeriod}</small>}
+          </span>
+          <span className="st-status" data-state={statusState}>
+            {status}
+          </span>
         </div>
-        <h3 className="card-title-tight">{name}</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          {description}
-        </p>
-        <div className="price-row action-row-inline">
-          <strong>{price}</strong>
-          <Link href={`/inventory/${slug}${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`} className="secondary-btn">
-            {m.inventory.viewDetails}
-          </Link>
-        </div>
+        <Link href={detailHref} className="st-text-link st-rental-cta">
+          {m.inventory.viewDetails} →
+        </Link>
       </div>
     </article>
   );
