@@ -5,6 +5,7 @@ import { DemoBanner } from "@/components/demo/demo-banner";
 import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { CatalogControls } from "@/components/public/catalog-controls";
 import { CatalogFilterForm } from "@/components/public/catalog-filter-form";
+import { SectionHead } from "@/components/public/themes/party-classic/section-head";
 import { getCatalogList } from "@/lib/data/catalog-list";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
@@ -85,132 +86,87 @@ export default async function InventoryPage({
     (p) => !p.status.startsWith("Unavailable")
   ).length;
 
+  const showDeliversTo =
+    settings.serviceAreaLabel && settings.serviceAreaLabel !== "Your service area";
+
   return (
     <>
       <PublicHeader />
 
-      <main className="page">
-        <div className="container">
-          <section className="panel" style={{ padding: 24 }}>
-            <div className="section-header">
-              <div>
-                <div className="kicker">{m.inventory.title}</div>
-                <h1 className="page-title">
-                  {m.inventory.browseByEventType}
-                </h1>
-                <div className="muted">
-                  {m.inventory.filterIntro}
-                </div>
+      <main id="main">
+        {/* Page head + filter bar */}
+        <section className="st-container st-catalog-head">
+          <span className="st-eyebrow">{m.inventory.title}</span>
+          <h1 className="st-section-title">{m.inventory.browseByEventType}</h1>
+          <p className="st-section-sub">{m.inventory.filterIntro}</p>
 
-                <div className="storefront-context-pills">
-                  {params.date ? (
-                    <span className="storefront-context-pill">
-                      {t(m.inventory.pillDate, { value: params.date })}
-                    </span>
-                  ) : null}
-                  {params.zip ? (
-                    <span className="storefront-context-pill">
-                      {t(m.inventory.pillZip, { value: params.zip })}
-                    </span>
-                  ) : null}
-                  {params.category ? (
-                    <span className="storefront-context-pill">
-                      {t(m.inventory.pillCategory, { value: formatCategoryLabel(params.category) })}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+          <CatalogFilterForm
+            initialDate={params.date}
+            initialZip={params.zip}
+            initialCategory={params.category}
+            categories={categoryOptions}
+          />
 
-            <CatalogFilterForm
-              initialDate={params.date}
-              initialZip={params.zip}
-              initialCategory={params.category}
-              categories={categoryOptions}
-            />
-          </section>
+          <div className="st-context-chips">
+            {params.date ? (
+              <span className="st-context-chip">
+                {t(m.inventory.pillDate, { value: params.date })}
+              </span>
+            ) : null}
+            {params.zip ? (
+              <span className="st-context-chip">
+                {t(m.inventory.pillZip, { value: params.zip })}
+              </span>
+            ) : null}
+            {params.category ? (
+              <span className="st-context-chip">
+                {t(m.inventory.pillCategory, { value: formatCategoryLabel(params.category) })}
+              </span>
+            ) : null}
+          </div>
 
-          {settings.serviceAreaLabel && settings.serviceAreaLabel !== "Your service area" && (
-            <div
-              style={{
-                padding: "10px 16px",
-                background: "var(--surface-muted)",
-                borderRadius: 10,
-                fontSize: 13,
-                color: "var(--text-soft)",
-                marginBottom: 4,
-              }}
-            >
+          {showDeliversTo && (
+            <p className="st-note" role="note">
               {t(m.inventory.deliversTo, { area: settings.serviceAreaLabel })}
-            </div>
+            </p>
           )}
 
           {!params.date && sortedProducts.length > 0 && (
-            <div
-              className="badge info"
-              role="note"
-              style={{
-                padding: "12px 18px",
-                marginBottom: 8,
-                fontSize: 14,
-                display: "block",
-                /* Override the global .badge { white-space: nowrap } —
-                 * this badge holds a full sentence that needs to wrap
-                 * inside a 390px viewport, not blow out the container. */
-                whiteSpace: "normal",
-                lineHeight: 1.5,
-              }}
-            >
+            <p className="st-note" role="note">
               {m.inventory.pickDateHint}
-            </div>
+            </p>
           )}
 
           {zipValid === false && zipMessage && (
-            <div
-              className="badge warning"
-              role="alert"
-              style={{
-                padding: "12px 18px",
-                marginBottom: 8,
-                fontSize: 14,
-                display: "block",
-              }}
-            >
+            <p className="st-note st-note--warning" role="alert">
               {zipMessage}
+            </p>
+          )}
+        </section>
+
+        {/* Results */}
+        <section className="st-container st-section">
+          <SectionHead
+            kicker={params.date ? m.inventory.availabilityResults : m.inventory.availableRentals}
+            title={
+              params.date
+                ? t(m.inventory.availabilityCount, { available: availableCount, total: sortedProducts.length })
+                : sortedProducts.length === 1
+                  ? m.inventory.optionSingle
+                  : t(m.inventory.optionsCount, { count: sortedProducts.length })
+            }
+          />
+
+          {sortedProducts.length > 0 ? (
+            <CatalogControls products={sortedProducts} date={params.date} zip={params.zip} />
+          ) : (
+            <div className="st-empty-state">
+              <span className="st-eyebrow">{m.inventory.noMatchesKicker}</span>
+              <h2 className="st-empty-state-title">{m.inventory.noMatchesTitle}</h2>
+              <p className="st-empty-state-body">{m.inventory.noMatchesBody}</p>
             </div>
           )}
-
-          <section className="section">
-            <div className="section-header">
-              <div>
-                <div className="kicker">
-                  {params.date ? m.inventory.availabilityResults : m.inventory.availableRentals}
-                </div>
-                <h2>
-                  {params.date
-                    ? t(m.inventory.availabilityCount, { available: availableCount, total: sortedProducts.length })
-                    : sortedProducts.length === 1
-                      ? m.inventory.optionSingle
-                      : t(m.inventory.optionsCount, { count: sortedProducts.length })}
-                </h2>
-              </div>
-            </div>
-
-            {sortedProducts.length > 0 ? (
-              <CatalogControls products={sortedProducts} date={params.date} zip={params.zip} />
-            ) : (
-              <div className="panel storefront-empty-state">
-                <div className="kicker">{m.inventory.noMatchesKicker}</div>
-                <h2 className="card-title-tight">
-                  {m.inventory.noMatchesTitle}
-                </h2>
-                <div className="muted">
-                  {m.inventory.noMatchesBody}
-                </div>
-              </div>
-            )}
-          </section>
-        </div>
+        </section>
       </main>
 
       <PublicFooter />

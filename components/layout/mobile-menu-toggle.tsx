@@ -32,7 +32,8 @@ const defaultLinks: NavLink[] = [
   { key: "catalog", label: "Catalog", href: "/inventory" },
   { key: "how_it_works", label: "How It Works", href: "/#how-it-works" },
   { key: "service_area", label: "Service Area", href: "/#service-area" },
-  { key: "pricing", label: "Pricing", href: "/pricing" },
+  // "Pricing" dropped from defaults — see defaultNavLinks in
+  // lib/data/content-settings.ts for rationale.
   { key: "order_status", label: "Order Status", href: "/order-status" },
   { key: "contact", label: "Contact", href: "/contact" },
 ];

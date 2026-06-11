@@ -13,7 +13,10 @@ export const defaultNavLinks: NavLink[] = [
   { key: "catalog", label: "Catalog", href: "/inventory", visible: true },
   { key: "how_it_works", label: "How It Works", href: "/#how-it-works", visible: true },
   { key: "service_area", label: "Service Area", href: "/#service-area", visible: true },
-  { key: "pricing", label: "Pricing", href: "/inventory", visible: true },
+  // "Pricing" was dropped from the defaults: it aliased /inventory, which
+  // confused customers expecting a price sheet ("Catalog" already goes
+  // there). Operators who stored a pricing link keep it — the merge logic
+  // below preserves stored links whose keys aren't in the defaults.
   { key: "order_status", label: "Order Status", href: "/order-status", visible: true },
   { key: "contact", label: "Contact", href: "/contact", visible: true },
 ];

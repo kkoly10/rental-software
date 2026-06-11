@@ -7,8 +7,8 @@ import type { CatalogProduct } from "@/lib/types";
 type SortKey = "default" | "price-asc" | "price-desc" | "name-asc";
 
 /**
- * Storefront catalog with a client-side search + sort. Wraps the
- * existing CatalogGrid layout but adds:
+ * Storefront catalog with a client-side search + sort, editorial
+ * styling. Adds:
  *
  *   - search input that filters name + description as the customer types
  *   - sort dropdown (default / price low → high / price high → low / A-Z)
@@ -74,41 +74,20 @@ export function CatalogControls({
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          alignItems: "stretch",
-          marginBottom: 16,
-        }}
-      >
+      <div className="st-catalog-controls">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search rentals…"
           aria-label="Search rentals"
-          style={{
-            flex: "1 1 280px",
-            minWidth: 0,
-            padding: "10px 14px",
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-            fontSize: 14,
-          }}
+          className="st-catalog-search"
         />
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           aria-label="Sort rentals"
-          style={{
-            padding: "10px 14px",
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-            fontSize: 14,
-            background: "white",
-          }}
+          className="st-catalog-sort"
         >
           <option value="default">Sort: featured</option>
           <option value="price-asc">Price: low to high</option>
@@ -118,37 +97,25 @@ export function CatalogControls({
       </div>
 
       {isFiltered && (
-        <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+        <div className="st-catalog-match-row">
           {filtered.length === 0
             ? "No matching rentals."
             : `${filtered.length} matching rental${filtered.length === 1 ? "" : "s"}`}
-          {(query.trim() || sort !== "default") && (
-            <>
-              {" · "}
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setSort("default");
-                }}
-                style={{
-                  background: "transparent",
-                  border: 0,
-                  padding: 0,
-                  color: "var(--primary)",
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                  fontSize: 13,
-                }}
-              >
-                Clear filters
-              </button>
-            </>
-          )}
+          {" · "}
+          <button
+            type="button"
+            className="st-catalog-clear"
+            onClick={() => {
+              setQuery("");
+              setSort("default");
+            }}
+          >
+            Clear filters
+          </button>
         </div>
       )}
 
-      <div className="grid grid-4">
+      <div className="st-products-grid">
         {filtered.map((product) => (
           <ProductCard
             key={product.id}

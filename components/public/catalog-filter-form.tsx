@@ -12,6 +12,12 @@ type CatalogFilterFormProps = {
   categories?: CategoryOption[];
 };
 
+/**
+ * Editorial catalog filter — same hairline-bar pattern as the hero
+ * availability bar: date / ZIP / category cells in a single 1px-border
+ * rectangle with a black uppercase submit. Stacks on mobile with a
+ * full-width button.
+ */
 export async function CatalogFilterForm({
   initialDate = "",
   initialZip = "",
@@ -20,42 +26,43 @@ export async function CatalogFilterForm({
 }: CatalogFilterFormProps) {
   const m = await getMessages();
   return (
-    <form action="/inventory" className="storefront-filter-shell">
-      <div className="storefront-filter-grid">
-        <label className="storefront-field">
-          <span>{m.storefront.hero.eventDate}</span>
-          <input name="date" type="date" defaultValue={initialDate} />
+    <form action="/inventory" className="st-filter-bar" role="search">
+      <label className="st-filter-field">
+        <span className="st-eyebrow">{m.storefront.hero.eventDate}</span>
+        <input name="date" type="date" defaultValue={initialDate} autoComplete="off" />
+      </label>
+
+      <label className="st-filter-field">
+        <span className="st-eyebrow">{m.storefront.hero.deliveryZip}</span>
+        <input
+          name="zip"
+          type="text"
+          defaultValue={initialZip}
+          placeholder={m.storefront.hero.zipPlaceholder}
+          inputMode="numeric"
+          autoComplete="postal-code"
+          maxLength={10}
+          pattern="[0-9-]*"
+        />
+      </label>
+
+      {categories.length > 0 && (
+        <label className="st-filter-field">
+          <span className="st-eyebrow">{m.dashboard.products.category}</span>
+          <select name="category" defaultValue={initialCategory}>
+            <option value="">{m.storefront.popularRentals.browseAll}</option>
+            {categories.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
         </label>
+      )}
 
-        <label className="storefront-field">
-          <span>{m.storefront.hero.deliveryZip}</span>
-          <input
-            name="zip"
-            type="text"
-            defaultValue={initialZip}
-            placeholder="22554"
-            inputMode="numeric"
-          />
-        </label>
-
-        {categories.length > 0 && (
-          <label className="storefront-field">
-            <span>{m.dashboard.products.category}</span>
-            <select name="category" defaultValue={initialCategory}>
-              <option value="">— {m.storefront.popularRentals.browseAll} —</option>
-              {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        <button className="primary-btn storefront-search-btn" type="submit">
-          {m.storefront.hero.checkAvailability}
-        </button>
-      </div>
+      <button className="st-filter-go" type="submit">
+        {m.storefront.hero.checkAvailability}
+      </button>
     </form>
   );
 }
