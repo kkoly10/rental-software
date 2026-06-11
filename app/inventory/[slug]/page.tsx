@@ -1,11 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getPlaceholderImage } from "@/lib/utils/placeholders";
+import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-images";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
 import { BookNowWithMode } from "@/components/public/book-now-with-mode";
 import { CapacityCalculator } from "@/components/public/capacity-calculator";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
@@ -17,6 +16,7 @@ import { isCurrentTenantDemo } from "@/lib/demo/context";
 import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { productJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
+import { prettifyCategoryName } from "@/lib/utils/prettify-category";
 import { getTranslator } from "@/lib/i18n/server";
 
 export async function generateMetadata({
@@ -30,11 +30,18 @@ export async function generateMetadata({
     getOrganizationSettings(),
   ]);
 
+  if (!product) {
+    return await buildPageMetadata({
+      title: "Product not found",
+      description: "This rental is not available.",
+      path: `/inventory/${slug}`,
+    });
+  }
+
   return await buildPageMetadata({
-    title: `${product.name} | ${settings.businessName}`,
+    title: `${product.name} — ${settings.businessName}`,
     description: product.description,
-    path: `/inventory/${product.slug}`,
-    image: product.imageUrl || undefined,
+    path: `/inventory/${slug}`,
     siteName: settings.businessName,
   });
 }
@@ -47,16 +54,46 @@ export default async function ProductDetailPage({
   searchParams: Promise<{ date?: string; zip?: string }>;
 }) {
   await requirePublicOrg();
-  const isDemo = await isCurrentTenantDemo();
-
   const { slug } = await params;
   const { date, zip } = await searchParams;
-  const [product, origin, { messages: m, t }, theme] = await Promise.all([
+
+  const [product, theme, origin, { messages: m, t }, isDemo] = await Promise.all([
     getCatalogDetail(slug),
+    getThemeSettings(),
     getRequestOrigin(),
     getTranslator(),
-    getThemeSettings(),
+    isCurrentTenantDemo(),
   ]);
+
+  if (!product) {
+    return (
+      <>
+        <PublicHeader />
+        <main id="main">
+          <section className="st-container st-pdp">
+            <div className="st-empty-state">
+              <span className="st-eyebrow">{m.inventoryDetail.unavailableForDate}</span>
+              <h1 className="st-empty-state-title">{m.inventoryDetail.notAvailableTitle}</h1>
+              <p className="st-empty-state-body">{m.inventoryDetail.notAvailableBody}</p>
+              <p style={{ marginTop: 24 }}>
+                <Link href="/inventory" className="st-text-link">
+                  {m.inventoryDetail.backToCatalog} →
+                </Link>
+              </p>
+            </div>
+          </section>
+        </main>
+        <PublicFooter />
+      </>
+    );
+  }
+
+  // Per-vertical fallback + slug/category-keyed local fallback chain —
+  // same logic the homepage product cards use, so the PDP hero never
+  // falls back to the dead /placeholders/*.png artwork.
+  const heroImage =
+    product.imageUrl || getStorefrontFallbackImage(product.slug, product.category);
+  const displayCategory = prettifyCategoryName(product.category);
 
   // Enrich with real availability for the selected date/zip
   const productAsListing = {
@@ -71,16 +108,21 @@ export default async function ProductDetailPage({
   };
   const { products: enriched } = await enrichCatalogAvailability([productAsListing], date, zip);
   const availabilityStatus = enriched[0]?.status ?? "Available";
+  const statusToken = availabilityStatus.startsWith("Unavailable")
+    ? "unavailable"
+    : availabilityStatus === "Limited"
+    ? "limited"
+    : "available";
 
   const checkoutParams = new URLSearchParams();
   checkoutParams.set("product", product.slug);
   if (date) checkoutParams.set("date", date);
   if (zip) checkoutParams.set("zip", zip);
 
-  const galleryImages =
-    product.galleryImages && product.galleryImages.length > 0
-      ? product.galleryImages
-      : ["", "", "", ""];
+  // Gallery — render only the active gallery images the operator
+  // uploaded. The legacy four blank tiles read as broken; if the
+  // operator only has one image, show that one alone.
+  const galleryImages = (product.galleryImages ?? []).filter(Boolean);
 
   const jsonLd = productJsonLd(
     {
@@ -95,101 +137,102 @@ export default async function ProductDetailPage({
     origin
   );
 
+  const backHref = `/inventory${
+    date || zip
+      ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}`
+      : ""
+  }`;
+
   return (
     <>
       <PublicHeader />
       <JsonLdScript data={jsonLd} />
 
-      <main className="page">
-        <div className="container">
-          <div className="storefront-context-pills" style={{ marginBottom: 18 }}>
-            {date ? (
-              <span className="storefront-context-pill">{t(m.inventory.pillDate, { value: date })}</span>
-            ) : null}
-            {zip ? <span className="storefront-context-pill">{t(m.inventory.pillZip, { value: zip })}</span> : null}
-          </div>
+      <main id="main">
+        <section className="st-container st-pdp">
+          {(date || zip) && (
+            <div className="st-context-chips">
+              {date && (
+                <span className="st-context-chip">
+                  {t(m.inventory.pillDate, { value: date })}
+                </span>
+              )}
+              {zip && (
+                <span className="st-context-chip">
+                  {t(m.inventory.pillZip, { value: zip })}
+                </span>
+              )}
+            </div>
+          )}
 
-          <div className="storefront-detail-shell">
-            <section className="panel storefront-gallery">
+          <div className="st-pdp-shell">
+            {/* Gallery */}
+            <div className="st-pdp-gallery">
               <div
-                className="storefront-gallery-main"
-                style={{
-                  backgroundImage: `url(${product.imageUrl || getPlaceholderImage(product.category)})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
+                className="st-pdp-gallery-main"
+                style={{ backgroundImage: `url(${heroImage})` }}
+                role="img"
+                aria-label={product.name}
               />
-              <div className="storefront-thumb-grid">
-                {galleryImages.slice(0, 4).map((image, index) => (
-                  <div
-                    key={`${image}-${index}`}
-                    className="storefront-thumb"
-                    style={{
-                      backgroundImage: `url(${image || getPlaceholderImage(product.category)})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
+              {galleryImages.length > 0 && (
+                <div className="st-pdp-thumbs">
+                  {galleryImages.slice(0, 4).map((image, index) => (
+                    <div
+                      key={`${image}-${index}`}
+                      className="st-pdp-thumb"
+                      style={{ backgroundImage: `url(${image})` }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <aside className="panel storefront-summary-card">
-              <div className="price-row" style={{ marginTop: 0 }}>
-                <div className="kicker">{product.category}</div>
-                <StatusBadge
-                  label={availabilityStatus}
-                  tone={
-                    availabilityStatus.startsWith("Unavailable")
-                      ? "danger"
-                      : availabilityStatus === "Limited"
-                        ? "warning"
-                        : "success"
-                  }
-                />
+            {/* Summary */}
+            <aside className="st-pdp-summary">
+              <div className="st-pdp-meta-row">
+                <span className="st-eyebrow">{displayCategory}</span>
+                <span className="st-status" data-state={statusToken}>
+                  {availabilityStatus}
+                </span>
               </div>
 
-              <h1 style={{ margin: "10px 0 8px" }}>{product.name}</h1>
-              <p className="muted">{product.description}</p>
+              <h1 className="st-pdp-title">{product.name}</h1>
+              <p className="st-pdp-lede">{product.description}</p>
 
-              <div className="price-row" style={{ marginTop: 18 }}>
-                {product.capabilitySlugs?.includes("pricing.per-hour") &&
-                product.hourlyRateCents != null ? (
-                  <div>
-                    <strong style={{ fontSize: "2rem" }}>
+              <div className="st-pdp-price-row">
+                <div className="st-pdp-price">
+                  {product.capabilitySlugs?.includes("pricing.per-hour") &&
+                  product.hourlyRateCents != null ? (
+                    <>
                       ${(product.hourlyRateCents / 100).toLocaleString(undefined, {
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 2,
                       })}
-                    </strong>
-                    <span
-                      className="muted"
-                      style={{ fontSize: "1rem", marginLeft: 6 }}
-                    >
-                      / hour
-                    </span>
-                    {product.minimumHours && product.minimumHours > 0 && (
-                      <div
-                        className="muted"
-                        style={{ fontSize: "0.88rem", marginTop: 4 }}
-                      >
-                        {product.minimumHours}-hour minimum
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <strong style={{ fontSize: "2rem" }}>{product.price}</strong>
-                )}
-                <span className="badge">{m.inventoryDetail.depositReservesDate}</span>
+                      <small>/ hour</small>
+                      {product.minimumHours && product.minimumHours > 0 && (
+                        <span className="st-pdp-price-min">
+                          {product.minimumHours}-hour minimum
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>{product.price}</>
+                  )}
+                </div>
+                <span className="st-pdp-deposit-note">
+                  {m.inventoryDetail.depositReservesDate}
+                </span>
               </div>
 
-              <div className="storefront-highlight-list">
-                {product.highlights.map((highlight) => (
-                  <div key={highlight} className="order-card">
-                    {highlight}
-                  </div>
-                ))}
-              </div>
+              {product.highlights.length > 0 && (
+                <div className="st-pdp-highlights">
+                  {product.highlights.map((highlight) => (
+                    <div key={highlight} className="st-pdp-highlight">
+                      {highlight}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Phase 1c — capacity calculator widget. Renders
                   per metric: dance-floor shows an interactive guest-
@@ -210,40 +253,13 @@ export default async function ProductDetailPage({
               {product.capabilitySlugs?.includes("display.structured-specs") &&
                 product.specs &&
                 product.specs.length > 0 && (
-                  <div
-                    className="order-card"
-                    style={{ marginTop: 18, padding: 16 }}
-                  >
-                    <strong
-                      style={{
-                        display: "block",
-                        fontSize: "0.78rem",
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
-                        color: "var(--text-muted, #6b7280)",
-                        marginBottom: 12,
-                      }}
-                    >
-                      Specs
-                    </strong>
-                    <dl
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "auto 1fr",
-                        gap: "8px 16px",
-                        margin: 0,
-                        fontSize: "0.92rem",
-                      }}
-                    >
+                  <div className="st-pdp-specs">
+                    <span className="st-eyebrow st-pdp-specs-kicker">Specs</span>
+                    <dl className="st-pdp-specs-list">
                       {product.specs.map((spec) => (
-                        <div
-                          key={spec.id}
-                          style={{ display: "contents" }}
-                        >
-                          <dt style={{ fontWeight: 600 }}>
-                            {spec.specLabel}
-                          </dt>
-                          <dd style={{ margin: 0 }}>{spec.specValue}</dd>
+                        <div key={spec.id} style={{ display: "contents" }}>
+                          <dt>{spec.specLabel}</dt>
+                          <dd>{spec.specValue}</dd>
                         </div>
                       ))}
                     </dl>
@@ -259,7 +275,7 @@ export default async function ProductDetailPage({
                 basePriceCents={product.basePriceCents ?? 0}
                 supportsModes={product.supportsModes ?? ["dry"]}
                 wetUpchargeCents={product.wetUpchargeCents ?? null}
-                backHref={`/inventory${date || zip ? `?${new URLSearchParams({ ...(date ? { date } : {}), ...(zip ? { zip } : {}) }).toString()}` : ""}`}
+                backHref={backHref}
                 perUnit={
                   product.capabilitySlugs?.includes("pricing.per-unit") &&
                   typeof product.unitPriceCents === "number" &&
@@ -299,61 +315,56 @@ export default async function ProductDetailPage({
                     : undefined
                 }
               />
+
               {theme.ctaSecondary === "request_quote" && (
-                <details
-                  className="order-card"
-                  style={{ marginTop: 14, padding: 14 }}
-                >
-                  <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-                    Need a custom quote?
-                  </summary>
-                  <p className="muted" style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6 }}>
-                    Use this for events that need site review or itemized pricing — the
-                    operator will email you a tailored quote.
-                  </p>
-                  <div style={{ marginTop: 10 }}>
-                    <RequestQuoteForm
-                      productSlug={product.slug}
-                      initialDate={date}
-                      initialZip={zip}
-                    />
+                <details className="st-pdp-quote">
+                  <summary>Need a custom quote?</summary>
+                  <div className="st-pdp-quote-body">
+                    <p>
+                      Use this for events that need site review or itemized pricing — the
+                      operator will email you a tailored quote.
+                    </p>
+                    <div style={{ marginTop: 12 }}>
+                      <RequestQuoteForm
+                        productSlug={product.slug}
+                        initialDate={date}
+                        initialZip={zip}
+                      />
+                    </div>
                   </div>
                 </details>
               )}
             </aside>
           </div>
 
-          <section className="section storefront-detail-section">
-            <div className="storefront-detail-grid">
-              <div className="panel">
-                <div className="kicker">{m.inventoryDetail.whatToExpect.kicker}</div>
-                <h2 style={{ margin: "8px 0 10px" }}>
-                  {m.inventoryDetail.whatToExpect.title}
-                </h2>
-                <div className="list">
-                  {m.inventoryDetail.whatToExpect.items.map((item) => (
-                    <div key={item.title} className="order-card">
-                      <strong>{item.title}</strong>
-                      <div className="muted" style={{ marginTop: 6 }}>
-                        {item.body}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="panel">
-                <div className="kicker">{m.inventoryDetail.bestFit.kicker}</div>
-                <h2 style={{ margin: "8px 0 10px" }}>{m.inventoryDetail.bestFit.title}</h2>
-                <div className="list">
-                  {m.inventoryDetail.bestFit.items.map((item) => (
-                    <div key={item} className="order-card">{item}</div>
-                  ))}
-                </div>
+          {/* What to expect / Best fit — editorial twin column below the shell. */}
+          <div className="st-pdp-extras">
+            <div className="st-pdp-extras-col">
+              <span className="st-eyebrow">{m.inventoryDetail.whatToExpect.kicker}</span>
+              <h2>{m.inventoryDetail.whatToExpect.title}</h2>
+              <div className="st-pdp-extras-list">
+                {m.inventoryDetail.whatToExpect.items.map((item) => (
+                  <div key={item.title} className="st-pdp-extras-item">
+                    <strong>{item.title}</strong>
+                    <div className="body">{item.body}</div>
+                  </div>
+                ))}
               </div>
             </div>
-          </section>
-        </div>
+
+            <div className="st-pdp-extras-col">
+              <span className="st-eyebrow">{m.inventoryDetail.bestFit.kicker}</span>
+              <h2>{m.inventoryDetail.bestFit.title}</h2>
+              <div className="st-pdp-extras-list">
+                {m.inventoryDetail.bestFit.items.map((item) => (
+                  <div key={item} className="st-pdp-extras-item-simple">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <PublicFooter />

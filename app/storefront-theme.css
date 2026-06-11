@@ -1732,3 +1732,412 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   max-width: 44ch;
   margin: 0 auto;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+ * Product detail page — editorial.
+ *
+ * Left: gallery (4:5 hero photo + 4-up thumbnail strip).
+ * Right: sticky summary column — eyebrow + Fraunces H1 + lede +
+ * price + highlights + specs + booking widget + optional quote
+ * details + back link. Below: "What to expect" / "Best fit" pair
+ * on a hairline-bordered two-column grid.
+ * ────────────────────────────────────────────────────────────────── */
+.st-pdp { padding: 56px 0 96px; }
+.st-pdp-shell {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 56px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .st-pdp { padding: 32px 0 64px; }
+  .st-pdp-shell { grid-template-columns: 1fr; gap: 32px; }
+}
+
+/* Context chips above the shell — same chrome as inventory page. */
+.st-pdp .st-context-chips { margin-bottom: 24px; }
+
+/* Gallery */
+.st-pdp-gallery { display: flex; flex-direction: column; gap: 14px; }
+.st-pdp-gallery-main {
+  aspect-ratio: 4 / 5;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--st-bg-alt);
+  border: 1px solid var(--st-line);
+}
+.st-pdp-thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.st-pdp-thumb {
+  aspect-ratio: 1 / 1;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--st-bg-alt);
+  border: 1px solid var(--st-line);
+}
+@media (max-width: 540px) {
+  .st-pdp-thumbs { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+}
+
+/* Summary column */
+.st-pdp-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: sticky;
+  top: 24px;
+}
+@media (max-width: 980px) {
+  .st-pdp-summary { position: static; }
+}
+
+.st-pdp-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.st-pdp-title {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 3.5vw, 40px);
+  line-height: 1.10;
+  letter-spacing: -0.022em;
+  color: var(--st-ink);
+  margin: 0;
+}
+.st-shell .st-pdp-title { color: var(--st-ink); }
+.st-pdp-lede {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-16);
+  line-height: 1.6;
+  color: var(--st-muted);
+  margin: 0;
+}
+
+.st-pdp-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--st-line);
+  border-bottom: 1px solid var(--st-line);
+}
+.st-pdp-price {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: clamp(28px, 3vw, 36px);
+  letter-spacing: -0.02em;
+  color: var(--st-ink);
+}
+.st-pdp-price small {
+  font-family: var(--st-font-body);
+  font-size: 14px;
+  color: var(--st-muted-2);
+  font-weight: 500;
+  margin-left: 4px;
+}
+.st-pdp-price-min {
+  display: block;
+  font-family: var(--st-font-body);
+  font-size: 12.5px;
+  color: var(--st-muted-2);
+  margin-top: 2px;
+}
+.st-pdp-deposit-note {
+  font-family: var(--st-font-body);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-muted);
+  text-align: right;
+}
+
+/* Highlight list — quiet vertical stack of one-liners, not chunky cards. */
+.st-pdp-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.st-pdp-highlight {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-15);
+  line-height: 1.55;
+  color: var(--st-ink);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--st-line);
+}
+.st-pdp-highlight:first-child { border-top: 1px solid var(--st-line); }
+
+/* Specs — definition list with hairline rules between rows. */
+.st-pdp-specs {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--st-line);
+}
+.st-pdp-specs-kicker {
+  display: block;
+  margin-bottom: 12px;
+}
+.st-pdp-specs-list {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 10px 24px;
+  margin: 0;
+}
+.st-pdp-specs-list dt {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-14);
+  font-weight: 500;
+  color: var(--st-muted);
+}
+.st-pdp-specs-list dd {
+  margin: 0;
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-14);
+  color: var(--st-ink);
+}
+
+/* Booking widget container — separates from the summary above by
+ * a hairline; doesn't introduce a card chrome. */
+.st-pdp-booking { padding-top: 16px; border-top: 1px solid var(--st-line); }
+
+/* Inputs inside the booking widget (units, addon qty). */
+.st-pdp-input {
+  border: 1px solid var(--st-line-strong);
+  border-radius: var(--st-radius-2);
+  background: var(--st-card);
+  padding: 12px 14px;
+  font-family: var(--st-font-body);
+  font-size: 16px;  /* iOS focus-zoom floor */
+  color: var(--st-ink);
+  outline: none;
+  width: 160px;
+  max-width: 100%;
+}
+.st-pdp-input-narrow { width: 72px; padding: 8px 10px; font-size: 16px; text-align: center; }
+.st-pdp-input:focus-visible { box-shadow: var(--st-focus-ring); border-color: var(--st-primary); }
+
+/* Group label (Options, Add-ons, Modes, How many) */
+.st-pdp-group { padding-top: 16px; border-top: 1px solid var(--st-line); margin-top: 16px; }
+.st-pdp-group-label {
+  display: block;
+  margin-bottom: 12px;
+}
+.st-pdp-group-help {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  color: var(--st-muted-2);
+}
+.st-pdp-subtotal {
+  margin-top: 12px;
+  font-family: var(--st-font-display);
+  font-size: 18px;
+  color: var(--st-ink);
+}
+.st-pdp-error {
+  margin-top: 10px;
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  color: var(--st-danger);
+}
+
+/* Variant + Mode radios — hairline frames with primary border on select. */
+.st-pdp-radio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.st-pdp-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--st-line);
+}
+.st-pdp-variant {
+  border: 1px solid var(--st-line-strong);
+  background: var(--st-card);
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  border-radius: var(--st-radius-2);
+  overflow: hidden;
+  transition: border-color var(--st-duration-1) var(--st-ease);
+}
+.st-pdp-variant:hover { border-color: var(--st-ink); }
+.st-pdp-variant[aria-checked="true"] { border-color: var(--st-primary); border-width: 2px; margin: -1px; }
+.st-pdp-variant-img {
+  aspect-ratio: 1 / 1;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--st-bg-alt);
+}
+.st-pdp-variant-label {
+  padding: 10px 12px;
+  font-family: var(--st-font-body);
+}
+.st-pdp-variant-label strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--st-ink);
+}
+.st-pdp-variant-label .delta {
+  display: block;
+  font-size: 12px;
+  color: var(--st-muted-2);
+  margin-top: 2px;
+}
+.st-pdp-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--st-line-strong);
+  border-radius: var(--st-radius-2);
+  cursor: pointer;
+  background: var(--st-card);
+  transition: border-color var(--st-duration-1) var(--st-ease);
+}
+.st-pdp-mode:has(input:checked) { border-color: var(--st-primary); border-width: 2px; margin: -1px; }
+.st-pdp-mode input { margin-bottom: 4px; }
+.st-pdp-mode strong { font-family: var(--st-font-body); font-weight: 600; font-size: 14px; color: var(--st-ink); }
+.st-pdp-mode-price { font-family: var(--st-font-body); font-size: 13px; color: var(--st-muted); }
+
+/* Addons — quiet row stack inside its own hairline group. */
+.st-pdp-addon-list { display: flex; flex-direction: column; gap: 0; }
+.st-pdp-addon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--st-line);
+}
+.st-pdp-addon:first-child { border-top: 1px solid var(--st-line); }
+.st-pdp-addon-body { flex: 1; min-width: 0; }
+.st-pdp-addon-name { font-family: var(--st-font-body); font-weight: 500; color: var(--st-ink); font-size: 14px; }
+.st-pdp-addon-name .required {
+  font-weight: 400;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--st-muted-2);
+}
+.st-pdp-addon-price { font-family: var(--st-font-body); font-size: 12.5px; color: var(--st-muted-2); }
+
+/* CTA row — primary "Book now" (black uppercase rectangle) + back link. */
+.st-pdp-cta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--st-line);
+}
+.st-pdp-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 28px;
+  background: var(--st-ink);
+  color: var(--st-bg);
+  border: 0;
+  border-radius: var(--st-radius-2);
+  font-family: var(--st-font-body);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--st-duration-1) var(--st-ease);
+  min-height: 56px;
+}
+.st-pdp-primary:hover { background: var(--st-primary); }
+.st-pdp-primary[aria-disabled="true"],
+.st-pdp-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Quote details affordance — minimal disclosure. */
+.st-pdp-quote { margin-top: 16px; }
+.st-pdp-quote summary {
+  cursor: pointer;
+  font-family: var(--st-font-body);
+  font-weight: 500;
+  font-size: 13.5px;
+  color: var(--st-ink);
+  border-bottom: 1px solid var(--st-ink);
+  display: inline;
+  padding-bottom: 2px;
+  list-style: none;
+}
+.st-pdp-quote summary::-webkit-details-marker { display: none; }
+.st-pdp-quote summary:hover { color: var(--st-primary); border-color: var(--st-primary); }
+.st-pdp-quote-body {
+  margin-top: 12px;
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-14);
+  line-height: 1.6;
+  color: var(--st-muted);
+}
+
+/* "What to expect" / "Best fit" twin section below the shell. */
+.st-pdp-extras {
+  margin-top: 96px;
+  padding-top: 56px;
+  border-top: 1px solid var(--st-line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+}
+@media (max-width: 980px) {
+  .st-pdp-extras { grid-template-columns: 1fr; gap: 48px; margin-top: 56px; padding-top: 40px; }
+}
+.st-pdp-extras-col h2 {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: var(--st-text-32);
+  letter-spacing: -0.022em;
+  color: var(--st-ink);
+  margin: 8px 0 24px;
+  line-height: 1.15;
+}
+.st-pdp-extras-list { display: flex; flex-direction: column; gap: 0; }
+.st-pdp-extras-item {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--st-line);
+}
+.st-pdp-extras-item:first-child { border-top: 1px solid var(--st-line); }
+.st-pdp-extras-item strong {
+  display: block;
+  font-family: var(--st-font-body);
+  font-weight: 600;
+  font-size: var(--st-text-15);
+  color: var(--st-ink);
+  margin-bottom: 4px;
+}
+.st-pdp-extras-item .body {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-14);
+  line-height: 1.6;
+  color: var(--st-muted);
+}
+.st-pdp-extras-item-simple {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--st-line);
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-15);
+  color: var(--st-ink);
+}
+.st-pdp-extras-item-simple:first-child { border-top: 1px solid var(--st-line); }
