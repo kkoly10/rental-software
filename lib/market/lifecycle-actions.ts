@@ -107,6 +107,16 @@ export async function advanceBooking(formData: FormData): Promise<void> {
   }
 
   if (step.to === "completed") {
+    try {
+      const { emitBridgeEvent } = await import("@/lib/market/bridge");
+      await emitBridgeEvent({
+        event: "marketplace.booking.completed",
+        bookingId: booking.id,
+        organizationId: booking.organization_id,
+      });
+    } catch {
+      // best-effort
+    }
     if (booking.hold_id) {
       await admin
         .from("market_reservation_holds")

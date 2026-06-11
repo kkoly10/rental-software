@@ -137,7 +137,7 @@ export async function confirmPaidBooking(input: {
 
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, hold_id, deposit_cents, listing_id, renter_profile_id")
+    .select("id, state, hold_id, deposit_cents, listing_id, renter_profile_id, organization_id")
     .eq("id", input.bookingId)
     .maybeSingle();
   if (!booking) return "skipped";
@@ -190,6 +190,19 @@ export async function confirmPaidBooking(input: {
     actor: "system",
     payload: { payment_intent_id: input.paymentIntentId },
   });
+
+  // §27: emit to the bridge outbox — the operator fulfillment
+  // projection is built asynchronously by the bridge cron.
+  try {
+    const { emitBridgeEvent } = await import("@/lib/market/bridge");
+    await emitBridgeEvent({
+      event: "marketplace.booking.confirmed",
+      bookingId: booking.id,
+      organizationId: booking.organization_id,
+    });
+  } catch {
+    // best-effort
+  }
 
   // §24: confirmation opens the coordination phase on the thread.
   try {

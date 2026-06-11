@@ -14,12 +14,45 @@ import { getTeamMembersForRoute } from "@/lib/data/unrouted-orders";
 import { getMessages } from "@/lib/i18n/server";
 import { getRoutingMode } from "@/lib/data/routing-mode";
 
+type FulfillmentProjection = {
+  booking_id: string;
+  listing_title: string;
+  quantity: number;
+  prep_at: string;
+  starts_at: string;
+  ends_at: string;
+  recovery_until: string;
+};
+
+/** §27 bridge inbox: marketplace bookings projected as fulfillment
+ *  work. Read with the user's client (org-scoped RLS) — the operator
+ *  app consumes projections, never marketplace internals. */
+async function getMarketplaceFulfillment(): Promise<FulfillmentProjection[]> {
+  try {
+    const { hasSupabaseEnv } = await import("@/lib/env");
+    if (!hasSupabaseEnv()) return [];
+    const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("market_fulfillment_projections")
+      .select("booking_id, listing_title, quantity, prep_at, starts_at, ends_at, recovery_until")
+      .eq("status", "active")
+      .gte("recovery_until", new Date().toISOString())
+      .order("prep_at", { ascending: true })
+      .limit(20);
+    return (data as FulfillmentProjection[] | null) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function DeliveriesPage() {
-  const [board, teamMembers, routingMode, m] = await Promise.all([
+  const [board, teamMembers, routingMode, m, marketplaceFulfillment] = await Promise.all([
     getDeliveryBoardData(),
     getTeamMembersForRoute(),
     getRoutingMode(),
     getMessages(),
+    getMarketplaceFulfillment(),
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/deliveries"];
@@ -37,6 +70,36 @@ export default async function DeliveriesPage() {
       {helpConfig && (
         <ContextHelpBanner config={helpConfig} dismissed={guidanceState.dismissedHelp[helpConfig.key] ?? false} />
       )}
+
+      {marketplaceFulfillment.length > 0 ? (
+        <section className="panel" style={{ marginBottom: 20 }}>
+          <div className="kicker">Marketplace fulfillment</div>
+          <h2 className="page-title-sm" style={{ marginTop: 6 }}>
+            {marketplaceFulfillment.length} marketplace booking
+            {marketplaceFulfillment.length === 1 ? "" : "s"} to fulfill
+          </h2>
+          <div className="list" style={{ marginTop: 12 }}>
+            {marketplaceFulfillment.map((f) => (
+              <article key={f.booking_id} className="order-card">
+                <strong>
+                  {f.listing_title}
+                  {f.quantity > 1 ? ` × ${f.quantity}` : ""}
+                </strong>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  prep from {new Date(f.prep_at).toLocaleString()} · handoff{" "}
+                  {new Date(f.starts_at).toLocaleString()} · return{" "}
+                  {new Date(f.ends_at).toLocaleString()} · recovery until{" "}
+                  {new Date(f.recovery_until).toLocaleString()}
+                </div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  Manage handoff, evidence and completion in{" "}
+                  <Link href="/dashboard/marketplace">Marketplace → Seller Hub</Link>.
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {routingMode === "auto" ? (
         <section className="panel" style={{ marginBottom: 20 }}>
