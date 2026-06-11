@@ -75,6 +75,39 @@ export type VerticalPolicies = {
   minLeadTimeHours: number;
 };
 
+/**
+ * Per-vertical defaults consumed by the editorial storefront. Sets
+ * the default hero photo, headline (split for italic accent), lede,
+ * trust-band statements, and browse-by-occasion tile presets when an
+ * operator hasn't customized any of them. Operators continue to win
+ * via `organizations.settings.{heroImageUrl, heroHeadline, websiteMessage}`
+ * and `content_settings.{trustBadges, browseTiles}`.
+ */
+export type VerticalStorefrontDefaults = {
+  /** Absolute path under /public for the hero photograph. */
+  heroImagePath: string;
+  /** Lead clause of the H1 (renders before the italic accent). */
+  headlineLead: string;
+  /** Italic accent at the end of the H1. Wrapped in <em>. */
+  headlineItalic: string;
+  /** One-sentence supporting copy. {area} is interpolated with the operator's
+   *  service-area label at render time (falls back to "your area" when empty). */
+  lede: string;
+  /** Short uppercase label used in the header tagline. e.g. "Party rentals" */
+  taglineLabel: string;
+  /** Three trust pillars (kicker + statement). {area} interpolation supported. */
+  trustBadges: ReadonlyArray<{ kicker: string; statement: string }>;
+  /** Three browse-by-occasion tile presets. */
+  vibeTiles: ReadonlyArray<{
+    kicker: string;
+    label: string;
+    /** Image path under /public; tile component will render at 4:5 aspect. */
+    imagePath: string;
+    /** Filter href on the catalog index, e.g. "/inventory?category=combos". */
+    href: string;
+  }>;
+};
+
 export type VerticalConfig = {
   /** Stable slug used in DB rows + registry lookup. e.g. "inflatable" */
   slug: string;
@@ -94,4 +127,7 @@ export type VerticalConfig = {
   marketing: VerticalMarketing;
   /** Image asset paths (typically under /public/). */
   imageSlugs: VerticalImageSlugs;
+  /** Editorial storefront defaults. Optional during the migration window
+   *  — verticals without it fall back to the inflatable defaults. */
+  storefrontDefaults?: VerticalStorefrontDefaults;
 };

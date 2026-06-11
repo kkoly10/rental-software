@@ -91,4 +91,21 @@ export const photoBoothsVertical: VerticalConfig = {
     crew: "/home/crew-loading-trailer.jpg",
     inventory: "/home/inventory-warehouse.jpg",
   },
+  storefrontDefaults: {
+    heroImagePath: "/storefront-defaults/hero/photo-booths.jpg",
+    headlineLead: "Photo booths",
+    headlineItalic: "with the editorial feel.",
+    lede: "Open-air and enclosed booths with custom print designs across {area}. Crew-attended every event — no kiosk left unattended.",
+    taglineLabel: "Event rentals",
+    trustBadges: [
+      { kicker: "Attended", statement: "A trained attendant runs every booth — set-up, breakdown, and live troubleshooting." },
+      { kicker: "Custom", statement: "Bespoke print template designed for your event before delivery, free of charge." },
+      { kicker: "Trusted", statement: "Hundreds of weddings, brand activations, and private events across {area}." },
+    ],
+    vibeTiles: [
+      { kicker: "For the couple", label: "Weddings", imagePath: "/storefront-defaults/hero/photo-booths.jpg", href: "/inventory?vibe=weddings" },
+      { kicker: "For the brand", label: "Activations", imagePath: "/storefront-defaults/hero/dance-floors.jpg", href: "/inventory?vibe=corporate" },
+      { kicker: "For the celebration", label: "Private parties", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory?vibe=parties" },
+    ],
+  },
 };
