@@ -151,7 +151,7 @@ export default async function MarketLayout({ children }: { children: React.React
         </div>
         <div className="mk-footer-bar">
           <span>© {new Date().getFullYear()} Korent Marketplace</span>
-          <a href="/">korent.app — the software side</a>
+          <a href={`https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? "korent.app"}`}>korent.app — the software side</a>
         </div>
       </footer>
     </div>

@@ -9,6 +9,17 @@ function isProtectedPath(pathname: string) {
   );
 }
 
+/** Main-app pages that marketplace chrome legitimately links to —
+ *  on the marketplace host these must bounce to the app domain, not
+ *  be rewritten into /market/* (where they 404). */
+function isCrossSurfacePath(pathname: string) {
+  return (
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
+    pathname === "/pricing"
+  );
+}
+
 function isAuthEntryPath(pathname: string) {
   return (
     pathname === "/login" ||
@@ -96,7 +107,11 @@ export async function middleware(request: NextRequest) {
   // Marketplace host: serve everything from the /market route group.
   // Dashboard/auth paths still belong to the main app domain.
   if (isMarketplaceHost(hostname)) {
-    if (isProtectedPath(pathname) || isAuthEntryPath(pathname)) {
+    if (
+      isProtectedPath(pathname) ||
+      isAuthEntryPath(pathname) ||
+      isCrossSurfacePath(pathname)
+    ) {
       const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
       const url = new URL(pathname, `${request.nextUrl.protocol}//${appDomain}`);
       url.search = request.nextUrl.search;
