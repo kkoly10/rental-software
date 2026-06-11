@@ -26,6 +26,7 @@ const base: OperatingDefaults = {
   minBookingSubtotalCents: 1_500,
   accessoriesChecklistRequired: false,
   serialNumberRequired: false,
+  listingReviewRequired: false,
   prepBufferMinutes: 60,
   recoveryBufferMinutes: 60,
   targetDailyPctOfReplacement: 4,
@@ -79,6 +80,7 @@ export const riskFamilies: readonly RiskFamily[] = [
     depositFloorCents: 25_000,
     proofOfFunctionRequired: true,
     accessoriesChecklistRequired: true,
+    listingReviewRequired: true,
     serialNumberRequired: true,
     identityVerification: "full_id",
     prepBufferMinutes: 120,
@@ -91,6 +93,7 @@ export const riskFamilies: readonly RiskFamily[] = [
   family("towable-road", "Towable / road", {
     depositPct: 40,
     depositFloorCents: 30_000,
+    listingReviewRequired: true,
     serialNumberRequired: true,
     identityVerification: "full_id",
     deliveryAllowed: false,
@@ -105,6 +108,7 @@ export const riskFamilies: readonly RiskFamily[] = [
   }),
 
   family("baby-sensitive", "Baby sensitive", {
+    listingReviewRequired: true, // recalled-product screening (§25)
     depositPct: 20,
     depositFloorCents: 7_500,
     sanitationClass: "strict",
@@ -148,6 +152,7 @@ export const riskFamilies: readonly RiskFamily[] = [
   }),
 
   family("manual-review-restricted", "Manual review / restricted", {
+    listingReviewRequired: true,
     depositStrategy: "manual_review",
     depositPct: 50,
     depositFloorCents: 50_000,

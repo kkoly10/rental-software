@@ -22,6 +22,7 @@ type ProfileRow = {
   display_name: string;
   bio: string | null;
   service_radius_miles: number;
+  state_code: string;
   offers_delivery: boolean;
   offers_pickup: boolean;
 };
@@ -85,7 +86,7 @@ export default async function MarketplaceSellerHubPage() {
     const [profileRes, listingsRes, productsRes] = await Promise.all([
       supabase
         .from("market_seller_profiles")
-        .select("slug, display_name, bio, service_radius_miles, offers_delivery, offers_pickup")
+        .select("slug, display_name, bio, service_radius_miles, state_code, offers_delivery, offers_pickup")
         .eq("organization_id", ctx.organizationId)
         .maybeSingle(),
       supabase
@@ -336,6 +337,7 @@ export default async function MarketplaceSellerHubPage() {
                     displayName: profile.display_name,
                     bio: profile.bio,
                     serviceRadiusMiles: profile.service_radius_miles,
+                    stateCode: profile.state_code,
                     offersDelivery: profile.offers_delivery,
                     offersPickup: profile.offers_pickup,
                   }

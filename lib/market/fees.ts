@@ -6,7 +6,11 @@
 
 export type SellerKind = "marketplace" | "korent_operator";
 
-export const MARKETPLACE_FEE_PCT = 12;
+// Raised from the spec's original 12% (2026-06-11): every comparable
+// charges more (BabyQuip ~22%, ShareGrid 15-20%, Turo 25-40%) and 12%
+// couldn't carry verification + support + dispute costs. 15% still
+// undercuts the camera-gear wedge target (ShareGrid's 20%).
+export const MARKETPLACE_FEE_PCT = 15;
 export const OPERATOR_FEE_PCT = 8;
 export const MINIMUM_PLATFORM_FEE_CENTS = 400;
 

@@ -379,7 +379,7 @@ Pricing engine must output:
 - deterministic explanation
 
 Marketplace fee defaults:
-- 12% default marketplace seller fee
+- 15% default marketplace seller fee (raised from 12% on 2026-06-11 — every comparable charges more; see lib/market/fees.ts)
 - 8% for Korent operators
 - $4 minimum platform fee
 - no fee on refundable deposit holds
@@ -900,7 +900,7 @@ Korent operators and marketplace-only sellers should both fit the organization m
 ==================================================
 
 Marketplace sellers:
-- 12% fee
+- 15% fee (raised from 12% on 2026-06-11)
 - $4 minimum platform fee
 
 Korent operators:
