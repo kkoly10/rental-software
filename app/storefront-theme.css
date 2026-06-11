@@ -138,6 +138,10 @@ body:has(.st-header):not(:has(.sidebar-layout)) {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Mobile: kill the ugly blue/gray tap-highlight flash on touch. The
+     custom focus ring already covers keyboard-nav accessibility. */
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
 }
 body:has(.st-header):not(:has(.sidebar-layout)) h1,
 body:has(.st-header):not(:has(.sidebar-layout)) h2,
@@ -593,13 +597,33 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   border: 0;
   background: transparent;
   font-family: var(--st-font-body);
-  font-size: 15px;
+  /* 16px floor — iOS Safari auto-zooms on focus for any input
+     under 16px. The eyebrow above sets the visual hierarchy, so
+     16px reads as utility, not display. */
+  font-size: 16px;
   font-weight: 500;
   color: var(--st-ink);
   padding: 0;
   width: 100%;
   outline: none;
   min-width: 0;
+  /* Strip iOS native styling from date inputs so they match the
+     rest of the bar. */
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* iOS date input renders the placeholder format text in a different
+ * color until a value is set — normalize so empty fields read as
+ * muted-2, not pure-black. */
+.st-avail-input[type="date"]::-webkit-datetime-edit-text,
+.st-avail-input[type="date"]::-webkit-datetime-edit-month-field,
+.st-avail-input[type="date"]::-webkit-datetime-edit-day-field,
+.st-avail-input[type="date"]::-webkit-datetime-edit-year-field {
+  color: var(--st-muted-2);
+}
+.st-avail-input[type="date"]:focus::-webkit-datetime-edit-text,
+.st-avail-input[type="date"]:valid::-webkit-datetime-edit-text {
+  color: var(--st-ink);
 }
 .st-avail-input::placeholder { color: var(--st-muted-2); font-weight: 400; }
 .st-avail-go {
@@ -647,10 +671,12 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
     padding-bottom: 32px;
     gap: 16px;
   }
-  .st-hero .st-h1 { max-width: 14ch; font-size: 36px; line-height: 1.10; }
+  .st-hero .st-h1 { max-width: 13ch; font-size: 36px; line-height: 1.10; }
   .st-hero .st-lede { font-size: 14.5px; max-width: 32ch; }
 
-  /* Availability bar stacks: date row, ZIP row, full-width black CTA. */
+  /* Availability bar stacks: date row, ZIP row, full-width black CTA.
+     Field padding bumped to give the inputs a 48px tap-target height
+     once the 16px input font + 6px label gap are factored in. */
   .st-hero-actions { padding-top: 20px; padding-bottom: 40px; }
   .st-avail {
     grid-template-columns: 1fr;
@@ -659,14 +685,23 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   .st-avail-field {
     border-right: 0;
     border-bottom: 1px solid var(--st-line-strong);
-    padding: 14px 18px;
+    padding: 16px 18px;
   }
   .st-avail-go {
     width: 100%;
-    padding: 16px 22px;
-    font-size: 13px;
+    padding: 18px 22px;
+    font-size: 14px;
+    /* Guarantees a 48px+ tap target regardless of font line-height. */
+    min-height: 52px;
   }
   .st-hero-cta-row { gap: 16px; }
+}
+
+/* Very small phones (≤ 360px / iPhone SE 1st gen). Tighten the H1
+ * one more notch to prevent awkward two-word orphans. */
+@media (max-width: 360px) {
+  .st-hero .st-h1 { font-size: 32px; max-width: 12ch; }
+  .st-hero .st-lede { font-size: 14px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -1012,9 +1047,11 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform var(--st-duration-2) var(--st-ease);
 }
-.st-vibe:hover img { transform: scale(1.03); }
+@media (hover: hover) and (pointer: fine) {
+  .st-vibe img { transition: transform var(--st-duration-2) var(--st-ease); }
+  .st-vibe:hover img { transform: scale(1.03); }
+}
 .st-vibe-caption {
   position: absolute;
   left: 22px;
@@ -1068,10 +1105,13 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform var(--st-duration-2) var(--st-ease);
 }
-.st-rental:hover .st-rental-photo-img,
-.st-rental:hover .st-rental-photo img { transform: scale(1.02); }
+@media (hover: hover) and (pointer: fine) {
+  .st-rental-photo-img,
+  .st-rental-photo img { transition: transform var(--st-duration-2) var(--st-ease); }
+  .st-rental:hover .st-rental-photo-img,
+  .st-rental:hover .st-rental-photo img { transform: scale(1.02); }
+}
 .st-rental-body {
   display: flex;
   flex-direction: column;
@@ -1333,7 +1373,11 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   width: 100%;
   background: none;
   border: 0;
-  padding: 0;
+  /* Vertical padding inflates the tap target without changing the
+     visible layout; min-height clinches the 48px Material guideline
+     even when the question wraps short. */
+  padding: 8px 0;
+  min-height: 48px;
   cursor: pointer;
   justify-content: space-between;
   align-items: flex-start;

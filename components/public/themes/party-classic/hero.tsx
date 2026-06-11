@@ -91,7 +91,12 @@ export async function PartyClassicHero() {
         <form action="/inventory" className="st-avail" role="search">
           <label className="st-avail-field">
             <span className="st-eyebrow">{m.storefront.hero.eventDate}</span>
-            <input name="date" type="date" className="st-avail-input" />
+            <input
+              name="date"
+              type="date"
+              autoComplete="off"
+              className="st-avail-input"
+            />
           </label>
           <label className="st-avail-field">
             <span className="st-eyebrow">{m.storefront.hero.deliveryZip}</span>
@@ -99,6 +104,9 @@ export async function PartyClassicHero() {
               name="zip"
               type="text"
               inputMode="numeric"
+              autoComplete="postal-code"
+              maxLength={10}
+              pattern="[0-9-]*"
               placeholder={m.storefront.hero.zipPlaceholder}
               className="st-avail-input"
             />
