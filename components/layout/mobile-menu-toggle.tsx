@@ -64,54 +64,6 @@ export function MobileMenuToggle({
     toggleRef.current?.focus();
   }, []);
 
-  /**
-   * Handles cross-page fragment navigation that next/link silently
-   * fails on. e.g. clicking "How It Works" (href="/#how-it-works")
-   * from /inventory navigates to / via next/link, but leaves scrollY
-   * at 0 because the target anchor isn't in the DOM yet at the moment
-   * Next finishes routing.
-   *
-   * The earlier RAF-based approach didn't fix it: the target element
-   * still wasn't mounted when the inner RAF fired, and setting
-   * window.location.hash after the URL already contained the hash
-   * was a no-op.
-   *
-   * The reliable fix: bypass next/link's client navigation entirely
-   * for these cross-page fragment links. window.location.assign()
-   * triggers a full document load, and browsers natively scroll to
-   * the fragment after the new page paints. Slight UX downgrade (no
-   * SPA transition) but the menu's primary job is reliable navigation.
-   */
-  const handleNavClick = useCallback(
-    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-      const safe = sanitizeHref(href);
-      if (!safe.startsWith("/")) {
-        // External URL — let the browser handle it natively.
-        close();
-        return;
-      }
-      const hashIndex = safe.indexOf("#");
-      if (hashIndex < 0) {
-        // No fragment — next/link's native handling is fine.
-        close();
-        return;
-      }
-      const targetPath = safe.slice(0, hashIndex) || "/";
-      if (targetPath === pathname) {
-        // Same-page anchor — native fragment scroll works for next/link.
-        close();
-        return;
-      }
-
-      // Cross-page anchor — full page navigation so the browser does
-      // the fragment scroll for us once the new page lands.
-      e.preventDefault();
-      close();
-      window.location.assign(safe);
-    },
-    [pathname, close]
-  );
-
   // Close on Escape
   useEffect(() => {
     if (!open) return;
@@ -214,15 +166,33 @@ export function MobileMenuToggle({
             </div>
 
             <nav className="mobile-menu-nav">
-              {links.map((link) => (
-                <Link
-                  key={link.key}
-                  href={sanitizeHref(link.href)}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {links.map((link) => {
+                const safe = sanitizeHref(link.href);
+                const hasFragment = safe.includes("#");
+                const targetPath = hasFragment
+                  ? safe.slice(0, safe.indexOf("#")) || "/"
+                  : safe;
+                const isCrossPageAnchor = hasFragment && targetPath !== pathname;
+                // Cross-page fragment links use a plain <a> tag so the
+                // browser does a full document load and natively scrolls
+                // to the fragment. next/link intercepts those clicks
+                // before our handler can run e.preventDefault(), even
+                // when we tried to call window.location.assign — so we
+                // can't fix this with an onClick handler alone, we have
+                // to take next/link out of the equation entirely.
+                if (isCrossPageAnchor) {
+                  return (
+                    <a key={link.key} href={safe} onClick={close}>
+                      {link.label}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={link.key} href={safe} onClick={close}>
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="mobile-menu-footer">
