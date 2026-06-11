@@ -51,11 +51,13 @@ export type PricingSuggestion = {
   explanation: string;
 };
 
-/** Charm-round a cents amount to a friendly dollar figure: snap to $5
- *  steps, then drop $1 above $20 ($40 → $39). Never below $1. */
+/** Charm-round a cents amount to a friendly dollar figure: $1 steps
+ *  below $20 (a $5 snap collapses the low/premium band to one number
+ *  for everyday items — the $400-ladder case suggests ~$8–$12), then
+ *  $5 steps with the $1 charm drop above ($40 → $39). Never below $1. */
 export function charmRoundCents(cents: number): number {
   const dollars = cents / 100;
-  if (dollars < 5) return Math.max(1, Math.round(dollars)) * 100;
+  if (dollars < 20) return Math.max(1, Math.round(dollars)) * 100;
   const snapped = Math.round(dollars / 5) * 5;
   const charmed = snapped >= 20 ? snapped - 1 : snapped;
   return charmed * 100;

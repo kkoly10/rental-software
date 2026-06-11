@@ -7,10 +7,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { suggestPricing, charmRoundCents } from "../lib/market/pricing.ts";
 
-test("charm rounding: snaps to $5 steps and drops $1 above $20", () => {
+test("charm rounding: $1 steps under $20, $5 steps and the $1 drop above", () => {
   assert.equal(charmRoundCents(4_000), 3_900); // $40 → $39
   assert.equal(charmRoundCents(1_500), 1_500); // $15 stays
   assert.equal(charmRoundCents(2_100), 1_900); // $21 → $20 → $19
+  assert.equal(charmRoundCents(800), 800); // $8 stays — no $5 snap collapse
+  assert.equal(charmRoundCents(1_190), 1_200); // $11.90 → $12
   assert.equal(charmRoundCents(350), 400); // small values round plainly
   assert.equal(charmRoundCents(40), 100); // floor at $1
 });
@@ -26,8 +28,9 @@ test("the $400 ladder: passive-standard band produces a sane suggestion", () => 
   assert.ok(s);
   // used value = 400 × .70 × .85 = $238 → 4% ≈ $9.52/day → charm $10
   assert.equal(s.dailyRecommendedCents, 1_000);
-  assert.ok(s.dailyLowCents <= s.dailyRecommendedCents);
-  assert.ok(s.dailyPremiumCents >= s.dailyRecommendedCents);
+  // the band must not collapse to a single number ("rent for $10–$10")
+  assert.ok(s.dailyLowCents < s.dailyRecommendedCents);
+  assert.ok(s.dailyPremiumCents > s.dailyRecommendedCents);
   // payout = $10 − 15% = $8.50 → 400/8.5 = 48 days (ceil 48)
   assert.equal(s.payoutPerDayCents, 850);
   assert.equal(s.recoverDays, Math.ceil(40_000 / 850));

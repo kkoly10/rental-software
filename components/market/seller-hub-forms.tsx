@@ -263,16 +263,14 @@ export function CreateListingForm({
           className="order-card"
           style={{ padding: 14, background: "#fdf6ec", border: "1px solid #f0e0c8" }}
         >
+          {/* Single template literals: the JSX transform was observed
+              dropping spaces at expression/text boundaries in the
+              deployed bundle ("48rental days"). */}
           <div style={{ fontSize: 13, fontWeight: 700 }}>
-            💡 Items like this typically rent for {dollars(suggestion.dailyLowCents)}–
-            {dollars(suggestion.dailyPremiumCents)}/day — we suggest{" "}
-            {dollars(suggestion.dailyRecommendedCents)}
+            {`💡 Items like this typically rent for ${dollars(suggestion.dailyLowCents)}–${dollars(suggestion.dailyPremiumCents)}/day — we suggest ${dollars(suggestion.dailyRecommendedCents)}`}
           </div>
           <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-            You&rsquo;d earn ≈{dollars(suggestion.payoutPerDayCents)} per rental day
-            after fees — about {suggestion.recoverDays} rental days to recover your
-            item&rsquo;s value. Weekend {dollars(suggestion.weekendCents)} · weekly{" "}
-            {dollars(suggestion.weeklyCents)}.
+            {`You’d earn ≈${dollars(suggestion.payoutPerDayCents)} per rental day after fees — about ${suggestion.recoverDays} rental days to recover your item’s value. Weekend ${dollars(suggestion.weekendCents)} · weekly ${dollars(suggestion.weeklyCents)}.`}
           </div>
           <div className="muted" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>
             {suggestion.explanation}

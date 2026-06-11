@@ -117,40 +117,50 @@ export async function createCheckoutUrlForBooking(
     }
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: booking.subtotal_cents + (booking.tax_cents ?? 0),
-          product_data: {
-            name: listingTitle,
-            description: `${booking.rental_days} day rental · qty ${booking.quantity}${
-              booking.tax_cents ? ` · incl. $${((booking.tax_cents ?? 0) / 100).toFixed(2)} sales tax` : ""
-            }`,
+  // Belt-and-braces (roadmap item 1): the flags can say ready while
+  // Stripe disagrees (account revoked moments ago, transient API
+  // error). A thrown Stripe error must degrade to the renter-facing
+  // "payments unavailable" state, not the error boundary.
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: booking.subtotal_cents + (booking.tax_cents ?? 0),
+            product_data: {
+              name: listingTitle,
+              description: `${booking.rental_days} day rental · qty ${booking.quantity}${
+                booking.tax_cents ? ` · incl. $${((booking.tax_cents ?? 0) / 100).toFixed(2)} sales tax` : ""
+              }`,
+            },
           },
         },
+      ],
+      payment_intent_data: {
+        // Facilitator tax rides with the platform fee: the platform
+        // collects and remits it; the seller payout never includes tax.
+        application_fee_amount: booking.platform_fee_cents + (booking.tax_cents ?? 0),
+        transfer_data: { destination: org.stripe_connect_account_id },
+        // §9: save the card so the deposit can be AUTHORIZED off-session
+        // at handoff−96h (never charged at booking time).
+        setup_future_usage: "off_session",
       },
-    ],
-    payment_intent_data: {
-      // Facilitator tax rides with the platform fee: the platform
-      // collects and remits it; the seller payout never includes tax.
-      application_fee_amount: booking.platform_fee_cents + (booking.tax_cents ?? 0),
-      transfer_data: { destination: org.stripe_connect_account_id },
-      // §9: save the card so the deposit can be AUTHORIZED off-session
-      // at handoff−96h (never charged at booking time).
-      setup_future_usage: "off_session",
-    },
-    customer_creation: "always",
-    metadata: {
-      surface: "marketplace",
-      market_booking_id: booking.id,
-    },
-    success_url: `${siteUrl}/market/rentals?paid=1`,
-    cancel_url: `${siteUrl}/market/rentals`,
-  });
+      customer_creation: "always",
+      metadata: {
+        surface: "marketplace",
+        market_booking_id: booking.id,
+      },
+      success_url: `${siteUrl}/market/rentals?paid=1`,
+      cancel_url: `${siteUrl}/market/rentals`,
+    });
+  } catch (err) {
+    console.error("market checkout session failed", err);
+    return null;
+  }
 
   await admin
     .from("market_bookings")
