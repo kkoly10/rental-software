@@ -39,6 +39,9 @@ export default function MarketLayout({ children }: { children: React.ReactNode }
         <span className="mk-metro">
           📍 <b>{metro?.label ?? "Your metro"}</b>
         </span>
+        <Link href="/market/rentals" className="mk-metro" style={{ textDecoration: "none" }}>
+          My rentals
+        </Link>
       </nav>
       {children}
       <footer className="mk-footer">

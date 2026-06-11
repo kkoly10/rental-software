@@ -240,17 +240,19 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
   const { booking, admin } = found;
 
   const from = booking.state as BookingState;
-  if (!canTransition(from, "confirmed")) return;
+  if (!canTransition(from, "awaiting_payment")) return;
 
-  // §10: the inventory hold is taken NOW, atomically, at approval.
+  // §10: the inventory hold is taken NOW, atomically, at approval —
+  // held for 24h while the renter pays (awaiting_renter_payment TTL).
+  // The 5-minute cron expires it (and the booking) if they never do.
   const { data: holdResult, error: holdError } = await admin.rpc("market_reserve_hold", {
     p_listing_id: booking.listing_id,
     p_renter_profile_id: booking.renter_profile_id,
     p_starts_at: booking.starts_at,
     p_ends_at: booking.ends_at,
     p_quantity: booking.quantity,
-    p_state: "confirmed",
-    p_ttl_minutes: 0,
+    p_state: "awaiting_renter_payment",
+    p_ttl_minutes: 24 * 60,
   });
 
   const result = holdResult as { ok?: boolean; hold_id?: string; reason?: string } | null;
@@ -262,20 +264,22 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
     return;
   }
 
-  assertTransition(from, "confirmed");
+  assertTransition(from, "awaiting_payment");
   await admin
     .from("market_bookings")
     .update({
-      state: "confirmed",
+      state: "awaiting_payment",
       hold_id: result.hold_id,
       seller_responded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", booking.id)
     .eq("state", from);
-  await logBookingEvent(admin, booking.id, "booking.confirmed", "seller");
-  // M3 wires the auto-capture here (saved payment method → destination
-  // charge with application_fee_amount on the seller's Connect account).
+  await logBookingEvent(admin, booking.id, "booking.approved", "seller");
+  // The renter pays via /market/rentals (destination charge); the
+  // marketplace webhook flips awaiting_payment → confirmed. Once
+  // saved-payment-method vaulting exists, this becomes the §10
+  // auto-capture and skips awaiting_payment for the common case.
   revalidatePath(SELLER_HUB_PATH);
 }
 

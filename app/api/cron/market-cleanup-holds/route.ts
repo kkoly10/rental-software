@@ -29,5 +29,44 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "expiry failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, expired: data ?? 0 });
+  // §19 auto-decision "no seller response by SLA": requests older than
+  // 24h auto-cancel — the renter was promised they pay nothing if the
+  // seller never answers.
+  const slaCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: timedOut } = await admin
+    .from("market_bookings")
+    .update({ state: "cancelled", updated_at: new Date().toISOString() })
+    .eq("state", "pending_seller_approval")
+    .lt("created_at", slaCutoff)
+    .select("id");
+
+  // awaiting_payment bookings whose hold has expired lose the slot —
+  // cancel them so the renter sees an honest state instead of a dead
+  // Pay button.
+  const { data: expiredHolds } = await admin
+    .from("market_reservation_holds")
+    .select("id")
+    .eq("state", "expired")
+    .gt("updated_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
+    .limit(200);
+  let paymentTimeouts = 0;
+  if (expiredHolds && expiredHolds.length > 0) {
+    const { data: cancelled } = await admin
+      .from("market_bookings")
+      .update({ state: "cancelled", updated_at: new Date().toISOString() })
+      .eq("state", "awaiting_payment")
+      .in(
+        "hold_id",
+        expiredHolds.map((h) => h.id),
+      )
+      .select("id");
+    paymentTimeouts = cancelled?.length ?? 0;
+  }
+
+  return NextResponse.json({
+    ok: true,
+    expired: data ?? 0,
+    sellerSlaCancelled: timedOut?.length ?? 0,
+    paymentTimeouts,
+  });
 }
