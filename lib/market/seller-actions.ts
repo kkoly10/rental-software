@@ -146,8 +146,38 @@ const listingSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(10_000).default(1),
   offersDelivery: z.coerce.boolean(),
   offersPickup: z.coerce.boolean(),
+  instantBook: z.coerce.boolean(),
   productId: z.string().uuid().optional().or(z.literal("")),
 });
+
+const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+const MAX_VIDEO_SIZE = 80 * 1024 * 1024;
+
+/** Proof-of-function video (§6, founder decision 2026-06-11): for
+ *  powered/electric categories the seller shows the item working —
+ *  e.g. a blow dryer running — as part of creating the listing. */
+async function uploadProofVideo(
+  file: File,
+  orgId: string,
+): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  if (!VIDEO_TYPES.includes(file.type)) {
+    return { ok: false, message: "Proof video must be MP4, MOV or WebM." };
+  }
+  if (file.size > MAX_VIDEO_SIZE) {
+    return { ok: false, message: "Proof video must be under 80 MB." };
+  }
+  const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
+  const admin = createSupabaseAdminClient();
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
+  const ext = file.type === "video/quicktime" ? "mov" : file.type === "video/webm" ? "webm" : "mp4";
+  const path = `market-proof/${orgId}/${Date.now()}.${ext}`;
+  const { error } = await admin.storage
+    .from(bucket)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) return { ok: false, message: "Video upload failed — try again." };
+  const { data } = admin.storage.from(bucket).getPublicUrl(path);
+  return { ok: true, url: data.publicUrl };
+}
 
 export async function createMarketListing(
   _prev: SellerActionState,
@@ -171,6 +201,7 @@ export async function createMarketListing(
     quantity: formData.get("quantity") || 1,
     offersDelivery: formData.get("offers_delivery") === "on",
     offersPickup: formData.get("offers_pickup") === "on",
+    instantBook: formData.get("instant_book") === "on",
     productId: formData.get("product_id") ?? "",
   });
   if (!parsed.success) {
@@ -202,6 +233,21 @@ export async function createMarketListing(
         }).depositCents
       : defaults.depositFloorCents;
 
+  // Proof-of-function: required at creation time for categories that
+  // demand it; optional everywhere else.
+  let proofVideoUrl: string | null = null;
+  const proofVideo = formData.get("proof_video");
+  if (proofVideo instanceof File && proofVideo.size > 0) {
+    const uploaded = await uploadProofVideo(proofVideo, auth.orgId);
+    if (!uploaded.ok) return { ok: false, message: uploaded.message };
+    proofVideoUrl = uploaded.url;
+  } else if (defaults.proofOfFunctionRequired) {
+    return {
+      ok: false,
+      message: "This category needs a short proof-of-function video — show the item powered on and working.",
+    };
+  }
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("market_listings").insert({
     organization_id: auth.orgId,
@@ -222,6 +268,8 @@ export async function createMarketListing(
     recovery_buffer_minutes: defaults.recoveryBufferMinutes,
     offers_delivery: parsed.data.offersDelivery && defaults.deliveryAllowed,
     offers_pickup: parsed.data.offersPickup,
+    instant_book: parsed.data.instantBook && defaults.instantBookAllowed,
+    proof_video_url: proofVideoUrl,
     metro_slug: DEFAULT_METRO_SLUG,
     // Smoke-test worlds take pre-listings only (spec §31): they
     // publish as browsable-but-not-bookable demand signals.
@@ -263,13 +311,19 @@ async function setListingStatus(
   if (status === "published") {
     const { data: listing } = await supabase
       .from("market_listings")
-      .select("world_slug, category_slug, published_at")
+      .select("world_slug, category_slug, published_at, proof_video_url")
       .eq("id", listingId)
       .eq("organization_id", auth.orgId)
       .maybeSingle();
     if (!listing) return { ok: false, message: "Couldn't update the listing." };
     try {
       const defaults = resolveOperatingDefaults(listing.world_slug, listing.category_slug);
+      if (defaults.proofOfFunctionRequired && !listing.proof_video_url) {
+        return {
+          ok: false,
+          message: "Add a proof-of-function video before publishing — this category requires one.",
+        };
+      }
       if (defaults.listingReviewRequired && !listing.published_at) {
         effectiveStatus = "pending_review";
       }

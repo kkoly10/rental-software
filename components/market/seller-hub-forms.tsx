@@ -229,6 +229,29 @@ export function CreateListingForm({
         </div>
       </div>
 
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "end" }}>
+        <div>
+          <label style={labelStyle}>
+            Proof-of-function video (required for powered/electric items)
+          </label>
+          <input
+            type="file"
+            name="proof_video"
+            accept="video/mp4,video/quicktime,video/webm"
+            style={{ fontSize: 12 }}
+          />
+          <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+            Short clip of the item powered on and working — e.g. the blow
+            dryer running. Renters see it on the listing.
+          </div>
+        </div>
+        <label style={{ fontSize: 13 }}>
+          <input type="checkbox" name="instant_book" /> ⚡ Instant book — renters
+          can book &amp; pay without waiting for your approval (where the
+          category allows it)
+        </label>
+      </div>
+
       <div>
         <label style={labelStyle}>Link to a catalog product (optional)</label>
         <select name="product_id" defaultValue="" style={inputStyle}>
