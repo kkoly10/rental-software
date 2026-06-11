@@ -181,7 +181,7 @@ export default async function ProductDetailPage({
             <div className="st-pdp-gallery">
               <div
                 className="st-pdp-gallery-main"
-                style={{ backgroundImage: `url(${heroImage})` }}
+                style={{ backgroundImage: `url("${heroImage}")` }}
                 role="img"
                 aria-label={product.name}
               />
@@ -191,7 +191,7 @@ export default async function ProductDetailPage({
                     <div
                       key={`${image}-${index}`}
                       className="st-pdp-thumb"
-                      style={{ backgroundImage: `url(${image})` }}
+                      style={{ backgroundImage: `url("${image}")` }}
                     />
                   ))}
                 </div>
