@@ -2,7 +2,14 @@
 
 Execution counterpart to [`MARKETPLACE_MASTER_PLAN.md`](MARKETPLACE_MASTER_PLAN.md) (the spec) and its section 31 launch scope. Follows the repo convention: spec/strategy docs say *what and why*; this doc says *how, in what order, with what gates*.
 
-**Date**: June 2026
+**Date**: June 2026 · **Status: M0–M6 SHIPPED (June 11, 2026)** — all six
+sprints are merged to main. Eight `20260611_*` migrations await
+application; production env needs `NEXT_PUBLIC_MARKETPLACE_HOST`,
+`STRIPE_MARKET_WEBHOOK_SECRET`, `PLATFORM_ADMIN_EMAILS`, the Stripe
+marketplace webhook endpoint, and the `rent` subdomain in Vercel.
+Remaining backlog (deferred by design): marketplace-only seller signup
+(12% tier), private-bucket evidence storage, world #2 graduation
+tooling, trust-queue expansion beyond disputes.
 **Launch scope assumed**: `hosting-and-events` live in 1–2 metros, other 6 worlds in smoke-test mode (spec §31).
 
 ---
