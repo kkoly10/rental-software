@@ -81,7 +81,7 @@ export default async function HomePage() {
         <JsonLdScript data={faqJsonLd(faqItems)} />
       )}
 
-      <main>
+      <main id="main">
         <PartyClassicHero />
 
         {vis.trust_bar !== false && <PartyClassicTrustStrip />}
