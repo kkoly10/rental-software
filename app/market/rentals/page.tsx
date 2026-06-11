@@ -10,6 +10,7 @@ import {
 import { EvidenceForm } from "@/components/market/evidence-form";
 import { DisputeForm } from "@/components/market/dispute-form";
 import { ReviewForm } from "@/components/market/review-form";
+import { FollowupForm } from "@/components/market/followup-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My rentals" };
@@ -53,6 +54,7 @@ export default async function MyRentalsPage({
 
   let bookings: BookingRow[] = [];
   let signedIn = false;
+  let followedUp = new Set<string>();
 
   if (hasSupabaseEnv()) {
     const supabase = await createSupabaseServerClient();
@@ -70,6 +72,15 @@ export default async function MyRentalsPage({
         .order("created_at", { ascending: false })
         .limit(50);
       bookings = (data as unknown as BookingRow[] | null) ?? [];
+      const completedIds = bookings.filter((b) => b.state === "completed").map((b) => b.id);
+      if (completedIds.length > 0) {
+        const { data: fu } = await supabase
+          .from("market_followups")
+          .select("booking_id")
+          .eq("party", "renter")
+          .in("booking_id", completedIds);
+        followedUp = new Set((fu ?? []).map((f) => f.booking_id));
+      }
     }
   }
 
@@ -164,6 +175,9 @@ export default async function MyRentalsPage({
                 {b.state === "completed" ? (
                   <div style={{ width: "100%" }}>
                     <ReviewForm bookingId={b.id} />
+                    {!followedUp.has(b.id) ? (
+                      <FollowupForm bookingId={b.id} party="renter" />
+                    ) : null}
                   </div>
                 ) : null}
               </div>

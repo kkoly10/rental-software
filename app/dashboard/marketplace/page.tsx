@@ -14,6 +14,7 @@ import {
 } from "@/lib/market/booking-actions";
 import { advanceBooking, confirmRenterIdentity } from "@/lib/market/lifecycle-actions";
 import { EvidenceForm } from "@/components/market/evidence-form";
+import { FollowupForm } from "@/components/market/followup-form";
 import {
   RenterNoShowButton,
   SellerCancelButton,
@@ -69,6 +70,7 @@ export default async function MarketplaceSellerHubPage() {
   let listings: ListingRow[] = [];
   let products: Array<{ id: string; name: string }> = [];
   let requests: RequestRow[] = [];
+  let sellerFollowedUp = new Set<string>();
 
   if (ctx) {
     const supabase = await createSupabaseServerClient();
@@ -86,6 +88,7 @@ export default async function MarketplaceSellerHubPage() {
         "checked_out",
         "overdue",
         "returned_pending_review",
+        "completed",
       ])
       .order("created_at", { ascending: false })
       .limit(50);
@@ -113,6 +116,15 @@ export default async function MarketplaceSellerHubPage() {
     products = (productsRes.data as Array<{ id: string; name: string }> | null) ?? [];
     const requestsRes = await requestsPromise;
     requests = (requestsRes.data as unknown as RequestRow[] | null) ?? [];
+    const completedIds = requests.filter((r) => r.state === "completed").map((r) => r.id);
+    if (completedIds.length > 0) {
+      const { data: fu } = await supabase
+        .from("market_followups")
+        .select("booking_id")
+        .eq("party", "seller")
+        .in("booking_id", completedIds);
+      sellerFollowedUp = new Set((fu ?? []).map((f) => f.booking_id));
+    }
   }
 
   const pendingRequests = requests.filter((r) => r.state === "pending_seller_approval");
@@ -308,6 +320,9 @@ export default async function MarketplaceSellerHubPage() {
                             </form>
                           </div>
                         </div>
+                      ) : null}
+                      {r.state === "completed" && !sellerFollowedUp.has(r.id) ? (
+                        <FollowupForm bookingId={r.id} party="seller" />
                       ) : null}
                       {r.state === "ready_for_handoff" && r.identity_verified_at ? (
                         <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>

@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DisputeResolveForm } from "@/components/market/dispute-resolve-form";
 import { approveListing, rejectListing } from "@/lib/market/listing-review-actions";
 import { resolveSupportRequest } from "@/lib/market/support-actions";
+import { markFollowupReviewed } from "@/lib/market/followup-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,15 @@ export default async function MarketAdminPage() {
     });
   }
 
+  const { data: flaggedFollowups } = await admin
+    .from("market_followups")
+    .select(
+      "id, party, overall, item_issue, suspicious, would_repeat, notes, created_at, market_bookings ( id, market_listings ( title ) )",
+    )
+    .eq("status", "flagged")
+    .order("created_at", { ascending: true })
+    .limit(50);
+
   const { data: supportRequests } = await admin
     .from("market_support_requests")
     .select("id, email, topic, message, created_at, booking_id")
@@ -143,6 +153,47 @@ export default async function MarketAdminPage() {
                 </div>
               </article>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {(flaggedFollowups ?? []).length > 0 ? (
+        <section className="panel" style={{ marginBottom: 20 }}>
+          <div className="kicker">Flagged follow-ups</div>
+          <h2 style={{ margin: "6px 0 12px" }}>
+            {(flaggedFollowups ?? []).length} post-rental flag
+            {(flaggedFollowups ?? []).length === 1 ? "" : "s"}
+          </h2>
+          <div className="list">
+            {(flaggedFollowups ?? []).map((f) => {
+              const title =
+                (f.market_bookings as unknown as { market_listings: { title: string } | null } | null)
+                  ?.market_listings?.title ?? "Listing";
+              return (
+                <article key={f.id} className="order-card">
+                  <strong>
+                    {title} — {f.party} says: {f.overall}
+                  </strong>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                    {f.item_issue ? "⚠️ item issue · " : ""}
+                    {f.suspicious ? "🚩 suspicious activity · " : ""}
+                    {f.would_repeat === false ? "would NOT rent again · " : ""}
+                    {new Date(f.created_at).toLocaleString()}
+                  </div>
+                  {f.notes ? (
+                    <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                      “{f.notes}”
+                    </p>
+                  ) : null}
+                  <form action={markFollowupReviewed} style={{ marginTop: 8 }}>
+                    <input type="hidden" name="followup_id" value={f.id} />
+                    <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                      Mark reviewed
+                    </button>
+                  </form>
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : null}

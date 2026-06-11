@@ -21,7 +21,8 @@ type NotifyKind =
   | "booking_cancelled" // → other party
   | "booking_overdue" // → renter
   | "ready_for_handoff" // → renter (pickup instructions)
-  | "booking_completed"; // → renter (review prompt)
+  | "booking_completed" // → renter (review prompt)
+  | "booking_completed_seller"; // → seller (follow-up prompt)
 
 const COPY: Record<NotifyKind, { subject: string; body: (d: NotifyData) => string }> = {
   request_received: {
@@ -68,6 +69,11 @@ const COPY: Record<NotifyKind, { subject: string; body: (d: NotifyData) => strin
     subject: "Rental complete — how did it go?",
     body: (d) =>
       `Your rental of <b>${d.listingTitle}</b> is complete and your deposit hold is released. Leave a review from My Rentals — it's how good sellers rise.`,
+  },
+  booking_completed_seller: {
+    subject: "Rental complete — 30-second follow-up",
+    body: (d) =>
+      `<b>${d.listingTitle}</b> is complete. Take 30 seconds in the Seller Hub: confirm the item came back fine and flag anything off — it protects you and keeps bad actors off the marketplace.`,
   },
   booking_overdue: {
     subject: "Your rental is overdue — late fees now apply",

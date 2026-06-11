@@ -121,6 +121,15 @@ export async function advanceBooking(formData: FormData): Promise<void> {
           startsAt: party.startsAt,
           endsAt: party.endsAt,
         });
+        if (step.to === "completed") {
+          void notifyMarketEmail({
+            kind: "booking_completed_seller",
+            to: party.sellerEmail,
+            listingTitle: party.listingTitle,
+            startsAt: party.startsAt,
+            endsAt: party.endsAt,
+          });
+        }
       }
     } catch {
       // best-effort
