@@ -33,6 +33,25 @@ export default async function StorePage({ params }: { params: Promise<Params> })
   const listings = await getSellerListings(profile.organizationId);
   const metro = metroBySlug.get(profile.metroSlug);
 
+  // Public trust signals: verified-rental reviews (anon-readable RLS).
+  const { hasSupabaseEnv } = await import("@/lib/env");
+  let reviews: Array<{ id: string; rating: number; body: string | null; created_at: string }> = [];
+  if (hasSupabaseEnv()) {
+    const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("market_reviews")
+      .select("id, rating, body, created_at")
+      .eq("organization_id", profile.organizationId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    reviews = data ?? [];
+  }
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : null;
+
   return (
     <main className="mk-wrap">
       <div className="mk-crumb">
@@ -41,6 +60,7 @@ export default async function StorePage({ params }: { params: Promise<Params> })
       <h1>{profile.displayName}</h1>
       <p className="mk-sub">
         <span className="mk-badge v">✔ Verified seller</span>{" "}
+        {avgRating ? `· ★ ${avgRating.toFixed(1)} (${reviews.length})` : null}{" "}
         {metro ? `· ${metro.label}` : null} · serves {profile.serviceRadiusMiles} mi
         {profile.offersDelivery && profile.offersPickup
           ? " · delivery & pickup"
@@ -64,6 +84,23 @@ export default async function StorePage({ params }: { params: Promise<Params> })
           <b>No published listings yet.</b>
         </div>
       )}
+
+      {reviews.length > 0 ? (
+        <>
+          <h2>Verified-rental reviews</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {reviews.map((r) => (
+              <div key={r.id} className="mk-panel">
+                <b>{"★".repeat(r.rating)}</b>
+                {r.body ? <p className="mk-sub" style={{ margin: "6px 0 0" }}>“{r.body}”</p> : null}
+                <div className="mk-card-m" style={{ marginTop: 4 }}>
+                  {new Date(r.created_at).toLocaleDateString()} · verified rental
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
     </main>
   );
 }

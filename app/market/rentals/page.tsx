@@ -6,6 +6,7 @@ import { payForBooking } from "@/lib/market/payment-actions";
 import { cancelBookingRequest } from "@/lib/market/booking-actions";
 import { EvidenceForm } from "@/components/market/evidence-form";
 import { DisputeForm } from "@/components/market/dispute-form";
+import { ReviewForm } from "@/components/market/review-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My rentals" };
@@ -151,6 +152,11 @@ export default async function MyRentalsPage({
                   <div style={{ width: "100%" }}>
                     <EvidenceForm bookingId={b.id} phase="return" />
                     <DisputeForm bookingId={b.id} />
+                  </div>
+                ) : null}
+                {b.state === "completed" ? (
+                  <div style={{ width: "100%" }}>
+                    <ReviewForm bookingId={b.id} />
                   </div>
                 ) : null}
               </div>
