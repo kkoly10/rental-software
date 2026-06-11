@@ -25,6 +25,10 @@ type NotifyKind =
   | "ready_for_handoff" // → renter (pickup instructions)
   | "booking_completed" // → renter (review prompt)
   | "booking_completed_seller" // → seller (follow-up prompt)
+  | "extension_requested" // → seller (12h window)
+  | "extension_approved" // → renter (charged)
+  | "extension_declined" // → renter
+  | "extension_lapsed" // → renter (no response in 12h)
   | "pickup_reminder" // → renter (day before, time-based cron)
   | "return_reminder" // → renter (return day, time-based cron)
   | "return_due_nudge"; // → renter (grace window, time-based cron)
@@ -99,6 +103,30 @@ const COPY: Record<
     body: (d) =>
       `<b>${d.listingTitle}</b> is complete. Take 30 seconds in the Seller Hub: confirm the item came back fine and flag anything off — it protects you and keeps bad actors off the marketplace.`,
     cta: { label: "Open Seller Hub", url: SELLER_HUB_URL },
+  },
+  extension_requested: {
+    subject: "Extension request — respond within 12 hours",
+    body: (d) =>
+      `The renter wants to keep <b>${d.listingTitle}</b> longer (until ${d.dates.split("→")[1]?.trim() ?? d.dates}). ${d.extra ?? ""} If you don't respond, the original return time stands.`,
+    cta: { label: "Respond in Seller Hub", url: SELLER_HUB_URL },
+  },
+  extension_approved: {
+    subject: "Extension confirmed — new return date",
+    body: (d) =>
+      `Your extension for <b>${d.listingTitle}</b> is confirmed — the new return date is ${d.dates.split("→")[1]?.trim() ?? d.dates}. ${d.extra ?? ""}`,
+    cta: { label: "View my rentals", url: RENTALS_URL },
+  },
+  extension_declined: {
+    subject: "Extension declined",
+    body: (d) =>
+      `The seller can't extend <b>${d.listingTitle}</b> this time. ${d.extra ?? ""}`,
+    cta: { label: "View my rentals", url: RENTALS_URL },
+  },
+  extension_lapsed: {
+    subject: "Extension request expired",
+    body: (d) =>
+      `The seller didn't respond to your extension request for <b>${d.listingTitle}</b> within 12 hours, so the original return time stands. ${d.extra ?? ""}`,
+    cta: { label: "View my rentals", url: RENTALS_URL },
   },
   pickup_reminder: {
     subject: "Pickup tomorrow — bring your verified ID",

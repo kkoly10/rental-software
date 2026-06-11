@@ -105,5 +105,36 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, ...counts });
+  // Roadmap item 4: pending extension requests lapse after the 12h
+  // window — original terms stand, renter notified (Turo model).
+  let lapsed = 0;
+  const { data: expired } = await admin
+    .from("market_extension_requests")
+    .select("id, booking_id")
+    .eq("state", "pending")
+    .lte("expires_at", new Date().toISOString())
+    .limit(50);
+  for (const e of expired ?? []) {
+    const { data: claimed } = await admin
+      .from("market_extension_requests")
+      .update({ state: "lapsed", decided_at: new Date().toISOString() })
+      .eq("id", e.id)
+      .eq("state", "pending")
+      .select("id")
+      .maybeSingle();
+    if (!claimed) continue;
+    lapsed += 1;
+    const party = await getBookingPartyEmails(e.booking_id);
+    if (party?.renterEmail) {
+      await notifyMarketEmail({
+        kind: "extension_lapsed",
+        to: party.renterEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...counts, lapsed });
 }
