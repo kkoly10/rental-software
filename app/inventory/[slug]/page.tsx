@@ -88,11 +88,20 @@ export default async function ProductDetailPage({
     );
   }
 
+  // A URL we can actually render — absolute http(s) or root-relative.
+  // Gallery rows in production occasionally carry truthy-but-broken
+  // values (bare filenames, whitespace, stale storage keys) which
+  // pass a simple Boolean filter and then paint as empty rectangles.
+  const isRenderableImageUrl = (url: unknown): url is string =>
+    typeof url === "string" &&
+    (/^https?:\/\//.test(url.trim()) || url.trim().startsWith("/"));
+
   // Per-vertical fallback + slug/category-keyed local fallback chain —
   // same logic the homepage product cards use, so the PDP hero never
   // falls back to the dead /placeholders/*.png artwork.
-  const heroImage =
-    product.imageUrl || getStorefrontFallbackImage(product.slug, product.category);
+  const heroImage = isRenderableImageUrl(product.imageUrl)
+    ? product.imageUrl
+    : getStorefrontFallbackImage(product.slug, product.category);
   const displayCategory = prettifyCategoryName(product.category);
 
   // Enrich with real availability for the selected date/zip
@@ -119,10 +128,12 @@ export default async function ProductDetailPage({
   if (date) checkoutParams.set("date", date);
   if (zip) checkoutParams.set("zip", zip);
 
-  // Gallery — render only the active gallery images the operator
-  // uploaded. The legacy four blank tiles read as broken; if the
-  // operator only has one image, show that one alone.
-  const galleryImages = (product.galleryImages ?? []).filter(Boolean);
+  // Gallery — render only gallery images that will actually paint.
+  // filter(Boolean) let truthy-but-broken rows (bare filenames, stale
+  // storage keys) through, which rendered as four empty rectangles on
+  // production. If nothing survives the filter, the strip is omitted
+  // and the hero photo stands alone.
+  const galleryImages = (product.galleryImages ?? []).filter(isRenderableImageUrl);
 
   const jsonLd = productJsonLd(
     {
