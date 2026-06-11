@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import type { Locale } from "@/lib/i18n/config";
@@ -57,7 +57,6 @@ export function MobileMenuToggle({
   const [mounted, setMounted] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
-  const router = useRouter();
   const pathname = usePathname();
 
   const close = useCallback(() => {
@@ -68,57 +67,49 @@ export function MobileMenuToggle({
   /**
    * Handles cross-page fragment navigation that next/link silently
    * fails on. e.g. clicking "How It Works" (href="/#how-it-works")
-   * from /inventory navigates to / but leaves scrollY at 0 instead
-   * of scrolling to the anchor target. We detect that case, intercept
-   * the click, push the route, and then scroll to the target ID after
-   * the next paint.
+   * from /inventory navigates to / via next/link, but leaves scrollY
+   * at 0 because the target anchor isn't in the DOM yet at the moment
+   * Next finishes routing.
+   *
+   * The earlier RAF-based approach didn't fix it: the target element
+   * still wasn't mounted when the inner RAF fired, and setting
+   * window.location.hash after the URL already contained the hash
+   * was a no-op.
+   *
+   * The reliable fix: bypass next/link's client navigation entirely
+   * for these cross-page fragment links. window.location.assign()
+   * triggers a full document load, and browsers natively scroll to
+   * the fragment after the new page paints. Slight UX downgrade (no
+   * SPA transition) but the menu's primary job is reliable navigation.
    */
   const handleNavClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
       const safe = sanitizeHref(href);
-      // Only handle our own /<pathname>#fragment shape. External URLs
-      // (mailto:, tel:, http://...) fall through to the browser default.
       if (!safe.startsWith("/")) {
+        // External URL — let the browser handle it natively.
         close();
         return;
       }
       const hashIndex = safe.indexOf("#");
       if (hashIndex < 0) {
-        // No fragment — Next.js native scroll behavior is fine.
+        // No fragment — next/link's native handling is fine.
         close();
         return;
       }
       const targetPath = safe.slice(0, hashIndex) || "/";
-      const targetHash = safe.slice(hashIndex);
       if (targetPath === pathname) {
-        // Same-page anchor — native fragment scroll works.
+        // Same-page anchor — native fragment scroll works for next/link.
         close();
         return;
       }
 
-      // Cross-page anchor — push the route, then scroll to the fragment
-      // after the next paint cycle (router push is async; the target
-      // element won't exist until the new page renders).
+      // Cross-page anchor — full page navigation so the browser does
+      // the fragment scroll for us once the new page lands.
       e.preventDefault();
       close();
-      router.push(safe);
-      // Two RAFs gives Next a beat to commit + paint. Falls back to
-      // location.hash on browsers that mis-handle smooth scrolling.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const id = targetHash.slice(1);
-          const el = document.getElementById(id);
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-          } else {
-            // The new page hasn't mounted yet. Set the hash so the
-            // browser handles it once the page lands.
-            window.location.hash = targetHash;
-          }
-        });
-      });
+      window.location.assign(safe);
     },
-    [pathname, router, close]
+    [pathname, close]
   );
 
   // Close on Escape
