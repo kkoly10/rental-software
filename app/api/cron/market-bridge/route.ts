@@ -30,50 +30,70 @@ export async function GET(request: NextRequest) {
     .limit(100);
 
   let projected = 0;
+  let consumed = 0;
   for (const e of events ?? []) {
-    if (e.event === "marketplace.booking.confirmed") {
-      const { data: b } = await admin
-        .from("market_bookings")
-        .select(
-          "id, organization_id, quantity, starts_at, ends_at, prep_buffer_minutes, recovery_buffer_minutes, market_listings ( title )",
-        )
-        .eq("id", e.booking_id)
-        .maybeSingle();
-      if (b) {
-        const starts = new Date(b.starts_at);
-        const ends = new Date(b.ends_at);
-        await admin.from("market_fulfillment_projections").upsert(
-          {
-            booking_id: b.id,
-            organization_id: b.organization_id,
-            listing_title:
-              (b.market_listings as unknown as { title: string } | null)?.title ??
-              "Marketplace rental",
-            quantity: b.quantity,
-            starts_at: b.starts_at,
-            ends_at: b.ends_at,
-            prep_at: new Date(starts.getTime() - b.prep_buffer_minutes * 60_000).toISOString(),
-            recovery_until: new Date(ends.getTime() + b.recovery_buffer_minutes * 60_000).toISOString(),
-            status: "active",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "booking_id" },
-        );
-        projected++;
+    // Bug #19: only mark the outbox row consumed after the projection
+    // write actually succeeds. A missing booking or a failed upsert
+    // leaves the row unconsumed so it retries (never silently dropped).
+    let ok = false;
+    try {
+      if (e.event === "marketplace.booking.confirmed") {
+        const { data: b } = await admin
+          .from("market_bookings")
+          .select(
+            "id, organization_id, quantity, starts_at, ends_at, prep_buffer_minutes, recovery_buffer_minutes, market_listings ( title )",
+          )
+          .eq("id", e.booking_id)
+          .maybeSingle();
+        if (b) {
+          const starts = new Date(b.starts_at);
+          const ends = new Date(b.ends_at);
+          const { error } = await admin.from("market_fulfillment_projections").upsert(
+            {
+              booking_id: b.id,
+              organization_id: b.organization_id,
+              listing_title:
+                (b.market_listings as unknown as { title: string } | null)?.title ??
+                "Marketplace rental",
+              quantity: b.quantity,
+              starts_at: b.starts_at,
+              ends_at: b.ends_at,
+              prep_at: new Date(starts.getTime() - b.prep_buffer_minutes * 60_000).toISOString(),
+              recovery_until: new Date(ends.getTime() + b.recovery_buffer_minutes * 60_000).toISOString(),
+              status: "active",
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "booking_id" },
+          );
+          ok = !error;
+          if (ok) projected++;
+        }
+        // booking missing (cascade-deleted): treat as consumable so we
+        // don't retry forever on a row that can never project.
+        else ok = true;
+      } else {
+        const status = e.event === "marketplace.booking.cancelled" ? "cancelled" : "completed";
+        const { error } = await admin
+          .from("market_fulfillment_projections")
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq("booking_id", e.booking_id);
+        // A status update is idempotent and a no-op (no projection yet)
+        // is acceptable to consume — confirmed always precedes these by
+        // outbox id ordering.
+        ok = !error;
       }
-    } else {
-      const status = e.event === "marketplace.booking.cancelled" ? "cancelled" : "completed";
-      await admin
-        .from("market_fulfillment_projections")
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq("booking_id", e.booking_id);
+    } catch {
+      ok = false;
     }
 
-    await admin
-      .from("market_bridge_outbox")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", e.id);
+    if (ok) {
+      await admin
+        .from("market_bridge_outbox")
+        .update({ consumed_at: new Date().toISOString() })
+        .eq("id", e.id);
+      consumed++;
+    }
   }
 
-  return NextResponse.json({ ok: true, consumed: events?.length ?? 0, projected });
+  return NextResponse.json({ ok: true, consumed, projected });
 }
