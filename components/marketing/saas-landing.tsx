@@ -311,19 +311,19 @@ export async function SaasLanding() {
 
             <div className="mk-card-grid mk-card-grid--2">
               <div className="mk-card">
-                <span className="mk-eyebrow" style={{ marginBottom: 8 }}>{s.dashboardPreview.bookingCalendar}</span>
+                <span className="mk-eyebrow">{s.dashboardPreview.bookingCalendar}</span>
                 <p>{s.dashboardPreview.bookingCalendarBody}</p>
               </div>
               <div className="mk-card">
-                <span className="mk-eyebrow" style={{ marginBottom: 8 }}>{s.dashboardPreview.orderPipeline}</span>
+                <span className="mk-eyebrow">{s.dashboardPreview.orderPipeline}</span>
                 <p>{s.dashboardPreview.orderPipelineBody}</p>
               </div>
               <div className="mk-card">
-                <span className="mk-eyebrow" style={{ marginBottom: 8 }}>{s.dashboardPreview.deliveryRoutes}</span>
+                <span className="mk-eyebrow">{s.dashboardPreview.deliveryRoutes}</span>
                 <p>{s.dashboardPreview.deliveryRoutesBody}</p>
               </div>
               <div className="mk-card">
-                <span className="mk-eyebrow" style={{ marginBottom: 8 }}>{s.dashboardPreview.onlineCheckout}</span>
+                <span className="mk-eyebrow">{s.dashboardPreview.onlineCheckout}</span>
                 <p>{s.dashboardPreview.onlineCheckoutBody}</p>
               </div>
             </div>

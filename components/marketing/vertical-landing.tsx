@@ -3,6 +3,7 @@ import Image from "next/image";
 import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getTranslator } from "@/lib/i18n/server";
+import { formatMessage } from "@/lib/i18n/format";
 import { getVerticalLandingCopy } from "@/lib/verticals/landing-copy";
 import { listVerticals } from "@/lib/verticals/registry";
 import type { VerticalConfig } from "@/lib/verticals/types";
@@ -247,7 +248,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
                   <div key={step.title} className="mk-numbered-item">
                     <span className="mk-num">{String(idx + 1).padStart(2, "0")}</span>
                     <strong>{step.title}</strong>
-                    <p>{step.body.replace("{domain}", appDomain)}</p>
+                    <p>{formatMessage(step.body, { domain: appDomain })}</p>
                   </div>
                 ))}
               </div>

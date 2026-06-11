@@ -24,16 +24,17 @@
   --primary: #c2410c;
   --primary-strong: #9a3412;
   --primary-light: #ff8c42;
-  /* Soft tint surfaces (sidebar active/hover, Ask AI, etc.) — now
-     olive-soft. Names kept for compatibility; treat as "secondary-bg". */
-  --primary-bg: #e9edde;
-  --primary-bg-subtle: #f3f5ec;
   /* Olive secondary — the supportive color that contrasts the orange. */
   --secondary: #3f4a33;
   --secondary-strong: #333d29;
   --secondary-light: #6b7a52;
   --secondary-bg: #e9edde;
   --secondary-bg-subtle: #f3f5ec;
+  /* Legacy soft-tint names (sidebar active/hover, Ask AI, etc.) — kept as
+     aliases so existing call sites keep working. Use --secondary-bg* in
+     new code. */
+  --primary-bg: var(--secondary-bg);
+  --primary-bg-subtle: var(--secondary-bg-subtle);
   --accent: #7c3aed;
   --accent-light: #a78bfa;
   --accent-bg: #f3f0ff;
