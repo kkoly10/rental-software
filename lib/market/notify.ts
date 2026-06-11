@@ -68,7 +68,7 @@ const COPY: Record<NotifyKind, { subject: string; body: (d: NotifyData) => strin
   booking_completed: {
     subject: "Rental complete — how did it go?",
     body: (d) =>
-      `Your rental of <b>${d.listingTitle}</b> is complete and your deposit hold is released. Leave a review from My Rentals — it's how good sellers rise.`,
+      `Your rental of <b>${d.listingTitle}</b> is complete. Your deposit hold releases automatically in 24 hours unless an issue is reported. Leave a review from My Rentals — it's how good sellers rise.`,
   },
   booking_completed_seller: {
     subject: "Rental complete — 30-second follow-up",

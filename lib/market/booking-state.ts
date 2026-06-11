@@ -45,12 +45,14 @@ const TRANSITIONS: Record<BookingState, readonly BookingState[]> = {
   checked_out: ["overdue", "returned_pending_review", "disputed"],
   overdue: ["returned_pending_review", "disputed"],
   returned_pending_review: ["completed", "disputed"],
-  completed: [],
+  // completed → disputed is legal ONLY inside the 24h post-completion
+  // claim window (enforced in openDispute against claim_window_ends_at).
+  completed: ["disputed"],
   cancelled: [],
   disputed: ["completed"],
 };
 
-export const TERMINAL_STATES: readonly BookingState[] = ["completed", "cancelled"];
+export const TERMINAL_STATES: readonly BookingState[] = ["cancelled"];
 
 export function isBookingState(value: string): value is BookingState {
   return (BOOKING_STATES as readonly string[]).includes(value);

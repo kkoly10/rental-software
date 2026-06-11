@@ -77,7 +77,7 @@ export async function openDispute(
 
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, renter_profile_id, organization_id")
+    .select("id, state, renter_profile_id, organization_id, claim_window_ends_at")
     .eq("id", parsed.data.bookingId)
     .maybeSingle();
   if (!booking) return { ok: false, message: "Booking not found." };
@@ -93,6 +93,19 @@ export async function openDispute(
   const from = booking.state as BookingState;
   if (!canTransition(from, "disputed")) {
     return { ok: false, message: "Disputes open after handoff — message the seller for pre-rental issues." };
+  }
+  // Turo-style claim window: completed bookings can dispute only
+  // within 24h of completion (while the deposit hold is still alive).
+  if (from === "completed") {
+    const windowEnds = booking.claim_window_ends_at
+      ? new Date(booking.claim_window_ends_at)
+      : null;
+    if (!windowEnds || windowEnds < new Date()) {
+      return {
+        ok: false,
+        message: "The 24-hour post-completion claim window has passed — contact support instead.",
+      };
+    }
   }
 
   const { data: dispute, error } = await admin
@@ -149,6 +162,7 @@ const resolveSchema = z.object({
     "resolved_no_fault",
   ]),
   captureCents: z.coerce.number().int().min(0).default(0),
+  refundCents: z.coerce.number().int().min(0).default(0),
   note: z.string().min(5).max(2000),
 });
 
@@ -170,6 +184,7 @@ export async function resolveDispute(
     disputeId: formData.get("dispute_id"),
     outcome: formData.get("outcome"),
     captureCents: formData.get("capture_cents") || 0,
+    refundCents: formData.get("refund_cents") || 0,
     note: String(formData.get("note") ?? "").trim(),
   });
   if (!parsed.success) {
@@ -191,10 +206,51 @@ export async function resolveDispute(
 
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, hold_id, deposit_status, deposit_cents, stripe_deposit_intent_id")
+    .select(
+      "id, state, hold_id, deposit_status, deposit_cents, stripe_deposit_intent_id, stripe_payment_intent_id, subtotal_cents, tax_cents, refund_cents",
+    )
     .eq("id", dispute.booking_id)
     .maybeSingle();
   if (!booking) return { ok: false, message: "Booking not found." };
+
+  // Refund lever (review fix 2026-06-11): seller-liable/split/no-fault
+  // outcomes can now send rental money back to the renter — the same
+  // proportional Stripe call the cancellation engine uses (reverses
+  // the seller transfer + platform fee + tax in ratio). Clamped to
+  // what's still refundable on the charge.
+  let refunded = 0;
+  const wantsRefund =
+    parsed.data.refundCents > 0 && parsed.data.outcome !== "resolved_renter_liable";
+  if (wantsRefund) {
+    if (!booking.stripe_payment_intent_id) {
+      return { ok: false, message: "No payment on file to refund." };
+    }
+    const charged = booking.subtotal_cents + (booking.tax_cents ?? 0);
+    const refundable = Math.max(charged - (booking.refund_cents ?? 0), 0);
+    const amount = Math.min(parsed.data.refundCents, refundable);
+    if (amount > 0) {
+      try {
+        const { getStripe, hasStripeEnv } = await import("@/lib/stripe/config");
+        if (!hasStripeEnv()) return { ok: false, message: "Stripe not configured." };
+        await getStripe().refunds.create({
+          payment_intent: booking.stripe_payment_intent_id,
+          amount,
+          reverse_transfer: true,
+          refund_application_fee: true,
+        });
+        refunded = amount;
+        await admin
+          .from("market_bookings")
+          .update({
+            refund_cents: (booking.refund_cents ?? 0) + amount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", booking.id);
+      } catch {
+        return { ok: false, message: "Refund failed — check the payment in Stripe, then resolve again." };
+      }
+    }
+  }
 
   // §9/§17: deposit capture happens HERE and only here. Renter-liable
   // (or split) outcomes may capture up to the held amount; everything
@@ -263,9 +319,12 @@ export async function resolveDispute(
     booking_id: booking.id,
     event: "dispute.resolved",
     actor: "admin",
-    payload: { outcome: parsed.data.outcome, captured_cents: captured },
+    payload: { outcome: parsed.data.outcome, captured_cents: captured, refunded_cents: refunded },
   });
 
   revalidatePath("/dashboard/market-admin");
-  return { ok: true, message: `Resolved (${parsed.data.outcome.replace("resolved_", "")})${captured ? ` — captured $${(captured / 100).toFixed(2)}` : ""}.` };
+  return {
+    ok: true,
+    message: `Resolved (${parsed.data.outcome.replace("resolved_", "")})${captured ? ` — captured $${(captured / 100).toFixed(2)} from the deposit` : ""}${refunded ? ` — refunded $${(refunded / 100).toFixed(2)} to the renter` : ""}.`,
+  };
 }
