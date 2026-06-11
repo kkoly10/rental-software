@@ -265,6 +265,20 @@ export async function requestBooking(
 
   revalidatePath(SELLER_HUB_PATH);
 
+  if (!instant) {
+    const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+    const party = await getBookingPartyEmails(booking.id);
+    if (party) {
+      void notifyMarketEmail({
+        kind: "request_received",
+        to: party.sellerEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+    }
+  }
+
   if (instant) {
     const { createCheckoutUrlForBooking } = await import("@/lib/market/payment-actions");
     const url = await createCheckoutUrlForBooking(booking.id, user.id);
@@ -326,9 +340,33 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
 
   const result = holdResult as { ok?: boolean; hold_id?: string; reason?: string } | null;
   if (holdError || !result?.ok || !result.hold_id) {
+    // Dates were taken by a competing booking: auto-cancel honestly
+    // instead of leaving a zombie request the seller keeps accepting
+    // (gap analysis #5) and tell the renter why.
+    await admin
+      .from("market_bookings")
+      .update({
+        state: "cancelled",
+        cancelled_by: "system",
+        cancel_reason: "dates_unavailable_at_approval",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", booking.id)
+      .eq("state", from);
     await logBookingEvent(admin, booking.id, "booking.approval_failed", "system", {
       reason: result?.reason ?? holdError?.message ?? "unknown",
     });
+    const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+    const party = await getBookingPartyEmails(booking.id);
+    if (party) {
+      void notifyMarketEmail({
+        kind: "request_unavailable",
+        to: party.renterEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+    }
     revalidatePath(SELLER_HUB_PATH);
     return;
   }
@@ -345,6 +383,19 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
     .eq("id", booking.id)
     .eq("state", from);
   await logBookingEvent(admin, booking.id, "booking.approved", "seller");
+  {
+    const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+    const party = await getBookingPartyEmails(booking.id);
+    if (party) {
+      void notifyMarketEmail({
+        kind: "request_approved",
+        to: party.renterEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+    }
+  }
   // The renter pays via /market/rentals (destination charge); the
   // marketplace webhook flips awaiting_payment → confirmed. Once
   // saved-payment-method vaulting exists, this becomes the §10
@@ -374,6 +425,19 @@ export async function declineBookingRequest(formData: FormData): Promise<void> {
     .eq("id", booking.id)
     .eq("state", from);
   await logBookingEvent(admin, booking.id, "booking.declined", "seller");
+  {
+    const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+    const party = await getBookingPartyEmails(booking.id);
+    if (party) {
+      void notifyMarketEmail({
+        kind: "request_declined",
+        to: party.renterEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+    }
+  }
   revalidatePath(SELLER_HUB_PATH);
 }
 

@@ -79,6 +79,21 @@ export async function GET(request: NextRequest) {
       event: "booking.overdue",
       actor: "system",
     });
+    try {
+      const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+      const party = await getBookingPartyEmails(b.id);
+      if (party) {
+        void notifyMarketEmail({
+          kind: "booking_overdue",
+          to: party.renterEmail,
+          listingTitle: party.listingTitle,
+          startsAt: party.startsAt,
+          endsAt: party.endsAt,
+        });
+      }
+    } catch {
+      // best-effort
+    }
   }
 
   return NextResponse.json({

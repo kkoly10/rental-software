@@ -189,6 +189,11 @@ export function CreateListingForm({
         <textarea name="description" maxLength={4000} rows={3} style={inputStyle} />
       </div>
 
+      <div>
+        <label style={labelStyle}>Photo (listings with photos get booked — don't skip this)</label>
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" style={{ fontSize: 12 }} />
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <div>
           <label style={labelStyle}>Daily price ($)</label>

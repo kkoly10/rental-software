@@ -233,6 +233,32 @@ export async function createMarketListing(
         }).depositCents
       : defaults.depositFloorCents;
 
+  // Listing photo (the eBay-feel requirement — emoji placeholders
+  // don't sell tents). Optional but strongly encouraged by the form.
+  let photoUrl: string | null = null;
+  const photo = formData.get("photo");
+  if (photo instanceof File && photo.size > 0) {
+    const IMG_TYPES = ["image/jpeg", "image/png", "image/webp"];
+    if (!IMG_TYPES.includes(photo.type) || photo.size > 15 * 1024 * 1024) {
+      return { ok: false, message: "Photo must be JPEG/PNG/WebP under 15 MB." };
+    }
+    const { sniffImageType } = await import("@/lib/utils/image-signature");
+    const sniffed = await sniffImageType(photo);
+    if (!sniffed || !IMG_TYPES.includes(sniffed)) {
+      return { ok: false, message: "Photo content doesn't match a supported image format." };
+    }
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
+    const adminClient = createSupabaseAdminClient();
+    const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
+    const ext = sniffed === "image/png" ? "png" : sniffed === "image/webp" ? "webp" : "jpg";
+    const path = `market-listings/${auth.orgId}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await adminClient.storage
+      .from(bucket)
+      .upload(path, photo, { contentType: sniffed, upsert: false });
+    if (uploadError) return { ok: false, message: "Photo upload failed — try again." };
+    photoUrl = adminClient.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  }
+
   // Proof-of-function: required at creation time for categories that
   // demand it; optional everywhere else.
   let proofVideoUrl: string | null = null;
@@ -270,6 +296,7 @@ export async function createMarketListing(
     offers_pickup: parsed.data.offersPickup,
     instant_book: parsed.data.instantBook && defaults.instantBookAllowed,
     proof_video_url: proofVideoUrl,
+    photo_url: photoUrl,
     metro_slug: DEFAULT_METRO_SLUG,
     // Smoke-test worlds take pre-listings only (spec §31): they
     // publish as browsable-but-not-bookable demand signals.

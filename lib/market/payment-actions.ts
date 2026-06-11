@@ -223,6 +223,30 @@ export async function confirmPaidBooking(input: {
     payload: { payment_intent_id: input.paymentIntentId },
   });
 
+  // §24: tell both humans the money moved.
+  try {
+    const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+    const party = await getBookingPartyEmails(booking.id);
+    if (party) {
+      void notifyMarketEmail({
+        kind: "booking_confirmed_renter",
+        to: party.renterEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+      void notifyMarketEmail({
+        kind: "booking_confirmed_seller",
+        to: party.sellerEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+      });
+    }
+  } catch {
+    // best-effort
+  }
+
   // §27: emit to the bridge outbox — the operator fulfillment
   // projection is built asynchronously by the bridge cron.
   try {
