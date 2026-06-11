@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -166,11 +167,24 @@ async function uploadProofVideo(
   if (file.size > MAX_VIDEO_SIZE) {
     return { ok: false, message: "Proof video must be under 80 MB." };
   }
+  // Bug #38: don't trust the client-declared type — sniff the container
+  // magic bytes (ftyp box for MP4/MOV, EBML header for WebM).
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const isMp4 = head[4] === 0x66 && head[5] === 0x74 && head[6] === 0x79 && head[7] === 0x70; // 'ftyp'
+  const isWebm = head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3; // EBML
+  if (!isMp4 && !isWebm) {
+    return { ok: false, message: "That file doesn't look like a valid video." };
+  }
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
+  // Proof video stays in the PUBLIC uploads bucket — it's a trust signal
+  // rendered on the public listing page (like the listing photo), and is
+  // protected from the storage-sweep cron via market_listings.proof_video_url
+  // (#61). A random token defeats the orgId/timestamp enumeration noted in
+  // #39 and the same-millisecond upsert collision.
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
   const ext = file.type === "video/quicktime" ? "mov" : file.type === "video/webm" ? "webm" : "mp4";
-  const path = `market-proof/${orgId}/${Date.now()}.${ext}`;
+  const path = `market-proof/${orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
   const { error } = await admin.storage
     .from(bucket)
     .upload(path, file, { contentType: file.type, upsert: false });

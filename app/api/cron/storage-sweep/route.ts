@@ -141,6 +141,24 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // 4. Marketplace public listing media (uploads bucket): listing photos
+  //    (`market-listings/…`) and proof-of-function videos (`market-proof/…`).
+  //    Bug #61: without this, the sweep treats every marketplace photo and
+  //    proof video as an orphan and deletes it 24h after upload — wiping
+  //    the storefront. (Evidence lives in the private market-evidence
+  //    bucket, which this cron never walks, so it needs no entry here.)
+  const { data: listingMedia } = await admin
+    .from("market_listings")
+    .select("photo_url, proof_video_url")
+    .or("photo_url.not.is.null,proof_video_url.not.is.null")
+    .limit(50_000);
+  for (const r of listingMedia ?? []) {
+    for (const url of [r.photo_url, r.proof_video_url]) {
+      const path = extractPathFromPublicUrl(url, uploadsBucket);
+      if (path) referencedPaths.add(`${uploadsBucket}:${path}`);
+    }
+  }
+
   // Walk both buckets and collect candidate orphans.
   const minAgeMs = MIN_AGE_HOURS * 60 * 60 * 1000;
   const nowMs = Date.now();

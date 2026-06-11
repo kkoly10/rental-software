@@ -55,7 +55,7 @@ Status legend: ☐ open · ☑ verified-real · ✗ false-positive (kept for the
 36. ☑ **P2 — Booking totals shown `toFixed(0)`, dropping cents and tax.** `rentals/page.tsx`. Fix: cents-accurate, tax-inclusive `dollars()` helper.
 37. ☑ **P2 — Dates render with server-TZ `toLocaleDateString()` → off-by-one.** Multiple market pages. Fix: format with the metro IANA timezone.
 38. ☑ **P2 — Proof-of-function video not byte-sniffed.** `seller-actions.ts uploadProofVideo`: trusts client `file.type` (images are sniffed). Fix: sniff container magic bytes.
-39. ☑ **P2 — Evidence + proof media on the PUBLIC uploads bucket.** Evidence photos and proof videos are publicly reachable via `getPublicUrl`; proof path is `orgId/timestamp` (semi-enumerable). Fix: private bucket + signed URLs (as identity already does).
+39. ☑ **P2 — Evidence + proof media on the PUBLIC uploads bucket.** Evidence photos and proof videos are publicly reachable via `getPublicUrl`; proof path is `orgId/timestamp` (semi-enumerable). Fixed with the correct split: **evidence** (private dispute material, no public render path) → new PRIVATE `market-evidence` bucket, `photo_url` now stores the path, read via admin `createSignedUrl()` (mirrors `market-identity`). **Proof video + listing photo** are *intentional* public listing media rendered on the listing page, so they stay in `uploads` — the real risk there was the sweep (#61), now fixed; proof path also hardened with a random token to kill enumeration/same-ms collision.
 40. ☑ **P2 — `published_at` tie-break in ranking is dead code.** `LISTING_SELECT` never selects it, so `rankListings` tie-break compares `""==""`. Fix: select + map `published_at`.
 41. ☑ **P3 — Review/profile mutations don't revalidate the store path.** Stale ratings on `/market/store/[slug]` (mitigated by force-dynamic). Fix: `revalidatePath` store route (old+new slug).
 42. ☑ **P3 — World tile counts capped at `.limit(1000)`.** Undercount at scale. Fix: `count:"exact",head:true`.
@@ -123,8 +123,14 @@ admin-gate consistency, OTP hardening, IDOR) appended below from the trust audit
 
 ---
 
+## Run 3 addendum (found while fixing #39)
+
+61. ☑ **P0 — Storage-sweep cron silently deletes all marketplace media after 24h.** `app/api/cron/storage-sweep/route.ts` walks the *entire* `uploads` bucket and removes any object >24h old whose path isn't in `referencedPaths`. That set was built only from `product_images`, org brand settings, and `route_stops` photos — it never included `market_listings.photo_url` (`market-listings/…`) or `market_listings.proof_video_url` (`market-proof/…`). Result: every listing photo and proof video would be deleted a day after upload, gutting the storefront. Fix: add a `market_listings` photo/proof-video query to the referenced-path set. (Evidence dodges this entirely by moving to the private `market-evidence` bucket, which the sweep never walks.)
+
+---
+
 ## Final count
-**60 consolidated, verified findings** distilled from ~100 raw observations across five parallel auditors (dupes merged, 1 false-positive and ~10 non-bugs recorded). Breakdown: **5 P0**, **~22 P1**, **~25 P2**, **~8 P3**.
+**61 consolidated, verified findings** distilled from ~100 raw observations across five parallel auditors (dupes merged, 1 false-positive and ~10 non-bugs recorded). Breakdown: **6 P0**, **~22 P1**, **~25 P2**, **~8 P3**.
 
 The recurring root causes are worth fixing structurally, not one-by-one:
 - **Stripe money moves before the guarded DB write** (do compare-and-swap on state first, *then* call Stripe) — explains #1, #4, #5, #7, #8, #9.

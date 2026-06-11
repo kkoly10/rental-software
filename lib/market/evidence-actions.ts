@@ -13,12 +13,16 @@ import type { BookingState } from "@/lib/market/booking-state";
 /**
  * §16 evidence capture: either party photographs the item at handoff
  * and at return; rows are preserved on the booking for disputes.
- * Upload path mirrors the crew proof-photo action (uploads bucket,
- * UUID-validated path segment, byte-sniffed content type).
+ *
+ * Bug #39: evidence is private dispute material — it lands in the PRIVATE
+ * `market-evidence` bucket (service-role writes, admin signed-URL reads),
+ * NOT the public `uploads` bucket. `photo_url` therefore stores the
+ * storage PATH, not a world-readable getPublicUrl() link.
  */
 
 export type EvidenceState = { ok: boolean; message: string };
 
+const EVIDENCE_BUCKET = "market-evidence";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 20 * 1024 * 1024;
 const MIME_TO_EXT: Record<string, string> = {
@@ -103,7 +107,8 @@ export async function submitEvidence(
   // Photo is optional only when a note is present; §16 wants photos,
   // so the UI labels the photo as the primary input.
   const file = formData.get("photo");
-  let photoUrl: string | null = null;
+  // Holds the PRIVATE-bucket storage path (not a public URL) — see #39.
+  let photoPath: string | null = null;
 
   if (file instanceof File && file.size > 0) {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -117,17 +122,17 @@ export async function submitEvidence(
       return { ok: false, message: "Photo must be under 20 MB." };
     }
 
-    const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
     const ext = MIME_TO_EXT[sniffed] ?? "jpg";
-    const filePath = `market-evidence/${booking.id}/${parsed.data.phase}-${party}-${Date.now()}.${ext}`;
+    const filePath = `${booking.id}/${parsed.data.phase}-${party}-${Date.now()}.${ext}`;
     const { error: uploadError } = await admin.storage
-      .from(bucket)
+      .from(EVIDENCE_BUCKET)
       .upload(filePath, file, { contentType: sniffed, upsert: false });
     if (uploadError) {
       return { ok: false, message: "Upload failed — please try again." };
     }
-    const { data: urlData } = admin.storage.from(bucket).getPublicUrl(filePath);
-    photoUrl = urlData.publicUrl;
+    // Private bucket: store the path; admin/dispute views read it via
+    // createSignedUrl(). Never getPublicUrl() here.
+    photoPath = filePath;
   } else if (!parsed.data.note) {
     return { ok: false, message: "Add a photo (or at least a note)." };
   }
@@ -136,7 +141,7 @@ export async function submitEvidence(
     booking_id: booking.id,
     phase: parsed.data.phase,
     party,
-    photo_url: photoUrl,
+    photo_url: photoPath,
     note: parsed.data.note || null,
   });
   if (error) return { ok: false, message: "Couldn't save the evidence." };
@@ -145,7 +150,7 @@ export async function submitEvidence(
     booking_id: booking.id,
     event: `evidence.${parsed.data.phase}.${party}`,
     actor: party,
-    payload: { has_photo: Boolean(photoUrl) },
+    payload: { has_photo: Boolean(photoPath) },
   });
 
   revalidatePath("/market/rentals");

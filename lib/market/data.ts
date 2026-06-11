@@ -33,6 +33,7 @@ export type MarketListing = {
   quantity: number;
   instantBook: boolean;
   proofVideoUrl: string | null;
+  publishedAt: string | null;
   sellerSlug: string | null;
   sellerDisplayName: string | null;
 };
@@ -53,7 +54,7 @@ const LISTING_SELECT = `
   title, description, condition, daily_price_cents, weekend_price_cents,
   weekly_price_cents, deposit_cents, offers_delivery, offers_pickup,
   metro_slug, photo_url, is_prelist, status, inventory_mode, quantity,
-  instant_book, proof_video_url,
+  instant_book, proof_video_url, published_at,
   market_seller_profiles ( slug, display_name )
 `;
 
@@ -80,6 +81,7 @@ type ListingRow = {
   quantity: number;
   instant_book: boolean;
   proof_video_url: string | null;
+  published_at: string | null;
   market_seller_profiles: { slug: string; display_name: string } | null;
 };
 
@@ -107,6 +109,7 @@ function mapListing(row: ListingRow): MarketListing {
     quantity: row.quantity,
     instantBook: row.instant_book,
     proofVideoUrl: row.proof_video_url,
+    publishedAt: row.published_at,
     sellerSlug: row.market_seller_profiles?.slug ?? null,
     sellerDisplayName: row.market_seller_profiles?.display_name ?? null,
   };
@@ -138,7 +141,10 @@ export async function getPublishedListings(options: {
   if (options.categorySlug) q = q.eq("category_slug", options.categorySlug);
   if (options.metroSlug) q = q.eq("metro_slug", options.metroSlug);
   if (options.query) {
-    const escaped = options.query.replace(/[%_,]/g, " ").trim();
+    // Bug #35: strip PostgREST/ilike metacharacters — parens and
+    // backslash could break out of the .or() group, commas/%_ corrupt
+    // the pattern.
+    const escaped = options.query.replace(/[%_,()\\]/g, " ").trim();
     if (escaped) q = q.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`);
   }
 
