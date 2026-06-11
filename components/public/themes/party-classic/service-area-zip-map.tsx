@@ -1,29 +1,21 @@
 import { getServiceAreasGeo } from "@/lib/data/service-areas-geo";
 import { getTranslator } from "@/lib/i18n/server";
 import { SectionHead } from "@/components/public/themes/party-classic/section-head";
-
-/**
- * Quietly random map-pin positions derived from the ZIP digit so each
- * ZIP always lands at the same spot on the abstract warm map. Pure
- * visual — real geocoding is out of scope.
- */
-function pinPosition(zip: string, index: number) {
-  let h = 0;
-  for (let i = 0; i < zip.length; i++) h = (h * 31 + zip.charCodeAt(i)) & 0xffff;
-  const x = 24 + (((h % 50) + index * 7) % 52);
-  const y = 28 + ((((h >> 4) % 44) + index * 11) % 44);
-  return { left: `${x}%`, top: `${y}%` };
-}
+import { ServiceAreaMap } from "@/components/maps/service-area-map";
 
 /**
  * Editorial coverage section — left column kicker + H2 + lede + plain
- * ZIP list (no pills, no borders). Right column a quiet warm-gradient
- * abstract map with olive dots.
+ * ZIP list (no pills, no borders). Right column hosts the real
+ * Leaflet-driven service-area map (lazy-loaded on the client), styled
+ * to fit the editorial container.
  *
- * Per spec §5.8.
+ * The original storefront rendered this via the legacy ServiceAreaSection
+ * component which got dropped during the editorial rebuild — this
+ * restores the real Leaflet map per operator service-area geocoding
+ * while keeping the editorial composition.
  */
 export async function PartyClassicServiceArea() {
-  const [areas, { messages: m, t }] = await Promise.all([
+  const [areas, { messages: m }] = await Promise.all([
     getServiceAreasGeo(),
     getTranslator(),
   ]);
@@ -53,16 +45,14 @@ export async function PartyClassicServiceArea() {
             {remaining > 0 && (
               <div className="st-zip-entry st-zip-more">
                 <strong>+{remaining}</strong>
-                <span>{t(m.storefront.serviceArea.moreZipsCount, { count: remaining })}</span>
+                <span>more</span>
               </div>
             )}
           </div>
           <p className="st-coverage-footnote">{m.storefront.serviceArea.notListed}</p>
         </div>
-        <div className="st-coverage-map" aria-hidden="true">
-          {displayed.slice(0, 5).map((a, i) => (
-            <span key={`pin-${a.id}`} className="st-coverage-pin" style={pinPosition(a.zipCode, i)} />
-          ))}
+        <div className="st-coverage-map-frame">
+          <ServiceAreaMap areas={areas} height="100%" />
         </div>
       </div>
     </section>

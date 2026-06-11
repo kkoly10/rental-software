@@ -740,38 +740,105 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
  * Press row
  * ────────────────────────────────────────────────────────────────── */
 .st-press {
-  padding: 14px 0 18px;
+  padding: 36px 0 32px;
+  border-top: 1px solid var(--st-line);
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 36px;
   flex-wrap: wrap;
-  color: var(--st-muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
-.st-press-label { font-size: 11px; opacity: 0.7; }
-.st-press-logos { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+.st-press-label {
+  font-family: var(--st-font-body);
+  font-size: var(--st-text-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--st-muted-2);
+}
+.st-press-logos { display: flex; gap: 36px; align-items: center; flex-wrap: wrap; }
 .st-press-logo {
-  opacity: 0.55;
-  font-family: Georgia, serif;
+  font-family: var(--st-font-display);
   font-style: italic;
-  font-size: 16px;
-  font-weight: normal;
+  font-weight: 400;
+  font-size: 18px;
   letter-spacing: -0.01em;
   text-transform: none;
+  color: var(--st-muted);
+  text-decoration: none;
 }
 .st-press-logo.sans {
-  font-family: var(--st-font);
+  font-family: var(--st-font-body);
   font-style: normal;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 13px;
 }
-@media (max-width: 980px) {
-  .st-press { gap: 14px; }
-  .st-press-logos { gap: 18px; }
-  .st-press-logo { font-size: var(--st-text-14); }
+@media (max-width: 760px) {
+  .st-press { gap: 18px; padding: 28px 0 24px; }
+  .st-press-logos { gap: 24px; }
+  .st-press-logo { font-size: 16px; }
+  .st-press-logo.sans { font-size: 12px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * About section — editorial: hairline-bordered, centered serif body
+ * over a quiet kicker. Only renders when the operator has written
+ * an aboutText and turned on vis.about_section.
+ * ────────────────────────────────────────────────────────────────── */
+.st-about-section {
+  padding: 96px 0;
+  border-top: 1px solid var(--st-line);
+  background: var(--st-bg);
+}
+.st-about-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+}
+.st-about-body {
+  font-family: var(--st-font-display);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--st-ink);
+  letter-spacing: -0.01em;
+  margin: 16px 0 0;
+}
+@media (max-width: 760px) {
+  .st-about-section { padding: 64px 0; }
+  .st-about-body { font-size: 18px; line-height: 1.5; }
+}
+
+/* Live availability chip — wraps the hero rating chip's frosted-glass
+ * treatment. Renders the green-pulse dot inline. */
+.st-hero-live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  align-self: flex-start;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.st-hero-live-chip::before {
+  content: "";
+  width: 7px; height: 7px;
+  background: #6cd76c;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(108, 215, 108, 0.28);
+  animation: st-pulse 2s infinite;
+}
+@keyframes st-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(108, 215, 108, 0.28); }
+  50%      { box-shadow: 0 0 0 7px rgba(108, 215, 108, 0.05); }
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -1324,25 +1391,20 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   font-style: italic;
   margin: 0;
 }
-.st-coverage-map {
+/* Map frame — wraps the real Leaflet map. The map itself styles
+ * itself; we just give it a fixed aspect ratio + hairline border so
+ * it sits cleanly in the editorial composition. */
+.st-coverage-map-frame {
   aspect-ratio: 4 / 3;
   border: 1px solid var(--st-line);
-  position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 38% 52%, color-mix(in srgb, var(--st-primary) 12%, transparent) 0%, transparent 38%),
-    radial-gradient(circle at 62% 38%, color-mix(in srgb, var(--st-primary) 9%, transparent) 0%, transparent 38%),
-    linear-gradient(135deg, var(--st-bg-alt) 0%, var(--st-bg) 100%);
+  position: relative;
+  background: var(--st-bg-alt);
 }
-.st-coverage-pin {
-  position: absolute;
-  width: 9px; height: 9px;
-  background: var(--st-primary);
-  border: 2px solid var(--st-bg);
-  border-radius: 99px;
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--st-primary) 12%, transparent);
-  transform: translate(-50%, -50%);
-}
+.st-coverage-map-frame > * { width: 100%; height: 100%; }
+/* Leaflet drops a container with .leaflet-container — match it to the
+ * editorial bg so tile-loading flashes don't pop visually. */
+.st-coverage-map-frame .leaflet-container { background: var(--st-bg-alt); font-family: var(--st-font-body); }
 @media (max-width: 760px) {
   .st-coverage-grid { grid-template-columns: 1fr; gap: 32px; }
   .st-coverage-map { aspect-ratio: 16 / 11; }
