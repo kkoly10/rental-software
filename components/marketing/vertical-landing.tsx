@@ -4,6 +4,7 @@ import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getTranslator } from "@/lib/i18n/server";
 import { getVerticalLandingCopy } from "@/lib/verticals/landing-copy";
+import { listVerticals } from "@/lib/verticals/registry";
 import type { VerticalConfig } from "@/lib/verticals/types";
 
 /**
@@ -439,6 +440,46 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           <p className="muted" style={{ marginTop: 20, fontSize: "0.82rem" }}>
             {s.finalCta.trustLine}
           </p>
+        </section>
+
+        {/* ── Sibling verticals — internal-linking mesh. Every vertical
+             page links the other five so link equity circulates among
+             the SEO set and multi-line operators find their other
+             business. ─────────────────────────────────────────────── */}
+        <section
+          style={{
+            padding: "32px 24px 48px",
+            maxWidth: 1000,
+            margin: "0 auto",
+            borderTop: "1px solid var(--border, #e5e7eb)",
+            textAlign: "center",
+          }}
+        >
+          <div className="kicker" style={{ marginBottom: 14 }}>
+            Korent also runs
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "8px 24px",
+              fontSize: "0.9rem",
+              fontWeight: 500,
+            }}
+          >
+            {listVerticals()
+              .filter((sibling) => sibling.slug !== vertical.slug)
+              .map((sibling) => (
+                <Link
+                  key={sibling.slug}
+                  href={`/${sibling.marketing.landingPageSlug}`}
+                  style={{ color: "var(--primary, #2563eb)" }}
+                >
+                  {sibling.label.en} rental software
+                </Link>
+              ))}
+          </div>
         </section>
       </main>
 

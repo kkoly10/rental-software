@@ -31,10 +31,12 @@ import { getTranslator } from "@/lib/i18n/server";
 export async function generateMetadata(): Promise<Metadata> {
   const isTenant = await isTenantHost();
   if (!isTenant) {
+    // Keyword-first title (the head term this page targets), brand last —
+    // under 60 chars so it doesn't truncate in the SERP.
     return await buildPageMetadata({
-      title: "Korent | Rental software for operators",
+      title: "Party Rental Business Software | Korent",
       description:
-        "Korent helps rental operators run bookings, inventory, payments, delivery routes, and customer documents from one platform.",
+        "Run your party or event rental business online: a branded booking storefront, real-time inventory holds, payments, delivery routes, and crew scheduling — from $49/month.",
       path: "/",
     });
   }

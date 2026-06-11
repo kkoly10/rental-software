@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { VerticalLanding } from "@/components/marketing/vertical-landing";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
-import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
+import { buildPageMetadata, getRequestOrigin, getSiteBaseUrl } from "@/lib/seo/metadata";
 import { isTenantHost } from "@/lib/auth/org-context";
+import { getVerticalLandingCopy } from "@/lib/verticals/landing-copy";
 import {
   findVerticalByLandingSlug,
   listLandingPageSlugs,
@@ -45,10 +46,18 @@ export async function generateMetadata({
     return { robots: { index: false, follow: false } };
   }
 
+  // Absolute OG image — the vertical's storefront hero photo. Social
+  // crawlers require absolute URLs; the static site base is correct here
+  // because vertical pages only render on the root marketing domain.
+  const ogImage = config.storefrontDefaults?.heroImagePath
+    ? `${getSiteBaseUrl()}${config.storefrontDefaults.heroImagePath}`
+    : undefined;
+
   return await buildPageMetadata({
     title: config.marketing.seoTitle,
     description: config.marketing.seoDescription,
     path: `/${vertical}`,
+    image: ogImage,
   });
 }
 
@@ -69,21 +78,65 @@ export default async function VerticalLandingPage({ params }: RouteParams) {
 
   const origin = await getRequestOrigin();
   const canonical = `${origin}/${vertical}`;
+  const copy = getVerticalLandingCopy(config.slug);
 
   return (
     <>
+      {/* SoftwareApplication — the schema type Google actually surfaces
+          for "<vertical> software" queries. Offer mirrors the on-page
+          "From $49/month" teaser (PLAN_TIERS.starter). No
+          aggregateRating: we have no third-party ratings and won't
+          fabricate one. */}
       <JsonLdScript
         data={{
           "@context": "https://schema.org",
-          "@type": "WebPage",
-          name: config.marketing.seoTitle,
+          "@type": "SoftwareApplication",
+          name: `Korent — ${config.label.en} rental software`,
           description: config.marketing.seoDescription,
           url: canonical,
-          isPartOf: {
-            "@type": "WebSite",
-            name: "Korent",
-            url: origin,
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          offers: {
+            "@type": "Offer",
+            price: "49.00",
+            priceCurrency: "USD",
+            description: "Starter plan, billed monthly. No per-booking fees.",
           },
+        }}
+      />
+      {/* BreadcrumbList — Home → vertical page. */}
+      <JsonLdScript
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Korent",
+              item: origin,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: config.marketing.heroKicker,
+              item: canonical,
+            },
+          ],
+        }}
+      />
+      {/* FAQPage — mirrors the visible on-page FAQ exactly (schema must
+          match rendered content). Rich-result eligibility is limited
+          since 2023 but the markup still aids entity understanding. */}
+      <JsonLdScript
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: copy.faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
         }}
       />
       <VerticalLanding vertical={config} />
