@@ -18,6 +18,9 @@ interface LanguageSwitcherProps {
   ariaLabel?: string;
   /** Show a compact "EN/FR/ES/PT" code instead of the full name. */
   compact?: boolean;
+  /** Strip the box chrome (border/radius/padding) so the control reads
+   *  as plain text — used in the editorial storefront nav. */
+  bare?: boolean;
 }
 
 export function LanguageSwitcher({
@@ -25,6 +28,7 @@ export function LanguageSwitcher({
   className,
   ariaLabel,
   compact = false,
+  bare = false,
 }: LanguageSwitcherProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -47,9 +51,9 @@ export function LanguageSwitcher({
         }}
         style={{
           background: "transparent",
-          border: "1px solid rgba(0,0,0,.12)",
-          borderRadius: 8,
-          padding: compact ? "6px 8px" : "6px 10px",
+          border: bare ? "none" : "1px solid rgba(0,0,0,.12)",
+          borderRadius: bare ? 0 : 8,
+          padding: bare ? 0 : compact ? "6px 8px" : "6px 10px",
           font: "inherit",
           fontSize: compact ? "0.85rem" : undefined,
           fontWeight: compact ? 600 : undefined,
