@@ -32,6 +32,8 @@ const ALL_NAV_ITEMS: NavItem[] = [
 
   // CATALOG — "what I rent, where, how much, is it ready".
   { href: "/dashboard/products",         label: "Products",      tourId: "nav-products",       key: "products",     group: "catalog" },
+  // Seller Hub v1 (spec §32) — the operator's marketplace presence.
+  { href: "/dashboard/marketplace",      label: "Marketplace",   tourId: undefined,            key: "marketplace",  group: "catalog" },
   { href: "/dashboard/pricing",          label: "Pricing",       tourId: "nav-pricing",        key: "pricing",      group: "catalog" },
   { href: "/dashboard/service-areas",    label: "Service Areas", tourId: undefined,            key: "serviceAreas", group: "catalog", verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment"] },
   { href: "/dashboard/maintenance",      label: "Maintenance",   tourId: undefined,            key: "maintenance",  group: "catalog" },

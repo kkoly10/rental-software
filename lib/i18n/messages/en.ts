@@ -589,6 +589,7 @@ const enValues = {
       billing: "Billing",
       team: "Team",
       helpCenter: "Help Center",
+      marketplace: "Marketplace",
       crewMobile: "Crew Mobile",
       publicSite: "Public Site",
       signOut: "Sign Out",

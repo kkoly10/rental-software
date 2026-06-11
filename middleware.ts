@@ -18,6 +18,19 @@ function isAuthEntryPath(pathname: string) {
 }
 
 /**
+ * The marketplace is served from its own reserved hostname (e.g.
+ * rent.korent.app, set via NEXT_PUBLIC_MARKETPLACE_HOST). This check
+ * MUST run before tenant resolution: the marketplace host is a
+ * subdomain of the app domain and would otherwise be misread as an
+ * operator-storefront tenant with slug "rent".
+ */
+function isMarketplaceHost(hostname: string): boolean {
+  const marketHost = process.env.NEXT_PUBLIC_MARKETPLACE_HOST;
+  if (!marketHost) return false;
+  return hostname.split(":")[0] === marketHost.split(":")[0];
+}
+
+/**
  * Determine if this hostname is a tenant subdomain or custom domain.
  * This runs on the edge — no DB access, just string matching.
  */
@@ -79,6 +92,23 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const hostname = request.headers.get("host") ?? "localhost";
+
+  // Marketplace host: serve everything from the /market route group.
+  // Dashboard/auth paths still belong to the main app domain.
+  if (isMarketplaceHost(hostname)) {
+    if (isProtectedPath(pathname) || isAuthEntryPath(pathname)) {
+      const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
+      const url = new URL(pathname, `${request.nextUrl.protocol}//${appDomain}`);
+      url.search = request.nextUrl.search;
+      return NextResponse.redirect(url);
+    }
+    if (!pathname.startsWith("/market") && !pathname.startsWith("/api")) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/market${pathname === "/" ? "" : pathname}`;
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
 
   // For tenant subdomains/custom domains, set a header so downstream pages
   // can resolve the org. Only allow public storefront routes — redirect

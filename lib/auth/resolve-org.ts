@@ -23,6 +23,11 @@ const RESERVED_SLUGS = new Set([
   "onboarding",
   "checkout",
   "crew",
+  // Marketplace hostnames (rent.korent.app etc.) — an org claiming one
+  // of these slugs would shadow the marketplace in middleware routing.
+  "rent",
+  "market",
+  "marketplace",
 ]);
 
 /**

@@ -588,6 +588,7 @@ export const pt: Messages = {
       billing: "Faturação",
       team: "Equipa",
       helpCenter: "Centro de ajuda",
+      marketplace: "Marketplace",
       crewMobile: "Móvel da equipa",
       publicSite: "Site público",
       signOut: "Sair",
