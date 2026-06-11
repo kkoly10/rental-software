@@ -73,6 +73,7 @@ const profileSchema = z.object({
   displayName: z.string().min(2, "Store name is too short.").max(80),
   bio: z.string().max(600).optional().or(z.literal("")),
   serviceRadiusMiles: z.coerce.number().int().min(1).max(200).default(15),
+  stateCode: z.enum(["DC", "MD", "VA"]),
   offersDelivery: z.coerce.boolean(),
   offersPickup: z.coerce.boolean(),
 });
@@ -92,6 +93,7 @@ export async function upsertSellerProfile(
     displayName: formData.get("display_name"),
     bio: formData.get("bio") ?? "",
     serviceRadiusMiles: formData.get("service_radius_miles") ?? 15,
+    stateCode: formData.get("state_code") ?? "DC",
     offersDelivery: formData.get("offers_delivery") === "on",
     offersPickup: formData.get("offers_pickup") === "on",
   });
@@ -111,6 +113,7 @@ export async function upsertSellerProfile(
       bio: parsed.data.bio || null,
       metro_slug: DEFAULT_METRO_SLUG,
       service_radius_miles: parsed.data.serviceRadiusMiles,
+      state_code: parsed.data.stateCode,
       offers_delivery: parsed.data.offersDelivery,
       offers_pickup: parsed.data.offersPickup,
       updated_at: new Date().toISOString(),
@@ -251,11 +254,35 @@ async function setListingStatus(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  // §6 moderation gate: first-time publishes in review-required
+  // categories enter pending_review for the trust queue instead of
+  // going live. published_at doubles as the "approved once" marker —
+  // re-publishing after a pause skips re-review.
+  let effectiveStatus: string = status;
+  if (status === "published") {
+    const { data: listing } = await supabase
+      .from("market_listings")
+      .select("world_slug, category_slug, published_at")
+      .eq("id", listingId)
+      .eq("organization_id", auth.orgId)
+      .maybeSingle();
+    if (!listing) return { ok: false, message: "Couldn't update the listing." };
+    try {
+      const defaults = resolveOperatingDefaults(listing.world_slug, listing.category_slug);
+      if (defaults.listingReviewRequired && !listing.published_at) {
+        effectiveStatus = "pending_review";
+      }
+    } catch {
+      effectiveStatus = "pending_review"; // unknown category = review it
+    }
+  }
+
   const update: Record<string, unknown> = {
-    status,
+    status: effectiveStatus,
     updated_at: new Date().toISOString(),
   };
-  if (status === "published") update.published_at = new Date().toISOString();
+  if (effectiveStatus === "published") update.published_at = new Date().toISOString();
 
   const { data, error } = await supabase
     .from("market_listings")
@@ -269,6 +296,12 @@ async function setListingStatus(
     return { ok: false, message: "Couldn't update the listing." };
   }
   revalidatePath(MARKET_DASHBOARD_PATH);
+  if (effectiveStatus === "pending_review") {
+    return {
+      ok: true,
+      message: "Submitted for review — this category requires a quick trust check before going live.",
+    };
+  }
   return { ok: true, message: status === "published" ? "Listing published." : "Listing paused." };
 }
 

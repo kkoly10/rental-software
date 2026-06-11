@@ -105,8 +105,8 @@ test("registry: launch metro is DMV", () => {
   assert.ok(metros.some((m) => m.slug === "dmv"));
 });
 
-test("fees: 12% marketplace / 8% operator with $4 minimum, zero on zero", () => {
-  assert.equal(computePlatformFeeCents(10_000, "marketplace"), 1_200);
+test("fees: 15% marketplace / 8% operator with $4 minimum, zero on zero", () => {
+  assert.equal(computePlatformFeeCents(10_000, "marketplace"), 1_500);
   assert.equal(computePlatformFeeCents(10_000, "korent_operator"), 800);
   // $20 booking → 12% = $2.40 → minimum $4 applies
   assert.equal(computePlatformFeeCents(2_000, "marketplace"), MINIMUM_PLATFORM_FEE_CENTS);
@@ -181,4 +181,24 @@ test("deposit: high-risk accessories add 50% of their value", () => {
     depositFloorCents: 10_000,
   });
   assert.equal(withAccessories.depositCents - without.depositCents, 10_000);
+});
+
+test("§6 moderation: high-risk families require listing review; low-risk don't", async () => {
+  const { resolveOperatingDefaults: resolve } = await import("../lib/market/registry/index.ts");
+  assert.equal(resolve("trailers-and-hauling", "utility-and-flatbed-trailers").listingReviewRequired, true);
+  assert.equal(resolve("creator-gear", "cameras-and-bodies").listingReviewRequired, true);
+  assert.equal(resolve("baby-gear", "sleep-and-nursery").listingReviewRequired, true);
+  assert.equal(resolve("hosting-and-events", "tables").listingReviewRequired, false);
+});
+
+test("facilitator tax: DMV rates incl. DC's Oct 2026 rate change; never taxes deposits' base", async () => {
+  const { computeTaxCents, taxRateForState } = await import("../lib/market/tax.ts");
+  const before = new Date("2026-07-01T12:00:00Z");
+  const after = new Date("2026-11-01T12:00:00Z");
+  assert.equal(computeTaxCents(10_000, "DC", before), 600);
+  assert.equal(computeTaxCents(10_000, "DC", after), 700);
+  assert.equal(computeTaxCents(10_000, "MD", before), 600);
+  assert.equal(computeTaxCents(10_000, "VA", before), 600);
+  assert.equal(computeTaxCents(0, "DC", before), 0);
+  assert.equal(taxRateForState("XX", before), 0.06); // unknown → never under-collect silently
 });

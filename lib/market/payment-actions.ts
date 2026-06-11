@@ -53,7 +53,7 @@ export async function payForBooking(formData: FormData): Promise<void> {
   const { data: booking } = await admin
     .from("market_bookings")
     .select(
-      "id, state, renter_profile_id, organization_id, subtotal_cents, platform_fee_cents, rental_days, quantity, stripe_checkout_session_id, market_listings ( title )",
+      "id, state, renter_profile_id, organization_id, subtotal_cents, platform_fee_cents, tax_cents, rental_days, quantity, stripe_checkout_session_id, market_listings ( title )",
     )
     .eq("id", bookingId)
     .eq("renter_profile_id", user.id)
@@ -92,16 +92,20 @@ export async function payForBooking(formData: FormData): Promise<void> {
         quantity: 1,
         price_data: {
           currency: "usd",
-          unit_amount: booking.subtotal_cents,
+          unit_amount: booking.subtotal_cents + (booking.tax_cents ?? 0),
           product_data: {
             name: listingTitle,
-            description: `${booking.rental_days} day rental · qty ${booking.quantity}`,
+            description: `${booking.rental_days} day rental · qty ${booking.quantity}${
+              booking.tax_cents ? ` · incl. $${((booking.tax_cents ?? 0) / 100).toFixed(2)} sales tax` : ""
+            }`,
           },
         },
       },
     ],
     payment_intent_data: {
-      application_fee_amount: booking.platform_fee_cents,
+      // Facilitator tax rides with the platform fee: the platform
+      // collects and remits it; the seller payout never includes tax.
+      application_fee_amount: booking.platform_fee_cents + (booking.tax_cents ?? 0),
       transfer_data: { destination: org.stripe_connect_account_id },
       // §9: save the card so the deposit can be AUTHORIZED off-session
       // at handoff−96h (never charged at booking time).

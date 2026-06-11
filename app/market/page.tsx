@@ -70,7 +70,7 @@ export default async function MarketHomePage() {
             First listings are arriving now. Run an event-rental business?
             List your inventory free and pay only when you get booked.
           </p>
-          <Link href="/dashboard/marketplace" className="mk-btn">
+          <Link href="/market/sell" className="mk-btn">
             Become a seller →
           </Link>
         </div>

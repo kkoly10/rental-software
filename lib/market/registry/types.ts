@@ -98,6 +98,9 @@ export type OperatingDefaults = {
   minBookingSubtotalCents: number;
   accessoriesChecklistRequired: boolean;
   serialNumberRequired: boolean;
+  /** §6 seller review requirement: listings in this category enter
+   *  pending_review instead of publishing directly. */
+  listingReviewRequired: boolean;
   /** §14 turnaround buffers */
   prepBufferMinutes: number;
   recoveryBufferMinutes: number;

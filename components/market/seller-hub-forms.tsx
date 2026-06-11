@@ -35,6 +35,7 @@ export function SellerProfileForm({
     displayName: string;
     bio: string | null;
     serviceRadiusMiles: number;
+    stateCode: string;
     offersDelivery: boolean;
     offersPickup: boolean;
   } | null;
@@ -83,7 +84,7 @@ export function SellerProfileForm({
         <textarea name="bio" defaultValue={profile?.bio ?? ""} maxLength={600} rows={3} style={inputStyle} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "end" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, alignItems: "end" }}>
         <div>
           <label style={labelStyle}>Service radius (miles)</label>
           <input
@@ -94,6 +95,14 @@ export function SellerProfileForm({
             defaultValue={profile?.serviceRadiusMiles ?? 15}
             style={inputStyle}
           />
+        </div>
+        <div>
+          <label style={labelStyle}>State (for sales tax)</label>
+          <select name="state_code" defaultValue={profile?.stateCode ?? "DC"} style={inputStyle}>
+            <option value="DC">Washington, DC</option>
+            <option value="MD">Maryland</option>
+            <option value="VA">Virginia</option>
+          </select>
         </div>
         <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
           <label>

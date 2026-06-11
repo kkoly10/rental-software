@@ -13,6 +13,7 @@ import {
   type BookingState,
 } from "@/lib/market/booking-state";
 import { computePlatformFeeCents, computeSellerPayoutCents } from "@/lib/market/fees";
+import { computeTaxCents } from "@/lib/market/tax";
 import { resolveOperatingDefaults } from "@/lib/market/registry";
 
 /**
@@ -169,10 +170,26 @@ export async function requestBooking(
       message: `Minimum booking for this category is $${(defaults.minBookingSubtotalCents / 100).toFixed(0)}.`,
     };
   }
-  const fee = computePlatformFeeCents(subtotal, "korent_operator");
-  const payout = computeSellerPayoutCents(subtotal, "korent_operator");
 
   const admin = await getAdminClient();
+
+  // Seller kind decides the fee tier (§23): marketplace-only sellers
+  // pay 15%, Korent operators 8%. Facilitator tax keys off the
+  // seller's state (lib/market/tax.ts — DC/MD/VA all tax rentals).
+  const [{ data: sellerOrg }, { data: sellerProfile }] = await Promise.all([
+    admin.from("organizations").select("business_type").eq("id", listing.organization_id).maybeSingle(),
+    admin
+      .from("market_seller_profiles")
+      .select("state_code")
+      .eq("organization_id", listing.organization_id)
+      .maybeSingle(),
+  ]);
+  const sellerKind =
+    sellerOrg?.business_type === "marketplace_seller" ? "marketplace" : "korent_operator";
+  const taxState = sellerProfile?.state_code ?? "DC";
+  const fee = computePlatformFeeCents(subtotal, sellerKind);
+  const payout = computeSellerPayoutCents(subtotal, sellerKind);
+  const tax = computeTaxCents(subtotal, taxState);
   const { data: booking, error } = await admin
     .from("market_bookings")
     .insert({
@@ -190,6 +207,8 @@ export async function requestBooking(
       subtotal_cents: subtotal,
       platform_fee_cents: fee,
       seller_payout_cents: payout,
+      tax_cents: tax,
+      tax_state_code: taxState,
       deposit_cents: listing.deposit_cents,
       deposit_strategy: defaults.depositStrategy,
       renter_message: parsed.data.message || null,
