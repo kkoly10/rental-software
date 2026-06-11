@@ -414,10 +414,20 @@ async function loadPendingForSeller(requestId: string) {
   const admin = createSupabaseAdminClient();
   const { data: req } = await admin
     .from("market_extension_requests")
-    .select("id, booking_id, state, requested_ends_at, extension_days, subtotal_cents, tax_cents, fee_cents, payout_cents")
+    .select("id, booking_id, state, requested_ends_at, extension_days, subtotal_cents, tax_cents, fee_cents, payout_cents, expires_at")
     .eq("id", requestId)
     .maybeSingle();
   if (!req || req.state !== "pending") return null;
+  // Codex review (#382): the 12h window is a promise to the renter —
+  // an approval that races the hourly lapse cron must not charge.
+  if (new Date(req.expires_at).getTime() <= Date.now()) {
+    await admin
+      .from("market_extension_requests")
+      .update({ state: "lapsed", decided_at: new Date().toISOString() })
+      .eq("id", requestId)
+      .eq("state", "pending");
+    return null;
+  }
   const { data: booking } = await admin
     .from("market_bookings")
     .select(BOOKING_SELECT)

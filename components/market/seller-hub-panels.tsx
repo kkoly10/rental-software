@@ -147,9 +147,12 @@ export async function SellerHubPanels() {
     const { data: extRows } = await supabase
       .from("market_extension_requests")
       .select(
-        "id, booking_id, requested_ends_at, extension_days, subtotal_cents, tax_cents, payout_cents, expires_at, market_bookings ( market_listings ( title ) )",
+        "id, booking_id, requested_ends_at, extension_days, subtotal_cents, tax_cents, payout_cents, expires_at, market_bookings!inner ( organization_id, market_listings ( title ) )",
       )
       .eq("state", "pending")
+      // Codex review (#382): scope to the ACTIVE org — RLS alone would
+      // leak other orgs' requests to multi-org users.
+      .eq("market_bookings.organization_id", ctx.organizationId)
       .order("expires_at", { ascending: true })
       .limit(20);
     extensionRequests = (extRows as unknown as typeof extensionRequests) ?? [];
