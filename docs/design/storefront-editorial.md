@@ -1,8 +1,8 @@
 # Korent Editorial — Storefront Design Specification
 
-**Status:** Spec for approval before build.
-**Mockup:** `reference/mockups/Korent Editorial (proposal).html` (open in any browser; images embedded inline).
-**Scope:** The default tenant storefront homepage at `app/page.tsx`, the shared header/footer, and the shared product card. All operator-customizable knobs (brand color, brand font, hero image, headline text, content section visibility) MUST continue to work — this rebuild changes the **defaults** and the **design language**, not the override surface.
+**Status:** SHIPPED — this document now describes the as-built system. Sections amended after launch are marked **[as-built]**; see §11 for the revision log mapping every change to its PR.
+**Mockup:** `reference/mockups/Korent Editorial (proposal).html` (open in any browser; images embedded inline). The mockup shows the original asymmetric-hero proposal; the shipped hero is full-bleed (§5.2).
+**Scope:** The default tenant storefront homepage at `app/page.tsx`, the catalog index at `app/inventory/page.tsx`, the shared header/footer, and the shared product card. All operator-customizable knobs (brand color, brand font, hero image, headline text, content section visibility) continue to work — this rebuild changed the **defaults** and the **design language**, not the override surface.
 
 ---
 
@@ -51,6 +51,8 @@ Each of these is a recurring "looks cheap" signature from the 2026 research (see
 | 10 | Vague aspirational headlines ("Make memories that last") | Manual review — no grep | Replaces specificity with feel-good |
 | 11 | Stock photo of people pointing at a laptop | Manual review — no grep | Universal cheap-tell |
 | 12 | More than 2 typefaces | Count `font-family` declarations outside `--st-font*` tokens | Real-estate / event premium standard is 2–3, default is 2 |
+
+**Scrim exemption [as-built]:** Anti-pattern #1 forbids *saturated brand-color* gradients. Neutral **dark legibility washes** (the hero scrim, the category/vibe tile overlays) are explicitly allowed — they're typographic tools serving white-on-photo legibility, the same exemption as `text-shadow` on `.st-vibe-caption`. The grep distinction: allowed gradients only use `rgba(0, 0, 0, …)` stops; any gradient referencing `--st-primary` / `--st-accent` / a saturated hex on a CTA surface is still a violation.
 
 ---
 
@@ -228,56 +230,62 @@ Each component below has: **(a)** purpose, **(b)** HTML structure (JSX outline),
 - Phone hidden by default (most demo content rows are placeholders); shown only when `theme.headerPhoneVisible && phone !== "(555) 000-0000"`.
 - Operator with a logo (`brand.logoUrl`) replaces the wordmark + tagline cleanly.
 
-### 5.2 Hero — `components/public/themes/party-classic/hero.tsx`
+### 5.2 Hero — `components/public/themes/party-classic/hero.tsx` **[as-built: full-bleed]**
 
-**(a)** Asymmetric editorial hero. Text 42%, photo 58%. One specific headline, one lede, a flat hairline availability bar, one underlined text-link CTA below. No carousel, no stats row, no "Check availability" pill — that's collapsed into the availability bar itself.
+> The original proposal here specified an asymmetric 5fr/7fr split (text left,
+> photo right). User feedback after PR #337 shipped: the split read low-impact
+> on desktop and the availability bar overflowed at mobile widths. PR #343
+> replaced it with the full-bleed composition documented below — the
+> Peerspace / RH / Found Rentals pattern from §10.
+
+**(a)** Full-bleed editorial hero. The photograph fills the viewport width; headline + lede overlay it bottom-left in white over a neutral dark legibility scrim. The availability bar sits **below** the hero on cream, full-width within the container. No carousel, no stats row, no floating card.
 
 **(b)**
 ```tsx
-<section className="st-container st-hero">
-  <div className="st-hero-copy">
-    {ratingChip && <RatingChip {…} />}    {/* see §5.2.1 */}
-    <h1 className="st-h1">
-      {headlineLead} <em>{headlineEmphasis}</em>
-    </h1>
-    <p className="st-lede">{subhead}</p>
-    <AvailabilityBar />
-    <Link href="/inventory" className="st-text-link">Or browse the full catalog →</Link>
-  </div>
+<section className="st-hero">
   <div className="st-hero-photo">
-    <img src={heroImage} alt={…} fetchPriority="high" />
+    <img src={heroImage} fetchPriority="high" … />
+    <div className="st-hero-scrim" aria-hidden="true" />
   </div>
+  <div className="st-container st-hero-content">
+    {showLiveChip && <span className="st-hero-live-chip">…</span>}
+    {showRating && <span className="st-hero-rating-chip">…</span>}
+    <h1 className="st-h1">{headlineLead} <em>{headlineItalic}</em></h1>
+    <p className="st-lede">{lede}</p>
+  </div>
+</section>
+<section className="st-container st-hero-actions">
+  <form action="/inventory" className="st-avail" role="search">…</form>
+  <div className="st-hero-cta-row">…text links…</div>
 </section>
 ```
 
 **(c)**
-- `.st-hero` — `padding: 88px 0 112px;` desktop, `48px 0 64px` mobile; `grid-template-columns: 5fr 7fr; gap: 80px; align-items: center;`
-- `.st-h1` — uses `--st-text-h1` (72 / 1.04 / −0.025em / 400 display). The `<em>` accent renders italic in `--st-font-display` italic style (Fraunces has a true italic). No color change on the accent — italic alone carries it.
-- `.st-hero-photo` — `aspect-ratio: 4/5; overflow: hidden; background: var(--st-line);` Image `width: 100%; height: 100%; object-fit: cover;`. No border-radius on the frame (sharp rectangle reads more editorial than rounded).
-- Mobile: single column, photo first at `aspect-ratio: 4/3`, copy below, lede max-width drops to `28ch`.
+- `.st-hero` — `height: clamp(560px, 78vh, 820px)` desktop; mobile becomes a 4:5 aspect block with a 460px floor.
+- `.st-hero-scrim` — two layered neutral gradients: a bottom-up wash (transparent to 22%, 0.45 at 55%, 0.82 at the bottom) plus a left-side wash (0.35 → 0 by 72%) that deepens contrast specifically where the headline anchors. Mobile uses a single stronger band (0.55 at 60%, 0.88 at bottom). **This is a typographic legibility tool, not brand chrome — see the scrim exemption note in §3.**
+- `.st-h1` — white, fluid `clamp(40px, 6.4vw, 72px)`, layered text-shadow (tight 0–2px contact shadow + wide soft halo). **Specificity warning:** the body-scoped `h1 { color: var(--st-ink) }` rule outranks `.st-hero .st-h1`; the white override is anchored through `.st-shell .st-hero .st-h1` (0,3,2) — don't simplify the selector (PR #346 was this exact bug).
+- `.st-lede` — white at 100% opacity, fluid 15–17px, matching shadow.
+- Sub-360px breakpoint: H1 32px / 12ch, lede 14px.
 
-**(c.1) Availability bar — `<AvailabilityBar />`**
-- Container — `display: grid; grid-template-columns: 1fr 1fr auto; border: 1px solid var(--st-line-2); border-radius: 2px; max-width: 460px;`
-- Each field — `padding: 14px 18px; border-right: 1px solid var(--st-line-2);` (last field omits right border via `:last-child`). Inside: a `.st-eyebrow` label + a 14.5px value.
-- Submit — `padding: 0 22px; background: var(--st-ink); color: var(--st-bg); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;` label is just **"Check"**. Hover: background `var(--st-primary)`. No icon, no gradient, no shadow.
-- Form action stays `/inventory`, posting `date` and `zip` query params. Existing inventory page consumes those — zero backend change.
+**(c.1) Availability bar — `.st-avail` (below the hero)**
+- Desktop — `grid-template-columns: 1fr 1fr auto; border: 1px solid var(--st-line-strong); border-radius: 2px; max-width: 560px;` Submit is the black uppercase **"Check availability"** button; hover `var(--st-primary)`.
+- **Mobile stacks**: date row → ZIP row → full-width black submit with `min-height: 52px`. Right-cell borders collapse to bottom borders.
+- Inputs are **16px** (anything smaller triggers iOS Safari focus-zoom), `autoComplete="postal-code"` + `maxLength` + `pattern` on ZIP, `autoComplete="off"` on date, `-webkit-appearance: none` with normalized datetime-edit colors.
+- Form action stays `/inventory`, posting `date` and `zip` query params.
 
 **(d)** Wiring:
-- `headlineLead` + `headlineEmphasis` come from a per-vertical split of `settings.heroHeadline ?? m.storefront.hero.defaultHeadlines[primaryVertical]`. See §6 for the per-vertical defaults.
-- `subhead` comes from `settings.websiteMessage ?? m.storefront.hero.defaultLedes[primaryVertical]`.
-- `heroImage` comes from `settings.heroImageUrl ?? PER_VERTICAL_DEFAULT_HERO[primaryVertical]` (§6).
-- `RatingChip` only renders when `testimonialCount >= 3 && avgRating >= 4` (same gate as today).
+- `headlineLead` + `headlineItalic` come from the vertical's `storefrontDefaults` (lib/verticals/*.ts) unless the operator set `settings.heroHeadline` (which renders whole, non-italic).
+- `lede` comes from `settings.websiteMessage || withArea(defaults.lede, serviceAreaLabel)`. **`getOrganizationSettings()` returns empty string — not a platform fallback — when `hero_message` is unset**, so the vertical default actually flows through (PR #350 fixed the clobbering fallback).
+- `heroImage` comes from `settings.heroImageUrl || defaults.heroImagePath` (§6).
+- `RatingChip` renders when `testimonialCount >= 3 && avgRating >= 4`; the live availability chip renders when `theme.availabilityChipVisible && readyCount > 0`. Both float in the overlay with a frosted-glass treatment (`rgba(0,0,0,0.42)` + backdrop-blur + white hairline border).
 
 **(e)** Same six-state coverage as §4.6 on every input + button.
 
-**(f)** Acceptance:
-- No more "Make your party unforgettable" / "Saturday's covered. Promise." copy. Headline is vertical-specific and place-specific.
-- No `.st-social-row`, no `.st-hero-stats`, no `.st-price-pill`, no `.st-delivery-pill` in the rendered DOM. (Migration deletes those classes.)
-- Booking widget is a hairline rectangle, not a floating card. **Critically: no overlap with the photo.** It sits inline in the copy column.
-
-#### 5.2.1 Rating chip (`<RatingChip>`)
-
-When eligible: `<div class="st-rating-chip">★ <strong>{avgRating}</strong> · {testimonialCount}+ reviews</div>`. CSS: `display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border: 1px solid var(--st-line); border-radius: 999px; font-size: 13px;` The `<strong>` uses body font weight 600; the star is `--st-warning` color, single character.
+**(f)** Acceptance (all verified on production via Playwright):
+- Headline is vertical-specific and place-specific; white and legible over every curated hero photo at desktop + mobile.
+- No `.st-social-row`, `.st-hero-stats`, `.st-price-pill`, `.st-delivery-pill` in the rendered DOM.
+- No horizontal scroll at 320 / 375 / 390 / 430 px.
+- Availability bar stacks at mobile with ≥48px tap targets.
 
 ### 5.3 Trust band — `components/public/themes/party-classic/trust-strip.tsx`
 
@@ -442,9 +450,9 @@ Three steps, serif italic numerals in the accent color.
 
 Left: kicker + H2 + lede + ZIP list as plain text (NOT pills). Right: quiet warm-gradient map block with olive dots.
 
-**(c)**
-- ZIP list — `display: flex; flex-wrap: wrap; column-gap: 28px; row-gap: 10px;` Each ZIP: `<strong>{zip}</strong>` (display 16px) above `{city}` (14px `--st-muted`). No backgrounds, no borders.
-- Map — `aspect-ratio: 4/3; border: 1px solid var(--st-line); background:` a warm radial-gradient. Pins are 9px olive dots with a 5px translucent halo. Real geocoding stays out of scope; pin positions stay deterministic-from-ZIP.
+**(c) [as-built]**
+- ZIP list — auto-fill grid (`minmax(140px, 1fr)`), each entry `<strong>{zip}</strong>` (display 17px) above `{city}` (13.5px `--st-muted`). No backgrounds, no borders.
+- Map — the **real Leaflet `ServiceAreaMap`** (lazy-loaded client component from `components/maps/service-area-map.tsx`), wrapped in `.st-coverage-map-frame` (4:3 aspect, hairline border, editorial bg behind tile loads). The original proposal's stylized warm-gradient block shipped briefly and was replaced in PR #350 — operators geocode real service areas and expect to see them on a real map.
 
 ### 5.9 FAQ — `components/public/faq-section.tsx`
 
@@ -597,3 +605,69 @@ Visual exemplars cited for direction:
 - [BBJ La Tavola](https://bbjlatavola.com/) — collection-name italic accents; warm cream + bronze metals.
 - [Aesop](https://aesop.com) — text-forward heroes, generous whitespace, literary microcopy.
 - [RH](https://rh.com) — thin refined serif logo, all-caps tracked nav, taupe/ivory base, institutional voice.
+
+---
+
+## 11. As-built revision log **[as-built]**
+
+Everything below shipped after the original spec was approved. Each row links the change to its PR so future readers can trace the reasoning.
+
+| PR | Change | Spec impact |
+|---|---|---|
+| #334 | PR 1 — tokens, page frame, header, closing | Shipped as specced |
+| #337 | PR 2 — hero, trust band, product card, browse tiles, vertical defaults | Shipped as specced (asymmetric hero, later revised) |
+| #339 | PR 3 — how-it-works, pull-quote, FAQ, coverage, a11y | Shipped as specced (stylized map, later revised) |
+| #343 | Hero → **full-bleed** with overlay + dark scrim; availability bar moved below hero; mobile stacking | §5.2 rewritten; scrim exemption added to §3 |
+| #344 | Stronger scrim + layered text-shadows | §5.2 (c) |
+| #346 | Hero headline color specificity fix (`.st-shell .st-hero .st-h1`) | §5.2 (c) warning note |
+| #347 | Mobile polish: 16px inputs (iOS zoom), 48px+ tap targets, `postal-code` autocomplete, tap-highlight removal, hover gating via `@media (hover: hover)`, sub-360px breakpoint | §5.2 (c.1) |
+| #350 | Restored **real Leaflet map** (§5.8), **About section** (operator opt-in), **press row** (operator logos), **live availability chip** in hero overlay; fixed `websiteMessage` fallback clobbering per-vertical ledes | §5.2 (d), §5.8, §12 |
+| #352 | Inventory `.badge.info` wrap fix; first cross-page-anchor attempt | superseded by #356/#359 |
+| #354 / #356 | Cross-page anchor menu items render as plain `<a>` (next/link intercepts clicks before React onClick can preventDefault) | §12 |
+| #359 | `HashScrollHandler` — explicit scroll-to-hash on hydration retry loop (Leaflet's late mount aborts the browser's native fragment scroll) | §12 |
+| #362 | Six curated per-vertical hero photos replace the Unsplash placeholders (operator-supplied, mozJPEG q82, 152–267 KB) | §6 image pool — now real |
+| (this PR) | `/inventory` editorial rebuild; category tiles restored above vibe tiles; "Pricing" dropped from default nav | §12, §13 |
+
+## 12. Section flow — as shipped
+
+The homepage section order as it exists on production (operator-visibility gates in parentheses):
+
+1. Header — wordmark + tagline, 4 nav links, Inquire text-link. Default nav: Catalog / How It Works / Service Area / Order Status / Contact. **"Pricing" was dropped from defaults** — it aliased `/inventory` and read as a broken promise of a price sheet. Operators with stored nav links keep theirs (the merge preserves non-default keys).
+2. Full-bleed hero + scrim + overlay chips (live availability · rating)
+3. Availability bar + text-link CTA row
+4. Trust band (`vis.trust_bar`)
+5. Press row (renders only when `theme.pressLogos` exist and `theme.pressRowVisible`)
+6. **Category tiles** — operator-curated catalog categories (`vis.category_grid`; renders only when active categories with products exist). Restored after the original rebuild dropped them — operators who curated categories expect them on the homepage.
+7. **Browse-by-occasion vibe tiles** — vertical defaults (`vis.category_grid`)
+8. Featured rentals — 3-up editorial grid
+9. How it works (`vis.how_it_works`)
+10. Pull-quote review (`vis.testimonials`)
+11. Coverage — ZIP list + real Leaflet map (`vis.service_area_map`)
+12. About (`vis.about_section`, default off)
+13. FAQ (`vis.faq_section`)
+14. Closing CTA — serif statement + ghost button
+15. Footer
+
+Cross-page anchor handling: fragment links to a *different* page render as plain `<a>` (full document load → native fragment scroll), and `HashScrollHandler` in `StorefrontShell` retries `scrollIntoView` on a 200ms loop for up to ~1.6s to survive hydration-time layout shifts (Leaflet).
+
+## 13. Catalog index (`/inventory`) — editorial spec **[as-built]**
+
+The catalog index shares the homepage design language:
+
+- **Page head** — `.st-eyebrow` kicker + Fraunces H1 (clamped 32–40px) + lede.
+- **Filter bar** (`.st-filter-bar`) — the hero availability-bar pattern extended to four cells: Event Date / Delivery ZIP / Category select / black uppercase submit. Same hairline border, same mobile stacking with full-width 52px submit, same 16px inputs.
+- **Context chips** (`.st-context-chip`) — active filters as quiet hairline chips, 2px radius (not pills).
+- **Notes** (`.st-note`) — "We deliver to…", "Pick a date…", and ZIP warnings render as left-accent-border notes (2px `--st-primary` / `--st-warning`), replacing the legacy peach `.badge.info` pills.
+- **Results head** — shared `SectionHead` with the count as the display title.
+- **Search + sort** (`.st-catalog-search` / `.st-catalog-sort`) — hairline-bordered, 2px radius, 16px search input. Client-side filtering unchanged.
+- **Grid** — `.st-products-grid` (3-up desktop / 2-up tablet / 1-up mobile), the same editorial ProductCard as the homepage.
+- **Empty state** (`.st-empty-state`) — centered serif statement between hairline rules.
+
+Category tiles on `/inventory` (the `?category=` filter source) come from operator categories; the editorial `.st-cat-tile` treatment (square corners, serif caption, neutral dark wash, tracked-uppercase count label) matches `.st-vibe`.
+
+## 14. Open follow-ups
+
+- PDP (`/inventory/[slug]`), checkout, order-status, contact pages still carry legacy styling — same treatment as §13 when prioritized.
+- A `/pricing` content page (categories × price ranges + minimums) if operators ask for the nav link back.
+- Dashboard Settings UI for the trust-band kicker/statement split (currently folds the legacy title/description shape).
+- Hero photography guide for operators (what makes an upload work against the overlay).

@@ -9,6 +9,7 @@ import { PartyClassicHeader } from "@/components/public/themes/party-classic/hea
 import { PartyClassicHero } from "@/components/public/themes/party-classic/hero";
 import { PartyClassicTrustStrip } from "@/components/public/themes/party-classic/trust-strip";
 import { PartyClassicBrowseTiles } from "@/components/public/themes/party-classic/browse-tiles";
+import { PartyClassicCategoryTiles } from "@/components/public/themes/party-classic/category-tiles";
 import { PartyClassicPressRow } from "@/components/public/themes/party-classic/press-row";
 import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
 import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
@@ -92,6 +93,13 @@ export default async function HomePage() {
             hidden when no logos configured or operator turned off
             theme.pressRowVisible. */}
         <PartyClassicPressRow />
+
+        {/* Shop by category — operator-curated catalog tiles. Renders
+            only when the operator has active categories with products
+            (the component returns null otherwise). The vertical-default
+            "Browse by occasion" vibe tiles follow as the secondary
+            shop-by-intent layer. Both share the vis.category_grid flag. */}
+        {vis.category_grid !== false && <PartyClassicCategoryTiles />}
 
         {vis.category_grid !== false && <PartyClassicBrowseTiles />}
 
