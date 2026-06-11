@@ -146,7 +146,9 @@ export const fr: Messages = {
       description: "Parcourez par type avant de choisir une location précise.",
       startingPrice: "À partir de {amount} $",
       optionCount: "{count} options",
+      optionCountOne: "1 option",
       viewAllWithCount: "Voir les {count} →",
+      viewAll: "Tout voir →",
     },
     themeChips: {
       all: "Toutes les catégories",
