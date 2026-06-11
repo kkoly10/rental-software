@@ -4,6 +4,7 @@ import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { getTranslator } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
+import { listVerticals } from "@/lib/verticals/registry";
 
 /**
  * SaaS marketing landing page for the root domain (korent.app without a subdomain).
@@ -125,53 +126,73 @@ export async function SaasLanding() {
           </div>
         </section>
 
-        {/* ── Industries strip (noob recognition) ────────────────── */}
+        {/* ── Vertical selector grid — routes searchers to the page
+             built for their business AND feeds internal link equity
+             to the six "<vertical> rental software" SEO pages.
+             (Replaces the old unlinked pill-chip strip.) ──────────── */}
         <section
           style={{
-            padding: "44px 24px 24px",
+            padding: "52px 24px 40px",
             maxWidth: 1100,
             margin: "0 auto",
             textAlign: "center",
           }}
         >
           <div className="kicker">{s.industries.kicker}</div>
-          <h3
-            style={{
-              margin: "8px 0 20px",
-              fontSize: "1.1rem",
-              color: "var(--text-muted, #6b7280)",
-              fontWeight: 600,
-            }}
-          >
-            {s.industries.title}
-          </h3>
+          <h2 style={{ margin: "8px 0 28px" }}>{s.industries.title}</h2>
           <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              gap: 8,
-              marginBottom: 18,
-            }}
+            className="grid grid-3 stat-grid-responsive"
+            style={{ gap: 16, textAlign: "left" }}
           >
-            {s.industries.items.map((item) => (
-              <span
-                key={item}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  border: "1px solid var(--border, #e5e7eb)",
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: "#fff",
-                  color: "var(--text, #111827)",
-                }}
-              >
-                {item}
-              </span>
-            ))}
+            {listVerticals().map((vertical) => {
+              const sd = vertical.storefrontDefaults;
+              return (
+                <Link
+                  key={vertical.slug}
+                  href={`/${vertical.marketing.landingPageSlug}`}
+                  className="panel"
+                  style={{
+                    padding: 0,
+                    overflow: "hidden",
+                    display: "block",
+                    textDecoration: "none",
+                    color: "inherit",
+                  }}
+                >
+                  {sd?.heroImagePath && (
+                    <span
+                      style={{
+                        display: "block",
+                        position: "relative",
+                        aspectRatio: "16 / 7",
+                        background: "var(--surface-soft, #f8f9fa)",
+                      }}
+                    >
+                      <Image
+                        src={sd.heroImagePath}
+                        alt={`${vertical.label.en} rentals`}
+                        fill
+                        sizes="(max-width: 860px) 100vw, 350px"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </span>
+                  )}
+                  <span style={{ display: "block", padding: "14px 18px 16px" }}>
+                    <strong style={{ fontSize: "0.98rem" }}>
+                      {vertical.label.en}
+                    </strong>
+                    <span
+                      className="muted"
+                      style={{ display: "block", fontSize: "0.85rem", marginTop: 4 }}
+                    >
+                      {vertical.marketing.heroKicker} →
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
-          <p className="muted" style={{ fontSize: "0.92rem", margin: 0 }}>
+          <p className="muted" style={{ fontSize: "0.92rem", margin: "18px 0 0" }}>
             {s.industries.footer}
           </p>
         </section>
