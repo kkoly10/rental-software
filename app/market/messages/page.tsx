@@ -38,7 +38,7 @@ export default async function MessagesInboxPage() {
     return (
       <main className="mk-wrap">
         <h1>Messages</h1>
-        <a className="mk-btn" href={`/login?redirect=${encodeURIComponent("/market/messages")}`}>
+        <a className="mk-btn" href={`/market/login?redirect=${encodeURIComponent("/market/messages")}`}>
           Sign in
         </a>
       </main>

@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DisputeResolveForm } from "@/components/market/dispute-resolve-form";
 import { approveListing, rejectListing } from "@/lib/market/listing-review-actions";
+import { resolveSupportRequest } from "@/lib/market/support-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,13 @@ export default async function MarketAdminPage() {
     .order("created_at", { ascending: true })
     .limit(50);
 
+  const { data: supportRequests } = await admin
+    .from("market_support_requests")
+    .select("id, email, topic, message, created_at, booking_id")
+    .eq("status", "open")
+    .order("created_at", { ascending: true })
+    .limit(50);
+
   return (
     <DashboardShell
       title="Marketplace trust queue"
@@ -109,6 +117,42 @@ export default async function MarketAdminPage() {
                     </button>
                   </form>
                 </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {(supportRequests ?? []).length > 0 ? (
+        <section className="panel" style={{ marginBottom: 20 }}>
+          <div className="kicker">Support inbox</div>
+          <h2 style={{ margin: "6px 0 12px" }}>
+            {(supportRequests ?? []).length} open request
+            {(supportRequests ?? []).length === 1 ? "" : "s"}
+          </h2>
+          <div className="list">
+            {(supportRequests ?? []).map((r) => (
+              <article key={r.id} className="order-card">
+                <strong>{r.topic}</strong>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {r.email} · {new Date(r.created_at).toLocaleString()}
+                  {r.booking_id ? ` · booking ${r.booking_id.slice(0, 8)}…` : ""}
+                </div>
+                <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+                  “{r.message}”
+                </p>
+                <form action={resolveSupportRequest} style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                  <input type="hidden" name="request_id" value={r.id} />
+                  <input
+                    name="note"
+                    maxLength={1000}
+                    placeholder="Resolution note (optional)"
+                    style={{ fontSize: 13, padding: "6px 10px", borderRadius: 8, border: "1px solid #e5e0d8", flex: 1, minWidth: 180 }}
+                  />
+                  <button type="submit" className="primary-btn" style={{ fontSize: 13 }}>
+                    Mark resolved
+                  </button>
+                </form>
               </article>
             ))}
           </div>

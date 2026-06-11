@@ -52,7 +52,7 @@ export default async function MarketSellPage() {
               </Link>
               <a
                 className="mk-btn ghost"
-                href={`/login?redirect=${encodeURIComponent("/market/sell")}`}
+                href={`/market/login?redirect=${encodeURIComponent("/market/sell")}`}
               >
                 Sign in
               </a>
