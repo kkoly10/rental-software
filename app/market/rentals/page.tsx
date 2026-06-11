@@ -34,18 +34,51 @@ type BookingRow = {
   } | null;
 };
 
-const STATE_LABELS: Record<string, { label: string; tone: "ok" | "warn" | "muted" }> = {
+const STATE_LABELS: Record<string, { label: string; tone: "ok" | "warn" | "muted" | "danger" }> = {
   pending_seller_approval: { label: "Awaiting seller (24h)", tone: "warn" },
   awaiting_payment: { label: "Approved — pay to confirm", tone: "warn" },
   confirmed: { label: "Confirmed", tone: "ok" },
   ready_for_handoff: { label: "Ready for handoff", tone: "ok" },
   checked_out: { label: "Active rental", tone: "ok" },
-  overdue: { label: "Overdue", tone: "warn" },
+  overdue: { label: "Overdue", tone: "danger" },
   returned_pending_review: { label: "Returned — pending review", tone: "muted" },
   completed: { label: "Completed", tone: "muted" },
   cancelled: { label: "Cancelled", tone: "muted" },
-  disputed: { label: "In dispute", tone: "warn" },
+  disputed: { label: "In dispute", tone: "danger" },
 };
+
+/** M2 journey stepper: how far along the lifecycle each state sits.
+ *  `active` is the step awaiting action; everything before it is done.
+ *  Cancelled/disputed render the pill only (no linear journey). */
+const STEPS = ["Requested", "Approved", "Paid", "Handoff", "Return", "Done"] as const;
+const STEP_ACTIVE: Record<string, number> = {
+  pending_seller_approval: 1,
+  awaiting_payment: 2,
+  confirmed: 3,
+  ready_for_handoff: 3,
+  checked_out: 4,
+  overdue: 4,
+  returned_pending_review: 5,
+  completed: 6,
+};
+
+function Stepper({ state }: { state: string }) {
+  const active = STEP_ACTIVE[state];
+  if (active === undefined) return null;
+  return (
+    <div className="mk-stepper" aria-hidden>
+      {STEPS.map((label, i) => {
+        const cls = i < active ? "done" : i === active ? "active" : "";
+        return (
+          <div key={label} className={`mk-sstep ${cls}`}>
+            <span className="dot">{i < active ? "✓" : i + 1}</span>
+            {label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * Renter account surface: every booking with its state and the action
@@ -151,7 +184,10 @@ export default async function MyRentalsPage({
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 220 }}>
-                  <b>{b.market_listings?.title ?? "Listing"}</b>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <b>{b.market_listings?.title ?? "Listing"}</b>
+                    <span className={`mk-statepill ${meta.tone}`}>{meta.label}</span>
+                  </div>
                   <div className="mk-card-m">
                     {new Date(b.starts_at).toLocaleDateString()} →{" "}
                     {new Date(b.ends_at).toLocaleDateString()} · qty {b.quantity} · $
@@ -161,9 +197,6 @@ export default async function MyRentalsPage({
                       ? ` · deposit $${(b.deposit_cents / 100).toFixed(0)} at handoff`
                       : ""}
                   </div>
-                  <span className={`mk-badge ${meta.tone === "ok" ? "v" : "soon"}`} style={{ marginTop: 6 }}>
-                    {meta.label}
-                  </span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   {b.state === "awaiting_payment" ? (
@@ -182,6 +215,7 @@ export default async function MyRentalsPage({
                     <SellerNoShowButton bookingId={b.id} />
                   ) : null}
                 </div>
+                <Stepper state={b.state} />
                 {b.state === "ready_for_handoff" || b.state === "checked_out" ? (
                   <div style={{ width: "100%" }}>
                     <EvidenceForm bookingId={b.id} phase="handoff" />

@@ -16,6 +16,13 @@ export function ListingCard({ listing }: { listing: MarketListing }) {
   return (
     <Link href={`/market/listing/${listing.id}`} className="mk-card">
       <div className="mk-ph">
+        {listing.isPrelist ? (
+          <span className="mk-vpill" style={{ color: "var(--mk-amber)" }}>
+            Coming soon
+          </span>
+        ) : (
+          <span className="mk-vpill">✓ Verified seller</span>
+        )}
         {listing.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={listing.photoUrl} alt={listing.title} loading="lazy" />
@@ -29,15 +36,13 @@ export function ListingCard({ listing }: { listing: MarketListing }) {
           {listing.sellerDisplayName ?? "Local seller"}
           {category ? ` · ${category.label}` : ""}
         </div>
-        <div className="mk-card-m">
-          {listing.isPrelist ? (
-            <span className="mk-badge soon">Coming soon</span>
-          ) : (
-            <span className="mk-badge v">✔ Bookable</span>
-          )}
-        </div>
         <div className="mk-card-p">
-          {formatDollars(listing.dailyPriceCents)} <small>/ day</small>
+          <span>
+            {formatDollars(listing.dailyPriceCents)} <small>/ day</small>
+          </span>
+          {listing.depositCents > 0 ? (
+            <small>{formatDollars(listing.depositCents)} deposit</small>
+          ) : null}
         </div>
       </div>
     </Link>

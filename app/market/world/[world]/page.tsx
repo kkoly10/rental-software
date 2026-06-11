@@ -12,6 +12,7 @@ import { getPublishedListings } from "@/lib/market/data";
 import { logDemandEvent } from "@/lib/market/actions";
 import { ListingCard } from "@/components/market/listing-card";
 import { WaitlistForm } from "@/components/market/waitlist-form";
+import { worldPhoto } from "@/lib/market/photos";
 
 export const dynamic = "force-dynamic";
 
@@ -95,18 +96,26 @@ export default async function WorldPage({
     );
   }
 
+  const photo = worldPhoto(world.slug);
   return (
     <main className="mk-wrap">
       <div className="mk-crumb">
         <Link href="/market">Marketplace</Link> · <b>{world.label}</b>
         {activeCategory ? <> · {activeCategory}</> : null}
       </div>
-      <h1>
-        {world.icon} {world.label}
-      </h1>
-      <p className="mk-sub">
-        {world.tagline} · {metro.label}
-      </p>
+      <div
+        className="mk-banner"
+        style={photo ? { backgroundImage: `url(${photo})` } : undefined}
+      >
+        <div className="mk-banner-inner">
+          <div className="mk-kicker">Marketplace · {metro.label}</div>
+          <h1>{world.label}</h1>
+          <p>{world.tagline}</p>
+          <span className="mk-pill live" style={{ background: "rgba(255,255,255,0.92)" }}>
+            ● Live · {listings.length} listing{listings.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
 
       <div className="mk-chiprow">
         <Link
