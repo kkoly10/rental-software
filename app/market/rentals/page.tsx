@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { payForBooking } from "@/lib/market/payment-actions";
 import { cancelBookingRequest } from "@/lib/market/booking-actions";
+import { EvidenceForm } from "@/components/market/evidence-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My rentals" };
@@ -140,6 +141,16 @@ export default async function MyRentalsPage({
                     </form>
                   ) : null}
                 </div>
+                {b.state === "ready_for_handoff" || b.state === "checked_out" ? (
+                  <div style={{ width: "100%" }}>
+                    <EvidenceForm bookingId={b.id} phase="handoff" />
+                  </div>
+                ) : null}
+                {["checked_out", "overdue", "returned_pending_review"].includes(b.state) ? (
+                  <div style={{ width: "100%" }}>
+                    <EvidenceForm bookingId={b.id} phase="return" />
+                  </div>
+                ) : null}
               </div>
             );
           })}
