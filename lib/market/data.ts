@@ -1,5 +1,6 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { getWorld } from "@/lib/market/registry";
+import { rankListings, type SellerStats } from "@/lib/market/ranking";
 
 /**
  * Marketplace public reads. Server-only. Reads published listings and
@@ -136,7 +137,63 @@ export async function getPublishedListings(options: {
 
   const { data, error } = await q;
   if (error || !data) return [];
-  return (data as unknown as ListingRow[]).map(mapListing);
+  const listings = (data as unknown as ListingRow[]).map(mapListing);
+
+  // §21 ranking: order by seller quality, never by price. Stats are
+  // read with the admin client (bookings aren't anon-readable) but
+  // only aggregates ever leave this function.
+  if (listings.length > 1) {
+    try {
+      const stats = await getSellerStatsByOrg([
+        ...new Set(listings.map((l) => l.organizationId)),
+      ]);
+      return rankListings(listings, stats);
+    } catch {
+      return listings; // ranking is best-effort; never break browse
+    }
+  }
+  return listings;
+}
+
+async function getSellerStatsByOrg(
+  orgIds: string[],
+): Promise<Map<string, SellerStats>> {
+  const stats = new Map<string, SellerStats>();
+  if (orgIds.length === 0) return stats;
+  const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
+  const admin = createSupabaseAdminClient();
+
+  const [reviewsRes, bookingsRes] = await Promise.all([
+    admin.from("market_reviews").select("organization_id, rating").in("organization_id", orgIds).limit(2000),
+    admin
+      .from("market_bookings")
+      .select("organization_id, state")
+      .in("organization_id", orgIds)
+      .in("state", ["completed", "disputed"])
+      .limit(2000),
+  ]);
+
+  for (const id of orgIds) {
+    stats.set(id, { avgRating: null, reviewCount: 0, completedBookings: 0, disputes: 0 });
+  }
+  const ratingSums = new Map<string, number>();
+  for (const r of (reviewsRes.data ?? []) as { organization_id: string; rating: number }[]) {
+    const s = stats.get(r.organization_id);
+    if (!s) continue;
+    s.reviewCount += 1;
+    ratingSums.set(r.organization_id, (ratingSums.get(r.organization_id) ?? 0) + r.rating);
+  }
+  for (const [id, sum] of ratingSums) {
+    const s = stats.get(id)!;
+    s.avgRating = sum / s.reviewCount;
+  }
+  for (const b of (bookingsRes.data ?? []) as { organization_id: string; state: string }[]) {
+    const s = stats.get(b.organization_id);
+    if (!s) continue;
+    if (b.state === "completed") s.completedBookings += 1;
+    else s.disputes += 1;
+  }
+  return stats;
 }
 
 export async function getListingById(id: string): Promise<MarketListing | null> {
