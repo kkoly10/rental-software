@@ -500,6 +500,22 @@ a:focus-visible {
   color: #c33;
 }
 
+/* Screen-reader-only utility. Several components (LanguageSwitcher,
+ * form hints) emit <span class="sr-only"> for accessible labels — without
+ * this rule the text renders visibly (the "Language" word that cluttered
+ * the storefront nav was exactly this). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Layouts */
 .two-col {
   display: grid;

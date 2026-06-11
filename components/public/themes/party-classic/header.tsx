@@ -5,6 +5,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { getStorefrontDefaults } from "@/lib/verticals/storefront-defaults";
 import { getTranslator } from "@/lib/i18n/server";
 import { sanitizeHref } from "@/lib/utils/safe-href";
 import { getThemeSettings } from "@/lib/data/theme-settings";
@@ -17,15 +18,21 @@ function formatPhoneCompact(raw: string | null | undefined): string {
 }
 
 export async function PartyClassicHeader() {
-  const [brand, settings, orgCtx, contentSettings, theme, { locale, messages }] = await Promise.all([
+  const [brand, settings, orgCtx, contentSettings, theme, defaults, { locale, messages }] = await Promise.all([
     getBrandSettings(),
     getOrganizationSettings(),
     getOrgContext(),
     getContentSettings(),
     getThemeSettings(),
+    getStorefrontDefaults(),
     getTranslator(),
   ]);
-  const visibleNavLinks = contentSettings.navLinks.filter((l) => l.visible);
+  // The Contact CTA at the rail covers /contact — rendering the plain
+  // "Contact" nav link alongside it reads as a redundancy bug. Keep the
+  // operator's other visible links untouched.
+  const visibleNavLinks = contentSettings.navLinks.filter(
+    (l) => l.visible && l.key !== "contact"
+  );
   const isOperator = !!orgCtx;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const m = messages;
@@ -53,9 +60,10 @@ export async function PartyClassicHeader() {
             ) : (
               <>
                 <span className="st-logo-mark">{settings.businessName}</span>
-                {settings.serviceAreaLabel && (
-                  <span className="st-logo-tagline">Serving {settings.serviceAreaLabel}</span>
-                )}
+                {/* The vertical's short tagline ("Party rentals" / "Event
+                    rentals") — NOT the serviceAreaLabel, which is often a
+                    street address that truncates mid-word in the header. */}
+                <span className="st-logo-tagline">{defaults.taglineLabel}</span>
               </>
             )}
           </Link>
@@ -66,7 +74,7 @@ export async function PartyClassicHeader() {
                 {link.label}
               </Link>
             ))}
-            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
+            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} compact bare />
             {showPhone && (
               <a href={`tel:${settings.phone.replace(/\D/g, "")}`} className="st-nav-phone">
                 {phoneDisplay}

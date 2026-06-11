@@ -331,9 +331,10 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Header — editorial: business mark + small uppercase tagline left,
- * 4-link nav + "Inquire" text-link right. No sticky, no logo gradient
- * tile, no pill-shaped phone chip, no drop shadow.
+ * Header — editorial: wordmark + small uppercase vertical tagline left,
+ * nav links + compact EN selector + tel + Contact text-link right.
+ * Nav links never wrap; the wordmark + nav share the row with the
+ * tagline truncating before either the mark or the link cluster does.
  * ────────────────────────────────────────────────────────────────── */
 .st-header {
   background: var(--st-bg);
@@ -345,6 +346,7 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   justify-content: space-between;
   gap: 32px;
   padding: 22px 0;
+  flex-wrap: nowrap;
 }
 .st-logo {
   display: inline-flex;
@@ -352,6 +354,10 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   gap: 14px;
   color: var(--st-ink);
   text-decoration: none;
+  /* Lets the logo shrink so the right-side nav can keep its full width;
+   * the tagline (the inner ellipsis target) absorbs the squeeze. */
+  min-width: 0;
+  flex-shrink: 1;
 }
 .st-logo-img { max-height: 36px; width: auto; display: block; }
 .st-logo-mark {
@@ -360,7 +366,8 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   font-size: var(--st-text-26);
   letter-spacing: -0.025em;
   color: var(--st-ink);
-  /* No background, no border-radius, no shadow. The mark is the wordmark. */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .st-logo-tagline {
   font-family: var(--st-font-body);
@@ -372,12 +379,19 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 36ch;
+  /* Capped tight because the vertical labels are short ("Party rentals",
+   * "Event rentals") and we don't want the tagline pushing the mark
+   * around. The serviceAreaLabel-based tagline that overflowed previously
+   * is gone — header.tsx now emits defaults.taglineLabel, never the
+   * operator's street address. */
+  max-width: 16ch;
+  min-width: 0;
 }
 .st-nav-links {
   display: flex;
-  gap: 32px;
+  gap: 28px;
   align-items: center;
+  flex-shrink: 0;
 }
 .st-nav-links a {
   color: var(--st-ink);
@@ -388,21 +402,33 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   border-radius: 0;
   background: transparent;
   text-decoration: none;
+  white-space: nowrap;
   transition: color var(--st-duration-1) var(--st-ease);
 }
 .st-nav-links a:hover { color: var(--st-primary); background: transparent; }
 .st-nav-phone {
-  /* Plain text, NOT a pill. */
+  /* Plain text, NOT a pill. Tabular-nums so the digit row reads even,
+   * a 1px hairline divider to its left separates the tel from the nav
+   * link cluster, and font-feature-settings keeps the parentheses kerning. */
   color: var(--st-ink) !important;
   font-weight: 500 !important;
+  font-variant-numeric: tabular-nums;
   background: transparent !important;
   border-radius: 0 !important;
   display: inline-flex !important;
   align-items: center;
   gap: 6px;
-  padding: 0 !important;
+  padding-left: 24px !important;
+  padding-right: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-left: 8px;
+  border-left: 1px solid var(--st-line);
   font-size: var(--st-text-14);
+  white-space: nowrap;
+  text-decoration: none;
 }
+.st-nav-phone:hover { color: var(--st-primary) !important; }
 .st-nav-phone svg { display: none; }
 .st-nav-cta {
   font-family: var(--st-font-body);
