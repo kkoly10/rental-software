@@ -399,7 +399,7 @@ export function OnboardingForm() {
         <div
           role="status"
           className="badge info"
-          style={{ padding: "10px 14px", display: "block" }}
+          style={{ padding: "10px 14px", display: "block", whiteSpace: "normal", lineHeight: 1.5 }}
         >
           {f.resumeBanner}
         </div>

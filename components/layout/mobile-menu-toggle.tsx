@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import type { Locale } from "@/lib/i18n/config";
@@ -56,11 +57,69 @@ export function MobileMenuToggle({
   const [mounted, setMounted] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const close = useCallback(() => {
     setOpen(false);
     toggleRef.current?.focus();
   }, []);
+
+  /**
+   * Handles cross-page fragment navigation that next/link silently
+   * fails on. e.g. clicking "How It Works" (href="/#how-it-works")
+   * from /inventory navigates to / but leaves scrollY at 0 instead
+   * of scrolling to the anchor target. We detect that case, intercept
+   * the click, push the route, and then scroll to the target ID after
+   * the next paint.
+   */
+  const handleNavClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      const safe = sanitizeHref(href);
+      // Only handle our own /<pathname>#fragment shape. External URLs
+      // (mailto:, tel:, http://...) fall through to the browser default.
+      if (!safe.startsWith("/")) {
+        close();
+        return;
+      }
+      const hashIndex = safe.indexOf("#");
+      if (hashIndex < 0) {
+        // No fragment — Next.js native scroll behavior is fine.
+        close();
+        return;
+      }
+      const targetPath = safe.slice(0, hashIndex) || "/";
+      const targetHash = safe.slice(hashIndex);
+      if (targetPath === pathname) {
+        // Same-page anchor — native fragment scroll works.
+        close();
+        return;
+      }
+
+      // Cross-page anchor — push the route, then scroll to the fragment
+      // after the next paint cycle (router push is async; the target
+      // element won't exist until the new page renders).
+      e.preventDefault();
+      close();
+      router.push(safe);
+      // Two RAFs gives Next a beat to commit + paint. Falls back to
+      // location.hash on browsers that mis-handle smooth scrolling.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const id = targetHash.slice(1);
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          } else {
+            // The new page hasn't mounted yet. Set the hash so the
+            // browser handles it once the page lands.
+            window.location.hash = targetHash;
+          }
+        });
+      });
+    },
+    [pathname, router, close]
+  );
 
   // Close on Escape
   useEffect(() => {
@@ -165,7 +224,13 @@ export function MobileMenuToggle({
 
             <nav className="mobile-menu-nav">
               {links.map((link) => (
-                <Link key={link.key} href={sanitizeHref(link.href)} onClick={close}>{link.label}</Link>
+                <Link
+                  key={link.key}
+                  href={sanitizeHref(link.href)}
+                  onClick={(e) => handleNavClick(e, link.href)}
+                >
+                  {link.label}
+                </Link>
               ))}
             </nav>
 
