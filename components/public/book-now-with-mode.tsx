@@ -169,18 +169,13 @@ export function BookNowWithMode({
     perUnit && perUnit.minimumQuantity > 0 && units < perUnit.minimumQuantity;
 
   return (
-    <div style={{ marginTop: 20 }}>
+    <div className="st-pdp-booking">
       {perUnit && (
-        <div
-          className="order-card"
-          style={{ marginBottom: 16, padding: 16 }}
-        >
-          <label
-            style={{ display: "flex", flexDirection: "column", gap: 6 }}
-          >
-            <strong style={{ fontSize: 14 }}>
+        <div className="st-pdp-group">
+          <label>
+            <span className="st-eyebrow st-pdp-group-label">
               How many {perUnit.unitLabel}s?
-            </strong>
+            </span>
             <input
               type="number"
               min={perUnit.minimumQuantity || 1}
@@ -190,75 +185,29 @@ export function BookNowWithMode({
                 const n = parseInt(e.target.value, 10);
                 setUnits(Number.isFinite(n) && n > 0 ? n : 1);
               }}
-              style={{
-                padding: "8px 10px",
-                fontSize: 15,
-                border: "1px solid var(--border, #e5e7eb)",
-                borderRadius: 6,
-                maxWidth: 160,
-              }}
+              className="st-pdp-input"
               aria-describedby="units-help"
             />
-            <span
-              id="units-help"
-              className="muted"
-              style={{ fontSize: 13 }}
-            >
-              ${(perUnit.unitPriceCents / 100).toFixed(2)} per{" "}
-              {perUnit.unitLabel}
+            <span id="units-help" className="st-pdp-group-help">
+              ${(perUnit.unitPriceCents / 100).toFixed(2)} per {perUnit.unitLabel}
               {perUnit.minimumQuantity > 0 ? (
                 <> · {perUnit.minimumQuantity} minimum</>
               ) : null}
             </span>
           </label>
-          <div
-            style={{
-              marginTop: 12,
-              fontSize: 15,
-              fontWeight: 600,
-            }}
-          >
-            Subtotal: ${perUnitTotalDollars}
-          </div>
+          <div className="st-pdp-subtotal">Subtotal: ${perUnitTotalDollars}</div>
           {belowMinimum && (
-            <div
-              className="field-error"
-              role="alert"
-              style={{ marginTop: 8, fontSize: 13 }}
-            >
-              Minimum order is {perUnit.minimumQuantity} {perUnit.unitLabel}
-              s. Please add more to continue.
+            <div className="st-pdp-error" role="alert">
+              Minimum order is {perUnit.minimumQuantity} {perUnit.unitLabel}s. Please add more to continue.
             </div>
           )}
         </div>
       )}
 
       {hasVariants && (
-        <div
-          role="radiogroup"
-          aria-label="Options"
-          className="order-card"
-          style={{ marginBottom: 16, padding: 16 }}
-        >
-          <strong
-            style={{
-              display: "block",
-              fontSize: "0.78rem",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-              color: "var(--text-muted, #6b7280)",
-              marginBottom: 12,
-            }}
-          >
-            Options
-          </strong>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-              gap: 12,
-            }}
-          >
+        <div role="radiogroup" aria-label="Options" className="st-pdp-group">
+          <span className="st-eyebrow st-pdp-group-label">Options</span>
+          <div className="st-pdp-radio-grid">
             {variants!.map((variant) => {
               const isSelected = variant.id === selectedVariantId;
               return (
@@ -268,47 +217,23 @@ export function BookNowWithMode({
                   role="radio"
                   aria-checked={isSelected}
                   onClick={() => setSelectedVariantId(variant.id)}
-                  style={{
-                    border: isSelected
-                      ? "2px solid var(--primary, #2563eb)"
-                      : "1px solid var(--border, #e5e7eb)",
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    background: "#fff",
-                    padding: 0,
-                    cursor: "pointer",
-                    textAlign: "left",
-                    font: "inherit",
-                  }}
+                  className="st-pdp-variant"
                 >
                   <div
-                    style={{
-                      backgroundImage: variant.thumbnailUrl
-                        ? `url(${variant.thumbnailUrl})`
-                        : "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      aspectRatio: "1 / 1",
-                    }}
+                    className="st-pdp-variant-img"
+                    style={
+                      variant.thumbnailUrl
+                        ? { backgroundImage: `url(${variant.thumbnailUrl})` }
+                        : undefined
+                    }
                   />
-                  <div style={{ padding: "8px 10px" }}>
-                    <div
-                      style={{
-                        fontSize: "0.88rem",
-                        fontWeight: 600,
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {variant.label}
-                    </div>
+                  <div className="st-pdp-variant-label">
+                    <strong>{variant.label}</strong>
                     {variant.priceDeltaCents !== 0 && (
-                      <div
-                        className="muted"
-                        style={{ fontSize: "0.78rem", marginTop: 2 }}
-                      >
+                      <span className="delta">
                         {variant.priceDeltaCents > 0 ? "+" : "−"}$
                         {Math.abs(variant.priceDeltaCents / 100).toFixed(2)}
-                      </div>
+                      </span>
                     )}
                   </div>
                 </button>
@@ -316,47 +241,25 @@ export function BookNowWithMode({
             })}
           </div>
           {selectedVariant && selectedVariant.priceDeltaCents !== 0 && (
-            <div
-              className="muted"
-              style={{ marginTop: 12, fontSize: "0.82rem" }}
-            >
+            <span className="st-pdp-group-help">
               Selected: {selectedVariant.label} (
               {selectedVariant.priceDeltaCents > 0 ? "+" : "−"}$
               {Math.abs(selectedVariant.priceDeltaCents / 100).toFixed(2)})
-            </div>
+            </span>
           )}
         </div>
       )}
 
       {hasAddons && (
-        <div className="order-card" style={{ marginBottom: 16, padding: 16 }}>
-          <strong
-            style={{
-              display: "block",
-              fontSize: "0.78rem",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-              color: "var(--text-muted, #6b7280)",
-              marginBottom: 12,
-            }}
-          >
-            Add-ons
-          </strong>
-          <div style={{ display: "grid", gap: 8 }}>
+        <div className="st-pdp-group">
+          <span className="st-eyebrow st-pdp-group-label">Add-ons</span>
+          <div className="st-pdp-addon-list">
             {addOns!.map((a) => {
               const qty = addonQty[a.addonProductId] ?? 0;
               const checked = qty > 0;
               const cap = a.maxQuantity ?? 99;
               return (
-                <div
-                  key={a.addonProductId}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "6px 0",
-                  }}
-                >
+                <div key={a.addonProductId} className="st-pdp-addon">
                   <input
                     type="checkbox"
                     checked={checked}
@@ -371,19 +274,12 @@ export function BookNowWithMode({
                     }
                     aria-label={a.name}
                   />
-                  <div style={{ flex: 1, fontSize: 14 }}>
-                    <div style={{ fontWeight: 600 }}>
+                  <div className="st-pdp-addon-body">
+                    <div className="st-pdp-addon-name">
                       {a.name}
-                      {a.isRequired && (
-                        <span
-                          className="muted"
-                          style={{ fontWeight: 400, marginLeft: 6, fontSize: 12 }}
-                        >
-                          required
-                        </span>
-                      )}
+                      {a.isRequired && <span className="required">required</span>}
                     </div>
-                    <div className="muted" style={{ fontSize: 12 }}>
+                    <div className="st-pdp-addon-price">
                       ${(a.basePriceCents / 100).toFixed(2)} each
                     </div>
                   </div>
@@ -404,13 +300,7 @@ export function BookNowWithMode({
                           [a.addonProductId]: clamped,
                         }));
                       }}
-                      style={{
-                        width: 60,
-                        padding: "4px 8px",
-                        border: "1px solid var(--border, #e5e7eb)",
-                        borderRadius: 6,
-                        fontSize: 14,
-                      }}
+                      className="st-pdp-input st-pdp-input-narrow"
                       aria-label={`Quantity for ${a.name}`}
                     />
                   )}
@@ -419,27 +309,15 @@ export function BookNowWithMode({
             })}
           </div>
           {addonsSubtotalCents > 0 && (
-            <div
-              className="muted"
-              style={{ marginTop: 10, fontSize: "0.82rem" }}
-            >
+            <span className="st-pdp-group-help">
               Add-ons subtotal: ${(addonsSubtotalCents / 100).toFixed(2)}
-            </div>
+            </span>
           )}
         </div>
       )}
 
       {isDualMode && (
-        <div
-          role="radiogroup"
-          aria-label={labels.availableModesLabel}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
+        <div role="radiogroup" aria-label={labels.availableModesLabel} className="st-pdp-mode-grid">
           <ModeRadio
             value="dry"
             label={labels.dryLabel}
@@ -457,24 +335,23 @@ export function BookNowWithMode({
         </div>
       )}
 
-      <div className="price-row">
+      <div className="st-pdp-cta-row">
         {belowMinimum ? (
           <button
             type="button"
-            className="primary-btn"
+            className="st-pdp-primary"
             disabled
             aria-disabled="true"
-            style={{ opacity: 0.5, cursor: "not-allowed" }}
           >
             {cta}
           </button>
         ) : (
-          <Link href={checkoutHref} className="primary-btn">
+          <Link href={checkoutHref} className="st-pdp-primary">
             {cta}
           </Link>
         )}
-        <Link href={backHref} className="secondary-btn">
-          {back}
+        <Link href={backHref} className="st-text-link" style={{ alignSelf: "flex-start" }}>
+          ← {back}
         </Link>
       </div>
     </div>
@@ -495,31 +372,16 @@ function ModeRadio({
   onSelect: () => void;
 }) {
   return (
-    <label
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        padding: 12,
-        border: selected ? "2px solid var(--primary)" : "1px solid var(--border)",
-        margin: selected ? 0 : 1,
-        borderRadius: 8,
-        cursor: "pointer",
-        background: selected ? "var(--primary-bg)" : "transparent",
-      }}
-    >
+    <label className="st-pdp-mode">
       <input
         type="radio"
         name="storefront_mode"
         value={value}
         checked={selected}
         onChange={onSelect}
-        style={{ marginBottom: 4 }}
       />
-      <strong style={{ fontSize: 14 }}>{label}</strong>
-      <span className="muted" style={{ fontSize: 13 }}>
-        {price}
-      </span>
+      <strong>{label}</strong>
+      <span className="st-pdp-mode-price">{price}</span>
     </label>
   );
 }
