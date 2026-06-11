@@ -81,4 +81,21 @@ export const tablesAndChairsVertical: VerticalConfig = {
     crew: "/home/crew-loading-trailer.jpg",
     inventory: "/home/inventory-warehouse.jpg",
   },
+  storefrontDefaults: {
+    heroImagePath: "/storefront-defaults/hero/tables-and-chairs.jpg",
+    headlineLead: "Chairs, tables, and tabletop",
+    headlineItalic: "styled for the day.",
+    lede: "Bring your vision to the table. Curated chairs, table styles, and linens across {area}, delivered, styled, and broken down by our crew.",
+    taglineLabel: "Event rentals",
+    trustBadges: [
+      { kicker: "Curated", statement: "Hand-selected silhouettes and linens — never warehouse-grade banquet stock." },
+      { kicker: "Counted", statement: "Inventory tied to your guest count; we deliver exactly what's needed, no fillers." },
+      { kicker: "On time", statement: "Setup completed before guests arrive across {area}." },
+    ],
+    vibeTiles: [
+      { kicker: "For the couple", label: "Weddings", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory?vibe=weddings" },
+      { kicker: "For the family", label: "Backyard dinners", imagePath: "/storefront-defaults/hero/tents.jpg", href: "/inventory?vibe=backyard" },
+      { kicker: "For the company", label: "Corporate dinners", imagePath: "/storefront-defaults/hero/dance-floors.jpg", href: "/inventory?vibe=corporate" },
+    ],
+  },
 };

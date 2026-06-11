@@ -1,197 +1,117 @@
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { getThemeSettings } from "@/lib/data/theme-settings";
-import { getReadyAssetCount } from "@/lib/data/storefront-counts";
-import { getCategoryGridItems } from "@/lib/data/category-grid";
+import { getStorefrontDefaults, withArea } from "@/lib/verticals/storefront-defaults";
 import { getTranslator } from "@/lib/i18n/server";
 
-// Bouncy castle photo at hero resolution. Re-uses the same Unsplash
-// photo id the storefront's "bounce" product fallback already uses
-// (lib/media/storefront-fallback-images.ts) so we keep a single source
-// of party imagery. The previous default (1607113284254-1ab1f6b48e21)
-// was 404 on Unsplash, leaving every tenant without a custom hero
-// image with a broken-image placeholder in the hero panel.
-const DEFAULT_HERO_IMAGE =
-  "https://images.unsplash.com/photo-1578430554430-1c59f56bd817?auto=format&fit=crop&w=1400&q=85";
-
-// Unsplash photo ids that used to be defaults but have since been removed
-// from Unsplash (HTTP 404). Tenants provisioned while those were the
-// defaults have the dead URL persisted in organizations.settings
-// .hero_image_url, so swapping the constant above is not enough — we
-// also need to ignore the dead URL at render time and fall through to
-// DEFAULT_HERO_IMAGE. Match by photo id so we catch query-string
-// variants too. Drop an entry here once a follow-up data migration
-// clears the corresponding hero_image_url rows.
-const DEAD_HERO_PHOTO_IDS = ["1607113284254-1ab1f6b48e21"] as const;
-
-function isDeadHeroUrl(url: string): boolean {
-  return DEAD_HERO_PHOTO_IDS.some((id) => url.includes(id));
-}
-
 /**
- * Split the headline into a leading clause + the final 1-2 words for the
- * italic accent. e.g. "Saturday's covered. Promise." → ["Saturday's covered.", "Promise."]
- * Falls back to no accent if the headline is a single word.
+ * Editorial hero — asymmetric grid (5fr text / 7fr photo) on desktop,
+ * stacked on mobile. One specific headline (vertical-default unless
+ * the operator overrides), one lede, a flat hairline availability bar,
+ * one underlined text-link CTA. NO carousel, NO stats row, NO floating
+ * card overlay, NO orange gradient anywhere.
+ *
+ * Per the spec at docs/design/storefront-editorial.md §5.2.
  */
-function splitHeadlineForAccent(headline: string): { lead: string; accent: string } {
-  const trimmed = headline.trim();
-  if (!trimmed) return { lead: "", accent: "" };
-  const parts = trimmed.split(/\s+/);
-  if (parts.length < 2) return { lead: trimmed, accent: "" };
-  // Take the last word; if it's <= 4 chars and preceded by punctuation we
-  // include the last two words to give the accent some weight.
-  const last = parts[parts.length - 1];
-  if (last.length <= 4 && parts.length >= 3 && /[.,;!?]$/.test(parts[parts.length - 2])) {
-    return {
-      lead: parts.slice(0, -2).join(" "),
-      accent: parts.slice(-2).join(" "),
-    };
-  }
-  return {
-    lead: parts.slice(0, -1).join(" "),
-    accent: last,
-  };
-}
-
 export async function PartyClassicHero() {
-  const [settings, content, theme, readyCount, categories, { messages: m, t }] = await Promise.all([
+  const [settings, content, theme, defaults, { messages: m }] = await Promise.all([
     getOrganizationSettings(),
     getContentSettings(),
     getThemeSettings(),
-    getReadyAssetCount(),
-    getCategoryGridItems(),
+    getStorefrontDefaults(),
     getTranslator(),
   ]);
 
-  // Derive the cheapest real "from" price across categories — hide the
-  // hero price pill entirely when we have no real price (rather than
-  // showing a fake "$145/day" that doesn't match any actual product).
-  // getCategoryGridItems() is cache()'d so the category-tiles section
-  // below shares this fetch — no extra round-trip.
-  const realPrices = categories
-    .map((c) => c.startingPrice)
-    .filter((p): p is number => typeof p === "number" && p > 0);
-  const fromPrice = realPrices.length > 0 ? Math.min(...realPrices) : null;
+  // Headline + italic accent. Operator override (settings.heroHeadline)
+  // wins entirely (renders as a single non-italic phrase). Otherwise we
+  // split into a lead + italic accent per vertical defaults.
+  const operatorHeadline = settings.heroHeadline?.trim() ?? "";
+  const headlineLead = operatorHeadline || defaults.headlineLead;
+  const headlineItalic = operatorHeadline ? "" : defaults.headlineItalic;
 
-  // Social-proof inline row — only surface a star/rating block when the
-  // operator actually has testimonials we can derive it from. New operators
-  // see insurance + same-day-quote bullets without the fake "4.9 / 500+"
-  // claim. avgRating clamps to 0–5 and rounds to 1 decimal.
+  const lede =
+    settings.websiteMessage?.trim() ||
+    withArea(defaults.lede, settings.serviceAreaLabel);
+
+  const heroImage = settings.heroImageUrl?.trim() || defaults.heroImagePath;
+
+  // Rating chip surfaces only with credible signal — same gate as before.
   const testimonialCount = content.testimonials.length;
   const ratingSum = content.testimonials.reduce(
     (sum, t) => sum + (typeof t.rating === "number" ? Math.max(0, Math.min(5, t.rating)) : 0),
     0
   );
   const avgRating = testimonialCount > 0 ? ratingSum / testimonialCount : 0;
-  // Need at least 3 ratings averaging ≥4 to surface a star block — anything
-  // less reads as fabricated and hurts trust more than helps it.
   const showRating = testimonialCount >= 3 && avgRating >= 4;
-  const showInsured = content.trustBadges.some((b) =>
-    /insur|liab/i.test(b.title) || /insur|liab/i.test(b.description)
-  );
 
-  const headlineRaw = settings.heroHeadline || m.storefront.hero.defaultHeadline;
-  const { lead, accent } = splitHeadlineForAccent(headlineRaw);
-  const storedHero = settings.heroImageUrl?.trim() ?? "";
-  const heroImage =
-    storedHero && !isDeadHeroUrl(storedHero) ? storedHero : DEFAULT_HERO_IMAGE;
-  const showLiveChip = theme.availabilityChipVisible && readyCount > 0;
   const showSecondaryCta = theme.ctaSecondary === "request_quote";
 
   return (
     <section className="st-container st-hero">
-      <div className="st-hero-text">
-        {showLiveChip && (
-          <span className="st-live-chip">
-            {t(m.storefront.hero.liveChip, { count: readyCount })}
+      <div className="st-hero-copy">
+        {showRating && (
+          <span className="st-hero-rating-chip">
+            <span className="st-hero-rating-chip-star">★</span>
+            <strong>{avgRating.toFixed(1)}</strong>
+            <span>· {testimonialCount}+ reviews</span>
           </span>
         )}
+
         <h1 className="st-h1">
-          {accent ? (
+          {headlineLead}
+          {headlineItalic && (
             <>
-              {lead} <span className="st-h1-accent">{accent}</span>
+              {" "}
+              <em>{headlineItalic}</em>
             </>
-          ) : (
-            headlineRaw
           )}
         </h1>
-        <p className="st-hero-sub">
-          {settings.websiteMessage || m.storefront.hero.defaultMessage}
-        </p>
 
-        <form action="/inventory" className="st-av-card">
-          <div className="st-av-row">
-            <label className="st-av-field">
-              <span className="st-av-field-label">{m.storefront.hero.eventDate}</span>
-              <input name="date" type="date" />
-            </label>
-            <label className="st-av-field">
-              <span className="st-av-field-label">{m.storefront.hero.deliveryZip}</span>
-              <input name="zip" type="text" placeholder={m.storefront.hero.zipPlaceholder} inputMode="numeric" />
-            </label>
-          </div>
-          <div className="st-av-actions">
-            <button type="submit" className="st-av-go">
-              {m.storefront.hero.checkOpenCta}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M5 12h14M13 5l7 7-7 7" />
-              </svg>
-            </button>
-            {showSecondaryCta && (
-              <a href="/contact" className="st-av-quote">
-                {m.storefront.hero.requestQuoteCta}
-              </a>
-            )}
-          </div>
+        <p className="st-lede">{lede}</p>
+
+        <form action="/inventory" className="st-avail" aria-label="Check availability">
+          <label className="st-avail-field">
+            <span className="st-eyebrow">{m.storefront.hero.eventDate}</span>
+            <input name="date" type="date" className="st-avail-input" />
+          </label>
+          <label className="st-avail-field">
+            <span className="st-eyebrow">{m.storefront.hero.deliveryZip}</span>
+            <input
+              name="zip"
+              type="text"
+              inputMode="numeric"
+              placeholder={m.storefront.hero.zipPlaceholder}
+              className="st-avail-input"
+            />
+          </label>
+          <button type="submit" className="st-avail-go">
+            {m.storefront.hero.checkAvailability}
+          </button>
         </form>
 
-        <div className="st-social-row">
-          {showRating && (
-            <>
-              <span className="st-stars">
-                <span className="st-stars-glyphs">
-                  {"★".repeat(Math.round(avgRating))}
-                  {"☆".repeat(5 - Math.round(avgRating))}
-                </span>
-                <strong>{avgRating.toFixed(1)}</strong>
-                <span>· {testimonialCount}+ reviews</span>
-              </span>
-              <span className="st-dot"></span>
-            </>
+        <div className="st-hero-cta-row">
+          <a href="#catalog" className="st-text-link">
+            Or browse the full catalog →
+          </a>
+          {showSecondaryCta && (
+            <a href="/contact" className="st-text-link">
+              {m.storefront.hero.requestQuoteCta} →
+            </a>
           )}
-          {showInsured && (
-            <>
-              <span>{m.storefront.hero.insuredInline}</span>
-              <span className="st-dot"></span>
-            </>
-          )}
-          <span>{m.storefront.hero.sameDayQuotes}</span>
         </div>
       </div>
 
-      <div className="st-hero-visual">
+      <div className="st-hero-photo">
+        {/* Inline <img> not next/image — these are vendored, ≤500 KB
+            files served from /public; next/image's optimizer adds
+            cost we don't need for a single hero per page. */}
         <img
           src={heroImage}
-          alt={`${settings.businessName} event setup`}
-          className="st-hero-photo"
-          width="1400"
-          height="1120"
+          alt={`${settings.businessName || "Korent"} event setup`}
+          width={1600}
+          height={2000}
           fetchPriority="high"
         />
-        {fromPrice !== null && (
-          <div className="st-price-pill">
-            <span className="st-price-pill-from">{m.storefront.hero.priceFromLabel}</span>
-            <span>${fromPrice}/day</span>
-          </div>
-        )}
-        <div className="st-delivery-pill">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7" />
-            <circle cx="5.5" cy="18.5" r="2.5" />
-            <circle cx="18.5" cy="18.5" r="2.5" />
-          </svg>
-          {m.storefront.hero.deliveryIncludedLabel}
-        </div>
       </div>
     </section>
   );

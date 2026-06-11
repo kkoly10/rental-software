@@ -86,4 +86,21 @@ export const concessionsVertical: VerticalConfig = {
     crew: "/home/crew-loading-trailer.jpg",
     inventory: "/home/inventory-warehouse.jpg",
   },
+  storefrontDefaults: {
+    heroImagePath: "/storefront-defaults/hero/concessions.jpg",
+    headlineLead: "Popcorn, cotton candy, and shaved ice",
+    headlineItalic: "for the crowd.",
+    lede: "Cart rentals delivered, stocked, and attended across {area}. Choose self-serve or staffed; both with proper food-handling permits in place.",
+    taglineLabel: "Party rentals",
+    trustBadges: [
+      { kicker: "Permitted", statement: "Local food-handling permits maintained for every staffed event we run." },
+      { kicker: "Stocked", statement: "Carts arrive pre-stocked for your guest count — no last-minute supply runs." },
+      { kicker: "On time", statement: "Setup completed at least 30 minutes before doors across {area}." },
+    ],
+    vibeTiles: [
+      { kicker: "For the school", label: "Field-day events", imagePath: "/storefront-defaults/hero/concessions.jpg", href: "/inventory?vibe=school" },
+      { kicker: "For the brand", label: "Activations", imagePath: "/storefront-defaults/hero/photo-booths.jpg", href: "/inventory?vibe=corporate" },
+      { kicker: "For the celebration", label: "Backyard parties", imagePath: "/storefront-defaults/hero/inflatable.jpg", href: "/inventory?vibe=parties" },
+    ],
+  },
 };

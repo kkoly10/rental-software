@@ -82,4 +82,21 @@ export const danceFloorsVertical: VerticalConfig = {
     crew: "/home/crew-loading-trailer.jpg",
     inventory: "/home/inventory-warehouse.jpg",
   },
+  storefrontDefaults: {
+    heroImagePath: "/storefront-defaults/hero/dance-floors.jpg",
+    headlineLead: "Dance floors",
+    headlineItalic: "built for the night.",
+    lede: "Parquet, black-and-white, and LED dance floors with crew setup and breakdown across {area}. Sized to your guest count, leveled to your surface.",
+    taglineLabel: "Event rentals",
+    trustBadges: [
+      { kicker: "Leveled", statement: "Floors leveled and locked for safety on grass, gravel, or hardscape." },
+      { kicker: "On time", statement: "Crews arrive in the install window, set up before the first guest arrives." },
+      { kicker: "Pairs well", statement: "Bundle with tents and tabletop for one delivery, one crew, one invoice." },
+    ],
+    vibeTiles: [
+      { kicker: "For the couple", label: "Weddings", imagePath: "/storefront-defaults/hero/dance-floors.jpg", href: "/inventory?vibe=weddings" },
+      { kicker: "For the company", label: "Corporate galas", imagePath: "/storefront-defaults/hero/tents.jpg", href: "/inventory?vibe=corporate" },
+      { kicker: "For the milestone", label: "Anniversary parties", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory?vibe=milestone" },
+    ],
+  },
 };
