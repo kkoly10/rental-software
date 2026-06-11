@@ -19,6 +19,7 @@ import {
   SellerCancelButton,
 } from "@/components/market/cancel-buttons";
 import { GoLiveChecklist } from "@/components/market/go-live-checklist";
+import { approveExtension, declineExtension } from "@/lib/market/extension-actions";
 
 /**
  * Seller Hub panels — the single source of truth for the seller
@@ -78,6 +79,17 @@ export async function SellerHubPanels() {
   let products: Array<{ id: string; name: string }> = [];
   let requests: RequestRow[] = [];
   let sellerFollowedUp = new Set<string>();
+  let extensionRequests: Array<{
+    id: string;
+    booking_id: string;
+    requested_ends_at: string;
+    extension_days: number;
+    subtotal_cents: number;
+    tax_cents: number;
+    payout_cents: number;
+    expires_at: string;
+    market_bookings: { market_listings: { title: string } | null } | null;
+  }> = [];
 
   let connectReady = false;
   if (ctx) {
@@ -132,6 +144,16 @@ export async function SellerHubPanels() {
     products = (productsRes.data as Array<{ id: string; name: string }> | null) ?? [];
     const requestsRes = await requestsPromise;
     requests = (requestsRes.data as unknown as RequestRow[] | null) ?? [];
+    const { data: extRows } = await supabase
+      .from("market_extension_requests")
+      .select(
+        "id, booking_id, requested_ends_at, extension_days, subtotal_cents, tax_cents, payout_cents, expires_at, market_bookings ( market_listings ( title ) )",
+      )
+      .eq("state", "pending")
+      .order("expires_at", { ascending: true })
+      .limit(20);
+    extensionRequests = (extRows as unknown as typeof extensionRequests) ?? [];
+
     const completedIds = requests.filter((r) => r.state === "completed").map((r) => r.id);
     if (completedIds.length > 0) {
       const { data: fu } = await supabase
@@ -262,6 +284,50 @@ export async function SellerHubPanels() {
               ))}
             </div>
           )}
+
+          {extensionRequests.length > 0 ? (
+            <>
+              <div className="section-header" style={{ marginTop: 16 }}>
+                <div>
+                  <div className="kicker">Extension requests</div>
+                </div>
+              </div>
+              <div className="list">
+                {extensionRequests.map((e) => (
+                  <article key={e.id} className="order-card" style={{ background: "#fef3e2" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <div>
+                        <strong>{e.market_bookings?.market_listings?.title ?? "Listing"}</strong>
+                        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                          +{e.extension_days} day{e.extension_days === 1 ? "" : "s"} · renter pays $
+                          {((e.subtotal_cents + e.tax_cents) / 100).toFixed(2)} · your payout +$
+                          {(e.payout_cents / 100).toFixed(2)} · respond by{" "}
+                          {new Date(e.expires_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Approving charges the renter's saved card immediately and moves the return date.
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <form action={approveExtension}>
+                          <input type="hidden" name="request_id" value={e.id} />
+                          <button type="submit" className="primary-btn" style={{ fontSize: 13 }}>
+                            Approve &amp; charge
+                          </button>
+                        </form>
+                        <form action={declineExtension}>
+                          <input type="hidden" name="request_id" value={e.id} />
+                          <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                            Decline
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : null}
 
           {activeBookings.length > 0 ? (
             <>

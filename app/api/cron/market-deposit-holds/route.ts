@@ -257,7 +257,18 @@ export async function GET(request: NextRequest) {
     .eq("state", "overdue")
     .limit(50);
 
+  // Roadmap item 4: a pending extension request suppresses late-fee
+  // accrual (Turo: an approved extension retroactively un-lates the
+  // renter — charging fees mid-negotiation guarantees disputes).
+  const { data: pendingExt } = await admin
+    .from("market_extension_requests")
+    .select("booking_id")
+    .eq("state", "pending")
+    .limit(500);
+  const extPending = new Set((pendingExt ?? []).map((e) => e.booking_id));
+
   for (const b of overdueBookings ?? []) {
+    if (extPending.has(b.id)) continue;
     const daysNow = lateDaysStarted(new Date(b.ends_at), now);
     if (daysNow > b.late_days_charged && b.stripe_customer_id && b.stripe_payment_method_id) {
       const targetTotal = computeLateFeeCents({

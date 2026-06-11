@@ -102,7 +102,7 @@ experience we have.
 - [x] Morning-of-return email
 - [x] Grace-expiry nudge (aligned with the 2h grace before `overdue`)
 - [x] Sent-flags on bookings so reminders are exactly-once (`reminder_*_sent_at`)
-- [ ] Extension approvals reschedule the return reminder (see §4)
+- [x] Extension approvals reschedule the return reminder (see §4)
 - [ ] ~ SMS channel for the time-critical nudges (post-launch)
 
 ## 4. Extension requests (master plan §18/§19)
@@ -133,13 +133,13 @@ and a dispute.
   re-auth cron already manages hold freshness.
 
 **Checklist:**
-- [ ] `market_extension_requests` table (booking, new end, price snapshot, state) + migration
-- [ ] Renter request UI on active rentals (price preview)
-- [ ] Seller approve/decline in Hub + 12h auto-lapse (cron)
-- [ ] No-conflict auto-approve path for instant-book listings
-- [ ] Off-session charge at approval (idempotency key per request)
-- [ ] Late-fee suppression while pending; retroactive un-late on approval
-- [ ] Emails: requested (→seller), approved/declined (→renter)
+- [x] `market_extension_requests` table (booking, new end, price snapshot, state) + migration
+- [x] Renter request UI on active rentals (price preview)
+- [x] Seller approve/decline in Hub + 12h auto-lapse (cron)
+- [x] No-conflict auto-approve path for instant-book listings
+- [x] Off-session charge at approval (idempotency key per request)
+- [x] Late-fee suppression while pending; retroactive un-late on approval
+- [x] Emails: requested (→seller), approved/declined (→renter)
 
 ## 5. Same-seller multi-item bookings (master plan §13)
 
@@ -205,3 +205,10 @@ not parity.
   weekly listing fields added end-to-end), reminder cron (pickup
   day-before / return morning-of / grace nudge, exactly-once flags,
   migration applied to prod).
+- **2026-06-11 — Item 4 (extensions):** market_extension_requests
+  (migration applied to prod), renter "Keep it longer" form with live
+  estimate, Hub approve-&-charge / decline panel, instant-book
+  auto-approve with conflict check, off-session destination charge at
+  approval (idempotent), late-fee suppression while pending +
+  retroactive un-late, return reminders re-armed on the new end date,
+  12h lapse processing in the reminders cron, 4 new email kinds.

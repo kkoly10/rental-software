@@ -12,6 +12,7 @@ import { DisputeForm } from "@/components/market/dispute-form";
 import { ReviewForm } from "@/components/market/review-form";
 import { FollowupForm } from "@/components/market/followup-form";
 import { categoryIcon } from "@/lib/market/icons";
+import { ExtensionForm } from "@/components/market/extension-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My rentals" };
@@ -26,11 +27,13 @@ type BookingRow = {
   tax_cents: number;
   deposit_cents: number;
   created_at: string;
+  daily_price_cents: number;
   market_listings: {
     title: string;
     photo_url: string | null;
     world_slug: string | null;
     category_slug: string | null;
+    instant_book: boolean | null;
   } | null;
 };
 
@@ -95,6 +98,10 @@ export default async function MyRentalsPage({
   let bookings: BookingRow[] = [];
   let signedIn = false;
   let followedUp = new Set<string>();
+  const pendingExtensions = new Map<
+    string,
+    { booking_id: string; requested_ends_at: string; subtotal_cents: number; tax_cents: number }
+  >();
 
   if (hasSupabaseEnv()) {
     const supabase = await createSupabaseServerClient();
@@ -106,12 +113,23 @@ export default async function MyRentalsPage({
       const { data } = await supabase
         .from("market_bookings")
         .select(
-          "id, state, starts_at, ends_at, quantity, subtotal_cents, tax_cents, deposit_cents, created_at, market_listings ( title, photo_url, world_slug, category_slug )",
+          "id, state, starts_at, ends_at, quantity, subtotal_cents, tax_cents, deposit_cents, daily_price_cents, created_at, market_listings ( title, photo_url, world_slug, category_slug, instant_book )",
         )
         .eq("renter_profile_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
       bookings = (data as unknown as BookingRow[] | null) ?? [];
+      const activeIds = bookings
+        .filter((b) => ["checked_out", "overdue"].includes(b.state))
+        .map((b) => b.id);
+      if (activeIds.length > 0) {
+        const { data: ext } = await supabase
+          .from("market_extension_requests")
+          .select("booking_id, requested_ends_at, subtotal_cents, tax_cents")
+          .eq("state", "pending")
+          .in("booking_id", activeIds);
+        for (const e of ext ?? []) pendingExtensions.set(e.booking_id, e);
+      }
       const completedIds = bookings.filter((b) => b.state === "completed").map((b) => b.id);
       if (completedIds.length > 0) {
         const { data: fu } = await supabase
@@ -227,6 +245,30 @@ export default async function MyRentalsPage({
                 {b.state === "ready_for_handoff" || b.state === "checked_out" ? (
                   <div style={{ width: "100%" }}>
                     <EvidenceForm bookingId={b.id} phase="handoff" />
+                  </div>
+                ) : null}
+                {["checked_out", "overdue"].includes(b.state) ? (
+                  <div style={{ width: "100%" }}>
+                    {pendingExtensions.has(b.id) ? (
+                      <p className="mk-msg" style={{ color: "var(--mk-amber)" }}>
+                        ⏳ Extension requested until{" "}
+                        {new Date(pendingExtensions.get(b.id)!.requested_ends_at).toLocaleDateString()} ($
+                        {(
+                          (pendingExtensions.get(b.id)!.subtotal_cents +
+                            pendingExtensions.get(b.id)!.tax_cents) /
+                          100
+                        ).toFixed(2)}{" "}
+                        incl. tax) — the seller has 12 hours to respond. No late fees accrue while it's pending.
+                      </p>
+                    ) : (
+                      <ExtensionForm
+                        bookingId={b.id}
+                        endsAt={b.ends_at}
+                        dailyPriceCents={b.daily_price_cents}
+                        quantity={b.quantity}
+                        instantBook={Boolean(b.market_listings?.instant_book)}
+                      />
+                    )}
                   </div>
                 ) : null}
                 {["checked_out", "overdue", "returned_pending_review"].includes(b.state) ? (
