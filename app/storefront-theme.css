@@ -147,6 +147,15 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   letter-spacing: -0.02em;
   color: var(--st-ink);
 }
+/* The full-bleed hero overrides the body-scoped ink color above with
+ * white because text sits on top of a photograph with a dark scrim.
+ * Specificity has to beat the body-rule's (0,2,2) so we anchor to
+ * .st-shell as well, lifting this to (0,3,2). Without this, the H1
+ * inherits --st-ink and disappears against the dark wash. */
+.st-shell .st-hero .st-h1,
+.st-shell .st-hero .st-lede {
+  color: #fff;
+}
 .st-shell { min-height: 100vh; }
 .st-shell * { box-sizing: border-box; }
 .st-shell a { color: inherit; text-decoration: none; }
