@@ -180,7 +180,7 @@
   padding: 64px 0 58px;
 }
 .mk-hero-grid {
-  display: grid; grid-template-columns: 1.25fr 1fr; gap: 56px; align-items: center;
+  display: grid; grid-template-columns: 1.25fr 1fr; gap: 56px; align-items: start;
 }
 .mk-hero h1 {
   font-size: clamp(32px, 3.4vw, 52px); line-height: 1.08; letter-spacing: -1.4px;
@@ -196,7 +196,7 @@
 .mk-search.lg button { padding: 14px 26px; font-size: 16px; }
 .mk-chiplabel { font-size: 12px; font-weight: 700; color: var(--mk-ink-soft); align-self: center; }
 
-.mk-hero-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.mk-hero-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 6px; }
 .mk-hero-tile {
   background: var(--mk-card); border: 1px solid var(--mk-line); border-radius: 18px;
   padding: 26px 18px 22px; text-decoration: none; color: var(--mk-ink); text-align: center;
@@ -253,3 +253,8 @@
   .mk-sellerband-cta { justify-self: start; }
   .mk-section { padding-top: 32px; padding-bottom: 32px; }
 }
+
+/* Nav: search stays centered-left, the link cluster pins to the right
+   edge so wide screens don't end mid-viewport. */
+.mk-navlinks { margin-left: auto; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+@media (max-width: 760px) { .mk-navlinks { margin-left: 0; } }
