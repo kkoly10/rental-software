@@ -146,8 +146,9 @@ function wrap(body: string, cta?: Cta): string {
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:1px solid #f0e4d8;overflow:hidden;">
         <tr>
           <td style="padding:22px 32px;border-bottom:1px solid #f0e4d8;">
-            <span style="font-size:20px;font-weight:800;color:#2d1f14;">korent<span style="color:#e8590c;">.</span></span>
-            <span style="font-size:12px;font-weight:600;color:#8a7565;letter-spacing:0.06em;text-transform:uppercase;margin-left:6px;">marketplace</span>
+            <img src="https://korent.app/icon-192x192.png" width="28" height="28" alt="" style="vertical-align:middle;border-radius:8px;margin-right:8px;" />
+            <span style="font-size:20px;font-weight:800;color:#2d1f14;vertical-align:middle;">korent<span style="color:#e8590c;">.</span></span>
+            <span style="font-size:12px;font-weight:600;color:#8a7565;letter-spacing:0.06em;text-transform:uppercase;margin-left:6px;vertical-align:middle;">marketplace</span>
           </td>
         </tr>
         <tr>
