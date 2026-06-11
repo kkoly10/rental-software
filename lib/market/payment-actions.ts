@@ -137,7 +137,7 @@ export async function confirmPaidBooking(input: {
 
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, hold_id, deposit_cents")
+    .select("id, state, hold_id, deposit_cents, listing_id, renter_profile_id")
     .eq("id", input.bookingId)
     .maybeSingle();
   if (!booking) return "skipped";
@@ -190,6 +190,18 @@ export async function confirmPaidBooking(input: {
     actor: "system",
     payload: { payment_intent_id: input.paymentIntentId },
   });
+
+  // §24: confirmation opens the coordination phase on the thread.
+  try {
+    const { openCoordinationPhase } = await import("@/lib/market/message-actions");
+    await openCoordinationPhase({
+      listingId: booking.listing_id,
+      renterProfileId: booking.renter_profile_id,
+      bookingId: booking.id,
+    });
+  } catch {
+    // Phase upgrade is best-effort; messaging still works in inquiry mode.
+  }
 
   return "confirmed";
 }

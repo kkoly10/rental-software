@@ -9,6 +9,7 @@ import {
 } from "@/lib/market/registry";
 import { logDemandEvent } from "@/lib/market/actions";
 import { BookingRequestForm } from "@/components/market/booking-request-form";
+import { MessageForm } from "@/components/market/message-form";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -163,6 +164,12 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
                 ⏱️ Sellers respond within 24 hours or your request auto-cancels
                 and you pay nothing.
               </p>
+              {signedIn ? (
+                <>
+                  <div style={{ borderTop: "1px dashed var(--mk-line)", marginTop: 14, paddingTop: 4 }} />
+                  <MessageForm listingId={listing.id} placeholder="💬 Message the seller…" />
+                </>
+              ) : null}
             </>
           )}
         </div>

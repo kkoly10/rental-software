@@ -42,6 +42,9 @@ export default function MarketLayout({ children }: { children: React.ReactNode }
         <Link href="/market/rentals" className="mk-metro" style={{ textDecoration: "none" }}>
           My rentals
         </Link>
+        <Link href="/market/messages" className="mk-metro" style={{ textDecoration: "none" }}>
+          Messages
+        </Link>
       </nav>
       {children}
       <footer className="mk-footer">
