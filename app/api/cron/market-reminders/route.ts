@@ -136,5 +136,42 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, ...counts, lapsed });
+  // Roadmap item 6: standby cascade — consume expired exclusive offers
+  // and hand the turn to the next waiter; also periodically re-offer
+  // listings whose capacity freed via TTL expiry (no cancel hook ran).
+  let standbyOffers = 0;
+  const { data: expiredOffers } = await admin
+    .from("market_reservation_standby")
+    .select("id, listing_id")
+    .is("promoted_at", null)
+    .not("offered_at", "is", null)
+    .lte("offer_expires_at", new Date().toISOString())
+    .limit(50);
+  const cascadeListings = new Set<string>();
+  for (const o of expiredOffers ?? []) {
+    await admin
+      .from("market_reservation_standby")
+      .update({ promoted_at: new Date().toISOString() })
+      .eq("id", o.id)
+      .is("promoted_at", null);
+    cascadeListings.add(o.listing_id);
+  }
+  // Listings with unoffered waiters get a periodic availability check
+  // (covers holds that expired by TTL without a cancellation event).
+  const { data: waiting } = await admin
+    .from("market_reservation_standby")
+    .select("listing_id")
+    .is("promoted_at", null)
+    .is("offered_at", null)
+    .limit(100);
+  for (const w of waiting ?? []) cascadeListings.add(w.listing_id);
+  if (cascadeListings.size > 0) {
+    const { offerStandbyForListing } = await import("@/lib/market/standby-actions");
+    for (const id of cascadeListings) {
+      await offerStandbyForListing(id);
+      standbyOffers += 1;
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...counts, lapsed, standbyListingsChecked: standbyOffers });
 }
