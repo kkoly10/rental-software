@@ -75,9 +75,14 @@ export default async function MyRentalsPage({
       <main className="mk-wrap">
         <h1>My rentals</h1>
         <p className="mk-sub">Sign in to see your bookings and requests.</p>
-        <a className="mk-btn" href={`/login?redirect=${encodeURIComponent("/market/rentals")}`}>
-          Sign in
-        </a>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a className="mk-btn" href={`/login?redirect=${encodeURIComponent("/market/rentals")}`}>
+            Sign in
+          </a>
+          <Link className="mk-btn ghost" href="/market/join">
+            Create a renter account
+          </Link>
+        </div>
       </main>
     );
   }
