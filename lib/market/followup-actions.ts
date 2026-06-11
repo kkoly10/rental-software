@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { isPlatformAdmin } from "@/lib/market/admin";
 
 /**
  * Post-rental follow-up (founder decision 2026-06-11): a short
@@ -126,14 +127,7 @@ export async function submitFollowup(
   };
 }
 
-function isPlatformAdmin(email: string | undefined | null): boolean {
-  if (!email) return false;
-  return (process.env.PLATFORM_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
-}
+
 
 export async function markFollowupReviewed(formData: FormData): Promise<void> {
   const id = String(formData.get("followup_id") ?? "");

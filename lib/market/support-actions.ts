@@ -7,6 +7,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { isPlatformAdmin } from "@/lib/market/admin";
 
 /**
  * Marketplace support channel (§19) + the dedicated marketplace
@@ -60,11 +61,29 @@ export async function submitSupportRequest(
 
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
+
+  // Bug #55: only attach a booking_id the submitter actually belongs to
+  // (renter or their org). Otherwise users could spoof association with
+  // arbitrary bookings and pollute the trust queue.
+  let bookingId: string | null = null;
+  if (parsed.data.bookingId && user) {
+    const { getOrgContext } = await import("@/lib/auth/org-context");
+    const ctx = await getOrgContext();
+    const { data: b } = await admin
+      .from("market_bookings")
+      .select("id, renter_profile_id, organization_id")
+      .eq("id", parsed.data.bookingId)
+      .maybeSingle();
+    if (b && (b.renter_profile_id === user.id || (ctx && ctx.organizationId === b.organization_id))) {
+      bookingId = b.id;
+    }
+  }
+
   const { error } = await admin.from("market_support_requests").insert({
     profile_id: user?.id ?? null,
     email: parsed.data.email,
     topic: parsed.data.topic,
-    booking_id: parsed.data.bookingId || null,
+    booking_id: bookingId,
     message: parsed.data.message,
   });
   if (error) return { ok: false, message: "Couldn't send that — please try again." };
@@ -75,14 +94,7 @@ export async function submitSupportRequest(
   };
 }
 
-function isPlatformAdmin(email: string | undefined | null): boolean {
-  if (!email) return false;
-  return (process.env.PLATFORM_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
-}
+
 
 export async function resolveSupportRequest(formData: FormData): Promise<void> {
   const id = String(formData.get("request_id") ?? "");

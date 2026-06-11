@@ -4,20 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/market/admin";
 
 /**
  * Listing moderation queue actions (§19 queue #1). Platform-admin
  * only — same gate as dispute resolution.
  */
 
-function isPlatformAdmin(email: string | undefined | null): boolean {
-  if (!email) return false;
-  return (process.env.PLATFORM_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
-}
+
 
 async function requireAdmin(): Promise<boolean> {
   if (!hasSupabaseEnv()) return false;

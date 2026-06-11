@@ -53,3 +53,24 @@ test("block wins over warn when both trigger", () => {
   assert.equal(v.verdict, "blocked");
   assert.ok(v.reasons.includes("payment_handle"));
 });
+
+test("#46/#58 obfuscation bypass now caught: leetspeak/spaced payment handles", () => {
+  for (const phase of ["inquiry", "coordination"] as const) {
+    assert.equal(moderateMessage("just v3nmo me", phase).verdict, "blocked");
+    assert.equal(moderateMessage("hit me on v e n m o", phase).verdict, "blocked");
+    assert.equal(moderateMessage("pay cash in person", phase).verdict, "blocked");
+  }
+});
+
+test("#46 spelled-out / unicode digits caught pre-booking", () => {
+  assert.equal(moderateMessage("call five five five one two three four five six seven", "inquiry").verdict, "blocked");
+  assert.equal(moderateMessage("reach me at dana [at] gmail [dot] com", "inquiry").verdict, "blocked");
+});
+
+test("#54 link-host check: lookalike hosts no longer pass as trusted", () => {
+  // substring 'korent.app' inside another host must NOT be treated as allowed
+  assert.equal(moderateMessage("see https://korent.app.evil.com/x", "inquiry").verdict, "soft_warn");
+  assert.equal(moderateMessage("visit https://evil.com/?ref=korent.app", "inquiry").verdict, "soft_warn");
+  // genuine platform links stay clean
+  assert.equal(moderateMessage("here https://rent.korent.app/market/listing/x", "inquiry").verdict, "clean");
+});
