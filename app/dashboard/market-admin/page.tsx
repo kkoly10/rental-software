@@ -19,6 +19,7 @@ type DisputeRow = {
     id: string;
     deposit_cents: number;
     deposit_status: string;
+    renter_profile_id: string;
     market_listings: { title: string } | null;
   } | null;
 };
@@ -49,7 +50,7 @@ export default async function MarketAdminPage() {
   const { data } = await admin
     .from("market_disputes")
     .select(
-      "id, dispute_type, status, opened_by, description, created_at, market_bookings ( id, deposit_cents, deposit_status, market_listings ( title ) )",
+      "id, dispute_type, status, opened_by, description, created_at, market_bookings ( id, deposit_cents, deposit_status, renter_profile_id, market_listings ( title ) )",
     )
     .in("status", ["open", "awaiting_renter_evidence", "awaiting_seller_evidence", "admin_review"])
     .order("created_at", { ascending: true })
@@ -64,6 +65,29 @@ export default async function MarketAdminPage() {
     .eq("status", "pending_review")
     .order("created_at", { ascending: true })
     .limit(50);
+
+  // Founder requirement: renter identity (private bucket) is viewable
+  // ONLY here, only when a dispute exists — 10-minute signed URLs.
+  const identityLinks = new Map<string, { idUrl: string | null; selfieUrl: string | null }>();
+  for (const d of disputes) {
+    const renterId = d.market_bookings?.renter_profile_id;
+    if (!renterId || identityLinks.has(renterId)) continue;
+    const { data: v } = await admin
+      .from("market_renter_verifications")
+      .select("id_photo_path, selfie_path")
+      .eq("profile_id", renterId)
+      .maybeSingle();
+    if (!v?.id_photo_path && !v?.selfie_path) continue;
+    const sign = async (path: string | null) =>
+      path
+        ? (await admin.storage.from("market-identity").createSignedUrl(path, 600)).data
+            ?.signedUrl ?? null
+        : null;
+    identityLinks.set(renterId, {
+      idUrl: await sign(v.id_photo_path),
+      selfieUrl: await sign(v.selfie_path),
+    });
+  }
 
   const { data: supportRequests } = await admin
     .from("market_support_requests")
@@ -182,6 +206,35 @@ export default async function MarketAdminPage() {
                 <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
                   “{d.description}”
                 </p>
+                {(() => {
+                  const ident = d.market_bookings?.renter_profile_id
+                    ? identityLinks.get(d.market_bookings.renter_profile_id)
+                    : undefined;
+                  return ident ? (
+                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                      Renter identity (10-min links):{" "}
+                      {ident.idUrl ? (
+                        <a href={ident.idUrl} target="_blank" rel="noreferrer">
+                          ID photo
+                        </a>
+                      ) : (
+                        "no ID"
+                      )}{" "}
+                      ·{" "}
+                      {ident.selfieUrl ? (
+                        <a href={ident.selfieUrl} target="_blank" rel="noreferrer">
+                          live selfie
+                        </a>
+                      ) : (
+                        "no selfie"
+                      )}
+                    </div>
+                  ) : (
+                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                      No identity on file for this renter.
+                    </div>
+                  );
+                })()}
                 <DisputeResolveForm
                   disputeId={d.id}
                   depositCents={d.market_bookings?.deposit_cents ?? 0}

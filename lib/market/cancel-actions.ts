@@ -177,6 +177,27 @@ async function finalizeCancellation(
     }
   }
 
+  // §24: the party who DIDN'T act gets told.
+  try {
+    const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
+    const party = await getBookingPartyEmails(booking.id);
+    if (party) {
+      void notifyMarketEmail({
+        kind: "booking_cancelled",
+        to: input.actor === "renter" ? party.sellerEmail : party.renterEmail,
+        listingTitle: party.listingTitle,
+        startsAt: party.startsAt,
+        endsAt: party.endsAt,
+        extra:
+          input.refundCents > 0
+            ? `A refund of $${(input.refundCents / 100).toFixed(2)} was issued.`
+            : undefined,
+      });
+    }
+  } catch {
+    // best-effort
+  }
+
   revalidatePath("/market/rentals");
   revalidatePath("/dashboard/marketplace");
 }
