@@ -270,7 +270,7 @@ export function CreateListingForm({
           </div>
           <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
             You&rsquo;d earn ≈{dollars(suggestion.payoutPerDayCents)} per rental day
-            after fees — about {suggestion.recoverDays} rental days to recover your
+            after fees — about {`${suggestion.recoverDays} rental days`} to recover your
             item&rsquo;s value. Weekend {dollars(suggestion.weekendCents)} · weekly{" "}
             {dollars(suggestion.weeklyCents)}.
           </div>
