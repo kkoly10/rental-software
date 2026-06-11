@@ -24,7 +24,7 @@ export default async function MarketVerifyPage() {
     return (
       <main className="mk-wrap" style={{ maxWidth: 520 }}>
         <h1>Verify your account</h1>
-        <a className="mk-btn" href={`/login?redirect=${encodeURIComponent("/market/verify")}`}>
+        <a className="mk-btn" href={`/market/login?redirect=${encodeURIComponent("/market/verify")}`}>
           Sign in first
         </a>
       </main>

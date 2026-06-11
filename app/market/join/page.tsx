@@ -11,7 +11,7 @@ export default function MarketJoinPage() {
       <p className="mk-sub">
         Free to join — request bookings, message sellers, and track every
         rental in one place. Already have an account (renter or seller)?{" "}
-        <a href={`/login?redirect=${encodeURIComponent("/market/rentals")}`}>Sign in</a>.
+        <a href={`/market/login?redirect=${encodeURIComponent("/market/rentals")}`}>Sign in</a>.
       </p>
       <div className="mk-panel">
         <RenterJoinForm />

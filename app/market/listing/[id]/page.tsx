@@ -159,7 +159,7 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
                   <a
                     className="mk-btn"
                     style={{ width: "100%", marginTop: 14, textAlign: "center", boxSizing: "border-box" }}
-                    href={`/login?redirect=${encodeURIComponent(`/market/listing/${listing.id}`)}`}
+                    href={`/market/login?redirect=${encodeURIComponent(`/market/listing/${listing.id}`)}`}
                   >
                     Sign in to request a booking
                   </a>
