@@ -138,6 +138,8 @@
   <button onclick="go('store',this)">4 · Seller store page</button>
   <button onclick="go('hub',this)">5 · Seller Hub</button>
   <button onclick="go('soon',this)">6 · Smoke-test world</button>
+  <button onclick="go('trips',this)">7 · Renter: my rentals</button>
+  <button onclick="go('trip',this)">8 · Renter: rental detail</button>
 </div>
 
 <!-- ============ 1 · HOME ============ -->
@@ -404,6 +406,113 @@
       <div class="card"><div class="ph d">🚗</div><div class="bd"><div class="t">Convertible car seat (2 avail.)</div><div class="p">$12 <small>/ day</small></div></div></div>
     </div>
     <p class="note" style="text-align:center;margin-top:18px">Searches, waitlist joins and pre-listings here are measured per metro — each world goes live when local demand and supply hit the graduation gates.</p>
+  </div>
+</section>
+
+<!-- ============ 7 · RENTER: MY RENTALS ============ -->
+<section id="trips" class="screen">
+  <nav class="topnav">
+    <div class="logo" onclick="go('home')" style="cursor:pointer">korent<em>.</em><small>marketplace</small></div>
+    <div class="search"><input placeholder="Search rentals…"><button>Search</button></div>
+    <div class="nav-right"><span class="metro">📍 <b>Washington–DMV</b></span><span class="pill">Alyssa M. ▾</span></div>
+  </nav>
+  <div class="wrap">
+    <h1>My rentals</h1>
+    <p class="sub">rent.korent.app/<b>rentals</b> — every booking, message and deposit in one place</p>
+
+    <h2 style="margin-top:8px">Needs your attention</h2>
+    <div class="req" style="border-color:var(--orange-deep)">
+      <div class="ph2">⛺</div>
+      <div class="grow"><div class="t">20×30 Frame Tent · handoff tomorrow 9:00 AM</div><div class="m">Capitol Party Rentals is delivering to 1200 K St NW · deposit hold ($180) goes on your card tonight</div></div>
+      <span class="sla">⏱ handoff in 18h</span>
+      <button class="btn ok" onclick="go('trip')">View rental</button>
+    </div>
+    <div class="req">
+      <div class="ph2">📸</div>
+      <div class="grow"><div class="t">Projector kit · return photos requested</div><div class="m">Snap 2 photos at drop-off so your $95 deposit releases same-day</div></div>
+      <button class="btn ok">Add photos</button>
+    </div>
+
+    <h2>Upcoming</h2>
+    <div class="req">
+      <div class="ph2">⛺</div>
+      <div class="grow"><div class="t">20×30 Frame Tent — white · Jun 20–21</div><div class="m">Confirmed · $488 paid · Capitol Party Rentals · delivery + setup</div></div>
+      <span class="badge v">✔ Confirmed</span>
+      <button class="btn no" onclick="go('trip')">Details</button>
+    </div>
+    <div class="req">
+      <div class="ph2">🪑</div>
+      <div class="grow"><div class="t">Chiavari chairs ×50 · Jul 4</div><div class="m">Awaiting seller approval · card saved, charged only when they accept (within 24h)</div></div>
+      <span class="sla">⏱ seller has 21h</span>
+      <button class="btn no">Cancel request</button>
+    </div>
+
+    <h2>Past</h2>
+    <div class="req" style="opacity:.75">
+      <div class="ph2">📽️</div>
+      <div class="grow"><div class="t">4K Projector + screen kit · May 30 – Jun 1</div><div class="m">Completed · deposit released in full · how was it?</div></div>
+      <button class="btn ok">★ Leave review</button>
+    </div>
+    <div class="req" style="opacity:.75">
+      <div class="ph2">🕺</div>
+      <div class="grow"><div class="t">Dance floor 12×12 · May 17</div><div class="m">Completed · ★★★★★ review left</div></div>
+      <button class="btn no">Rent again</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8 · RENTER: RENTAL DETAIL ============ -->
+<section id="trip" class="screen">
+  <nav class="topnav">
+    <div class="logo" onclick="go('home')" style="cursor:pointer">korent<em>.</em><small>marketplace</small></div>
+    <div style="flex:1"></div>
+    <div class="nav-right"><span class="metro" onclick="go('trips')" style="cursor:pointer">← My rentals</span><span class="pill">Alyssa M. ▾</span></div>
+  </nav>
+  <div class="wrap">
+    <div class="pdp">
+      <div>
+        <h1>20×30 Frame Tent — white · Jun 20–21</h1>
+        <div class="m" style="color:var(--ink-soft);font-size:14px;margin-top:4px">Booking #MK-2047 · Capitol Party Rentals · delivery to 1200 K St NW, Washington DC</div>
+
+        <h2>Status</h2>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;font-size:13px">
+          <div style="display:flex;gap:10px;padding:7px 0"><span>✅</span><div><b>Requested</b> — Jun 12, 2:14 PM</div></div>
+          <div style="display:flex;gap:10px;padding:7px 0"><span>✅</span><div><b>Seller accepted · payment captured ($488)</b> — Jun 12, 3:02 PM</div></div>
+          <div style="display:flex;gap:10px;padding:7px 0"><span>🟠</span><div><b>Deposit hold ($180) placed on your card</b> — tonight, day before handoff. Released after clean return; never charged unless a claim is decided.</div></div>
+          <div style="display:flex;gap:10px;padding:7px 0;color:var(--ink-soft)"><span>⚪</span><div><b>Handoff</b> — Jun 20, 9:00 AM · both sides take condition photos</div></div>
+          <div style="display:flex;gap:10px;padding:7px 0;color:var(--ink-soft)"><span>⚪</span><div><b>Return</b> — Jun 21, 6:00 PM · return photos + accessory checklist → deposit releases</div></div>
+        </div>
+
+        <h2>Condition evidence</h2>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div><b>At handoff</b><div class="m" style="margin-top:6px;color:var(--ink-soft)">Seller posts setup photos; you acknowledge condition with one tap + photo. Takes 60 seconds.</div></div>
+          <div><b>At return</b><div class="m" style="margin-top:6px;color:var(--ink-soft)">You snap return photos; seller inspects. If anything's disputed, support decides from these photos.</div></div>
+        </div>
+
+        <h2>Need something?</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn no">⏰ Request extension</button>
+          <button class="btn no">⚠️ Report an issue</button>
+          <button class="btn no">📄 Receipt</button>
+          <button class="btn no" style="color:#b91c1c">Cancel (policy: full refund ≥72h before)</button>
+        </div>
+      </div>
+
+      <div class="buybox">
+        <b style="font-size:15px">Messages — Capitol Party Rentals</b>
+        <div style="font-size:13px;margin-top:12px;display:flex;flex-direction:column;gap:10px">
+          <div style="background:var(--cream);border-radius:12px 12px 12px 4px;padding:10px 12px;max-width:90%">Hi Alyssa! Confirming delivery for 9 AM Saturday — is the alley entrance on K St open that early?</div>
+          <div style="background:#ffe9d4;border-radius:12px 12px 4px 12px;padding:10px 12px;max-width:90%;align-self:flex-end">Yes! Building opens at 8. I'll meet your crew at the loading dock.</div>
+          <div style="background:#f3f0ec;border-radius:10px;padding:9px 12px;font-size:12px;color:var(--ink-soft);text-align:center">🛡️ System · Booking confirmed — $488 captured · deposit hold scheduled Jun 19</div>
+          <div style="background:var(--cream);border-radius:12px 12px 12px 4px;padding:10px 12px;max-width:90%">Perfect. Crew of 2, setup done by 10:30. See you Saturday!</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <input placeholder="Message seller…" style="flex:1;border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-family:inherit">
+          <button class="btn ok">Send</button>
+        </div>
+        <div class="depnote" style="margin-top:12px">One thread for everything — questions, booking, support. Phone numbers and outside-payment links are blocked for your protection until handoff coordination opens.</div>
+      </div>
+    </div>
   </div>
 </section>
 
