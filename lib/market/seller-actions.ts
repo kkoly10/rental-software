@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -153,6 +154,13 @@ const listingSchema = z.object({
 const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 const MAX_VIDEO_SIZE = 80 * 1024 * 1024;
 
+// #62: listing photos + proof videos are INTENTIONAL public media (the
+// storefront's face) and must live in a PUBLIC bucket — `uploads` is
+// private (crew proof photos), so getPublicUrl links into it 400.
+// market-media has no client write policies (service-role writes only)
+// and is never walked by the storage-sweep cron.
+const PUBLIC_MEDIA_BUCKET = "market-media";
+
 /** Proof-of-function video (§6, founder decision 2026-06-11): for
  *  powered/electric categories the seller shows the item working —
  *  e.g. a blow dryer running — as part of creating the listing. */
@@ -166,16 +174,26 @@ async function uploadProofVideo(
   if (file.size > MAX_VIDEO_SIZE) {
     return { ok: false, message: "Proof video must be under 80 MB." };
   }
+  // Bug #38: don't trust the client-declared type — sniff the container
+  // magic bytes (ftyp box for MP4/MOV, EBML header for WebM).
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const isMp4 = head[4] === 0x66 && head[5] === 0x74 && head[6] === 0x79 && head[7] === 0x70; // 'ftyp'
+  const isWebm = head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3; // EBML
+  if (!isMp4 && !isWebm) {
+    return { ok: false, message: "That file doesn't look like a valid video." };
+  }
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
+  // Proof video is a trust signal rendered on the public listing page
+  // (like the listing photo). A random token defeats the orgId/timestamp
+  // enumeration noted in #39 and the same-millisecond upsert collision.
   const ext = file.type === "video/quicktime" ? "mov" : file.type === "video/webm" ? "webm" : "mp4";
-  const path = `market-proof/${orgId}/${Date.now()}.${ext}`;
+  const path = `market-proof/${orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
   const { error } = await admin.storage
-    .from(bucket)
+    .from(PUBLIC_MEDIA_BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false });
   if (error) return { ok: false, message: "Video upload failed — try again." };
-  const { data } = admin.storage.from(bucket).getPublicUrl(path);
+  const { data } = admin.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(path);
   return { ok: true, url: data.publicUrl };
 }
 
@@ -249,14 +267,13 @@ export async function createMarketListing(
     }
     const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
     const adminClient = createSupabaseAdminClient();
-    const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
     const ext = sniffed === "image/png" ? "png" : sniffed === "image/webp" ? "webp" : "jpg";
-    const path = `market-listings/${auth.orgId}/${Date.now()}.${ext}`;
+    const path = `market-listings/${auth.orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
     const { error: uploadError } = await adminClient.storage
-      .from(bucket)
+      .from(PUBLIC_MEDIA_BUCKET)
       .upload(path, photo, { contentType: sniffed, upsert: false });
     if (uploadError) return { ok: false, message: "Photo upload failed — try again." };
-    photoUrl = adminClient.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+    photoUrl = adminClient.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
   }
 
   // Proof-of-function: required at creation time for categories that

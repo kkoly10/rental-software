@@ -22,6 +22,7 @@ type BookingRow = {
   ends_at: string;
   quantity: number;
   subtotal_cents: number;
+  tax_cents: number;
   deposit_cents: number;
   created_at: string;
   market_listings: { title: string; photo_url: string | null } | null;
@@ -66,7 +67,7 @@ export default async function MyRentalsPage({
       const { data } = await supabase
         .from("market_bookings")
         .select(
-          "id, state, starts_at, ends_at, quantity, subtotal_cents, deposit_cents, created_at, market_listings ( title, photo_url )",
+          "id, state, starts_at, ends_at, quantity, subtotal_cents, tax_cents, deposit_cents, created_at, market_listings ( title, photo_url )",
         )
         .eq("renter_profile_id", user.id)
         .order("created_at", { ascending: false })
@@ -135,7 +136,8 @@ export default async function MyRentalsPage({
                   <div className="mk-card-m">
                     {new Date(b.starts_at).toLocaleDateString()} →{" "}
                     {new Date(b.ends_at).toLocaleDateString()} · qty {b.quantity} · $
-                    {(b.subtotal_cents / 100).toFixed(0)}
+                    {((b.subtotal_cents + (b.tax_cents ?? 0)) / 100).toFixed(2)}
+                    {b.tax_cents ? ` (incl. tax)` : ""}
                     {b.deposit_cents > 0
                       ? ` · deposit $${(b.deposit_cents / 100).toFixed(0)} at handoff`
                       : ""}
@@ -149,7 +151,7 @@ export default async function MyRentalsPage({
                     <form action={payForBooking}>
                       <input type="hidden" name="booking_id" value={b.id} />
                       <button type="submit" className="mk-btn">
-                        Pay ${(b.subtotal_cents / 100).toFixed(0)} now
+                        Pay ${((b.subtotal_cents + (b.tax_cents ?? 0)) / 100).toFixed(2)} now
                       </button>
                     </form>
                   ) : null}

@@ -50,25 +50,27 @@ export default async function MarketLayout({ children }: { children: React.React
           />
           <button type="submit">Search</button>
         </form>
-        <span className="mk-metro">
-          📍 <b>{metro?.label ?? "Your metro"}</b>
-        </span>
-        <Link href="/market/rentals" className="mk-metro" style={{ textDecoration: "none" }}>
-          My rentals
-        </Link>
-        <Link href="/market/messages" className="mk-metro" style={{ textDecoration: "none" }}>
-          Messages
-        </Link>
-        {signedIn ? null : (
-          <>
-            <Link href="/market/login" className="mk-metro" style={{ textDecoration: "none" }}>
-              <b>Sign in</b>
-            </Link>
-            <Link href="/market/join" className="mk-btn" style={{ padding: "8px 16px", fontSize: 13 }}>
-              Join
-            </Link>
-          </>
-        )}
+        <div className="mk-navlinks">
+          <span className="mk-metro">
+            📍 <b>{metro?.label ?? "Your metro"}</b>
+          </span>
+          <Link href="/market/rentals" className="mk-metro" style={{ textDecoration: "none" }}>
+            My rentals
+          </Link>
+          <Link href="/market/messages" className="mk-metro" style={{ textDecoration: "none" }}>
+            Messages
+          </Link>
+          {signedIn ? null : (
+            <>
+              <Link href="/market/login" className="mk-metro" style={{ textDecoration: "none" }}>
+                <b>Sign in</b>
+              </Link>
+              <Link href="/market/join" className="mk-btn" style={{ padding: "8px 16px", fontSize: 13 }}>
+                Join
+              </Link>
+            </>
+          )}
+        </div>
       </nav>
       {children}
       <footer className="mk-footer">

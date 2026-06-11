@@ -36,21 +36,32 @@ export default async function StorePage({ params }: { params: Promise<Params> })
   // Public trust signals: verified-rental reviews (anon-readable RLS).
   const { hasSupabaseEnv } = await import("@/lib/env");
   let reviews: Array<{ id: string; rating: number; body: string | null; created_at: string }> = [];
+  // Bug #34: the rating average + count must come from ALL reviews, not
+  // just the 10 latest shown as cards.
+  let avgRating: number | null = null;
+  let reviewCount = 0;
   if (hasSupabaseEnv()) {
     const { createSupabaseServerClient } = await import("@/lib/supabase/server");
     const supabase = await createSupabaseServerClient();
-    const { data } = await supabase
-      .from("market_reviews")
-      .select("id, rating, body, created_at")
-      .eq("organization_id", profile.organizationId)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    reviews = data ?? [];
+    const [{ data: latest }, { data: all, count }] = await Promise.all([
+      supabase
+        .from("market_reviews")
+        .select("id, rating, body, created_at")
+        .eq("organization_id", profile.organizationId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("market_reviews")
+        .select("rating", { count: "exact" })
+        .eq("organization_id", profile.organizationId)
+        .limit(5000),
+    ]);
+    reviews = latest ?? [];
+    reviewCount = count ?? all?.length ?? 0;
+    if (all && all.length > 0) {
+      avgRating = all.reduce((sum, r) => sum + (r as { rating: number }).rating, 0) / all.length;
+    }
   }
-  const avgRating =
-    reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : null;
 
   return (
     <main className="mk-wrap">
@@ -60,7 +71,7 @@ export default async function StorePage({ params }: { params: Promise<Params> })
       <h1>{profile.displayName}</h1>
       <p className="mk-sub">
         <span className="mk-badge v">✔ Verified seller</span>{" "}
-        {avgRating ? `· ★ ${avgRating.toFixed(1)} (${reviews.length})` : null}{" "}
+        {avgRating ? `· ★ ${avgRating.toFixed(1)} (${reviewCount})` : null}{" "}
         {metro ? `· ${metro.label}` : null} · serves {profile.serviceRadiusMiles} mi
         {profile.offersDelivery && profile.offersPickup
           ? " · delivery & pickup"

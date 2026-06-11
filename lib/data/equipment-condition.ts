@@ -3,6 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import {
+  resolveUploadsPhotoUrls,
+  type UploadsSigner,
+} from "@/lib/storage/uploads-signing";
 
 /**
  * Sprint 5.5 — fetch the before/after photo pair(s) for a given order.
@@ -43,7 +47,7 @@ export async function getOrderConditionRows(
     .eq("routes.organization_id", ctx.organizationId)
     .order("stop_sequence", { ascending: true });
 
-  return mapRows(data ?? []);
+  return signRows(supabase, mapRows(data ?? []));
 }
 
 /**
@@ -69,7 +73,7 @@ export async function getOrderConditionRowsForPortal(
     .eq("order_id", orderId)
     .eq("routes.organization_id", organizationId)
     .order("stop_sequence", { ascending: true });
-  return mapRows(data ?? []);
+  return signRows(supabase, mapRows(data ?? []));
 }
 
 function mapRows(data: Record<string, unknown>[]): ConditionRow[] {
@@ -83,5 +87,26 @@ function mapRows(data: Record<string, unknown>[]): ConditionRow[] {
     deliverySignature: (row.signature_name as string | null) ?? null,
     pickupPhotoUrl: (row.pickup_photo_url as string | null) ?? null,
     pickupSignature: (row.pickup_signature_name as string | null) ?? null,
+  }));
+}
+
+/**
+ * #62: the uploads bucket is private — swap stored photo values
+ * (paths, or legacy public URLs) for short-lived signed URLs using
+ * whichever client the caller is already authorized with (org member
+ * on operator surfaces, admin on the portal-token path).
+ */
+async function signRows(
+  supabase: UploadsSigner,
+  rows: ConditionRow[],
+): Promise<ConditionRow[]> {
+  const signed = await resolveUploadsPhotoUrls(
+    supabase,
+    rows.flatMap((r) => [r.deliveryPhotoUrl, r.pickupPhotoUrl]),
+  );
+  return rows.map((row, i) => ({
+    ...row,
+    deliveryPhotoUrl: signed[i * 2],
+    pickupPhotoUrl: signed[i * 2 + 1],
   }));
 }

@@ -5,6 +5,7 @@ import {
   hasSupabaseServiceRoleEnv,
 } from "@/lib/supabase/admin";
 import { verifyCronSecret } from "@/lib/security/cron-auth";
+import { uploadsObjectPath } from "@/lib/storage/uploads-signing";
 
 // Cron job: sweep orphaned storage objects whose DB row never landed
 // (or has been deleted), reclaiming bucket space.
@@ -125,18 +126,34 @@ export async function GET(request: NextRequest) {
   // 3. route_stops.proof_photo_url + pickup_photo_url (uploads bucket).
   // Sprint 5.5 added pickup_photo_url for the before/after pair; both
   // columns are loaded in one query to avoid scanning the table twice.
+  // #62: new rows store the storage PATH (the bucket is private, so
+  // public URLs were dead links); legacy rows hold public-URL shapes.
+  // uploadsObjectPath() resolves both, so neither gets swept.
   const { data: stops } = await admin
     .from("route_stops")
     .select("proof_photo_url, pickup_photo_url")
     .or("proof_photo_url.not.is.null,pickup_photo_url.not.is.null")
     .limit(50_000);
   for (const r of stops ?? []) {
-    if (r.proof_photo_url) {
-      const path = extractPathFromPublicUrl(r.proof_photo_url, uploadsBucket);
+    for (const stored of [r.proof_photo_url, r.pickup_photo_url]) {
+      const path = uploadsObjectPath(stored, uploadsBucket);
       if (path) referencedPaths.add(`${uploadsBucket}:${path}`);
     }
-    if (r.pickup_photo_url) {
-      const path = extractPathFromPublicUrl(r.pickup_photo_url, uploadsBucket);
+  }
+
+  // 4. Marketplace listing media. New uploads land in the public
+  //    market-media bucket (#62), which this sweep never walks — this
+  //    query protects any LEGACY `market-listings/…` / `market-proof/…`
+  //    files still in uploads from being treated as orphans (#61).
+  //    (Evidence/identity live in private buckets, also never walked.)
+  const { data: listingMedia } = await admin
+    .from("market_listings")
+    .select("photo_url, proof_video_url")
+    .or("photo_url.not.is.null,proof_video_url.not.is.null")
+    .limit(50_000);
+  for (const r of listingMedia ?? []) {
+    for (const url of [r.photo_url, r.proof_video_url]) {
+      const path = extractPathFromPublicUrl(url, uploadsBucket);
       if (path) referencedPaths.add(`${uploadsBucket}:${path}`);
     }
   }
