@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Korent Marketplace — Mockup (standalone)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#fffaf5; --ink:#2d1f14; --ink-soft:#8a7565;
+    --orange:#ff8c42; --orange-deep:#e8590c; --wine:#5c2b2e;
+    --card:#ffffff; --line:#f0e4d8; --green:#1e7f4f; --amber:#b45309;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--cream);color:var(--ink)}
+  .mock-bar{position:sticky;top:0;z-index:50;background:var(--ink);color:#fff;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mock-bar span{font-size:12px;opacity:.7;margin-right:8px}
+  .mock-bar button{font-family:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;cursor:pointer}
+  .mock-bar button.active{background:var(--orange);border-color:var(--orange);color:#2a1215}
+  .screen{display:none;min-height:100vh}
+  .screen.active{display:block}
+  .topnav{background:#fff;border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;gap:20px}
+  .logo{font-weight:800;font-size:20px;letter-spacing:-.5px}
+  .logo em{color:var(--orange-deep);font-style:normal}
+  .logo small{font-weight:500;color:var(--ink-soft);font-size:12px;margin-left:6px}
+  .search{flex:1;display:flex;max-width:640px}
+  .search input{flex:1;border:2px solid var(--ink);border-right:none;border-radius:999px 0 0 999px;padding:10px 18px;font-family:inherit;font-size:14px;background:#fff;outline:none}
+  .search button{border:2px solid var(--ink);background:var(--orange);border-radius:0 999px 999px 0;padding:10px 22px;font-weight:700;cursor:pointer;font-family:inherit}
+  .nav-right{display:flex;gap:16px;align-items:center;font-size:14px;font-weight:600}
+  .nav-right .pill{background:var(--cream);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
+  .metro{font-size:13px;color:var(--ink-soft);font-weight:500}
+  .metro b{color:var(--ink)}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px}
+  h1{font-size:30px;letter-spacing:-.8px;margin-bottom:6px}
+  h2{font-size:20px;letter-spacing:-.4px;margin:26px 0 14px}
+  .sub{color:var(--ink-soft);font-size:15px;margin-bottom:22px}
+  .worlds{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+  .world{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;position:relative;transition:transform .12s}
+  .world:hover{transform:translateY(-3px)}
+  .world .ico{font-size:28px;display:block;margin-bottom:8px}
+  .world .nm{font-size:13px;font-weight:700;line-height:1.25}
+  .world .soon{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;letter-spacing:.4px;color:var(--amber);background:#fef3e2;border-radius:999px;padding:2px 8px;text-transform:uppercase}
+  .world .live{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;letter-spacing:.4px;color:var(--green);background:#e7f5ee;border-radius:999px;padding:2px 8px;text-transform:uppercase}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .12s}
+  .card:hover{transform:translateY(-3px)}
+  .ph{height:140px;display:flex;align-items:center;justify-content:center;font-size:44px}
+  .ph.a{background:linear-gradient(135deg,#ffe3c7,#ffd1a3)} .ph.b{background:linear-gradient(135deg,#ffd9d4,#ffc4bb)}
+  .ph.c{background:linear-gradient(135deg,#e2efe7,#cfe7da)} .ph.d{background:linear-gradient(135deg,#e7e4f7,#d6d1f0)}
+  .card .bd{padding:12px 14px}
+  .card .t{font-size:14px;font-weight:700;line-height:1.3}
+  .card .m{font-size:12px;color:var(--ink-soft);margin-top:4px}
+  .card .p{font-size:15px;font-weight:800;margin-top:8px}
+  .card .p small{font-weight:500;color:var(--ink-soft)}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+  .badge.v{background:#e7f5ee;color:var(--green)} .badge.top{background:#fef3e2;color:var(--amber)} .badge.fast{background:#eef2ff;color:#4338ca}
+  .strip{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 22px;display:flex;gap:28px;margin:24px 0;flex-wrap:wrap}
+  .strip div{font-size:13px;display:flex;gap:8px;align-items:center;color:var(--ink-soft)}
+  .strip b{color:var(--ink)}
+  /* browse */
+  .browse{display:grid;grid-template-columns:230px 1fr;gap:24px}
+  .filters{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;height:fit-content;font-size:13px}
+  .filters h3{font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;color:var(--ink-soft)}
+  .filters h3:first-child{margin-top:0}
+  .filters label{display:flex;gap:8px;align-items:center;padding:4px 0;font-weight:500;cursor:pointer}
+  .crumb{font-size:13px;color:var(--ink-soft);margin-bottom:10px}
+  .crumb b{color:var(--ink)}
+  .sortrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:13px;color:var(--ink-soft)}
+  .sel{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:13px}
+  /* pdp */
+  .pdp{display:grid;grid-template-columns:1.5fr 1fr;gap:28px}
+  .gallery .main{height:340px;border-radius:18px;background:linear-gradient(135deg,#ffe3c7,#ffb877);display:flex;align-items:center;justify-content:center;font-size:90px}
+  .thumbs{display:flex;gap:10px;margin-top:10px}
+  .thumbs div{width:72px;height:54px;border-radius:10px;background:#ffe9d4;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid transparent}
+  .thumbs div:first-child{border-color:var(--orange-deep)}
+  .buybox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;height:fit-content}
+  .price{font-size:28px;font-weight:800}
+  .price small{font-size:14px;font-weight:500;color:var(--ink-soft)}
+  .dates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+  .dates label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft)}
+  .dates input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;font-family:inherit;margin-top:4px}
+  .totals{font-size:13px;border-top:1px dashed var(--line);margin-top:8px;padding-top:12px}
+  .totals div{display:flex;justify-content:space-between;padding:3px 0;color:var(--ink-soft)}
+  .totals .due{font-weight:800;color:var(--ink);font-size:15px;border-top:1px solid var(--line);margin-top:8px;padding-top:10px}
+  .cta{width:100%;background:var(--orange);border:2px solid var(--ink);color:var(--ink);font-weight:800;font-size:15px;border-radius:999px;padding:13px;margin-top:14px;cursor:pointer;font-family:inherit}
+  .cta.ghost{background:#fff;margin-top:8px}
+  .depnote{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.5;background:var(--cream);border-radius:10px;padding:10px}
+  .sellercard{display:flex;gap:12px;align-items:center;background:var(--cream);border-radius:14px;padding:14px;margin-top:16px}
+  .avatar{width:46px;height:46px;border-radius:50%;background:var(--wine);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+  .pdp h1{font-size:24px}
+  .specs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;font-size:13px}
+  .specs div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .specs b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);font-weight:700}
+  /* store */
+  .banner{height:150px;border-radius:18px;background:linear-gradient(120deg,var(--wine),#8a4a3d 60%,var(--orange-deep));display:flex;align-items:flex-end;padding:20px;color:#fff}
+  .storehead{display:flex;gap:18px;align-items:center;margin:-32px 0 10px 26px}
+  .storehead .avatar{width:76px;height:76px;font-size:26px;border:4px solid var(--cream)}
+  .storemeta{padding-top:34px}
+  .storemeta h1{font-size:24px}
+  .storemeta .row{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink-soft)}
+  /* hub */
+  .hub{display:grid;grid-template-columns:200px 1fr;gap:24px}
+  .hubnav{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;height:fit-content;font-size:14px}
+  .hubnav a{display:block;padding:9px 12px;border-radius:10px;color:var(--ink);text-decoration:none;font-weight:600}
+  .hubnav a.on{background:var(--cream);color:var(--orange-deep)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .kpi b{font-size:22px;display:block}
+  .kpi span{font-size:12px;color:var(--ink-soft)}
+  .req{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;gap:14px;align-items:center;margin-bottom:12px}
+  .req .ph2{width:64px;height:50px;border-radius:10px;background:#ffe9d4;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .req .grow{flex:1}
+  .req .t{font-weight:700;font-size:14px}
+  .req .m{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .sla{font-size:11px;font-weight:800;color:var(--amber);background:#fef3e2;border-radius:999px;padding:4px 10px;white-space:nowrap}
+  .btn{font-family:inherit;font-weight:700;font-size:13px;border-radius:999px;padding:8px 16px;cursor:pointer;border:2px solid var(--ink)}
+  .btn.ok{background:var(--orange)} .btn.no{background:#fff}
+  /* smoke test world */
+  .hero-soon{text-align:center;padding:60px 20px 30px}
+  .hero-soon .big{font-size:54px}
+  .hero-soon h1{margin:10px 0 8px}
+  .waitlist{display:flex;max-width:430px;margin:18px auto 6px}
+  .waitlist input{flex:1;border:2px solid var(--ink);border-right:none;border-radius:999px 0 0 999px;padding:11px 18px;font-family:inherit}
+  .waitlist button{border:2px solid var(--ink);background:var(--orange);border-radius:0 999px 999px 0;padding:11px 20px;font-weight:800;cursor:pointer;font-family:inherit}
+  .note{font-size:12px;color:var(--ink-soft)}
+  .ghostcards .card{opacity:.55;pointer-events:none}
+  footer{border-top:1px solid var(--line);margin-top:40px;padding:22px 28px;font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  @media(max-width:900px){.worlds{grid-template-columns:repeat(4,1fr)}.cards{grid-template-columns:repeat(2,1fr)}.pdp,.browse,.hub{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <span>MOCKUP · rent.korent.app · click to switch screens →</span>
+  <button class="active" onclick="go('home',this)">1 · Home</button>
+  <button onclick="go('browse',this)">2 · Browse world</button>
+  <button onclick="go('pdp',this)">3 · Listing</button>
+  <button onclick="go('store',this)">4 · Seller store page</button>
+  <button onclick="go('hub',this)">5 · Seller Hub</button>
+  <button onclick="go('soon',this)">6 · Smoke-test world</button>
+</div>
+
+<!-- ============ 1 · HOME ============ -->
+<section id="home" class="screen active">
+  <nav class="topnav">
+    <div class="logo">korent<em>.</em><small>marketplace</small></div>
+    <div class="search"><input placeholder="Search rentals — “20x30 tent”, “chiavari chairs”, “projector”…"><button>Search</button></div>
+    <div class="nav-right"><span class="metro">📍 <b>Washington–DMV</b></span><span class="pill">Become a seller</span><span class="pill">Sign in</span></div>
+  </nav>
+  <div class="wrap">
+    <h1>Rent expensive things, only for as long as you need them.</h1>
+    <p class="sub">Verified local sellers · deposit-protected · pickup &amp; return photo evidence on every rental</p>
+
+    <div class="worlds">
+      <div class="world" onclick="go('browse')"><span class="ico">🎪</span><span class="nm">Hosting &amp; Events</span><br><span class="live">● Live in DMV</span></div>
+      <div class="world" onclick="go('soon')"><span class="ico">🔨</span><span class="nm">Home &amp; Projects</span><br><span class="soon">Coming soon</span></div>
+      <div class="world" onclick="go('soon')"><span class="ico">🍼</span><span class="nm">Baby Gear</span><br><span class="soon">Coming soon</span></div>
+      <div class="world" onclick="go('soon')"><span class="ico">🎥</span><span class="nm">Creator Gear</span><br><span class="soon">Coming soon</span></div>
+      <div class="world" onclick="go('soon')"><span class="ico">🚛</span><span class="nm">Trailers &amp; Hauling</span><br><span class="soon">Coming soon</span></div>
+      <div class="world" onclick="go('soon')"><span class="ico">💼</span><span class="nm">Office &amp; Pop-Up</span><br><span class="soon">Coming soon</span></div>
+      <div class="world" onclick="go('soon')"><span class="ico">⛈️</span><span class="nm">Seasonal &amp; Emergency</span><br><span class="soon">Coming soon</span></div>
+    </div>
+
+    <div class="strip">
+      <div>🛡️ <b>Deposit-protected</b>&nbsp;risk-based, never more than the item’s value</div>
+      <div>📸 <b>Photo evidence</b>&nbsp;at pickup &amp; return — disputes get decided on facts</div>
+      <div>✅ <b>Verified sellers</b>&nbsp;ID + payout KYC before anything is bookable</div>
+      <div>💬 <b>On-platform messaging</b>&nbsp;one thread from question → booking → support</div>
+    </div>
+
+    <h2>Popular near you · Hosting &amp; Events</h2>
+    <div class="cards">
+      <div class="card" onclick="go('pdp')"><div class="ph a">⛺</div><div class="bd"><div class="t">20×30 Frame Tent — white, sidewalls incl.</div><div class="m">Arlington · 4.2 mi · <span class="badge v">✔ Verified</span></div><div class="p">$210 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph b">🪑</div><div class="bd"><div class="t">Chiavari Chairs — gold (set of 50)</div><div class="m">Silver Spring · 7 mi · <span class="badge top">★ Top seller</span></div><div class="p">$135 <small>/ day · set</small></div></div></div>
+      <div class="card"><div class="ph c">📽️</div><div class="bd"><div class="t">4K Projector + 120&quot; screen kit</div><div class="m">Alexandria · 5.8 mi · <span class="badge fast">⚡ Fast reply</span></div><div class="p">$95 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph d">🕺</div><div class="bd"><div class="t">Dance floor 15×15 — oak parquet</div><div class="m">DC · 2.9 mi · <span class="badge v">✔ Verified</span></div><div class="p">$240 <small>/ day</small></div></div></div>
+    </div>
+
+    <h2>Browse Hosting &amp; Events</h2>
+    <div class="cards">
+      <div class="card" onclick="go('browse')"><div class="ph a">⛺</div><div class="bd"><div class="t">Tents &amp; Canopies</div><div class="m">38 listings in DMV</div></div></div>
+      <div class="card" onclick="go('browse')"><div class="ph b">🪑</div><div class="bd"><div class="t">Chairs &amp; Seating</div><div class="m">54 listings in DMV</div></div></div>
+      <div class="card" onclick="go('browse')"><div class="ph c">🎤</div><div class="bd"><div class="t">Audio/Visual &amp; Presentation</div><div class="m">29 listings in DMV</div></div></div>
+      <div class="card" onclick="go('browse')"><div class="ph d">🍿</div><div class="bd"><div class="t">Concessions &amp; Food Service</div><div class="m">17 listings in DMV</div></div></div>
+    </div>
+  </div>
+  <footer><span>© 2026 Korent Marketplace · rent.korent.app</span><span>Run a rental business? <b>korent.app</b> is the software side.</span></footer>
+</section>
+
+<!-- ============ 2 · BROWSE ============ -->
+<section id="browse" class="screen">
+  <nav class="topnav">
+    <div class="logo" onclick="go('home')" style="cursor:pointer">korent<em>.</em><small>marketplace</small></div>
+    <div class="search"><input value="tents"><button>Search</button></div>
+    <div class="nav-right"><span class="metro">📍 <b>Washington–DMV</b></span><span class="pill">Sign in</span></div>
+  </nav>
+  <div class="wrap">
+    <div class="crumb">Hosting &amp; Events <b>· Tents &amp; Canopies</b> · 38 results near 20001</div>
+    <div class="browse">
+      <aside class="filters">
+        <h3>Dates</h3>
+        <label><input type="date" style="font-family:inherit;border:1px solid var(--line);border-radius:8px;padding:4px"></label>
+        <h3>Distance</h3>
+        <label><input type="radio" name="d" checked> Within 10 mi</label>
+        <label><input type="radio" name="d"> Within 25 mi</label>
+        <label><input type="radio" name="d"> DMV-wide</label>
+        <h3>Fulfillment</h3>
+        <label><input type="checkbox" checked> Delivery available</label>
+        <label><input type="checkbox"> Pickup only</label>
+        <label><input type="checkbox"> On-site setup</label>
+        <h3>Price / day</h3>
+        <label><input type="checkbox"> Under $100</label>
+        <label><input type="checkbox" checked> $100 – $300</label>
+        <label><input type="checkbox"> $300+</label>
+        <h3>Trust</h3>
+        <label><input type="checkbox" checked> Verified sellers</label>
+        <label><input type="checkbox"> Instant book</label>
+        <label><input type="checkbox"> 4.5★ &amp; up</label>
+      </aside>
+      <div>
+        <div class="sortrow"><span>Showing available <b style="color:var(--ink)">Sat Jun 20 – Sun Jun 21</b></span><select class="sel"><option>Sort: Best match</option><option>Distance</option><option>Price low→high</option><option>Rating</option></select></div>
+        <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+          <div class="card" onclick="go('pdp')"><div class="ph a">⛺</div><div class="bd"><div class="t">20×30 Frame Tent — white, sidewalls incl.</div><div class="m">Capitol Party Rentals · 4.2 mi · ★ 4.9 (87)</div><div class="m"><span class="badge v">✔ Verified</span> <span class="badge fast">⚡ &lt; 1 hr reply</span></div><div class="p">$210 <small>/ day · delivery $45</small></div></div></div>
+          <div class="card"><div class="ph b">⛺</div><div class="bd"><div class="t">10×20 Pop-Up Canopy (2 available)</div><div class="m">Bethesda · 9.1 mi · ★ 4.7 (31)</div><div class="m"><span class="badge v">✔ Verified</span></div><div class="p">$75 <small>/ day · pickup</small></div></div></div>
+          <div class="card"><div class="ph c">🎪</div><div class="bd"><div class="t">40×60 Pole Tent — weddings, incl. install</div><div class="m">NoVA Event Co · 12 mi · ★ 5.0 (12)</div><div class="m"><span class="badge top">★ Top seller</span> <span class="badge v">✔ Verified</span></div><div class="p">$890 <small>/ weekend · setup incl.</small></div></div></div>
+          <div class="card"><div class="ph d">⛺</div><div class="bd"><div class="t">15×15 High-Peak Frame Tent</div><div class="m">DC · 3.4 mi · ★ 4.8 (44)</div><div class="m"><span class="badge fast">⚡ Instant book</span></div><div class="p">$165 <small>/ day</small></div></div></div>
+          <div class="card"><div class="ph a">🏕️</div><div class="bd"><div class="t">Clear-Top Tent 20×40 — premium</div><div class="m">Rockville · 14 mi · ★ 4.9 (23)</div><div class="m"><span class="badge v">✔ Verified</span></div><div class="p">$640 <small>/ day</small></div></div></div>
+          <div class="card"><div class="ph b">⛺</div><div class="bd"><div class="t">Sidewall &amp; weight kit add-on bundle</div><div class="m">Arlington · 4.2 mi · ★ 4.9 (87)</div><div class="m"><span class="badge v">✔ Verified</span></div><div class="p">$40 <small>/ day · add-on</small></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3 · LISTING PDP ============ -->
+<section id="pdp" class="screen">
+  <nav class="topnav">
+    <div class="logo" onclick="go('home')" style="cursor:pointer">korent<em>.</em><small>marketplace</small></div>
+    <div class="search"><input value="tents"><button>Search</button></div>
+    <div class="nav-right"><span class="metro">📍 <b>Washington–DMV</b></span><span class="pill">Sign in</span></div>
+  </nav>
+  <div class="wrap">
+    <div class="crumb">Hosting &amp; Events · Tents &amp; Canopies · <b>20×30 Frame Tent</b></div>
+    <div class="pdp">
+      <div>
+        <div class="gallery">
+          <div class="main">⛺</div>
+          <div class="thumbs"><div>⛺</div><div>🌅</div><div>🔩</div><div>📋</div><div>📐</div></div>
+        </div>
+        <h1 style="margin-top:18px">20×30 Frame Tent — white, sidewalls included</h1>
+        <div class="m" style="color:var(--ink-soft);font-size:14px;margin-top:4px">★ 4.9 (87 reviews) · Arlington, VA · 4.2 mi away</div>
+        <div class="specs">
+          <div><b>Fits</b> 60 seated · 90 standing</div>
+          <div><b>Footprint needed</b> 24×34 ft, stake or weight anchoring</div>
+          <div><b>Includes</b> sidewalls ×4, stake kit, 2 hr setup</div>
+          <div><b>Condition</b> Excellent · purchased 2025</div>
+          <div><b>Fulfillment</b> Delivery + on-site setup ($45, ≤15 mi)</div>
+          <div><b>Turnaround</b> 6 hr prep before · 12 hr recovery after</div>
+        </div>
+        <h2>What happens at handoff</h2>
+        <p class="sub" style="margin-bottom:10px">Both sides snap photos at setup and at return. Evidence is attached to the booking — if anything's disputed, support decides from the photos, not from memory.</p>
+        <div class="sellercard">
+          <div class="avatar">CP</div>
+          <div style="flex:1">
+            <b style="font-size:14px">Capitol Party Rentals</b>
+            <div style="font-size:12px;color:var(--ink-soft)">✔ Verified seller · ⚡ replies &lt; 1 hr · 142 rentals · member since 2026</div>
+          </div>
+          <button class="btn no" onclick="go('store')">View store</button>
+        </div>
+      </div>
+      <div class="buybox">
+        <div class="price">$210 <small>/ day</small></div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:2px">$540 weekend · $980 weekly</div>
+        <div class="dates">
+          <div><label>Start</label><input value="Sat, Jun 20"></div>
+          <div><label>End</label><input value="Sun, Jun 21"></div>
+        </div>
+        <div class="totals">
+          <div><span>$210 × 2 days</span><span>$420</span></div>
+          <div><span>Delivery + setup</span><span>$45</span></div>
+          <div><span>Service fee</span><span>$23</span></div>
+          <div class="due"><span>Due today</span><span>$488</span></div>
+        </div>
+        <button class="cta">Request to book</button>
+        <button class="cta ghost">💬 Message seller</button>
+        <div class="depnote">🛡️ <b>Deposit: $180</b> — authorized (not charged) on your card the day before handoff, released after clean return. You'll never be asked to deposit more than the item is worth.</div>
+        <div class="depnote" style="background:#fef3e2">⏱️ Seller responds within 24 hours or your request auto-cancels and you pay nothing. Your card is only charged when they accept.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 · SELLER STORE PAGE ============ -->
+<section id="store" class="screen">
+  <nav class="topnav">
+    <div class="logo" onclick="go('home')" style="cursor:pointer">korent<em>.</em><small>marketplace</small></div>
+    <div class="search"><input placeholder="Search this store…"><button>Search</button></div>
+    <div class="nav-right"><span class="metro">📍 <b>Washington–DMV</b></span><span class="pill">Sign in</span></div>
+  </nav>
+  <div class="wrap">
+    <div class="crumb">rent.korent.app/<b>store/capitol-party-rentals</b> — a page inside the marketplace, not a separate website</div>
+    <div class="banner"></div>
+    <div class="storehead">
+      <div class="avatar">CP</div>
+      <div class="storemeta">
+        <h1>Capitol Party Rentals</h1>
+        <div class="row">
+          <span class="badge v">✔ Identity verified</span>
+          <span class="badge v">✔ Payout verified</span>
+          <span class="badge top">★ Top seller</span>
+          <span class="badge fast">⚡ replies &lt; 1 hr · 98% response rate</span>
+          <span>★ 4.9 (87 reviews) · 142 completed rentals · serves 15 mi around Arlington, VA · delivery &amp; pickup</span>
+        </div>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:14px">Family-run event rental crew serving the DMV since 2019. Tents, seating, dance floors — setup included on anything big.</p>
+    <h2>Live inventory · 12 listings</h2>
+    <div class="cards">
+      <div class="card" onclick="go('pdp')"><div class="ph a">⛺</div><div class="bd"><div class="t">20×30 Frame Tent — white</div><div class="p">$210 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph b">🪑</div><div class="bd"><div class="t">Folding chairs — white (per 25)</div><div class="p">$45 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph c">🕺</div><div class="bd"><div class="t">Dance floor 12×12</div><div class="p">$190 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph d">🔥</div><div class="bd"><div class="t">Patio heaters (4 available)</div><div class="p">$35 <small>/ day each</small></div></div></div>
+    </div>
+    <h2>Recent reviews</h2>
+    <div class="req"><div class="ph2">⭐</div><div class="grow"><div class="t">“Tent was spotless, setup crew was in and out in 90 minutes.” — Dana W.</div><div class="m">20×30 Frame Tent · June 2026 · ★★★★★</div></div></div>
+    <div class="req"><div class="ph2">⭐</div><div class="grow"><div class="t">“Photos at pickup and drop-off made the deposit return painless.” — Marcus T.</div><div class="m">Dance floor 12×12 · May 2026 · ★★★★★</div></div></div>
+  </div>
+</section>
+
+<!-- ============ 5 · SELLER HUB ============ -->
+<section id="hub" class="screen">
+  <nav class="topnav">
+    <div class="logo">korent<em>.</em><small>seller hub</small></div>
+    <div style="flex:1"></div>
+    <div class="nav-right"><span class="metro">rent.korent.app/<b>selling</b></span><span class="pill">Capitol Party Rentals ▾</span></div>
+  </nav>
+  <div class="wrap">
+    <div class="hub">
+      <aside class="hubnav">
+        <a class="on">📥 Requests &amp; bookings</a>
+        <a>📦 Listings</a>
+        <a>📅 Calendar</a>
+        <a>💰 Earnings &amp; payouts</a>
+        <a>💬 Messages</a>
+        <a>📈 Performance</a>
+      </aside>
+      <div>
+        <div class="kpis">
+          <div class="kpi"><b>$3,840</b><span>This month (after 8% operator fee)</span></div>
+          <div class="kpi"><b>2</b><span>Requests awaiting your reply</span></div>
+          <div class="kpi"><b>4</b><span>Handoffs this week</span></div>
+          <div class="kpi"><b>4.9 ★ · 98%</b><span>Rating · response rate (ranks you)</span></div>
+        </div>
+        <h2 style="margin-top:0">Booking requests</h2>
+        <div class="req">
+          <div class="ph2">⛺</div>
+          <div class="grow"><div class="t">20×30 Frame Tent · Jun 20–21 · $488 total</div><div class="m">Renter: Alyssa M. — ✔ ID verified · payment method on file, auto-charges when you accept</div></div>
+          <span class="sla">⏱ 19h 12m to respond</span>
+          <button class="btn ok">Accept</button><button class="btn no">Decline</button>
+        </div>
+        <div class="req">
+          <div class="ph2">🪑</div>
+          <div class="grow"><div class="t">Folding chairs ×75 · Jun 27 · $135 + delivery</div><div class="m">Renter: Jordan K. — ✔ ID verified · asks: “can you deliver by 9am?”</div></div>
+          <span class="sla">⏱ 22h 40m to respond</span>
+          <button class="btn ok">Accept</button><button class="btn no">Decline</button>
+        </div>
+        <h2>Today</h2>
+        <div class="req">
+          <div class="ph2">📸</div>
+          <div class="grow"><div class="t">Return due: Dance floor 12×12 — Bowie, MD</div><div class="m">Take return photos + accessory checklist at pickup · deposit releases after your inspection</div></div>
+          <button class="btn ok">Start return</button>
+        </div>
+        <div class="req" style="border-style:dashed">
+          <div class="ph2">🔁</div>
+          <div class="grow"><div class="t">You're a Korent operator — fulfillment runs in your operator dashboard</div><div class="m">Confirmed bookings appear on your delivery board automatically. Routes, crew and prep never duplicate here.</div></div>
+          <button class="btn no">Open operator app ↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 · SMOKE-TEST WORLD ============ -->
+<section id="soon" class="screen">
+  <nav class="topnav">
+    <div class="logo" onclick="go('home')" style="cursor:pointer">korent<em>.</em><small>marketplace</small></div>
+    <div class="search"><input placeholder="Search rentals…"><button>Search</button></div>
+    <div class="nav-right"><span class="metro">📍 <b>Washington–DMV</b></span><span class="pill">Sign in</span></div>
+  </nav>
+  <div class="wrap">
+    <div class="hero-soon">
+      <div class="big">🍼</div>
+      <h1>Baby Gear is coming to the DMV</h1>
+      <p class="sub">Cribs, strollers, monitors and travel gear from verified local sellers — sanitized, recall-checked, deposit-protected.</p>
+      <div class="waitlist"><input placeholder="you@email.com"><button>Notify me</button></div>
+      <div class="note">214 people in the DMV are waiting · launches when 25 local sellers have listed</div>
+      <div style="margin-top:14px"><button class="btn ok">Have baby gear? Pre-list it free →</button></div>
+    </div>
+    <h2 style="text-align:center;border-top:1px dashed var(--line);padding-top:26px">A preview of what's coming</h2>
+    <div class="cards ghostcards">
+      <div class="card"><div class="ph a">🛏️</div><div class="bd"><div class="t">Full-size crib + organic mattress</div><div class="p">$18 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph b">👶</div><div class="bd"><div class="t">UPPAbaby Vista stroller</div><div class="p">$22 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph c">📹</div><div class="bd"><div class="t">Nanit Pro monitor kit</div><div class="p">$9 <small>/ day</small></div></div></div>
+      <div class="card"><div class="ph d">🚗</div><div class="bd"><div class="t">Convertible car seat (2 avail.)</div><div class="p">$12 <small>/ day</small></div></div></div>
+    </div>
+    <p class="note" style="text-align:center;margin-top:18px">Searches, waitlist joins and pre-listings here are measured per metro — each world goes live when local demand and supply hit the graduation gates.</p>
+  </div>
+</section>
+
+<script>
+function go(id, btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.mock-bar button').forEach(b=>b.classList.remove('active'));
+  if(btn){btn.classList.add('active')}
+  else{document.querySelectorAll('.mock-bar button').forEach(b=>{if(b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('active')})}
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
