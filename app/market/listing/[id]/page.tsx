@@ -9,6 +9,7 @@ import {
 } from "@/lib/market/registry";
 import { logDemandEvent } from "@/lib/market/actions";
 import { cancellationPresetForFamily } from "@/lib/market/cancellation";
+import { categoryIcon } from "@/lib/market/icons";
 import { BookingRequestForm } from "@/components/market/booking-request-form";
 import { MessageForm } from "@/components/market/message-form";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -80,7 +81,7 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
               // eslint-disable-next-line @next/next/no-img-element
               <img src={listing.photoUrl} alt={listing.title} />
             ) : (
-              <span aria-hidden>{world?.icon ?? "📦"}</span>
+              <span aria-hidden>{categoryIcon(listing.worldSlug, listing.categorySlug)}</span>
             )}
           </div>
           <h1 style={{ marginTop: 18 }}>{listing.title}</h1>
@@ -138,6 +139,15 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
           <div className="mk-price">
             {dollars(listing.dailyPriceCents)} <small>/ day</small>
           </div>
+          {listing.weekendPriceCents || listing.weeklyPriceCents ? (
+            <p className="mk-card-m" style={{ marginTop: 4 }}>
+              {listing.weekendPriceCents
+                ? `${dollars(listing.weekendPriceCents)} weekend`
+                : null}
+              {listing.weekendPriceCents && listing.weeklyPriceCents ? " · " : null}
+              {listing.weeklyPriceCents ? `${dollars(listing.weeklyPriceCents)} weekly` : null}
+            </p>
+          ) : null}
 
           {listing.isPrelist ? (
             <>

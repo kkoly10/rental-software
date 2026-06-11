@@ -11,6 +11,7 @@ import { EvidenceForm } from "@/components/market/evidence-form";
 import { DisputeForm } from "@/components/market/dispute-form";
 import { ReviewForm } from "@/components/market/review-form";
 import { FollowupForm } from "@/components/market/followup-form";
+import { categoryIcon } from "@/lib/market/icons";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My rentals" };
@@ -25,7 +26,12 @@ type BookingRow = {
   tax_cents: number;
   deposit_cents: number;
   created_at: string;
-  market_listings: { title: string; photo_url: string | null } | null;
+  market_listings: {
+    title: string;
+    photo_url: string | null;
+    world_slug: string | null;
+    category_slug: string | null;
+  } | null;
 };
 
 const STATE_LABELS: Record<string, { label: string; tone: "ok" | "warn" | "muted" }> = {
@@ -67,7 +73,7 @@ export default async function MyRentalsPage({
       const { data } = await supabase
         .from("market_bookings")
         .select(
-          "id, state, starts_at, ends_at, quantity, subtotal_cents, tax_cents, deposit_cents, created_at, market_listings ( title, photo_url )",
+          "id, state, starts_at, ends_at, quantity, subtotal_cents, tax_cents, deposit_cents, created_at, market_listings ( title, photo_url, world_slug, category_slug )",
         )
         .eq("renter_profile_id", user.id)
         .order("created_at", { ascending: false })
@@ -131,6 +137,19 @@ export default async function MyRentalsPage({
             const meta = STATE_LABELS[b.state] ?? { label: b.state, tone: "muted" as const };
             return (
               <div key={b.id} className="mk-panel" style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+                <div className="mk-bk-thumb" aria-hidden>
+                  {b.market_listings?.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={b.market_listings.photo_url} alt="" loading="lazy" />
+                  ) : (
+                    <span>
+                      {categoryIcon(
+                        b.market_listings?.world_slug,
+                        b.market_listings?.category_slug,
+                      )}
+                    </span>
+                  )}
+                </div>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <b>{b.market_listings?.title ?? "Listing"}</b>
                   <div className="mk-card-m">
