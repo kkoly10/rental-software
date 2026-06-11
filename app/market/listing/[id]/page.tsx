@@ -104,6 +104,14 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
             <div>
               <b>Condition</b> {listing.condition}
             </div>
+            {listing.proofVideoUrl ? (
+              <div>
+                <b>Proof of function</b> ✓ verified working ·{" "}
+                <a href={listing.proofVideoUrl} target="_blank" rel="noreferrer">
+                  watch video
+                </a>
+              </div>
+            ) : null}
             <div>
               <b>Fulfillment</b>{" "}
               {[
@@ -145,7 +153,7 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
           ) : (
             <>
               {signedIn ? (
-                <BookingRequestForm listingId={listing.id} maxQuantity={listing.quantity} />
+                <BookingRequestForm listingId={listing.id} maxQuantity={listing.quantity} instant={listing.instantBook} />
               ) : (
                 <>
                   <a

@@ -31,6 +31,8 @@ export type MarketListing = {
   status: string;
   inventoryMode: string;
   quantity: number;
+  instantBook: boolean;
+  proofVideoUrl: string | null;
   sellerSlug: string | null;
   sellerDisplayName: string | null;
 };
@@ -51,6 +53,7 @@ const LISTING_SELECT = `
   title, description, condition, daily_price_cents, weekend_price_cents,
   weekly_price_cents, deposit_cents, offers_delivery, offers_pickup,
   metro_slug, photo_url, is_prelist, status, inventory_mode, quantity,
+  instant_book, proof_video_url,
   market_seller_profiles ( slug, display_name )
 `;
 
@@ -75,6 +78,8 @@ type ListingRow = {
   status: string;
   inventory_mode: string;
   quantity: number;
+  instant_book: boolean;
+  proof_video_url: string | null;
   market_seller_profiles: { slug: string; display_name: string } | null;
 };
 
@@ -100,6 +105,8 @@ function mapListing(row: ListingRow): MarketListing {
     status: row.status,
     inventoryMode: row.inventory_mode,
     quantity: row.quantity,
+    instantBook: row.instant_book,
+    proofVideoUrl: row.proof_video_url,
     sellerSlug: row.market_seller_profiles?.slug ?? null,
     sellerDisplayName: row.market_seller_profiles?.display_name ?? null,
   };

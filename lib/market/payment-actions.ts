@@ -47,6 +47,21 @@ export async function payForBooking(formData: FormData): Promise<void> {
     return;
   }
 
+  const url = await createCheckoutUrlForBooking(bookingId, user.id);
+  if (url) redirect(url);
+}
+
+/**
+ * Shared by payForBooking and the instant-book path: builds the
+ * destination-charge Checkout Session for an awaiting_payment booking
+ * the renter owns. Returns the session URL or null (seller's Connect
+ * not ready / booking not payable).
+ */
+export async function createCheckoutUrlForBooking(
+  bookingId: string,
+  renterProfileId: string,
+): Promise<string | null> {
+  if (!hasSupabaseEnv() || !hasStripeEnv()) return null;
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
 
@@ -56,10 +71,10 @@ export async function payForBooking(formData: FormData): Promise<void> {
       "id, state, renter_profile_id, organization_id, subtotal_cents, platform_fee_cents, tax_cents, rental_days, quantity, stripe_checkout_session_id, market_listings ( title )",
     )
     .eq("id", bookingId)
-    .eq("renter_profile_id", user.id)
+    .eq("renter_profile_id", renterProfileId)
     .maybeSingle();
-  if (!booking) return;
-  if ((booking.state as BookingState) !== "awaiting_payment") return;
+  if (!booking) return null;
+  if ((booking.state as BookingState) !== "awaiting_payment") return null;
 
   const { data: org } = await admin
     .from("organizations")
@@ -77,7 +92,7 @@ export async function payForBooking(formData: FormData): Promise<void> {
       payoutsEnabled: org.stripe_connect_payouts_enabled,
       detailsSubmitted: org.stripe_connect_details_submitted,
     });
-  if (!connectReady || !org?.stripe_connect_account_id) return;
+  if (!connectReady || !org?.stripe_connect_account_id) return null;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const listingTitle =
@@ -128,7 +143,7 @@ export async function payForBooking(formData: FormData): Promise<void> {
     })
     .eq("id", booking.id);
 
-  if (session.url) redirect(session.url);
+  return session.url ?? null;
 }
 
 /** Used by the webhook: idempotent confirm of a paid booking. */

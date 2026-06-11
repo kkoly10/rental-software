@@ -11,9 +11,11 @@ const initial: BookingActionState = { ok: false, message: "" };
 export function BookingRequestForm({
   listingId,
   maxQuantity,
+  instant = false,
 }: {
   listingId: string;
   maxQuantity: number;
+  instant?: boolean;
 }) {
   const [state, action, pending] = useActionState(requestBooking, initial);
 
@@ -72,7 +74,7 @@ export function BookingRequestForm({
         />
       </label>
       <button type="submit" className="mk-btn" style={{ width: "100%", marginTop: 12 }} disabled={pending}>
-        {pending ? "Sending…" : "Request to book"}
+        {pending ? (instant ? "Reserving…" : "Sending…") : instant ? "⚡ Book now" : "Request to book"}
       </button>
       {state.message ? <p className="mk-msg err">{state.message}</p> : null}
     </form>

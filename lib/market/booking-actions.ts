@@ -15,6 +15,7 @@ import {
 import { computePlatformFeeCents, computeSellerPayoutCents } from "@/lib/market/fees";
 import { computeTaxCents } from "@/lib/market/tax";
 import { resolveOperatingDefaults } from "@/lib/market/registry";
+import { redirect } from "next/navigation";
 
 /**
  * Booking lifecycle actions (spec §10/§13, build plan M2).
@@ -139,7 +140,7 @@ export async function requestBooking(
   const { data: listing } = await supabase
     .from("market_listings")
     .select(
-      "id, organization_id, world_slug, category_slug, status, is_prelist, daily_price_cents, deposit_cents, quantity, prep_buffer_minutes, recovery_buffer_minutes",
+      "id, organization_id, world_slug, category_slug, status, is_prelist, daily_price_cents, deposit_cents, quantity, prep_buffer_minutes, recovery_buffer_minutes, instant_book",
     )
     .eq("id", parsed.data.listingId)
     .eq("status", "published")
@@ -163,6 +164,20 @@ export async function requestBooking(
   }
 
   const defaults = resolveOperatingDefaults(listing.world_slug, listing.category_slug);
+
+  // Trust gates (founder decision 2026-06-11, Turo-style): a verified
+  // phone is required to book anything; full_id categories also need
+  // the ID + live-selfie on file (stored privately, admin-viewed only
+  // when a dispute arises).
+  const { getVerificationStatus } = await import("@/lib/market/verification-actions");
+  const verification = await getVerificationStatus(user.id);
+  if (!verification.phoneVerified) {
+    return { ok: false, message: "Verify your phone number first — it takes 30 seconds on the Verify page (/market/verify)." };
+  }
+  if (defaults.identityVerification === "full_id" && !verification.idOnFile) {
+    return { ok: false, message: "This category requires ID verification (photo + live selfie) — add it on the Verify page (/market/verify)." };
+  }
+
   const subtotal = listing.daily_price_cents * rentalDays * parsed.data.quantity;
   if (subtotal < defaults.minBookingSubtotalCents) {
     return {
@@ -190,13 +205,37 @@ export async function requestBooking(
   const fee = computePlatformFeeCents(subtotal, sellerKind);
   const payout = computeSellerPayoutCents(subtotal, sellerKind);
   const tax = computeTaxCents(subtotal, taxState);
+  // §10 instant book: category allows it AND the seller opted in.
+  // The renter is live in checkout, so a 30-minute checkout_hold is
+  // taken atomically BEFORE the booking row exists; payment follows
+  // immediately and the webhook confirms.
+  const instant = Boolean(listing.instant_book) && defaults.instantBookAllowed;
+  let instantHoldId: string | null = null;
+  if (instant) {
+    const { data: holdResult } = await admin.rpc("market_reserve_hold", {
+      p_listing_id: listing.id,
+      p_renter_profile_id: user.id,
+      p_starts_at: startsAt.toISOString(),
+      p_ends_at: endsAt.toISOString(),
+      p_quantity: parsed.data.quantity,
+      p_state: "checkout_hold",
+      p_ttl_minutes: 30,
+    });
+    const hr = holdResult as { ok?: boolean; hold_id?: string } | null;
+    if (!hr?.ok || !hr.hold_id) {
+      return { ok: false, message: "Those dates just became unavailable — try different dates." };
+    }
+    instantHoldId = hr.hold_id;
+  }
+
   const { data: booking, error } = await admin
     .from("market_bookings")
     .insert({
       listing_id: listing.id,
       organization_id: listing.organization_id,
       renter_profile_id: user.id,
-      state: "pending_seller_approval",
+      state: instant ? "awaiting_payment" : "pending_seller_approval",
+      hold_id: instantHoldId,
       quantity: parsed.data.quantity,
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
@@ -219,12 +258,23 @@ export async function requestBooking(
   if (error || !booking) {
     return { ok: false, message: "Couldn't create the request — please try again." };
   }
-  await logBookingEvent(admin, booking.id, "booking.requested", "renter", {
+  await logBookingEvent(admin, booking.id, instant ? "booking.instant" : "booking.requested", "renter", {
     rental_days: rentalDays,
     subtotal_cents: subtotal,
   });
 
   revalidatePath(SELLER_HUB_PATH);
+
+  if (instant) {
+    const { createCheckoutUrlForBooking } = await import("@/lib/market/payment-actions");
+    const url = await createCheckoutUrlForBooking(booking.id, user.id);
+    if (url) redirect(url); // NEXT_REDIRECT propagates out of the action
+    return {
+      ok: true,
+      message: "Booked — finish payment from My rentals (the seller's payout setup is still syncing).",
+    };
+  }
+
   return {
     ok: true,
     message:
