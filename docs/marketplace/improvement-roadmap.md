@@ -164,12 +164,12 @@ decline; one risk-based deposit on summed replacement value; one
 payment; booking-level dispute with item-level evidence.
 
 **Checklist:**
-- [ ] `market_booking_items` child table + migration (booking keeps money totals)
-- [ ] Multi-listing atomic reserve (extend `market_reserve_hold` to item sets)
-- [ ] "Add more from this seller" on the listing/request form
-- [ ] Deposit engine recompute on summed replacement value
-- [ ] Hub + rentals surfaces render line items
-- [ ] Evidence/disputes: booking-level case, per-item notes
+- [x] `market_booking_items` child table + migration (booking keeps money totals)
+- [x] Multi-listing atomic reserve (extend `market_reserve_hold` to item sets)
+- [x] "Add more from this seller" on the listing/request form
+- [x] Deposit engine recompute on summed replacement value
+- [x] Hub + rentals surfaces render line items
+- [x] Evidence/disputes: booking-level case, per-item notes
 
 ## 6. Standby queue (master plan §10)
 
@@ -212,3 +212,12 @@ not parity.
   approval (idempotent), late-fee suppression while pending +
   retroactive un-late, return reminders re-armed on the new end date,
   12h lapse processing in the reminders cron, 4 new email kinds.
+- **2026-06-11 — Item 5 (multi-item bookings):** market_booking_items
+  + market_reserve_holds_multi RPC (all-or-nothing, deadlock-free
+  sorted locks; capacity now counts secondary-item rows — migration
+  applied to prod), "Add more from this seller" picker on the PDP
+  (≤4 extras, same org enforced), combined rate-honoring subtotal,
+  order-level risk-based deposit on summed replacement value, holds
+  confirmed/released/stretched across every line item (payment,
+  cancel, completion, extensions), line items rendered on My rentals
+  and the Seller Hub.

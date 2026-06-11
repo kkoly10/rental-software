@@ -87,7 +87,13 @@ const requestSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   quantity: z.coerce.number().int().min(1).max(10_000).default(1),
   message: z.string().max(1000).optional().or(z.literal("")),
+  // Roadmap item 5: extra same-seller items, JSON-encoded by the form.
+  extraItems: z.string().max(2000).optional().or(z.literal("")),
 });
+
+const extraItemsSchema = z
+  .array(z.object({ listingId: z.string().uuid(), quantity: z.coerce.number().int().min(1).max(10_000) }))
+  .max(4);
 
 export async function requestBooking(
   _prev: BookingActionState,
@@ -103,6 +109,7 @@ export async function requestBooking(
     endDate: formData.get("end_date"),
     quantity: formData.get("quantity") || 1,
     message: formData.get("message") ?? "",
+    extraItems: formData.get("extra_items") ?? "",
   });
   if (!parsed.success) {
     return { ok: false, message: parsed.error.errors[0]?.message ?? "Invalid request." };
@@ -145,7 +152,7 @@ export async function requestBooking(
   const { data: listing } = await supabase
     .from("market_listings")
     .select(
-      "id, organization_id, world_slug, category_slug, status, is_prelist, daily_price_cents, weekend_price_cents, weekly_price_cents, deposit_cents, quantity, prep_buffer_minutes, recovery_buffer_minutes, instant_book",
+      "id, organization_id, world_slug, category_slug, status, is_prelist, title, daily_price_cents, weekend_price_cents, weekly_price_cents, deposit_cents, replacement_value_cents, quantity, prep_buffer_minutes, recovery_buffer_minutes, instant_book",
     )
     .eq("id", parsed.data.listingId)
     .eq("status", "published")
@@ -207,10 +214,62 @@ export async function requestBooking(
     return { ok: false, message: "Add your ID + live selfie on the Verify page (/market/verify) — sellers confirm it's you at pickup, on every rental." };
   }
 
+  // Roadmap item 5: extra same-seller items — one booking, line items,
+  // all-or-nothing availability, whole-booking accept/decline.
+  type ExtraListing = {
+    id: string;
+    organization_id: string;
+    is_prelist: boolean;
+    title: string;
+    daily_price_cents: number;
+    weekend_price_cents: number | null;
+    weekly_price_cents: number | null;
+    deposit_cents: number;
+    replacement_value_cents: number | null;
+    quantity: number;
+  };
+  let extras: Array<{ listing: ExtraListing; quantity: number; subtotal: number }> = [];
+  if (parsed.data.extraItems) {
+    let requestedExtras: Array<{ listingId: string; quantity: number }>;
+    try {
+      requestedExtras = extraItemsSchema.parse(JSON.parse(parsed.data.extraItems));
+    } catch {
+      return { ok: false, message: "Invalid extra items." };
+    }
+    const deduped = requestedExtras.filter(
+      (e, i) =>
+        e.listingId !== parsed.data.listingId &&
+        requestedExtras.findIndex((x) => x.listingId === e.listingId) === i,
+    );
+    if (deduped.length > 0) {
+      const { data: extraRows } = await supabase
+        .from("market_listings")
+        .select(
+          "id, organization_id, is_prelist, title, daily_price_cents, weekend_price_cents, weekly_price_cents, deposit_cents, replacement_value_cents, quantity",
+        )
+        .in("id", deduped.map((e) => e.listingId))
+        .eq("status", "published");
+      const byId = new Map(((extraRows as ExtraListing[] | null) ?? []).map((r) => [r.id, r]));
+      for (const e of deduped) {
+        const row = byId.get(e.listingId);
+        if (!row || row.is_prelist) {
+          return { ok: false, message: "One of the added items is no longer available." };
+        }
+        if (row.organization_id !== listing.organization_id) {
+          return { ok: false, message: "All items in one booking must come from the same seller." };
+        }
+        if (e.quantity > row.quantity) {
+          return { ok: false, message: `Only ${row.quantity} of "${row.title}" available.` };
+        }
+        extras.push({ listing: row, quantity: e.quantity, subtotal: 0 });
+      }
+    }
+  }
+
   // Honor advertised weekend/weekly rates (Codex review, PR #381) —
   // renter-favoring rate selection, never above daily × days.
   const { computeRentalSubtotalCents } = await import("@/lib/market/pricing");
-  const subtotal = computeRentalSubtotalCents({
+  const primarySubtotal = computeRentalSubtotalCents({
     rentalDays,
     quantity: parsed.data.quantity,
     dailyCents: listing.daily_price_cents,
@@ -218,6 +277,43 @@ export async function requestBooking(
     weeklyCents: listing.weekly_price_cents,
     startsAt: new Date(startMs),
   });
+  extras = extras.map((e) => ({
+    ...e,
+    subtotal: computeRentalSubtotalCents({
+      rentalDays,
+      quantity: e.quantity,
+      dailyCents: e.listing.daily_price_cents,
+      weekendCents: e.listing.weekend_price_cents,
+      weeklyCents: e.listing.weekly_price_cents,
+      startsAt: new Date(startMs),
+    }),
+  }));
+  const subtotal = primarySubtotal + extras.reduce((s, e) => s + e.subtotal, 0);
+
+  // Order-level deposit (research: Booqable/Goodshuffle bill per
+  // order, not summed per item): risk-based on the SUMMED replacement
+  // value through the §9 engine; falls back to summed per-listing
+  // deposits when replacement values are missing.
+  let depositCents = listing.deposit_cents;
+  if (extras.length > 0) {
+    const allListings = [listing, ...extras.map((e) => e.listing)];
+    const summedReplacement = allListings.reduce(
+      (s, l) => s + (l.replacement_value_cents ?? 0),
+      0,
+    );
+    if (summedReplacement > 0) {
+      const { computeDepositCents } = await import("@/lib/market/fees");
+      depositCents = computeDepositCents({
+        replacementValueCents: summedReplacement,
+        ageMonths: 24,
+        condition: "good",
+        riskFamilyPct: defaults.depositPct,
+        depositFloorCents: defaults.depositFloorCents,
+      }).depositCents;
+    } else {
+      depositCents = allListings.reduce((s, l) => s + l.deposit_cents, 0);
+    }
+  }
   if (subtotal < defaults.minBookingSubtotalCents) {
     return {
       ok: false,
@@ -250,34 +346,42 @@ export async function requestBooking(
   // immediately and the webhook confirms.
   const instant = Boolean(listing.instant_book) && defaults.instantBookAllowed;
   let instantHoldId: string | null = null;
+  // listing_id → hold_id for every item (multi-item instant bookings).
+  const instantItemHolds = new Map<string, string>();
   if (instant) {
-    const { data: holdResult } = await admin.rpc("market_reserve_hold", {
-      p_listing_id: listing.id,
+    const itemsPayload = [
+      { listing_id: listing.id, quantity: parsed.data.quantity },
+      ...extras.map((e) => ({ listing_id: e.listing.id, quantity: e.quantity })),
+    ];
+    // Bug #27: the hold backs a real awaiting_payment booking, so it
+    // gets the 24h payment TTL (matching the "pay from My rentals"
+    // copy), not the 30-min checkout TTL that would silently kill it.
+    // All-or-nothing across items (roadmap item 5).
+    const { data: holdResult } = await admin.rpc("market_reserve_holds_multi", {
+      p_items: itemsPayload,
       p_renter_profile_id: user.id,
       p_starts_at: startsAt.toISOString(),
       p_ends_at: endsAt.toISOString(),
-      p_quantity: parsed.data.quantity,
-      // Bug #27: the hold backs a real awaiting_payment booking, so it
-      // gets the 24h payment TTL (matching the "pay from My rentals"
-      // copy), not the 30-min checkout TTL that would silently kill it.
       p_state: "awaiting_renter_payment",
       p_ttl_minutes: 24 * 60,
     });
-    const hr = holdResult as { ok?: boolean; hold_id?: string } | null;
-    if (!hr?.ok || !hr.hold_id) {
+    const hr = holdResult as { ok?: boolean; holds?: Array<{ listing_id: string; hold_id: string }> } | null;
+    if (!hr?.ok || !hr.holds) {
       return { ok: false, message: "Those dates just became unavailable — try different dates." };
     }
-    instantHoldId = hr.hold_id;
+    for (const h of hr.holds) instantItemHolds.set(h.listing_id, h.hold_id);
+    instantHoldId = instantItemHolds.get(listing.id) ?? null;
   }
 
-  // Bug #20: if anything below fails, the instant hold must be released
-  // so it doesn't block the slot for its whole TTL.
+  // Bug #20: if anything below fails, every instant hold must be
+  // released so the slots aren't blocked for their whole TTL.
   const releaseInstantHold = async () => {
-    if (instantHoldId) {
+    const ids = [...instantItemHolds.values()];
+    if (ids.length > 0) {
       await admin
         .from("market_reservation_holds")
         .update({ state: "released", updated_at: new Date().toISOString() })
-        .eq("id", instantHoldId);
+        .in("id", ids);
     }
   };
 
@@ -301,7 +405,7 @@ export async function requestBooking(
       seller_payout_cents: payout,
       tax_cents: tax,
       tax_state_code: taxState,
-      deposit_cents: listing.deposit_cents,
+      deposit_cents: depositCents,
       deposit_strategy: defaults.depositStrategy,
       renter_message: parsed.data.message || null,
     })
@@ -311,6 +415,37 @@ export async function requestBooking(
   if (error || !booking) {
     await releaseInstantHold();
     return { ok: false, message: "Couldn't create the request — please try again." };
+  }
+
+  // Line items (primary + extras). Legacy single-item bookings skip
+  // this (zero rows = readers fall back to the booking columns).
+  if (extras.length > 0) {
+    const itemRows = [
+      {
+        booking_id: booking.id,
+        listing_id: listing.id,
+        hold_id: instantItemHolds.get(listing.id) ?? null,
+        quantity: parsed.data.quantity,
+        daily_price_cents: listing.daily_price_cents,
+        subtotal_cents: primarySubtotal,
+        title_snapshot: listing.title,
+      },
+      ...extras.map((e) => ({
+        booking_id: booking.id,
+        listing_id: e.listing.id,
+        hold_id: instantItemHolds.get(e.listing.id) ?? null,
+        quantity: e.quantity,
+        daily_price_cents: e.listing.daily_price_cents,
+        subtotal_cents: e.subtotal,
+        title_snapshot: e.listing.title,
+      })),
+    ];
+    const { error: itemsError } = await admin.from("market_booking_items").insert(itemRows);
+    if (itemsError) {
+      await admin.from("market_bookings").delete().eq("id", booking.id);
+      await releaseInstantHold();
+      return { ok: false, message: "Couldn't create the request — please try again." };
+    }
   }
   await logBookingEvent(admin, booking.id, instant ? "booking.instant" : "booking.requested", "renter", {
     rental_days: rentalDays,
@@ -384,17 +519,30 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
   // §10: the inventory hold is taken NOW, atomically, at approval —
   // held for 24h while the renter pays (awaiting_renter_payment TTL).
   // The 5-minute cron expires it (and the booking) if they never do.
-  const { data: holdResult, error: holdError } = await admin.rpc("market_reserve_hold", {
-    p_listing_id: booking.listing_id,
+  // Multi-item bookings (roadmap item 5) reserve every line item
+  // all-or-nothing.
+  const { getBookingItems } = await import("@/lib/market/booking-items");
+  const bookingItems = await getBookingItems(admin, booking.id);
+  const itemsPayload =
+    bookingItems.length > 0
+      ? bookingItems.map((i) => ({ listing_id: i.listing_id, quantity: i.quantity }))
+      : [{ listing_id: booking.listing_id, quantity: booking.quantity }];
+  const { data: holdResult, error: holdError } = await admin.rpc("market_reserve_holds_multi", {
+    p_items: itemsPayload,
     p_renter_profile_id: booking.renter_profile_id,
     p_starts_at: booking.starts_at,
     p_ends_at: booking.ends_at,
-    p_quantity: booking.quantity,
     p_state: "awaiting_renter_payment",
     p_ttl_minutes: 24 * 60,
   });
 
-  const result = holdResult as { ok?: boolean; hold_id?: string; reason?: string } | null;
+  const multi = holdResult as { ok?: boolean; holds?: Array<{ listing_id: string; hold_id: string }> } | null;
+  const holdByListing = new Map((multi?.holds ?? []).map((h) => [h.listing_id, h.hold_id]));
+  const result = {
+    ok: multi?.ok,
+    hold_id: holdByListing.get(booking.listing_id),
+    reason: undefined as string | undefined,
+  };
   if (holdError || !result?.ok || !result.hold_id) {
     // Dates were taken by a competing booking: auto-cancel honestly
     // instead of leaving a zombie request the seller keeps accepting
@@ -447,9 +595,16 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
     await admin
       .from("market_reservation_holds")
       .update({ state: "released", updated_at: new Date().toISOString() })
-      .eq("id", result.hold_id);
+      .in("id", [...holdByListing.values()]);
     revalidatePath(SELLER_HUB_PATH);
     return;
+  }
+  // Stamp per-item holds so every later release/confirm covers them.
+  for (const item of bookingItems) {
+    const hid = holdByListing.get(item.listing_id);
+    if (hid) {
+      await admin.from("market_booking_items").update({ hold_id: hid }).eq("id", item.id);
+    }
   }
   await logBookingEvent(admin, booking.id, "booking.approved", "seller");
   {

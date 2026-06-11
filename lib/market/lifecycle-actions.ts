@@ -156,11 +156,10 @@ export async function advanceBooking(formData: FormData): Promise<void> {
     } catch {
       // best-effort
     }
-    if (booking.hold_id) {
-      await admin
-        .from("market_reservation_holds")
-        .update({ state: "released", updated_at: new Date().toISOString() })
-        .eq("id", booking.hold_id);
+    {
+      // Multi-item bookings: release every line item's hold too.
+      const { updateBookingHolds } = await import("@/lib/market/booking-items");
+      await updateBookingHolds(admin, booking.id, booking.hold_id, { state: "released" });
     }
 
     // Turo-style claim window (decision 2026-06-11): the deposit no
