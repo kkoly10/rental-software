@@ -179,8 +179,18 @@ async function finalizeCancellation(
 
   {
     // Multi-item bookings: release every line item's hold too.
-    const { updateBookingHolds } = await import("@/lib/market/booking-items");
+    const { updateBookingHolds, getBookingItems } = await import("@/lib/market/booking-items");
     await updateBookingHolds(admin, booking.id, booking.hold_id, { state: "released" });
+    // Roadmap item 6: freed capacity → offer the standby queue
+    // (fire-and-forget; covers every cancelled line item's listing).
+    try {
+      const { offerStandbyForListing } = await import("@/lib/market/standby-actions");
+      const items = await getBookingItems(admin, booking.id);
+      const listingIds = new Set<string>([booking.listing_id, ...items.map((i) => i.listing_id)]);
+      for (const id of listingIds) void offerStandbyForListing(id);
+    } catch {
+      // standby is best-effort
+    }
   }
 
   await releaseDepositIfHeld(admin, booking);

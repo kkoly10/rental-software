@@ -187,11 +187,11 @@ not parity.
   fallback when pickup is <48h away.
 
 **Checklist:**
-- [ ] "Notify me if it frees up" on unavailable date selections (writes `market_reservation_standby`)
-- [ ] Cancellation/expiry hook: offer to next waiter + TTL hold
-- [ ] Offer email with claim link; cascade on expiry (cron)
-- [ ] Broadcast fallback inside 48h of pickup
-- [ ] Promotion → normal request/checkout flow
+- [x] "Notify me if it frees up" on unavailable date selections (writes `market_reservation_standby`)
+- [x] Cancellation/expiry hook: offer to next waiter + TTL hold
+- [x] Offer email with claim link; cascade on expiry (cron)
+- [x] Broadcast fallback inside 48h of pickup
+- [x] Promotion → normal request/checkout flow
 
 ---
 
@@ -221,3 +221,11 @@ not parity.
   confirmed/released/stretched across every line item (payment,
   cancel, completion, extensions), line items rendered on My rentals
   and the Seller Hub.
+- **2026-06-11 — Item 6 (standby queue):** "Notify me if these dates
+  free up" capture on unavailable booking attempts, sequential
+  3h-exclusive offer emails with listing-link CTA (v1 offers are
+  exclusive notifications, not blocking holds — a hold would block
+  the claimant's own booking), hourly cascade + availability sweep in
+  the reminders cron, broadcast to all waiters inside 48h of start,
+  cancel-path hook covering every line item's listing. Migration
+  applied to prod. ALL SIX ROADMAP ITEMS COMPLETE.

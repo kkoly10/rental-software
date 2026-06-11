@@ -25,6 +25,7 @@ type NotifyKind =
   | "ready_for_handoff" // → renter (pickup instructions)
   | "booking_completed" // → renter (review prompt)
   | "booking_completed_seller" // → seller (follow-up prompt)
+  | "standby_available" // → renter (dates freed up)
   | "extension_requested" // → seller (12h window)
   | "extension_approved" // → renter (charged)
   | "extension_declined" // → renter
@@ -103,6 +104,12 @@ const COPY: Record<
     body: (d) =>
       `<b>${d.listingTitle}</b> is complete. Take 30 seconds in the Seller Hub: confirm the item came back fine and flag anything off — it protects you and keeps bad actors off the marketplace.`,
     cta: { label: "Open Seller Hub", url: SELLER_HUB_URL },
+  },
+  standby_available: {
+    subject: "It's available! The dates you wanted just freed up",
+    body: (d) =>
+      `<b>${d.listingTitle}</b> is now available for ${d.dates}. ${d.extra ?? ""} Standby spots aren't held — book to lock it in.`,
+    cta: { label: "Book it now", url: MARKET_URL },
   },
   extension_requested: {
     subject: "Extension request — respond within 12 hours",
@@ -227,10 +234,15 @@ export async function notifyMarketEmail(input: {
   startsAt: string;
   endsAt: string;
   extra?: string;
+  /** Override the kind's default CTA target (e.g. a listing URL). */
+  ctaUrl?: string;
 }): Promise<void> {
   try {
     if (!input.to) return;
-    const tpl = COPY[input.kind];
+    const base = COPY[input.kind];
+    const tpl = input.ctaUrl && base.cta
+      ? { ...base, cta: { ...base.cta, url: input.ctaUrl } }
+      : base;
     const dates = `${formatMarketDate(input.startsAt)} → ${formatMarketDate(input.endsAt)}`;
     await sendEmail({
       to: input.to,

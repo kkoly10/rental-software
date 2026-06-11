@@ -5,8 +5,10 @@ import {
   requestBooking,
   type BookingActionState,
 } from "@/lib/market/booking-actions";
+import { joinStandby, type StandbyState } from "@/lib/market/standby-actions";
 
 const initial: BookingActionState = { ok: false, message: "" };
+const standbyInitial: StandbyState = { ok: false, message: "" };
 
 export type SellerExtraOption = {
   id: string;
@@ -29,6 +31,10 @@ export function BookingRequestForm({
   sellerExtras?: SellerExtraOption[];
 }) {
   const [state, action, pending] = useActionState(requestBooking, initial);
+  const [standbyState, standbyAction, standbyPending] = useActionState(joinStandby, standbyInitial);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [quantity, setQuantity] = useState(1);
   // listingId → quantity for added extras (max 4).
   const [extras, setExtras] = useState<Record<string, number>>({});
   const extraItemsJson = JSON.stringify(
@@ -51,7 +57,11 @@ export function BookingRequestForm({
   const today = new Date();
   const minDate = new Date(today.getTime() + 86_400_000).toISOString().slice(0, 10);
 
+  const showStandby =
+    state.message && /unavailable/i.test(state.message) && startDate && endDate;
+
   return (
+    <>
     <form action={action} style={{ marginTop: 14 }}>
       <input type="hidden" name="listing_id" value={listingId} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -62,6 +72,8 @@ export function BookingRequestForm({
             name="start_date"
             required
             min={minDate}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
             style={{ width: "100%", marginTop: 4, padding: 8, border: "1px solid var(--mk-line)", borderRadius: 10, font: "inherit" }}
           />
         </label>
@@ -72,6 +84,8 @@ export function BookingRequestForm({
             name="end_date"
             required
             min={minDate}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
             style={{ width: "100%", marginTop: 4, padding: 8, border: "1px solid var(--mk-line)", borderRadius: 10, font: "inherit" }}
           />
         </label>
@@ -84,7 +98,8 @@ export function BookingRequestForm({
             name="quantity"
             min={1}
             max={maxQuantity}
-            defaultValue={1}
+            value={quantity}
+            onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
             style={{ width: "100%", marginTop: 4, padding: 8, border: "1px solid var(--mk-line)", borderRadius: 10, font: "inherit" }}
           />
         </label>
@@ -154,5 +169,22 @@ export function BookingRequestForm({
       </button>
       {state.message ? <p className="mk-msg err">{state.message}</p> : null}
     </form>
+    {showStandby ? (
+      standbyState.ok ? (
+        <p className="mk-msg ok">✓ {standbyState.message}</p>
+      ) : (
+        <form action={standbyAction} style={{ marginTop: 8 }}>
+          <input type="hidden" name="listing_id" value={listingId} />
+          <input type="hidden" name="start_date" value={startDate} />
+          <input type="hidden" name="end_date" value={endDate} />
+          <input type="hidden" name="quantity" value={quantity} />
+          <button type="submit" className="mk-btn ghost" style={{ width: "100%" }} disabled={standbyPending}>
+            {standbyPending ? "Joining…" : "🔔 Notify me if these dates free up"}
+          </button>
+          {standbyState.message ? <p className="mk-msg err">{standbyState.message}</p> : null}
+        </form>
+      )
+    ) : null}
+    </>
   );
 }
