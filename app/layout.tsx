@@ -120,9 +120,12 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Editorial storefront fonts — Fraunces display + Inter Tight body.
+            DM Sans / Plus Jakarta Sans / Sora / DM Serif Display intentionally
+            dropped — they're the previous-iteration "Framer template" tells. */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Inter+Tight:wght@400;500;600;700&display=swap"
         />
       </head>
       <body>
