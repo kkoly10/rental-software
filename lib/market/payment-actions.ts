@@ -225,11 +225,13 @@ export async function confirmPaidBooking(input: {
     return "skipped";
   }
 
-  if (booking.hold_id) {
-    await admin
-      .from("market_reservation_holds")
-      .update({ state: "confirmed", expires_at: null, updated_at: new Date().toISOString() })
-      .eq("id", booking.hold_id);
+  {
+    // Multi-item bookings: confirm every line item's hold too.
+    const { updateBookingHolds } = await import("@/lib/market/booking-items");
+    await updateBookingHolds(admin, booking.id, booking.hold_id, {
+      state: "confirmed",
+      expires_at: null,
+    });
   }
 
   await admin.from("market_booking_events").insert({

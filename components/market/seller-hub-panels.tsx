@@ -79,6 +79,7 @@ export async function SellerHubPanels() {
   let products: Array<{ id: string; name: string }> = [];
   let requests: RequestRow[] = [];
   let sellerFollowedUp = new Set<string>();
+  const itemsByBooking = new Map<string, Array<{ title_snapshot: string; quantity: number }>>();
   let extensionRequests: Array<{
     id: string;
     booking_id: string;
@@ -144,6 +145,17 @@ export async function SellerHubPanels() {
     products = (productsRes.data as Array<{ id: string; name: string }> | null) ?? [];
     const requestsRes = await requestsPromise;
     requests = (requestsRes.data as unknown as RequestRow[] | null) ?? [];
+    if (requests.length > 0) {
+      const { data: itemRows } = await supabase
+        .from("market_booking_items")
+        .select("booking_id, title_snapshot, quantity")
+        .in("booking_id", requests.map((r) => r.id));
+      for (const r of itemRows ?? []) {
+        const list = itemsByBooking.get(r.booking_id) ?? [];
+        list.push(r);
+        itemsByBooking.set(r.booking_id, list);
+      }
+    }
     const { data: extRows } = await supabase
       .from("market_extension_requests")
       .select(
@@ -256,6 +268,15 @@ export async function SellerHubPanels() {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                     <div>
                       <strong>{r.market_listings?.title ?? "Listing"}</strong>
+                      {itemsByBooking.has(r.id) ? (
+                        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                          {itemsByBooking.get(r.id)!.length} items:{" "}
+                          {itemsByBooking
+                            .get(r.id)!
+                            .map((i) => (i.quantity > 1 ? `${i.title_snapshot} ×${i.quantity}` : i.title_snapshot))
+                            .join(" · ")}
+                        </div>
+                      ) : null}
                       <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                         {new Date(r.starts_at).toLocaleDateString()} →{" "}
                         {new Date(r.ends_at).toLocaleDateString()} · qty {r.quantity} · $

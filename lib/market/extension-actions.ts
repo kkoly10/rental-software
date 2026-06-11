@@ -89,11 +89,33 @@ async function extensionConflicts(
     new Date(newEndsAtIso).getTime() + booking.recovery_buffer_minutes * 60_000,
   ).toISOString();
 
+  // Multi-item bookings: the extension must be conflict-free for EVERY
+  // line item's listing, not just the primary.
+  const { getBookingItems, bookingHoldIds } = await import("@/lib/market/booking-items");
+  const items = await getBookingItems(admin, booking.id);
+  const listingIds = items.length > 0 ? items.map((i) => i.listing_id) : [booking.listing_id];
+  const ownHoldIds = new Set(await bookingHoldIds(admin, booking.id, booking.hold_id));
+
+  for (const listingId of listingIds) {
+    const conflict = await listingConflicts(admin, booking, listingId, windowStart, windowEnd, ownHoldIds);
+    if (conflict) return true;
+  }
+  return false;
+}
+
+async function listingConflicts(
+  admin: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  booking: BookingRow,
+  listingId: string,
+  windowStart: string,
+  windowEnd: string,
+  ownHoldIds: Set<string>,
+): Promise<boolean> {
   const [{ data: holds }, { data: bookings }] = await Promise.all([
     admin
       .from("market_reservation_holds")
       .select("id, expires_at")
-      .eq("listing_id", booking.listing_id)
+      .eq("listing_id", listingId)
       .in("state", ["checkout_hold", "verification_hold", "awaiting_renter_payment", "confirmed"])
       .lt("starts_at", windowEnd)
       .gt("ends_at", windowStart)
@@ -101,7 +123,7 @@ async function extensionConflicts(
     admin
       .from("market_bookings")
       .select("id")
-      .eq("listing_id", booking.listing_id)
+      .eq("listing_id", listingId)
       .neq("id", booking.id)
       .in("state", ["confirmed", "ready_for_handoff", "checked_out", "overdue"])
       .lt("starts_at", windowEnd)
@@ -112,8 +134,8 @@ async function extensionConflicts(
   const liveHolds = (holds ?? []).filter(
     (h) => !h.expires_at || new Date(h.expires_at).getTime() > Date.now(),
   );
-  // The booking's own hold may overlap the window boundary — exclude it.
-  const foreignHolds = liveHolds.filter((h) => h.id !== booking.hold_id);
+  // The booking's own holds may overlap the window boundary — exclude.
+  const foreignHolds = liveHolds.filter((h) => !ownHoldIds.has(h.id));
   return foreignHolds.length > 0 || (bookings ?? []).length > 0;
 }
 
@@ -218,17 +240,15 @@ async function chargeAndApply(
     })
     .eq("id", booking.id);
 
-  // Stretch the inventory hold so the capacity math keeps blocking.
-  if (booking.hold_id) {
-    await admin
-      .from("market_reservation_holds")
-      .update({
-        ends_at: new Date(
-          new Date(ext.requested_ends_at).getTime() + booking.recovery_buffer_minutes * 60_000,
-        ).toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", booking.hold_id);
+  // Stretch every hold backing the booking (incl. line items) so the
+  // capacity math keeps blocking through the new window.
+  {
+    const { updateBookingHolds } = await import("@/lib/market/booking-items");
+    await updateBookingHolds(admin, booking.id, booking.hold_id, {
+      ends_at: new Date(
+        new Date(ext.requested_ends_at).getTime() + booking.recovery_buffer_minutes * 60_000,
+      ).toISOString(),
+    });
   }
 
   await admin.from("market_booking_events").insert({

@@ -98,6 +98,7 @@ export default async function MyRentalsPage({
   let bookings: BookingRow[] = [];
   let signedIn = false;
   let followedUp = new Set<string>();
+  const itemsByBooking = new Map<string, Array<{ title_snapshot: string; quantity: number }>>();
   const pendingExtensions = new Map<
     string,
     { booking_id: string; requested_ends_at: string; subtotal_cents: number; tax_cents: number }
@@ -119,6 +120,17 @@ export default async function MyRentalsPage({
         .order("created_at", { ascending: false })
         .limit(50);
       bookings = (data as unknown as BookingRow[] | null) ?? [];
+      if (bookings.length > 0) {
+        const { data: itemRows } = await supabase
+          .from("market_booking_items")
+          .select("booking_id, title_snapshot, quantity")
+          .in("booking_id", bookings.map((b) => b.id));
+        for (const r of itemRows ?? []) {
+          const list = itemsByBooking.get(r.booking_id) ?? [];
+          list.push(r);
+          itemsByBooking.set(r.booking_id, list);
+        }
+      }
       const activeIds = bookings
         .filter((b) => ["checked_out", "overdue"].includes(b.state))
         .map((b) => b.id);
@@ -214,6 +226,15 @@ export default async function MyRentalsPage({
                     <b>{b.market_listings?.title ?? "Listing"}</b>
                     <span className={`mk-statepill ${meta.tone}`}>{meta.label}</span>
                   </div>
+                  {itemsByBooking.has(b.id) ? (
+                    <div className="mk-card-m">
+                      Includes:{" "}
+                      {itemsByBooking
+                        .get(b.id)!
+                        .map((i) => (i.quantity > 1 ? `${i.title_snapshot} ×${i.quantity}` : i.title_snapshot))
+                        .join(" · ")}
+                    </div>
+                  ) : null}
                   <div className="mk-card-m">
                     {new Date(b.starts_at).toLocaleDateString()} →{" "}
                     {new Date(b.ends_at).toLocaleDateString()} · qty {b.quantity} · $

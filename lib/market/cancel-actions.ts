@@ -177,11 +177,10 @@ async function finalizeCancellation(
     }
   }
 
-  if (booking.hold_id) {
-    await admin
-      .from("market_reservation_holds")
-      .update({ state: "released", updated_at: new Date().toISOString() })
-      .eq("id", booking.hold_id);
+  {
+    // Multi-item bookings: release every line item's hold too.
+    const { updateBookingHolds } = await import("@/lib/market/booking-items");
+    await updateBookingHolds(admin, booking.id, booking.hold_id, { state: "released" });
   }
 
   await releaseDepositIfHeld(admin, booking);

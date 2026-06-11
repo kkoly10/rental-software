@@ -63,6 +63,19 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
   // the CTA (roadmap item 1).
   const bookable = await sellerBookable(listing.organizationId);
 
+  // Roadmap item 5: other published listings from the same seller for
+  // the "add more from this seller" picker (one booking, line items).
+  const { getSellerListings } = await import("@/lib/market/data");
+  const sellerExtras = (await getSellerListings(listing.organizationId))
+    .filter((l) => l.id !== listing.id && !l.isPrelist)
+    .slice(0, 6)
+    .map((l) => ({
+      id: l.id,
+      title: l.title,
+      dailyPriceCents: l.dailyPriceCents,
+      maxQuantity: l.quantity,
+    }));
+
   let signedIn = false;
   if (hasSupabaseEnv()) {
     const supabase = await createSupabaseServerClient();
@@ -181,7 +194,12 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
                   </button>
                 </>
               ) : signedIn ? (
-                <BookingRequestForm listingId={listing.id} maxQuantity={listing.quantity} instant={listing.instantBook} />
+                <BookingRequestForm
+                  listingId={listing.id}
+                  maxQuantity={listing.quantity}
+                  instant={listing.instantBook}
+                  sellerExtras={sellerExtras}
+                />
               ) : (
                 <>
                   <a
