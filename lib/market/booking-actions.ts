@@ -158,6 +158,19 @@ export async function requestBooking(
   if (listing.organization_id == null) {
     return { ok: false, message: "This listing is misconfigured." };
   }
+  // §12 gate (roadmap item 1): never take a booking for a seller who
+  // can't be paid. Read at decision time so a Stripe restriction
+  // auto-pauses bookability.
+  {
+    const { sellerBookable } = await import("@/lib/market/bookability");
+    if (!(await sellerBookable(listing.organization_id))) {
+      return {
+        ok: false,
+        message:
+          "This seller is finishing payout verification — booking opens once it's done. Message them in the meantime.",
+      };
+    }
+  }
   if (parsed.data.quantity > listing.quantity) {
     return { ok: false, message: `Only ${listing.quantity} available.` };
   }

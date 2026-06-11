@@ -24,7 +24,10 @@ type NotifyKind =
   | "booking_overdue" // → renter
   | "ready_for_handoff" // → renter (pickup instructions)
   | "booking_completed" // → renter (review prompt)
-  | "booking_completed_seller"; // → seller (follow-up prompt)
+  | "booking_completed_seller" // → seller (follow-up prompt)
+  | "pickup_reminder" // → renter (day before, time-based cron)
+  | "return_reminder" // → renter (return day, time-based cron)
+  | "return_due_nudge"; // → renter (grace window, time-based cron)
 
 // Where the recipient acts on the email. Renter surfaces live on the
 // marketplace subdomain; the Seller Hub lives in the operator app.
@@ -96,6 +99,24 @@ const COPY: Record<
     body: (d) =>
       `<b>${d.listingTitle}</b> is complete. Take 30 seconds in the Seller Hub: confirm the item came back fine and flag anything off — it protects you and keeps bad actors off the marketplace.`,
     cta: { label: "Open Seller Hub", url: SELLER_HUB_URL },
+  },
+  pickup_reminder: {
+    subject: "Pickup tomorrow — bring your verified ID",
+    body: (d) =>
+      `Your rental of <b>${d.listingTitle}</b> starts tomorrow (${d.dates}). Bring the ID you verified with — the seller confirms it's you at handoff. Both of you snap a quick photo of the item's condition before it leaves.`,
+    cta: { label: "View pickup details", url: RENTALS_URL },
+  },
+  return_reminder: {
+    subject: "Return day — wrap up your rental",
+    body: (d) =>
+      `<b>${d.listingTitle}</b> is due back today (${d.dates}). Snap a return photo when you hand it over — your deposit hold releases automatically after a clean return.`,
+    cta: { label: "View return details", url: RENTALS_URL },
+  },
+  return_due_nudge: {
+    subject: "Your rental is due back now",
+    body: (d) =>
+      `<b>${d.listingTitle}</b> was due back. There's a short grace window before late fees start (daily rate + $20 per started day) — return it now or message the seller if you're on the way.`,
+    cta: { label: "View my rentals", url: RENTALS_URL },
   },
   booking_overdue: {
     subject: "Your rental is overdue — late fees now apply",

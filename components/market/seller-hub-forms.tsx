@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import {
   createMarketListing,
   upsertSellerProfile,
   type SellerActionState,
 } from "@/lib/market/seller-actions";
+import { suggestPricing } from "@/lib/market/pricing";
+import type { ItemCondition, SellerKind } from "@/lib/market/fees";
 
 const initial: SellerActionState = { ok: false, message: "" };
 
@@ -127,18 +129,53 @@ type WorldOption = {
   label: string;
   status: "live" | "smoke_test";
 };
-type CategoryOption = { worldSlug: string; slug: string; label: string };
+type CategoryOption = { worldSlug: string; slug: string; label: string; riskFamilySlug: string };
 
 export function CreateListingForm({
   worlds,
   categories,
   products,
+  sellerKind = "marketplace",
 }: {
   worlds: WorldOption[];
   categories: CategoryOption[];
   products: Array<{ id: string; name: string }>;
+  sellerKind?: SellerKind;
 }) {
   const [state, action, pending] = useActionState(createMarketListing, initial);
+
+  // Pricing calculator state (roadmap item 2 / master plan §8).
+  // Controlled mirrors of the calculator's input fields — suggestion
+  // updates live; "Use suggested" fills the price fields but the
+  // seller always stays in control (never auto-set).
+  const [categorySlug, setCategorySlug] = useState(categories[0]?.slug ?? "");
+  const [replacementValue, setReplacementValue] = useState("");
+  const [condition, setCondition] = useState<ItemCondition>("good");
+  const [acquiredYear, setAcquiredYear] = useState("");
+  const [dailyPrice, setDailyPrice] = useState("");
+  const [weekendPrice, setWeekendPrice] = useState("");
+  const [weeklyPrice, setWeeklyPrice] = useState("");
+
+  const suggestion = useMemo(() => {
+    const replacement = Number(replacementValue);
+    if (!Number.isFinite(replacement) || replacement <= 0) return null;
+    const category = categories.find((c) => c.slug === categorySlug);
+    if (!category) return null;
+    const year = Number(acquiredYear);
+    const ageMonths =
+      Number.isFinite(year) && year >= 1990
+        ? Math.max(0, (new Date().getFullYear() - year) * 12)
+        : 24;
+    return suggestPricing({
+      replacementValueCents: Math.round(replacement * 100),
+      ageMonths,
+      condition,
+      riskFamilySlug: category.riskFamilySlug,
+      sellerKind,
+    });
+  }, [replacementValue, categorySlug, condition, acquiredYear, categories, sellerKind]);
+
+  const dollars = (cents: number) => `$${Math.round(cents / 100)}`;
 
   return (
     <form
@@ -162,7 +199,13 @@ export function CreateListingForm({
         </div>
         <div>
           <label style={labelStyle}>Category (must match the world)</label>
-          <select name="category_slug" required style={inputStyle}>
+          <select
+            name="category_slug"
+            required
+            style={inputStyle}
+            value={categorySlug}
+            onChange={(e) => setCategorySlug(e.target.value)}
+          >
             {categories.map((c) => (
               <option key={`${c.worldSlug}/${c.slug}`} value={c.slug}>
                 {worlds.find((w) => w.slug === c.worldSlug)?.label} — {c.label}
@@ -194,14 +237,20 @@ export function CreateListingForm({
         <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" style={{ fontSize: 12 }} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <label style={labelStyle}>Daily price ($)</label>
-          <input type="number" name="daily_price" required min={1} max={100000} step="0.01" style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>Replacement value ($)</label>
-          <input type="number" name="replacement_value" min={0} max={500000} step="1" style={inputStyle} />
+          <label style={labelStyle}>Replacement value ($) — powers price &amp; deposit suggestions</label>
+          <input
+            type="number"
+            name="replacement_value"
+            min={0}
+            max={500000}
+            step="1"
+            style={inputStyle}
+            value={replacementValue}
+            onChange={(e) => setReplacementValue(e.target.value)}
+            placeholder="400"
+          />
         </div>
         <div>
           <label style={labelStyle}>Quantity</label>
@@ -209,10 +258,92 @@ export function CreateListingForm({
         </div>
       </div>
 
+      {suggestion ? (
+        <div
+          className="order-card"
+          style={{ padding: 14, background: "#fdf6ec", border: "1px solid #f0e0c8" }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
+            💡 Items like this typically rent for {dollars(suggestion.dailyLowCents)}–
+            {dollars(suggestion.dailyPremiumCents)}/day — we suggest{" "}
+            {dollars(suggestion.dailyRecommendedCents)}
+          </div>
+          <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+            You&rsquo;d earn ≈{dollars(suggestion.payoutPerDayCents)} per rental day
+            after fees — about {suggestion.recoverDays} rental days to recover your
+            item&rsquo;s value. Weekend {dollars(suggestion.weekendCents)} · weekly{" "}
+            {dollars(suggestion.weeklyCents)}.
+          </div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>
+            {suggestion.explanation}
+          </div>
+          <button
+            type="button"
+            className="secondary-btn"
+            style={{ marginTop: 8, fontSize: 12 }}
+            onClick={() => {
+              setDailyPrice(String(suggestion.dailyRecommendedCents / 100));
+              setWeekendPrice(String(suggestion.weekendCents / 100));
+              setWeeklyPrice(String(suggestion.weeklyCents / 100));
+            }}
+          >
+            Use suggested prices
+          </button>
+        </div>
+      ) : null}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+        <div>
+          <label style={labelStyle}>Daily price ($)</label>
+          <input
+            type="number"
+            name="daily_price"
+            required
+            min={1}
+            max={100000}
+            step="0.01"
+            style={inputStyle}
+            value={dailyPrice}
+            onChange={(e) => setDailyPrice(e.target.value)}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Weekend price ($, optional)</label>
+          <input
+            type="number"
+            name="weekend_price"
+            min={1}
+            max={200000}
+            step="0.01"
+            style={inputStyle}
+            value={weekendPrice}
+            onChange={(e) => setWeekendPrice(e.target.value)}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Weekly price ($, optional)</label>
+          <input
+            type="number"
+            name="weekly_price"
+            min={1}
+            max={500000}
+            step="0.01"
+            style={inputStyle}
+            value={weeklyPrice}
+            onChange={(e) => setWeeklyPrice(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, alignItems: "end" }}>
         <div>
           <label style={labelStyle}>Condition</label>
-          <select name="condition" defaultValue="good" style={inputStyle}>
+          <select
+            name="condition"
+            style={inputStyle}
+            value={condition}
+            onChange={(e) => setCondition(e.target.value as ItemCondition)}
+          >
             <option value="new">New</option>
             <option value="excellent">Excellent</option>
             <option value="good">Good</option>
@@ -222,7 +353,16 @@ export function CreateListingForm({
         </div>
         <div>
           <label style={labelStyle}>Year acquired</label>
-          <input type="number" name="acquired_year" min={1990} max={2100} placeholder="2025" style={inputStyle} />
+          <input
+            type="number"
+            name="acquired_year"
+            min={1990}
+            max={2100}
+            placeholder="2025"
+            style={inputStyle}
+            value={acquiredYear}
+            onChange={(e) => setAcquiredYear(e.target.value)}
+          />
         </div>
         <div style={{ display: "flex", gap: 14, fontSize: 13 }}>
           <label>

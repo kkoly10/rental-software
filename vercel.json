@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/market-bridge",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/market-reminders",
+      "schedule": "10 * * * *"
     }
   ]
 }
