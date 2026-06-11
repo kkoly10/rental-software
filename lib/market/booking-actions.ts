@@ -325,7 +325,7 @@ export async function cancelBookingRequest(formData: FormData): Promise<void> {
   const admin = await getAdminClient();
   const { data: booking } = await admin
     .from("market_bookings")
-    .select("id, state, hold_id, renter_profile_id")
+    .select("id, state, hold_id, renter_profile_id, organization_id")
     .eq("id", bookingId)
     .eq("renter_profile_id", user.id)
     .maybeSingle();
@@ -346,5 +346,15 @@ export async function cancelBookingRequest(formData: FormData): Promise<void> {
       .eq("id", booking.hold_id);
   }
   await logBookingEvent(admin, booking.id, "booking.cancelled", "renter");
+  // §27: a cancelled-after-confirmation booking must cancel its
+  // operator fulfillment projection too.
+  if (from === "confirmed") {
+    const { emitBridgeEvent } = await import("@/lib/market/bridge");
+    await emitBridgeEvent({
+      event: "marketplace.booking.cancelled",
+      bookingId: booking.id,
+      organizationId: booking.organization_id,
+    });
+  }
   revalidatePath("/market");
 }
