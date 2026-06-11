@@ -147,13 +147,18 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
               {signedIn ? (
                 <BookingRequestForm listingId={listing.id} maxQuantity={listing.quantity} />
               ) : (
-                <a
-                  className="mk-btn"
-                  style={{ width: "100%", marginTop: 14, textAlign: "center", boxSizing: "border-box" }}
-                  href={`/login?redirect=${encodeURIComponent(`/market/listing/${listing.id}`)}`}
-                >
-                  Sign in to request a booking
-                </a>
+                <>
+                  <a
+                    className="mk-btn"
+                    style={{ width: "100%", marginTop: 14, textAlign: "center", boxSizing: "border-box" }}
+                    href={`/login?redirect=${encodeURIComponent(`/market/listing/${listing.id}`)}`}
+                  >
+                    Sign in to request a booking
+                  </a>
+                  <p className="mk-card-m" style={{ textAlign: "center", marginTop: 8 }}>
+                    New here? <Link href="/market/join">Create a free renter account</Link>
+                  </p>
+                </>
               )}
               <p className="mk-note">
                 🛡️ <b>Deposit: {dollars(listing.depositCents)}</b> — authorized

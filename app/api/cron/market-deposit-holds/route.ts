@@ -128,5 +128,66 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, placed, failed });
+  // ── Re-auth: card-network auth holds die after ~7 days. For rentals
+  // still active 6 days after the hold was placed, cancel + re-place
+  // so the deposit never silently lapses mid-rental.
+  let reauthed = 0;
+  const sixDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: aging } = await admin
+    .from("market_bookings")
+    .select(
+      "id, state, deposit_cents, stripe_customer_id, stripe_payment_method_id, stripe_deposit_intent_id, updated_at",
+    )
+    .eq("deposit_status", "held")
+    .in("state", ["confirmed", "ready_for_handoff", "checked_out", "overdue"])
+    .lt("updated_at", sixDaysAgo)
+    .limit(25);
+
+  for (const b of aging ?? []) {
+    if (!b.stripe_customer_id || !b.stripe_payment_method_id || !b.stripe_deposit_intent_id) {
+      continue;
+    }
+    try {
+      await stripe.paymentIntents.cancel(b.stripe_deposit_intent_id).catch(() => {
+        // already expired/canceled on Stripe's side — fine, re-place below
+      });
+      const fresh = await stripe.paymentIntents.create({
+        amount: b.deposit_cents,
+        currency: "usd",
+        customer: b.stripe_customer_id,
+        payment_method: b.stripe_payment_method_id,
+        off_session: true,
+        confirm: true,
+        capture_method: "manual",
+        description: "Refundable rental deposit hold (re-authorization)",
+        metadata: { surface: "marketplace", market_booking_id: b.id },
+      });
+      await admin
+        .from("market_bookings")
+        .update({ stripe_deposit_intent_id: fresh.id, updated_at: new Date().toISOString() })
+        .eq("id", b.id)
+        .eq("deposit_status", "held");
+      await admin.from("market_booking_events").insert({
+        booking_id: b.id,
+        event: "deposit.reauthorized",
+        actor: "system",
+      });
+      reauthed++;
+    } catch (err) {
+      await admin
+        .from("market_bookings")
+        .update({ deposit_status: "failed", updated_at: new Date().toISOString() })
+        .eq("id", b.id)
+        .eq("deposit_status", "held");
+      await admin.from("market_booking_events").insert({
+        booking_id: b.id,
+        event: "deposit.reauth_failed",
+        actor: "system",
+        payload: { reason: err instanceof Error ? err.message.slice(0, 300) : "unknown" },
+      });
+      failed++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, placed, failed, reauthed });
 }

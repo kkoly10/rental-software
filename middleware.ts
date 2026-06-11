@@ -155,6 +155,11 @@ export async function middleware(request: NextRequest) {
   }
 
   const isConfirmed = Boolean(user?.email_confirmed_at);
+  // Renter accounts (marketplace signup) default-route to the
+  // marketplace, never operator onboarding. Routing only — membership
+  // RLS remains the permission source of truth.
+  const isRenter = user?.user_metadata?.korent_role === "renter";
+  const homePath = isRenter ? "/market/rentals" : "/dashboard";
 
   if (
     user &&
@@ -171,14 +176,14 @@ export async function middleware(request: NextRequest) {
 
   if (user && isAuthEntryPath(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = isConfirmed ? "/dashboard" : "/auth/verify-email";
+    url.pathname = isConfirmed ? homePath : "/auth/verify-email";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
   if (user && pathname === "/auth/verify-email" && isConfirmed) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = homePath;
     url.search = "";
     return NextResponse.redirect(url);
   }
