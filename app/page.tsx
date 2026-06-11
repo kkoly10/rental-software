@@ -38,6 +38,10 @@ export async function generateMetadata(): Promise<Metadata> {
       description:
         "Run your party or event rental business online: a branded booking storefront, real-time inventory holds, payments, delivery routes, and crew scheduling — from $49/month.",
       path: "/",
+      // Page-level openGraph REPLACES the layout's wholesale (Next.js
+      // shallow-merges metadata per field) — without this the homepage
+      // ships with no og:image at all.
+      image: "/og-image.png",
     });
   }
 

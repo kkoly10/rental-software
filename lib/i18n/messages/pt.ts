@@ -235,11 +235,11 @@ export const pt: Messages = {
       demoLink: "ou veja a loja de demonstração →",
     },
     trustBar: [
-      "✓ Teste grátis de 14 dias",
-      "✓ Não é necessário cartão",
-      "✓ Cancele a qualquer momento",
-      "✓ Configuração em menos de 30 minutos",
-      "✓ Pagamentos pela Stripe",
+      "Teste grátis de 14 dias",
+      "Não é necessário cartão",
+      "Cancele a qualquer momento",
+      "Configuração em menos de 30 minutos",
+      "Pagamentos pela Stripe",
     ],
     industries: {
       kicker: "Feito para estes alugueres",
@@ -341,15 +341,6 @@ export const pt: Messages = {
         { stat: "10+ h", label: "Poupadas por semana em admin" },
         { stat: "0", label: "Reservas duplicadas com deteção automática" },
         { stat: "49 $/mês", label: "Preço inicial — vs 125 $+ noutros" },
-      ],
-    },
-    testimonials: {
-      kicker: "Opiniões iniciais de operadores",
-      title: "O que dizem os negócios de aluguer",
-      items: [
-        { quote: "Reduzimos o tempo de admin para metade na primeira semana. Os clientes adoram verificar a disponibilidade sozinhos.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
-        { quote: "A configuração demorou menos de uma hora. A minha equipa de entrega finalmente tem uma rota a sério em vez de me enviar mensagens todas as manhãs.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
-        { quote: "Recebia chamadas a noite toda. Agora os clientes reservam online e recebo uma notificação. Não tive reservas duplicadas desde a mudança.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
     comparison: {
@@ -1584,7 +1575,7 @@ export const pt: Messages = {
       storefrontHint: "O endereço web que os clientes usam para encontrar e reservar os seus alugueres.",
       slugStatus: {
         checking: "A verificar…",
-        available: "✓ Disponível",
+        available: "Disponível",
         taken: "Já em uso — tente outro.",
         invalid: "3+ letras minúsculas, números e hífenes apenas.",
       },

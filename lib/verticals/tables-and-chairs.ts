@@ -77,9 +77,9 @@ export const tablesAndChairsVertical: VerticalConfig = {
     ],
   },
   imageSlugs: {
-    hero: "/home/operator-with-ipad.jpg",
-    crew: "/home/crew-loading-trailer.jpg",
-    inventory: "/home/inventory-warehouse.jpg",
+    hero: "/marketing/tables-and-chairs/crew-staging-ceremony-chairs.jpg",
+    crew: "/marketing/tables-and-chairs/warehouse-table-cart.jpg",
+    transitionBanner: "/marketing/tables-and-chairs/barn-reception-tablescape.jpg",
   },
   storefrontDefaults: {
     heroImagePath: "/storefront-defaults/hero/tables-and-chairs.jpg",

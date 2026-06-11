@@ -235,11 +235,11 @@ export const es: Messages = {
       demoLink: "o ver la tienda demo en vivo →",
     },
     trustBar: [
-      "✓ Prueba gratuita de 14 días",
-      "✓ Sin tarjeta de crédito",
-      "✓ Cancela cuando quieras",
-      "✓ Configuración en menos de 30 minutos",
-      "✓ Pagos con tecnología de Stripe",
+      "Prueba gratuita de 14 días",
+      "Sin tarjeta de crédito",
+      "Cancela cuando quieras",
+      "Configuración en menos de 30 minutos",
+      "Pagos con tecnología de Stripe",
     ],
     industries: {
       kicker: "Hecho para estos alquileres",
@@ -341,15 +341,6 @@ export const es: Messages = {
         { stat: "10+ h", label: "Ahorradas por semana en admin de reservas" },
         { stat: "0", label: "Dobles reservas con detección automática" },
         { stat: "$49/mes", label: "Precio inicial — vs $125+ en otros" },
-      ],
-    },
-    testimonials: {
-      kicker: "Opiniones tempranas",
-      title: "Lo que dicen los negocios de alquiler",
-      items: [
-        { quote: "Redujimos a la mitad el tiempo de admin la primera semana. A los clientes les encanta comprobar la disponibilidad ellos mismos.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
-        { quote: "La configuración tomó menos de una hora. Mi equipo de entrega por fin tiene una ruta de verdad en vez de escribirme cada mañana.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
-        { quote: "Recibía llamadas toda la tarde. Ahora los clientes reservan en línea y me llega una notificación. No hemos tenido dobles reservas desde que cambiamos.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
     comparison: {
@@ -1584,7 +1575,7 @@ export const es: Messages = {
       storefrontHint: "La dirección web que los clientes usan para encontrarte y reservar.",
       slugStatus: {
         checking: "Comprobando…",
-        available: "✓ Disponible",
+        available: "Disponible",
         taken: "Ya en uso — prueba con otro.",
         invalid: "3+ letras minúsculas, números y guiones solamente.",
       },

@@ -82,9 +82,9 @@ export const concessionsVertical: VerticalConfig = {
     ],
   },
   imageSlugs: {
-    hero: "/home/operator-with-ipad.jpg",
-    crew: "/home/crew-loading-trailer.jpg",
-    inventory: "/home/inventory-warehouse.jpg",
+    hero: "/marketing/concessions/operators-popcorn-cart-tablet.jpg",
+    crew: "/marketing/concessions/restocking-cotton-candy-truck.jpg",
+    transitionBanner: "/marketing/concessions/vintage-concession-carts-trio.jpg",
   },
   storefrontDefaults: {
     heroImagePath: "/storefront-defaults/hero/concessions.jpg",

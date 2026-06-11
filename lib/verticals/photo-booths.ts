@@ -87,9 +87,9 @@ export const photoBoothsVertical: VerticalConfig = {
     ],
   },
   imageSlugs: {
-    hero: "/home/operator-with-ipad.jpg",
-    crew: "/home/crew-loading-trailer.jpg",
-    inventory: "/home/inventory-warehouse.jpg",
+    hero: "/marketing/photo-booths/attendant-setting-up-booth.jpg",
+    crew: "/marketing/photo-booths/attendant-arranging-prints.jpg",
+    transitionBanner: "/marketing/photo-booths/booth-hedge-wall-wedding.jpg",
   },
   storefrontDefaults: {
     heroImagePath: "/storefront-defaults/hero/photo-booths.jpg",

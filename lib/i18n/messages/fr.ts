@@ -235,11 +235,11 @@ export const fr: Messages = {
       demoLink: "ou voir la boutique de démonstration →",
     },
     trustBar: [
-      "✓ Essai gratuit de 14 jours",
-      "✓ Aucune carte bancaire requise",
-      "✓ Annulez à tout moment",
-      "✓ Installation en moins de 30 minutes",
-      "✓ Paiements sécurisés par Stripe",
+      "Essai gratuit de 14 jours",
+      "Aucune carte bancaire requise",
+      "Annulez à tout moment",
+      "Installation en moins de 30 minutes",
+      "Paiements sécurisés par Stripe",
     ],
     industries: {
       kicker: "Conçu pour ces locations",
@@ -341,15 +341,6 @@ export const fr: Messages = {
         { stat: "10+ h", label: "Économisées par semaine sur l’administration" },
         { stat: "0", label: "Doubles réservations grâce à la détection automatique" },
         { stat: "49 $/mois", label: "Prix de départ — vs 125 $+ ailleurs" },
-      ],
-    },
-    testimonials: {
-      kicker: "Retours des premiers opérateurs",
-      title: "Ce que disent les entreprises de location",
-      items: [
-        { quote: "Nous avons réduit de moitié le temps d’administration la première semaine. Les clients adorent vérifier la disponibilité eux-mêmes au lieu de nous appeler.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
-        { quote: "L’installation a pris moins d’une heure. Mon équipe de livraison a enfin un vrai itinéraire au lieu de m’envoyer des SMS chaque matin pour demander où aller.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
-        { quote: "Je recevais des appels toute la soirée. Maintenant les clients réservent en ligne et je reçois une notification. Plus aucune double réservation depuis qu’on a changé.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
     comparison: {
@@ -1584,7 +1575,7 @@ export const fr: Messages = {
       storefrontHint: "L’adresse web utilisée par les clients pour trouver et réserver vos locations.",
       slugStatus: {
         checking: "Vérification…",
-        available: "✓ Disponible",
+        available: "Disponible",
         taken: "Déjà pris — essayez-en un autre.",
         invalid: "3+ lettres minuscules, chiffres et tirets uniquement.",
       },
