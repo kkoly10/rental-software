@@ -78,9 +78,9 @@ export const danceFloorsVertical: VerticalConfig = {
     ],
   },
   imageSlugs: {
-    hero: "/home/operator-with-ipad.jpg",
-    crew: "/home/crew-loading-trailer.jpg",
-    inventory: "/home/inventory-warehouse.jpg",
+    hero: "/marketing/dance-floors/installer-laying-parquet-floor.jpg",
+    crew: "/marketing/dance-floors/crew-carrying-floor-panels.jpg",
+    transitionBanner: "/marketing/dance-floors/white-dance-floor-tent-night.jpg",
   },
   storefrontDefaults: {
     heroImagePath: "/storefront-defaults/hero/dance-floors.jpg",

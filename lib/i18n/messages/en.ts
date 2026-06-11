@@ -236,11 +236,11 @@ const enValues = {
       demoLink: "or see the live demo storefront →",
     },
     trustBar: [
-      "✓ Free 14-day trial",
-      "✓ No credit card required",
-      "✓ Cancel anytime",
-      "✓ Setup in under 30 minutes",
-      "✓ Payments powered by Stripe",
+      "Free 14-day trial",
+      "No credit card required",
+      "Cancel anytime",
+      "Setup in under 30 minutes",
+      "Payments powered by Stripe",
     ],
     industries: {
       kicker: "Built for these rentals",
@@ -342,15 +342,6 @@ const enValues = {
         { stat: "10+ hrs", label: "Saved per week on booking admin" },
         { stat: "0", label: "Double-bookings with automatic conflict detection" },
         { stat: "$49/mo", label: "Starting price — vs. $125+ elsewhere" },
-      ],
-    },
-    testimonials: {
-      kicker: "Early operator feedback",
-      title: "What rental businesses say",
-      items: [
-        { quote: "We cut booking admin time in half in the first week. Customers love being able to check availability themselves instead of calling us.", name: "Jamie R.", business: "Skyline Tent & Event Co.", location: "Richmond, VA" },
-        { quote: "Setting up took less than an hour. My delivery crew finally has a proper route instead of texting me every morning asking where to go first.", name: "Marcus T.", business: "Snapshot Booths", location: "Charlotte, NC" },
-        { quote: "I used to get calls all evening. Now customers book online and I get a notification. I haven’t had a double-booking since we switched.", name: "Alicia D.", business: "Fun Time Party Rentals", location: "Columbus, OH" },
       ],
     },
     comparison: {
@@ -1585,7 +1576,7 @@ const enValues = {
       storefrontHint: "The web address customers use to find and book your rentals.",
       slugStatus: {
         checking: "Checking…",
-        available: "✓ Available",
+        available: "Available",
         taken: "Already taken — try a different one.",
         invalid: "Must be 3+ lowercase letters, numbers, and hyphens.",
       },

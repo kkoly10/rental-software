@@ -80,10 +80,9 @@ export const inflatableVertical: VerticalConfig = {
     ],
   },
   imageSlugs: {
-    hero: "/home/operator-with-ipad.jpg",
-    crew: "/home/crew-loading-trailer.jpg",
-    inventory: "/home/inventory-warehouse.jpg",
-    transitionBanner: "/home/event-setup.jpg",
+    hero: "/marketing/inflatables/operator-tablet-bounce-house.jpg",
+    crew: "/marketing/inflatables/crew-unloading-inflatable-truck.jpg",
+    transitionBanner: "/marketing/inflatables/bounce-house-backyard-party.jpg",
     customerPhone: "/home/customer-booking-phone.jpg",
   },
   storefrontDefaults: {

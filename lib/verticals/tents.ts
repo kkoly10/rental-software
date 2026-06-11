@@ -89,9 +89,9 @@ export const tentsVertical: VerticalConfig = {
     ],
   },
   imageSlugs: {
-    hero: "/home/operator-with-ipad.jpg",
-    crew: "/home/crew-loading-trailer.jpg",
-    inventory: "/home/inventory-warehouse.jpg",
+    hero: "/marketing/tents/operator-site-check-tent-build.jpg",
+    crew: "/marketing/tents/crew-raising-tent-pole-dawn.jpg",
+    transitionBanner: "/marketing/tents/sailcloth-tent-lakeside-evening.jpg",
   },
   storefrontDefaults: {
     heroImagePath: "/storefront-defaults/hero/tents.jpg",
