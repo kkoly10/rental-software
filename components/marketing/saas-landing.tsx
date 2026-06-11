@@ -300,10 +300,12 @@ export async function SaasLanding() {
               <p className="mk-muted">{s.dashboardPreview.subtitle}</p>
             </div>
 
+            {/* Real product screenshot — the live booking calendar with
+                manual holds, captured from production. */}
             <div className="mk-product-shot" style={{ marginBottom: 28 }}>
               <Image
-                src="/home/dashboard-tablet.jpg"
-                alt="The Korent operator dashboard open on a tablet showing an order with delivery route and timeline"
+                src="/marketing/product/dashboard-calendar.jpg"
+                alt="The Korent dashboard booking calendar showing a month of events alongside the manual-hold panel"
                 fill
                 sizes="(max-width: 980px) 100vw, 932px"
               />
