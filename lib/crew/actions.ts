@@ -301,18 +301,18 @@ export async function uploadProofPhoto(
     return { ok: false, message: uploadError.message };
   }
 
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-
   // Atomic via crew_attach_proof_photo RPC. The role check, the
   // assignment check, and the route_stops UPDATE all run inside one
   // Postgres transaction with a row lock on the parent route — so a
   // dispatcher reassignment between auth check and UPDATE can't let
   // an unassigned crew member's photo land on the wrong route.
+  // #62: store the storage PATH, not a public URL — the uploads bucket
+  // is private, so public URLs 400; renders sign the path on read.
   const { data: rpcRows, error: rpcError } = await supabase.rpc("crew_attach_proof_photo", {
     p_stop_id: stopId,
     p_org_id: ctx.organizationId,
     p_user_id: ctx.userId,
-    p_photo_url: urlData.publicUrl,
+    p_photo_url: filePath,
   });
 
   if (rpcError) {
@@ -470,15 +470,14 @@ export async function uploadPickupPhoto(
     });
   if (uploadError) return { ok: false, message: uploadError.message };
 
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-
+  // #62: store the storage PATH (see uploadProofPhoto above).
   const { data: rpcRows, error: rpcError } = await supabase.rpc(
     "crew_attach_pickup_photo",
     {
       p_stop_id: stopId,
       p_org_id: ctx.organizationId,
       p_user_id: ctx.userId,
-      p_photo_url: urlData.publicUrl,
+      p_photo_url: filePath,
     },
   );
 

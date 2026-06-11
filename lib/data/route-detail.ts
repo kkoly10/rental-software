@@ -8,6 +8,7 @@ import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 import { getMessages } from "@/lib/i18n/server";
 import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
+import { resolveUploadsPhotoUrls } from "@/lib/storage/uploads-signing";
 import type { RouteDetail, RouteDetailEnhanced, RouteStopEnhanced } from "@/lib/types";
 
 export type RouteStopData = {
@@ -182,6 +183,22 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
     }
   }
 
+  // #62: the uploads bucket is private — stored photo values (paths,
+  // or legacy public URLs) must be signed before they can render. One
+  // batched storage call for the whole route; signing runs as the org
+  // member, so the org-folder read policy still gates access.
+  const photoInputs = stops.flatMap((stop) => {
+    const s = stop as Record<string, unknown>;
+    return [
+      s.proof_photo_url as string | null,
+      s.pickup_photo_url as string | null,
+      (stop.stop_type ?? "delivery") === "pickup"
+        ? (deliveryPhotosByOrder.get(s.order_id as string) ?? null)
+        : null,
+    ];
+  });
+  const signedPhotos = await resolveUploadsPhotoUrls(supabase, photoInputs);
+
   return stops.map((stop, index) => {
     const order = (stop as Record<string, unknown>).orders as {
       order_number: string;
@@ -228,15 +245,10 @@ export async function getRouteStops(routeId: string): Promise<RouteStopData[]> {
       address: addressParts.length > 0 ? addressParts.join(", ") : undefined,
       productName,
       orderId: (stop as Record<string, unknown>).order_id as string | undefined,
-      proofPhotoUrl: (stop as Record<string, unknown>).proof_photo_url as string | undefined,
-      pickupPhotoUrl: (stop as Record<string, unknown>).pickup_photo_url as string | undefined,
+      proofPhotoUrl: signedPhotos[index * 3] ?? undefined,
+      pickupPhotoUrl: signedPhotos[index * 3 + 1] ?? undefined,
       pickupSignatureName: (stop as Record<string, unknown>).pickup_signature_name as string | undefined,
-      matchingDeliveryPhotoUrl:
-        (stop.stop_type ?? "delivery") === "pickup"
-          ? deliveryPhotosByOrder.get(
-              (stop as Record<string, unknown>).order_id as string,
-            )
-          : undefined,
+      matchingDeliveryPhotoUrl: signedPhotos[index * 3 + 2] ?? undefined,
       signatureName: (stop as Record<string, unknown>).signature_name as string | undefined,
     };
   });
