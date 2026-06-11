@@ -154,6 +154,13 @@ const listingSchema = z.object({
 const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 const MAX_VIDEO_SIZE = 80 * 1024 * 1024;
 
+// #62: listing photos + proof videos are INTENTIONAL public media (the
+// storefront's face) and must live in a PUBLIC bucket — `uploads` is
+// private (crew proof photos), so getPublicUrl links into it 400.
+// market-media has no client write policies (service-role writes only)
+// and is never walked by the storage-sweep cron.
+const PUBLIC_MEDIA_BUCKET = "market-media";
+
 /** Proof-of-function video (§6, founder decision 2026-06-11): for
  *  powered/electric categories the seller shows the item working —
  *  e.g. a blow dryer running — as part of creating the listing. */
@@ -177,19 +184,16 @@ async function uploadProofVideo(
   }
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
-  // Proof video stays in the PUBLIC uploads bucket — it's a trust signal
-  // rendered on the public listing page (like the listing photo), and is
-  // protected from the storage-sweep cron via market_listings.proof_video_url
-  // (#61). A random token defeats the orgId/timestamp enumeration noted in
-  // #39 and the same-millisecond upsert collision.
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
+  // Proof video is a trust signal rendered on the public listing page
+  // (like the listing photo). A random token defeats the orgId/timestamp
+  // enumeration noted in #39 and the same-millisecond upsert collision.
   const ext = file.type === "video/quicktime" ? "mov" : file.type === "video/webm" ? "webm" : "mp4";
   const path = `market-proof/${orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
   const { error } = await admin.storage
-    .from(bucket)
+    .from(PUBLIC_MEDIA_BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false });
   if (error) return { ok: false, message: "Video upload failed — try again." };
-  const { data } = admin.storage.from(bucket).getPublicUrl(path);
+  const { data } = admin.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(path);
   return { ok: true, url: data.publicUrl };
 }
 
@@ -263,14 +267,13 @@ export async function createMarketListing(
     }
     const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
     const adminClient = createSupabaseAdminClient();
-    const bucket = process.env.NEXT_PUBLIC_SUPABASE_UPLOADS_BUCKET || "uploads";
     const ext = sniffed === "image/png" ? "png" : sniffed === "image/webp" ? "webp" : "jpg";
-    const path = `market-listings/${auth.orgId}/${Date.now()}.${ext}`;
+    const path = `market-listings/${auth.orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
     const { error: uploadError } = await adminClient.storage
-      .from(bucket)
+      .from(PUBLIC_MEDIA_BUCKET)
       .upload(path, photo, { contentType: sniffed, upsert: false });
     if (uploadError) return { ok: false, message: "Photo upload failed — try again." };
-    photoUrl = adminClient.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+    photoUrl = adminClient.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
   }
 
   // Proof-of-function: required at creation time for categories that

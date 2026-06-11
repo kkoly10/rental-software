@@ -141,12 +141,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 4. Marketplace public listing media (uploads bucket): listing photos
-  //    (`market-listings/…`) and proof-of-function videos (`market-proof/…`).
-  //    Bug #61: without this, the sweep treats every marketplace photo and
-  //    proof video as an orphan and deletes it 24h after upload — wiping
-  //    the storefront. (Evidence lives in the private market-evidence
-  //    bucket, which this cron never walks, so it needs no entry here.)
+  // 4. Marketplace listing media. New uploads land in the public
+  //    market-media bucket (#62), which this sweep never walks — this
+  //    query protects any LEGACY `market-listings/…` / `market-proof/…`
+  //    files still in uploads from being treated as orphans (#61).
+  //    (Evidence/identity live in private buckets, also never walked.)
   const { data: listingMedia } = await admin
     .from("market_listings")
     .select("photo_url, proof_video_url")
