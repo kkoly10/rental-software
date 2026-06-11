@@ -262,6 +262,19 @@ export async function resolveDispute(
       parsed.data.outcome === "resolved_split");
 
   if (booking.deposit_status === "held" && booking.stripe_deposit_intent_id) {
+    // Bug #8: CAS held → capturing BEFORE touching Stripe, so the
+    // claim-window release cron can't act on the same intent. If the CAS
+    // loses, the cron already released it — nothing to capture.
+    const { data: claimed } = await admin
+      .from("market_bookings")
+      .update({ deposit_status: "capturing", updated_at: new Date().toISOString() })
+      .eq("id", booking.id)
+      .eq("deposit_status", "held")
+      .select("id")
+      .maybeSingle();
+    if (!claimed) {
+      return { ok: false, message: "The deposit hold was just released (claim window elapsed) — no capture possible." };
+    }
     try {
       const { getStripe, hasStripeEnv } = await import("@/lib/stripe/config");
       if (!hasStripeEnv()) return { ok: false, message: "Stripe not configured." };
@@ -276,16 +289,22 @@ export async function resolveDispute(
           .from("market_bookings")
           .update({ deposit_status: "captured", updated_at: new Date().toISOString() })
           .eq("id", booking.id)
-          .eq("deposit_status", "held");
+          .eq("deposit_status", "capturing");
       } else {
         await stripe.paymentIntents.cancel(booking.stripe_deposit_intent_id);
         await admin
           .from("market_bookings")
           .update({ deposit_status: "released", updated_at: new Date().toISOString() })
           .eq("id", booking.id)
-          .eq("deposit_status", "held");
+          .eq("deposit_status", "capturing");
       }
     } catch {
+      // Roll the CAS back so a retry can act on the still-live intent.
+      await admin
+        .from("market_bookings")
+        .update({ deposit_status: "held", updated_at: new Date().toISOString() })
+        .eq("id", booking.id)
+        .eq("deposit_status", "capturing");
       return { ok: false, message: "Stripe deposit action failed — resolve again after checking the intent." };
     }
   }

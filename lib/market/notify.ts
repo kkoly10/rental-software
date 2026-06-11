@@ -2,6 +2,8 @@
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { sendEmail } from "@/lib/email/send";
+import { escapeHtml } from "@/lib/maps/escape-html";
+import { formatMarketDate } from "@/lib/market/time";
 
 /**
  * Marketplace transactional email (§24 communications matrix) — the
@@ -103,11 +105,20 @@ export async function notifyMarketEmail(input: {
   try {
     if (!input.to) return;
     const tpl = COPY[input.kind];
-    const dates = `${new Date(input.startsAt).toLocaleDateString()} → ${new Date(input.endsAt).toLocaleDateString()}`;
+    const dates = `${formatMarketDate(input.startsAt)} → ${formatMarketDate(input.endsAt)}`;
     await sendEmail({
       to: input.to,
       subject: `${tpl.subject} · Korent Marketplace`,
-      html: wrap(tpl.body({ listingTitle: input.listingTitle, dates, extra: input.extra })),
+      // Bug #32: listingTitle/extra are user-controlled (seller sets the
+      // title) — escape before they reach email HTML. dates is built
+      // from our own formatter, safe.
+      html: wrap(
+        tpl.body({
+          listingTitle: escapeHtml(input.listingTitle),
+          dates,
+          extra: input.extra ? escapeHtml(input.extra) : undefined,
+        }),
+      ),
     });
   } catch {
     // fire-and-forget by design

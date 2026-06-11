@@ -203,6 +203,17 @@ export async function GET(request: NextRequest) {
     .limit(50);
   for (const b of releasable ?? []) {
     try {
+      // Bug #9: CAS `held → releasing` BEFORE touching Stripe so a dispute
+      // capture racing this cron can't act on the same intent — whoever
+      // flips the status first owns the intent.
+      const { data: claimed } = await admin
+        .from("market_bookings")
+        .update({ deposit_status: "releasing", updated_at: new Date().toISOString() })
+        .eq("id", b.id)
+        .eq("deposit_status", "held")
+        .select("id")
+        .maybeSingle();
+      if (!claimed) continue; // a dispute capture won the race
       if (b.stripe_deposit_intent_id) {
         await stripe.paymentIntents.cancel(b.stripe_deposit_intent_id).catch(() => {});
       }
@@ -210,7 +221,7 @@ export async function GET(request: NextRequest) {
         .from("market_bookings")
         .update({ deposit_status: "released", updated_at: new Date().toISOString() })
         .eq("id", b.id)
-        .eq("deposit_status", "held");
+        .eq("deposit_status", "releasing");
       await admin.from("market_booking_events").insert({
         booking_id: b.id,
         event: "deposit.released",
@@ -265,22 +276,33 @@ export async function GET(request: NextRequest) {
           if (org?.stripe_connect_account_id) {
             const sellerKind =
               org.business_type === "marketplace_seller" ? "marketplace" : "korent_operator";
-            const dailyPart = delta - LATE_FLAT_FEE_CENTS * (daysNow - b.late_days_charged);
-            const appFee =
-              computePlatformFeeCents(Math.max(dailyPart, 0), sellerKind) +
-              LATE_FLAT_FEE_CENTS * (daysNow - b.late_days_charged);
-            await stripe.paymentIntents.create({
-              amount: delta,
-              currency: "usd",
-              customer: b.stripe_customer_id,
-              payment_method: b.stripe_payment_method_id,
-              off_session: true,
-              confirm: true,
-              application_fee_amount: Math.min(appFee, delta),
-              transfer_data: { destination: org.stripe_connect_account_id },
-              description: "Late return fee",
-              metadata: { surface: "marketplace", market_booking_id: b.id, kind: "late_fee" },
-            });
+            const newDays = daysNow - b.late_days_charged;
+            // Bug #6: the seller gets the daily portion of this delta; the
+            // platform keeps its % of that daily portion PLUS the flat
+            // $20/day. application_fee = delta − sellerDailyPortion, so the
+            // seller is never shorted when the figure is clamped.
+            const dailyPart = Math.max(delta - LATE_FLAT_FEE_CENTS * newDays, 0);
+            const sellerDailyPortion = dailyPart - computePlatformFeeCents(dailyPart, sellerKind);
+            const appFee = Math.min(Math.max(delta - sellerDailyPortion, 0), delta);
+            await stripe.paymentIntents.create(
+              {
+                amount: delta,
+                currency: "usd",
+                customer: b.stripe_customer_id,
+                payment_method: b.stripe_payment_method_id,
+                off_session: true,
+                confirm: true,
+                application_fee_amount: appFee,
+                transfer_data: { destination: org.stripe_connect_account_id },
+                description: "Late return fee",
+                metadata: { surface: "marketplace", market_booking_id: b.id, kind: "late_fee" },
+              },
+              // Bug #2: idempotency key per (booking, late-day count) so a
+              // crash between charge and DB write can't re-bill the same day.
+              { idempotencyKey: `late_fee_${b.id}_${daysNow}` },
+            );
+            // Bug #3: state-guard the write so a concurrent return/cancel/
+            // dispute that left `overdue` doesn't get a late fee stamped.
             await admin
               .from("market_bookings")
               .update({
@@ -288,7 +310,9 @@ export async function GET(request: NextRequest) {
                 late_days_charged: daysNow,
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", b.id);
+              .eq("id", b.id)
+              .eq("state", "overdue")
+              .eq("late_days_charged", b.late_days_charged);
             await admin.from("market_booking_events").insert({
               booking_id: b.id,
               event: "late_fee.charged",

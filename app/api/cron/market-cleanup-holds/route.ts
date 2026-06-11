@@ -43,17 +43,24 @@ export async function GET(request: NextRequest) {
   // awaiting_payment bookings whose hold has expired lose the slot —
   // cancel them so the renter sees an honest state instead of a dead
   // Pay button. 48h lookback so a stalled cron run can't strand rows.
+  // Bug #26: cancel any awaiting_payment booking whose hold has expired,
+  // regardless of how long ago (no 48h lookback) — a long cron outage
+  // must not strand a booking with a dead Pay button forever.
   const { data: expiredHolds } = await admin
     .from("market_reservation_holds")
     .select("id")
     .eq("state", "expired")
-    .gt("updated_at", new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
-    .limit(500);
+    .limit(1000);
   let paymentTimeouts = 0;
   if (expiredHolds && expiredHolds.length > 0) {
     const { data: cancelled } = await admin
       .from("market_bookings")
-      .update({ state: "cancelled", updated_at: new Date().toISOString() })
+      .update({
+        state: "cancelled",
+        cancelled_by: "system",
+        cancel_reason: "payment_window_elapsed",
+        updated_at: new Date().toISOString(),
+      })
       .eq("state", "awaiting_payment")
       .in(
         "hold_id",

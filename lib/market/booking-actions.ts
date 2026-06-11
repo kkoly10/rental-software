@@ -15,6 +15,7 @@ import {
 import { computePlatformFeeCents, computeSellerPayoutCents } from "@/lib/market/fees";
 import { computeTaxCents } from "@/lib/market/tax";
 import { resolveOperatingDefaults } from "@/lib/market/registry";
+import { marketWallClock } from "@/lib/market/time";
 import { redirect } from "next/navigation";
 
 /**
@@ -119,8 +120,11 @@ export async function requestBooking(
     return { ok: false, message: "Too many requests — try again in a few minutes." };
   }
 
-  const startsAt = new Date(`${parsed.data.startDate}T09:00:00`);
-  const endsAt = new Date(`${parsed.data.endDate}T18:00:00`);
+  // Bug #18: pin booking windows to the marketplace timezone (DMV),
+  // not the server's (UTC on Vercel) — otherwise "tomorrow 9am" lands
+  // on the wrong calendar day.
+  const startsAt = marketWallClock(parsed.data.startDate, 9, 0);
+  const endsAt = marketWallClock(parsed.data.endDate, 18, 0);
   const now = new Date();
   if (!(startsAt > now)) {
     return { ok: false, message: "Start date must be in the future." };
@@ -128,10 +132,11 @@ export async function requestBooking(
   if (!(endsAt > startsAt)) {
     return { ok: false, message: "End date must be after the start date." };
   }
-  const rentalDays = Math.max(
-    1,
-    Math.ceil((endsAt.getTime() - startsAt.getTime()) / 86_400_000),
-  );
+  // Bug #28: rental days come from the calendar dates, not the synthetic
+  // 09:00/18:00 timestamps (which would diverge from the blocked window).
+  const startMs = Date.parse(`${parsed.data.startDate}T00:00:00Z`);
+  const endMs = Date.parse(`${parsed.data.endDate}T00:00:00Z`);
+  const rentalDays = Math.max(1, Math.round((endMs - startMs) / 86_400_000) || 1);
   if (rentalDays > MAX_RENTAL_DAYS) {
     return { ok: false, message: `Rentals are capped at ${MAX_RENTAL_DAYS} days for now.` };
   }
@@ -157,11 +162,19 @@ export async function requestBooking(
     return { ok: false, message: `Only ${listing.quantity} available.` };
   }
 
-  // Renters can't book their own org's listings.
-  const ctx = await getOrgContext();
-  if (ctx && ctx.organizationId === listing.organization_id) {
-    return { ok: false, message: "You can't book your own listing." };
+  // Bug #24: renters can't book ANY listing from an org they belong
+  // to — check every membership, not just the active org context.
+  {
+    const { data: memberOrgs } = await supabase.rpc("get_user_org_ids");
+    const orgIds = (memberOrgs as { get_user_org_ids: string }[] | string[] | null) ?? [];
+    const ids = Array.isArray(orgIds)
+      ? orgIds.map((o) => (typeof o === "string" ? o : o.get_user_org_ids))
+      : [];
+    if (ids.includes(listing.organization_id)) {
+      return { ok: false, message: "You can't book your own listing." };
+    }
   }
+  const ctx = await getOrgContext();
 
   const defaults = resolveOperatingDefaults(listing.world_slug, listing.category_slug);
 
@@ -221,8 +234,11 @@ export async function requestBooking(
       p_starts_at: startsAt.toISOString(),
       p_ends_at: endsAt.toISOString(),
       p_quantity: parsed.data.quantity,
-      p_state: "checkout_hold",
-      p_ttl_minutes: 30,
+      // Bug #27: the hold backs a real awaiting_payment booking, so it
+      // gets the 24h payment TTL (matching the "pay from My rentals"
+      // copy), not the 30-min checkout TTL that would silently kill it.
+      p_state: "awaiting_renter_payment",
+      p_ttl_minutes: 24 * 60,
     });
     const hr = holdResult as { ok?: boolean; hold_id?: string } | null;
     if (!hr?.ok || !hr.hold_id) {
@@ -230,6 +246,17 @@ export async function requestBooking(
     }
     instantHoldId = hr.hold_id;
   }
+
+  // Bug #20: if anything below fails, the instant hold must be released
+  // so it doesn't block the slot for its whole TTL.
+  const releaseInstantHold = async () => {
+    if (instantHoldId) {
+      await admin
+        .from("market_reservation_holds")
+        .update({ state: "released", updated_at: new Date().toISOString() })
+        .eq("id", instantHoldId);
+    }
+  };
 
   const { data: booking, error } = await admin
     .from("market_bookings")
@@ -259,6 +286,7 @@ export async function requestBooking(
     .single();
 
   if (error || !booking) {
+    await releaseInstantHold();
     return { ok: false, message: "Couldn't create the request — please try again." };
   }
   await logBookingEvent(admin, booking.id, instant ? "booking.instant" : "booking.requested", "renter", {
@@ -286,6 +314,8 @@ export async function requestBooking(
     const { createCheckoutUrlForBooking } = await import("@/lib/market/payment-actions");
     const url = await createCheckoutUrlForBooking(booking.id, user.id);
     if (url) redirect(url); // NEXT_REDIRECT propagates out of the action
+    // Booking exists in awaiting_payment with the 24h hold — the renter
+    // finishes from My Rentals; the cron cancels + releases if they don't.
     return {
       ok: true,
       message: "Booked — finish payment from My rentals (the seller's payout setup is still syncing).",
@@ -375,7 +405,10 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
   }
 
   assertTransition(from, "awaiting_payment");
-  await admin
+  // Bug #22: guard on affected-row count. Bug #21: if a concurrent
+  // action already moved the booking, the update no-ops — release the
+  // hold we just created so it doesn't block the slot for 24h.
+  const { data: approved } = await admin
     .from("market_bookings")
     .update({
       state: "awaiting_payment",
@@ -384,7 +417,17 @@ export async function approveBookingRequest(formData: FormData): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq("id", booking.id)
-    .eq("state", from);
+    .eq("state", from)
+    .select("id")
+    .maybeSingle();
+  if (!approved) {
+    await admin
+      .from("market_reservation_holds")
+      .update({ state: "released", updated_at: new Date().toISOString() })
+      .eq("id", result.hold_id);
+    revalidatePath(SELLER_HUB_PATH);
+    return;
+  }
   await logBookingEvent(admin, booking.id, "booking.approved", "seller");
   {
     const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");
@@ -418,15 +461,24 @@ export async function declineBookingRequest(formData: FormData): Promise<void> {
   const from = booking.state as BookingState;
   if (!canTransition(from, "cancelled")) return;
 
-  await admin
+  // Bug #22: bail if the guarded update changed no row (race).
+  const { data: declined } = await admin
     .from("market_bookings")
     .update({
       state: "cancelled",
+      cancelled_by: "seller",
+      cancel_reason: "seller_declined",
       seller_responded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", booking.id)
-    .eq("state", from);
+    .eq("state", from)
+    .select("id")
+    .maybeSingle();
+  if (!declined) {
+    revalidatePath(SELLER_HUB_PATH);
+    return;
+  }
   await logBookingEvent(admin, booking.id, "booking.declined", "seller");
   {
     const { getBookingPartyEmails, notifyMarketEmail } = await import("@/lib/market/notify");

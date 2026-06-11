@@ -196,7 +196,10 @@ export async function confirmPaidBooking(input: {
     }
   }
 
-  await admin
+  // Bug #1: if this write fails, the renter was charged but the booking
+  // stays awaiting_payment. THROW so the webhook returns 500 and Stripe
+  // redelivers (the event ledger marks it failed → retried).
+  const { data: confirmedRow, error: confirmError } = await admin
     .from("market_bookings")
     .update({
       state: "confirmed",
@@ -207,7 +210,16 @@ export async function confirmPaidBooking(input: {
       updated_at: new Date().toISOString(),
     })
     .eq("id", booking.id)
-    .eq("state", from);
+    .eq("state", from)
+    .select("id")
+    .maybeSingle();
+  if (confirmError) {
+    throw new Error(`confirmPaidBooking: booking update failed: ${confirmError.message}`);
+  }
+  if (!confirmedRow) {
+    // Another delivery already confirmed it; idempotent no-op.
+    return "skipped";
+  }
 
   if (booking.hold_id) {
     await admin

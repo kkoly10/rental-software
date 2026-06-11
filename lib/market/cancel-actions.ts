@@ -47,11 +47,12 @@ type BookingRow = {
   deposit_status: string;
   stripe_payment_intent_id: string | null;
   stripe_deposit_intent_id: string | null;
+  refund_cents: number | null;
   market_listings: { risk_family_slug: string } | null;
 };
 
 const BOOKING_SELECT =
-  "id, state, hold_id, renter_profile_id, organization_id, listing_id, starts_at, created_at, quantity, rental_days, daily_price_cents, subtotal_cents, tax_cents, deposit_status, stripe_payment_intent_id, stripe_deposit_intent_id, market_listings ( risk_family_slug )";
+  "id, state, hold_id, renter_profile_id, organization_id, listing_id, starts_at, created_at, quantity, rental_days, daily_price_cents, subtotal_cents, tax_cents, deposit_status, stripe_payment_intent_id, stripe_deposit_intent_id, refund_cents, market_listings ( risk_family_slug )";
 
 async function rateLimited(scope: string): Promise<boolean> {
   try {
@@ -123,6 +124,13 @@ async function releaseDepositIfHeld(
   }
 }
 
+/**
+ * Bug #4/#5/#7 fix: do the state-guarded cancel FIRST (compare-and-swap),
+ * and only the winner issues the refund — so a concurrent cancel/no-show
+ * can never double-refund, and a retry after a DB hiccup can't re-refund
+ * (the CAS already moved the state, so the retry loses). Returns whether
+ * this call won the cancellation.
+ */
 async function finalizeCancellation(
   admin: Awaited<ReturnType<typeof getAdmin>>,
   booking: BookingRow,
@@ -133,18 +141,41 @@ async function finalizeCancellation(
     actor: "renter" | "seller" | "system";
     event: string;
   },
-): Promise<void> {
-  await admin
+): Promise<{ won: boolean; refunded: number }> {
+  // CAS to cancelled. Loser (0 rows) bails before any money moves.
+  const { data: won } = await admin
     .from("market_bookings")
     .update({
       state: "cancelled",
       cancelled_by: input.cancelledBy,
       cancel_reason: input.reason,
-      refund_cents: input.refundCents,
       updated_at: new Date().toISOString(),
     })
     .eq("id", booking.id)
-    .eq("state", booking.state);
+    .eq("state", booking.state)
+    .select("id")
+    .maybeSingle();
+  if (!won) return { won: false, refunded: 0 };
+
+  // Refund AFTER winning the CAS → exactly-once.
+  let refunded = 0;
+  if (input.refundCents > 0) {
+    const ok = await refundPaymentProportional(booking, input.refundCents);
+    if (ok) {
+      refunded = input.refundCents;
+      await admin
+        .from("market_bookings")
+        .update({ refund_cents: (booking.refund_cents ?? 0) + refunded })
+        .eq("id", booking.id);
+    } else {
+      await admin.from("market_booking_events").insert({
+        booking_id: booking.id,
+        event: "refund.failed",
+        actor: "system",
+        payload: { intended_cents: input.refundCents, reason: input.reason },
+      });
+    }
+  }
 
   if (booking.hold_id) {
     await admin
@@ -159,7 +190,7 @@ async function finalizeCancellation(
     booking_id: booking.id,
     event: input.event,
     actor: input.actor,
-    payload: { reason: input.reason, refund_cents: input.refundCents },
+    payload: { reason: input.reason, refund_cents: refunded },
   });
 
   // §27: cancelled-after-confirmation must cancel the fulfillment
@@ -189,8 +220,8 @@ async function finalizeCancellation(
         startsAt: party.startsAt,
         endsAt: party.endsAt,
         extra:
-          input.refundCents > 0
-            ? `A refund of $${(input.refundCents / 100).toFixed(2)} was issued.`
+          refunded > 0
+            ? `A refund of $${(refunded / 100).toFixed(2)} was issued.`
             : undefined,
       });
     }
@@ -200,6 +231,7 @@ async function finalizeCancellation(
 
   revalidatePath("/market/rentals");
   revalidatePath("/dashboard/marketplace");
+  return { won: true, refunded };
 }
 
 async function loadBooking(
@@ -264,20 +296,19 @@ export async function renterCancelBooking(
     chargedCents: charged,
   });
 
-  if (decision.refundCents > 0) {
-    const refunded = await refundPaymentProportional(booking, decision.refundCents);
-    if (!refunded) {
-      return { ok: false, message: "Refund failed — contact support and don't retry." };
-    }
-  }
-
-  await finalizeCancellation(admin, booking, {
+  const result = await finalizeCancellation(admin, booking, {
     cancelledBy: "renter",
     reason: `renter_cancelled_${decision.presetName}_${decision.pct}pct`,
     refundCents: decision.refundCents,
     actor: "renter",
     event: "booking.cancelled",
   });
+  if (!result.won) {
+    return { ok: false, message: "This booking was already updated — refresh to see its status." };
+  }
+  if (decision.refundCents > 0 && result.refunded === 0) {
+    return { ok: false, message: "Cancelled, but the refund didn't go through — support will sort it out." };
+  }
 
   return {
     ok: true,
@@ -316,24 +347,24 @@ export async function sellerCancelBooking(
     return { ok: false, message: "This booking can no longer be cancelled." };
   }
 
-  let refund = 0;
-  if (PAID_STATES.includes(state)) {
-    refund = booking.subtotal_cents + (booking.tax_cents ?? 0);
-    const refunded = await refundPaymentProportional(booking, refund);
-    if (!refunded) {
-      return { ok: false, message: "Refund failed — resolve via support before cancelling." };
-    }
-  }
-
+  const refund = PAID_STATES.includes(state)
+    ? booking.subtotal_cents + (booking.tax_cents ?? 0)
+    : 0;
   // Seller cancels count against ranking (cancelled_by='seller' feeds
   // the §21 stats) and are tracked for future Turo-style fees.
-  await finalizeCancellation(admin, booking, {
+  const result = await finalizeCancellation(admin, booking, {
     cancelledBy: "seller",
     reason: "seller_cancelled",
     refundCents: refund,
     actor: "seller",
     event: "booking.seller_cancelled",
   });
+  if (!result.won) {
+    return { ok: false, message: "This booking was already updated — refresh to see its status." };
+  }
+  if (refund > 0 && result.refunded === 0) {
+    return { ok: false, message: "Cancelled, but the refund didn't process — support will resolve it." };
+  }
 
   return {
     ok: true,
@@ -374,16 +405,15 @@ export async function reportSellerNoShow(
   }
 
   const refund = booking.subtotal_cents + (booking.tax_cents ?? 0);
-  const refunded = await refundPaymentProportional(booking, refund);
-  if (!refunded) return { ok: false, message: "Refund failed — contact support." };
-
-  await finalizeCancellation(admin, booking, {
+  const result = await finalizeCancellation(admin, booking, {
     cancelledBy: "seller",
     reason: "seller_no_show",
     refundCents: refund,
     actor: "renter",
     event: "booking.seller_no_show",
   });
+  if (!result.won) return { ok: false, message: "This booking was already updated — refresh." };
+  if (result.refunded === 0) return { ok: false, message: "Reported, but the refund didn't process — contact support." };
   return { ok: true, message: "Reported — you're fully refunded and the deposit hold is released." };
 }
 
@@ -413,25 +443,31 @@ export async function reportRenterNoShow(
     return { ok: false, message: "Give the renter 30 minutes past the start time first." };
   }
 
-  const charged = booking.subtotal_cents + (booking.tax_cents ?? 0);
-  const { refundCents, sellerKeepsCents } = computeRenterNoShowRefund({
+  // Bug #10: compute the seller's "keep" on the SUBTOTAL, then refund
+  // the remaining subtotal PLUS its proportional tax — so the renter
+  // isn't shorted tax on the refunded portion.
+  const subtotal = booking.subtotal_cents;
+  const tax = booking.tax_cents ?? 0;
+  const { refundCents: subtotalRefund, sellerKeepsCents } = computeRenterNoShowRefund({
     dailyPriceCents: booking.daily_price_cents,
     quantity: booking.quantity,
     rentalDays: booking.rental_days,
-    chargedCents: charged,
+    chargedCents: subtotal,
   });
-  if (refundCents > 0) {
-    const refunded = await refundPaymentProportional(booking, refundCents);
-    if (!refunded) return { ok: false, message: "Refund failed — contact support." };
-  }
+  const taxRefund = subtotal > 0 ? Math.round((tax * subtotalRefund) / subtotal) : 0;
+  const refundCents = subtotalRefund + taxRefund;
 
-  await finalizeCancellation(admin, booking, {
+  const result = await finalizeCancellation(admin, booking, {
     cancelledBy: "renter",
     reason: "renter_no_show",
     refundCents,
     actor: "seller",
     event: "booking.renter_no_show",
   });
+  if (!result.won) return { ok: false, message: "This booking was already updated — refresh." };
+  if (refundCents > 0 && result.refunded === 0) {
+    return { ok: false, message: "Recorded, but the renter refund didn't process — contact support." };
+  }
   return {
     ok: true,
     message: `Recorded. You keep $${(sellerKeepsCents / 100).toFixed(2)} (Turo-model no-show compensation); the rest refunds to the renter.`,
