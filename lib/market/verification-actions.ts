@@ -58,20 +58,41 @@ export async function sendPhoneOtp(
 
   const phone = normalizePhoneE164(String(formData.get("phone") ?? ""));
   if (!phone) return { ok: false, message: "Enter a valid US phone number." };
-  if (await rateLimited("market:otp-send", 5)) {
+  // Bug #53: rate-limit per USER (not just client key) so an attacker
+  // rotating client keys can't pump SMS to a victim's account.
+  if (await rateLimited(`market:otp-send:${user.id}`, 5)) {
+    return { ok: false, message: "Too many codes requested — try again later." };
+  }
+  if (await rateLimited("market:otp-send", 20)) {
     return { ok: false, message: "Too many codes requested — try again later." };
   }
 
-  const code = String(randomInt(100000, 1000000));
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
 
+  // Bug #52: cumulative failure cap survives resends, and a 60s resend
+  // cooldown blocks the send→try-5→resend brute-force loop.
+  const { data: existing } = await admin
+    .from("market_phone_otp")
+    .select("cumulative_failures, last_sent_at")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (existing?.last_sent_at && Date.now() - new Date(existing.last_sent_at).getTime() < 60_000) {
+    return { ok: false, message: "Please wait a minute before requesting another code." };
+  }
+  if ((existing?.cumulative_failures ?? 0) >= 15) {
+    return { ok: false, message: "Too many failed attempts — contact support to verify your phone." };
+  }
+
+  const code = String(randomInt(100000, 1000000));
   await admin.from("market_phone_otp").upsert(
     {
       profile_id: user.id,
       code_hash: hashCode(code),
       expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
       attempts: 0,
+      cumulative_failures: existing?.cumulative_failures ?? 0,
+      last_sent_at: new Date().toISOString(),
     },
     { onConflict: "profile_id" },
   );
@@ -106,7 +127,7 @@ export async function confirmPhoneOtp(
   const admin = createSupabaseAdminClient();
   const { data: otp } = await admin
     .from("market_phone_otp")
-    .select("code_hash, expires_at, attempts")
+    .select("code_hash, expires_at, attempts, cumulative_failures")
     .eq("profile_id", user.id)
     .maybeSingle();
   if (!otp) return { ok: false, message: "Request a code first." };
@@ -116,15 +137,23 @@ export async function confirmPhoneOtp(
   if (otp.attempts >= MAX_OTP_ATTEMPTS) {
     return { ok: false, message: "Too many attempts — request a new code." };
   }
-
-  await admin
-    .from("market_phone_otp")
-    .update({ attempts: otp.attempts + 1 })
-    .eq("profile_id", user.id);
+  // Bug #52: a cumulative cap across resends — the per-code 5-try limit
+  // alone was resettable by requesting a new code.
+  if ((otp.cumulative_failures ?? 0) >= 15) {
+    return { ok: false, message: "Too many failed attempts — contact support to verify your phone." };
+  }
 
   const expected = Buffer.from(otp.code_hash, "hex");
   const actual = Buffer.from(hashCode(code), "hex");
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+  const match = expected.length === actual.length && timingSafeEqual(expected, actual);
+  if (!match) {
+    await admin
+      .from("market_phone_otp")
+      .update({
+        attempts: otp.attempts + 1,
+        cumulative_failures: (otp.cumulative_failures ?? 0) + 1,
+      })
+      .eq("profile_id", user.id);
     return { ok: false, message: "Wrong code — try again." };
   }
 

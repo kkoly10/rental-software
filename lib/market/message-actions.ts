@@ -82,12 +82,14 @@ export async function sendMarketMessage(
     phase: string;
     renter_profile_id: string;
     organization_id: string;
+    leakage_score: number | null;
+    flagged_at: string | null;
   } | null = null;
 
   if (parsed.data.conversationId) {
     const { data } = await admin
       .from("market_conversations")
-      .select("id, phase, renter_profile_id, organization_id")
+      .select("id, phase, renter_profile_id, organization_id, leakage_score, flagged_at")
       .eq("id", parsed.data.conversationId)
       .maybeSingle();
     conversation = data;
@@ -104,7 +106,7 @@ export async function sendMarketMessage(
     }
     const { data: existing } = await admin
       .from("market_conversations")
-      .select("id, phase, renter_profile_id, organization_id")
+      .select("id, phase, renter_profile_id, organization_id, leakage_score, flagged_at")
       .eq("listing_id", listing.id)
       .eq("renter_profile_id", user.id)
       .maybeSingle();
@@ -118,7 +120,7 @@ export async function sendMarketMessage(
             organization_id: listing.organization_id,
             renter_profile_id: user.id,
           })
-          .select("id, phase, renter_profile_id, organization_id")
+          .select("id, phase, renter_profile_id, organization_id, leakage_score, flagged_at")
           .single()
       ).data;
   }
@@ -131,6 +133,26 @@ export async function sendMarketMessage(
 
   // §20 moderation, phase-aware (§24).
   const verdict = moderateMessage(parsed.data.body, conversation.phase as ConversationPhase);
+
+  // Bug #45/#59: leakage scoring + escalation. A blocked attempt is a
+  // strong off-platform signal; a soft-warn is a weak one. Crossing the
+  // threshold flags the thread into the trust queue, so repeated probing
+  // has consequences instead of being a free retry loop.
+  if (verdict.verdict !== "clean") {
+    const weight = verdict.verdict === "blocked" ? 3 : 1;
+    const next = (conversation.leakage_score ?? 0) + weight;
+    await admin
+      .from("market_conversations")
+      .update({
+        leakage_score: next,
+        ...(next >= 6 && !conversation.flagged_at
+          ? { flagged_at: new Date().toISOString() }
+          : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conversation.id);
+  }
+
   if (verdict.verdict === "blocked") {
     return { ok: false, message: blockedMessageCopy(verdict.reasons) };
   }

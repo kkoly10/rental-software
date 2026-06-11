@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DisputeResolveForm } from "@/components/market/dispute-resolve-form";
 import { approveListing, rejectListing } from "@/lib/market/listing-review-actions";
 import { resolveSupportRequest } from "@/lib/market/support-actions";
+import { isPlatformAdmin } from "@/lib/market/admin";
 import { markFollowupReviewed } from "@/lib/market/followup-actions";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +26,7 @@ type DisputeRow = {
   } | null;
 };
 
-function isPlatformAdmin(email: string | undefined | null): boolean {
-  if (!email) return false;
-  return (process.env.PLATFORM_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
-}
+
 
 /**
  * Trust/admin queue v1 (§19): the disputes queue. Gated to
@@ -106,6 +100,15 @@ export default async function MarketAdminPage() {
     .order("created_at", { ascending: true })
     .limit(50);
 
+  // Bug #45: conversations the leakage engine flagged for off-platform
+  // probing.
+  const { data: flaggedThreads } = await admin
+    .from("market_conversations")
+    .select("id, leakage_score, flagged_at, market_listings ( title )")
+    .not("flagged_at", "is", null)
+    .order("flagged_at", { ascending: false })
+    .limit(25);
+
   return (
     <DashboardShell
       title="Marketplace trust queue"
@@ -150,6 +153,29 @@ export default async function MarketAdminPage() {
                       Reject
                     </button>
                   </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {(flaggedThreads ?? []).length > 0 ? (
+        <section className="panel" style={{ marginBottom: 20 }}>
+          <div className="kicker">Flagged conversations</div>
+          <h2 style={{ margin: "6px 0 12px" }}>
+            {(flaggedThreads ?? []).length} thread
+            {(flaggedThreads ?? []).length === 1 ? "" : "s"} flagged for off-platform probing
+          </h2>
+          <div className="list">
+            {(flaggedThreads ?? []).map((t) => (
+              <article key={t.id} className="order-card">
+                <strong>
+                  {(t.market_listings as unknown as { title: string } | null)?.title ?? "Listing"}
+                </strong>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  leakage score {t.leakage_score} · flagged{" "}
+                  {t.flagged_at ? new Date(t.flagged_at).toLocaleString() : ""}
                 </div>
               </article>
             ))}

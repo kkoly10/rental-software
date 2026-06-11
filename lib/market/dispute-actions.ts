@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { hasSupabaseEnv } from "@/lib/env";
+import { isPlatformAdmin } from "@/lib/market/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { getActionClientKey } from "@/lib/security/action-client";
@@ -143,15 +144,6 @@ export async function openDispute(
 }
 
 // ── Admin resolution (§17/§19) ───────────────────────────────────────
-
-function isPlatformAdmin(email: string | undefined | null): boolean {
-  if (!email) return false;
-  const list = (process.env.PLATFORM_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return list.includes(email.toLowerCase());
-}
 
 const resolveSchema = z.object({
   disputeId: z.string().uuid(),
