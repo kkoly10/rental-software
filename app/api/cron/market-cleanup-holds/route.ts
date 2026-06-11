@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
 
   // awaiting_payment bookings whose hold has expired lose the slot —
   // cancel them so the renter sees an honest state instead of a dead
-  // Pay button.
+  // Pay button. 48h lookback so a stalled cron run can't strand rows.
   const { data: expiredHolds } = await admin
     .from("market_reservation_holds")
     .select("id")
     .eq("state", "expired")
-    .gt("updated_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
-    .limit(200);
+    .gt("updated_at", new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+    .limit(500);
   let paymentTimeouts = 0;
   if (expiredHolds && expiredHolds.length > 0) {
     const { data: cancelled } = await admin

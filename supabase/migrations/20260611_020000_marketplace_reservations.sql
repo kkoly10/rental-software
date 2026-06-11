@@ -231,6 +231,9 @@ end;
 $$;
 
 revoke all on function public.market_reserve_hold(uuid, uuid, timestamptz, timestamptz, integer, text, integer) from public, anon, authenticated;
+-- Called only via the admin client (booking approval) — explicit
+-- grant so the posture doesn't depend on Supabase default privileges.
+grant execute on function public.market_reserve_hold(uuid, uuid, timestamptz, timestamptz, integer, text, integer) to service_role;
 
 -- Expire stale holds; called by the 5-minute cron. Returns the number
 -- of holds expired (the cron logs it).
@@ -254,3 +257,4 @@ end;
 $$;
 
 revoke all on function public.market_expire_stale_holds() from public, anon, authenticated;
+grant execute on function public.market_expire_stale_holds() to service_role;
