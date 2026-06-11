@@ -100,6 +100,19 @@ export async function createCheckoutUrlForBooking(
     "Marketplace rental";
 
   const stripe = getStripe();
+
+  // Double-payment guard: a renter clicking Pay twice (or instant-book
+  // then Pay-now) must never end up with two live sessions — expire
+  // the previous one before minting a replacement.
+  if (booking.stripe_checkout_session_id) {
+    try {
+      await stripe.checkout.sessions.expire(booking.stripe_checkout_session_id);
+    } catch {
+      // already expired/completed — completed is fine: the state guard
+      // above would have returned before reaching here.
+    }
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [

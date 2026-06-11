@@ -63,10 +63,29 @@ export async function GET(request: NextRequest) {
     paymentTimeouts = cancelled?.length ?? 0;
   }
 
+  // Late-return enforcement: checked_out bookings past end + 2h grace
+  // flip to overdue (the hourly deposit cron charges the Turo-model
+  // late fees; 3 late days escalates to a non_return dispute there).
+  const overdueCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const { data: overdueFlipped } = await admin
+    .from("market_bookings")
+    .update({ state: "overdue", updated_at: new Date().toISOString() })
+    .eq("state", "checked_out")
+    .lt("ends_at", overdueCutoff)
+    .select("id");
+  for (const b of overdueFlipped ?? []) {
+    await admin.from("market_booking_events").insert({
+      booking_id: b.id,
+      event: "booking.overdue",
+      actor: "system",
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     expired: data ?? 0,
     sellerSlaCancelled: timedOut?.length ?? 0,
     paymentTimeouts,
+    overdue: overdueFlipped?.length ?? 0,
   });
 }

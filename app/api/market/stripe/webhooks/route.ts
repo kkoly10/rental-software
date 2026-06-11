@@ -57,6 +57,68 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // §15 chargebacks (Stripe Connect guidance: reverse the transfer
+    // IMMEDIATELY on dispute.created — delay risks platform losses).
+    if (event.type === "charge.dispute.created") {
+      const dispute = event.data.object as Stripe.Dispute;
+      const chargeId = typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id;
+      const piId =
+        typeof dispute.payment_intent === "string"
+          ? dispute.payment_intent
+          : (dispute.payment_intent?.id ?? null);
+
+      const { data: booking } = piId
+        ? await admin
+            .from("market_bookings")
+            .select("id")
+            .eq("stripe_payment_intent_id", piId)
+            .maybeSingle()
+        : { data: null };
+
+      let transferReversed = false;
+      try {
+        const charge = await getStripe().charges.retrieve(chargeId);
+        const transferId =
+          typeof charge.transfer === "string" ? charge.transfer : charge.transfer?.id;
+        if (transferId) {
+          await getStripe().transfers.createReversal(transferId);
+          transferReversed = true;
+        }
+      } catch {
+        // surfaced via transfer_reversed=false in the trust queue
+      }
+
+      await admin.from("market_chargebacks").upsert(
+        {
+          stripe_dispute_id: dispute.id,
+          stripe_charge_id: chargeId,
+          booking_id: booking?.id ?? null,
+          amount_cents: dispute.amount,
+          transfer_reversed: transferReversed,
+        },
+        { onConflict: "stripe_dispute_id" },
+      );
+      if (booking?.id) {
+        await admin.from("market_booking_events").insert({
+          booking_id: booking.id,
+          event: "chargeback.opened",
+          actor: "system",
+          payload: { dispute_id: dispute.id, amount_cents: dispute.amount, transfer_reversed: transferReversed },
+        });
+      }
+    }
+
+    if (event.type === "charge.dispute.closed") {
+      const dispute = event.data.object as Stripe.Dispute;
+      await admin
+        .from("market_chargebacks")
+        .update({
+          status: dispute.status === "won" ? "won" : "lost",
+          resolved_at: new Date().toISOString(),
+        })
+        .eq("stripe_dispute_id", dispute.id);
+    }
+
     if (
       event.type === "checkout.session.completed" ||
       event.type === "checkout.session.expired"

@@ -174,14 +174,20 @@ async function getSellerStatsByOrg(
     admin.from("market_reviews").select("organization_id, rating").in("organization_id", orgIds).limit(2000),
     admin
       .from("market_bookings")
-      .select("organization_id, state")
+      .select("organization_id, state, cancelled_by")
       .in("organization_id", orgIds)
-      .in("state", ["completed", "disputed"])
+      .in("state", ["completed", "disputed", "cancelled"])
       .limit(2000),
   ]);
 
   for (const id of orgIds) {
-    stats.set(id, { avgRating: null, reviewCount: 0, completedBookings: 0, disputes: 0 });
+    stats.set(id, {
+      avgRating: null,
+      reviewCount: 0,
+      completedBookings: 0,
+      disputes: 0,
+      sellerCancellations: 0,
+    });
   }
   const ratingSums = new Map<string, number>();
   for (const r of (reviewsRes.data ?? []) as { organization_id: string; rating: number }[]) {
@@ -194,11 +200,16 @@ async function getSellerStatsByOrg(
     const s = stats.get(id)!;
     s.avgRating = sum / s.reviewCount;
   }
-  for (const b of (bookingsRes.data ?? []) as { organization_id: string; state: string }[]) {
+  for (const b of (bookingsRes.data ?? []) as {
+    organization_id: string;
+    state: string;
+    cancelled_by: string | null;
+  }[]) {
     const s = stats.get(b.organization_id);
     if (!s) continue;
     if (b.state === "completed") s.completedBookings += 1;
-    else s.disputes += 1;
+    else if (b.state === "disputed") s.disputes += 1;
+    else if (b.state === "cancelled" && b.cancelled_by === "seller") s.sellerCancellations += 1;
   }
   return stats;
 }

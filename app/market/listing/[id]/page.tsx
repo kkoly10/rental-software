@@ -8,6 +8,7 @@ import {
   resolveOperatingDefaults,
 } from "@/lib/market/registry";
 import { logDemandEvent } from "@/lib/market/actions";
+import { cancellationPresetForFamily } from "@/lib/market/cancellation";
 import { BookingRequestForm } from "@/components/market/booking-request-form";
 import { MessageForm } from "@/components/market/message-form";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -176,6 +177,15 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
               <p className="mk-note warn">
                 ⏱️ Sellers respond within 24 hours or your request auto-cancels
                 and you pay nothing.
+              </p>
+              <p className="mk-note">
+                ↩️ <b>Cancellation ({cancellationPresetForFamily(listing.riskFamilySlug).name}):</b>{" "}
+                full refund until{" "}
+                {cancellationPresetForFamily(listing.riskFamilySlug).fullRefundHoursBefore >= 48
+                  ? `${cancellationPresetForFamily(listing.riskFamilySlug).fullRefundHoursBefore / 24} days`
+                  : `${cancellationPresetForFamily(listing.riskFamilySlug).fullRefundHoursBefore} hours`}{" "}
+                before handoff, 50% after that, plus a 1-hour free window right
+                after booking. Deposits are always fully released on cancellation.
               </p>
               {signedIn ? (
                 <>

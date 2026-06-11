@@ -189,5 +189,119 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, placed, failed, reauthed });
+  // ── Late fees (decision record 2026-06-11, Turo model) ────────────
+  // Per started late day: 1x daily rate + $20 flat, charged off-session
+  // to the saved card as a destination charge (seller gets the daily
+  // part, platform keeps its fee % + the $20). Cap 3 days, then a
+  // non_return dispute opens automatically.
+  const { lateDaysStarted, computeLateFeeCents, LATE_DAYS_CAP, LATE_FLAT_FEE_CENTS } =
+    await import("@/lib/market/cancellation");
+  const { computePlatformFeeCents } = await import("@/lib/market/fees");
+
+  let lateCharges = 0;
+  let escalated = 0;
+  const { data: overdueBookings } = await admin
+    .from("market_bookings")
+    .select(
+      "id, ends_at, daily_price_cents, quantity, late_days_charged, late_fee_cents, stripe_customer_id, stripe_payment_method_id, organization_id, listing_id, renter_profile_id",
+    )
+    .eq("state", "overdue")
+    .limit(50);
+
+  for (const b of overdueBookings ?? []) {
+    const daysNow = lateDaysStarted(new Date(b.ends_at), now);
+    if (daysNow > b.late_days_charged && b.stripe_customer_id && b.stripe_payment_method_id) {
+      const targetTotal = computeLateFeeCents({
+        dailyPriceCents: b.daily_price_cents,
+        quantity: b.quantity,
+        lateDays: daysNow,
+      });
+      const delta = targetTotal - b.late_fee_cents;
+      if (delta > 0) {
+        try {
+          const { data: org } = await admin
+            .from("organizations")
+            .select("stripe_connect_account_id, business_type")
+            .eq("id", b.organization_id)
+            .maybeSingle();
+          if (org?.stripe_connect_account_id) {
+            const sellerKind =
+              org.business_type === "marketplace_seller" ? "marketplace" : "korent_operator";
+            const dailyPart = delta - LATE_FLAT_FEE_CENTS * (daysNow - b.late_days_charged);
+            const appFee =
+              computePlatformFeeCents(Math.max(dailyPart, 0), sellerKind) +
+              LATE_FLAT_FEE_CENTS * (daysNow - b.late_days_charged);
+            await stripe.paymentIntents.create({
+              amount: delta,
+              currency: "usd",
+              customer: b.stripe_customer_id,
+              payment_method: b.stripe_payment_method_id,
+              off_session: true,
+              confirm: true,
+              application_fee_amount: Math.min(appFee, delta),
+              transfer_data: { destination: org.stripe_connect_account_id },
+              description: "Late return fee",
+              metadata: { surface: "marketplace", market_booking_id: b.id, kind: "late_fee" },
+            });
+            await admin
+              .from("market_bookings")
+              .update({
+                late_fee_cents: targetTotal,
+                late_days_charged: daysNow,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", b.id);
+            await admin.from("market_booking_events").insert({
+              booking_id: b.id,
+              event: "late_fee.charged",
+              actor: "system",
+              payload: { days: daysNow, total_cents: targetTotal },
+            });
+            lateCharges++;
+          }
+        } catch (err) {
+          await admin.from("market_booking_events").insert({
+            booking_id: b.id,
+            event: "late_fee.charge_failed",
+            actor: "system",
+            payload: { reason: err instanceof Error ? err.message.slice(0, 200) : "unknown" },
+          });
+        }
+      }
+    }
+
+    // 3 late days reached → automatic non_return dispute (once).
+    if (daysNow >= LATE_DAYS_CAP) {
+      const { data: existing } = await admin
+        .from("market_disputes")
+        .select("id")
+        .eq("booking_id", b.id)
+        .eq("dispute_type", "non_return")
+        .maybeSingle();
+      if (!existing) {
+        const { data: dispute } = await admin
+          .from("market_disputes")
+          .insert({
+            booking_id: b.id,
+            opened_by: "system",
+            dispute_type: "non_return",
+            description:
+              "Automatic escalation: rental is 3+ days overdue after late fees. Review deposit capture and recovery.",
+            status: "admin_review",
+          })
+          .select("id")
+          .single();
+        if (dispute) {
+          await admin
+            .from("market_bookings")
+            .update({ state: "disputed", updated_at: new Date().toISOString() })
+            .eq("id", b.id)
+            .eq("state", "overdue");
+          escalated++;
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true, placed, failed, reauthed, lateCharges, escalated });
 }
