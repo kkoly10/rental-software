@@ -8,6 +8,9 @@ import {
   resolveOperatingDefaults,
 } from "@/lib/market/registry";
 import { logDemandEvent } from "@/lib/market/actions";
+import { BookingRequestForm } from "@/components/market/booking-request-form";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +53,15 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
     metroSlug: listing.metroSlug,
     listingId: listing.id,
   });
+
+  let signedIn = false;
+  if (hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    signedIn = Boolean(user);
+  }
 
   return (
     <main className="mk-wrap">
@@ -131,9 +143,17 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
             </>
           ) : (
             <>
-              <button className="mk-btn" style={{ width: "100%", marginTop: 14 }} disabled>
-                Request to book — coming this sprint
-              </button>
+              {signedIn ? (
+                <BookingRequestForm listingId={listing.id} maxQuantity={listing.quantity} />
+              ) : (
+                <a
+                  className="mk-btn"
+                  style={{ width: "100%", marginTop: 14, textAlign: "center", boxSizing: "border-box" }}
+                  href={`/login?redirect=${encodeURIComponent(`/market/listing/${listing.id}`)}`}
+                >
+                  Sign in to request a booking
+                </a>
+              )}
               <p className="mk-note">
                 🛡️ <b>Deposit: {dollars(listing.depositCents)}</b> — authorized
                 (not charged) close to handoff, released after clean return.

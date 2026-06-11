@@ -8,6 +8,10 @@ import {
   SellerProfileForm,
 } from "@/components/market/seller-hub-forms";
 import { publishListing, pauseListing } from "@/lib/market/seller-actions";
+import {
+  approveBookingRequest,
+  declineBookingRequest,
+} from "@/lib/market/booking-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +35,19 @@ type ListingRow = {
   deposit_cents: number;
 };
 
+type RequestRow = {
+  id: string;
+  state: string;
+  starts_at: string;
+  ends_at: string;
+  quantity: number;
+  subtotal_cents: number;
+  seller_payout_cents: number;
+  renter_message: string | null;
+  created_at: string;
+  market_listings: { title: string } | null;
+};
+
 /**
  * Seller Hub v1 (spec §32): store page + listings manager. Lives in
  * the operator dashboard because Korent operators are the launch
@@ -42,9 +59,19 @@ export default async function MarketplaceSellerHubPage() {
   let profile: ProfileRow | null = null;
   let listings: ListingRow[] = [];
   let products: Array<{ id: string; name: string }> = [];
+  let requests: RequestRow[] = [];
 
   if (ctx) {
     const supabase = await createSupabaseServerClient();
+    const requestsPromise = supabase
+      .from("market_bookings")
+      .select(
+        "id, state, starts_at, ends_at, quantity, subtotal_cents, seller_payout_cents, renter_message, created_at, market_listings ( title )",
+      )
+      .eq("organization_id", ctx.organizationId)
+      .in("state", ["pending_seller_approval", "confirmed"])
+      .order("created_at", { ascending: false })
+      .limit(50);
     const [profileRes, listingsRes, productsRes] = await Promise.all([
       supabase
         .from("market_seller_profiles")
@@ -67,7 +94,12 @@ export default async function MarketplaceSellerHubPage() {
     profile = (profileRes.data as ProfileRow | null) ?? null;
     listings = (listingsRes.data as ListingRow[] | null) ?? [];
     products = (productsRes.data as Array<{ id: string; name: string }> | null) ?? [];
+    const requestsRes = await requestsPromise;
+    requests = (requestsRes.data as unknown as RequestRow[] | null) ?? [];
   }
+
+  const pendingRequests = requests.filter((r) => r.state === "pending_seller_approval");
+  const confirmedBookings = requests.filter((r) => r.state === "confirmed");
 
   const worldOptions = worlds.map((w) => ({
     slug: w.slug,
@@ -95,6 +127,83 @@ export default async function MarketplaceSellerHubPage() {
           <div className="section-header">
             <div>
               <div className="kicker">Seller Hub</div>
+              <h2 style={{ margin: "6px 0 0" }}>Booking requests</h2>
+            </div>
+          </div>
+
+          {pendingRequests.length === 0 ? (
+            <div className="order-card" style={{ padding: 16 }}>
+              <span className="muted" style={{ fontSize: 13 }}>
+                No pending requests. You have 24 hours to respond when one
+                arrives — the renter pays nothing unless you accept.
+              </span>
+            </div>
+          ) : (
+            <div className="list">
+              {pendingRequests.map((r) => (
+                <article key={r.id} className="order-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                    <div>
+                      <strong>{r.market_listings?.title ?? "Listing"}</strong>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                        {new Date(r.starts_at).toLocaleDateString()} →{" "}
+                        {new Date(r.ends_at).toLocaleDateString()} · qty {r.quantity} · $
+                        {(r.subtotal_cents / 100).toFixed(0)} total · your payout $
+                        {(r.seller_payout_cents / 100).toFixed(0)}
+                      </div>
+                      {r.renter_message ? (
+                        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                          “{r.renter_message}”
+                        </div>
+                      ) : null}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <form action={approveBookingRequest}>
+                        <input type="hidden" name="booking_id" value={r.id} />
+                        <button type="submit" className="primary-btn" style={{ fontSize: 13 }}>
+                          Accept
+                        </button>
+                      </form>
+                      <form action={declineBookingRequest}>
+                        <input type="hidden" name="booking_id" value={r.id} />
+                        <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                          Decline
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {confirmedBookings.length > 0 ? (
+            <>
+              <div className="section-header" style={{ marginTop: 16 }}>
+                <div>
+                  <div className="kicker">Confirmed</div>
+                </div>
+              </div>
+              <div className="list">
+                {confirmedBookings.map((r) => (
+                  <article key={r.id} className="order-card">
+                    <strong>{r.market_listings?.title ?? "Listing"}</strong>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                      {new Date(r.starts_at).toLocaleDateString()} →{" "}
+                      {new Date(r.ends_at).toLocaleDateString()} · qty {r.quantity} ·
+                      payout ${(r.seller_payout_cents / 100).toFixed(0)}
+                    </div>
+                    <span className="badge success" style={{ marginTop: 6 }}>
+                      confirmed
+                    </span>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          <div className="section-header" style={{ marginTop: 20 }}>
+            <div>
               <h2 style={{ margin: "6px 0 0" }}>Your listings</h2>
             </div>
           </div>
