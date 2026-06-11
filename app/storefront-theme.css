@@ -379,12 +379,13 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* Capped tight because the vertical labels are short ("Party rentals",
-   * "Event rentals") and we don't want the tagline pushing the mark
-   * around. The serviceAreaLabel-based tagline that overflowed previously
-   * is gone — header.tsx now emits defaults.taglineLabel, never the
-   * operator's street address. */
-  max-width: 16ch;
+  /* Vertical labels we ship ("Party rentals" / "Event rentals") need
+   * 22ch to render in full at 11px uppercase with 0.12em letter-spacing
+   * — 16ch truncated "PARTY RENTALS" to "PARTY RENT…" in production on
+   * hannah-anderson.korent.app. 22ch fits both labels with breathing
+   * room and still ellipsizes anything an operator might customize
+   * longer rather than letting it run into the nav. */
+  max-width: 22ch;
   min-width: 0;
 }
 .st-nav-links {
