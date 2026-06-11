@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { MarketListing } from "@/lib/market/data";
 import { getCategory } from "@/lib/market/registry";
+import { categoryIcon } from "@/lib/market/icons";
 
 function formatDollars(cents: number): string {
   const dollars = cents / 100;
@@ -9,23 +10,19 @@ function formatDollars(cents: number): string {
     : `$${dollars.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "tents-and-canopies": "⛺",
-  tables: "🪑",
-  "chairs-and-seating": "🪑",
-  "dance-floors-and-staging": "🕺",
-  "photo-booths": "📸",
-  "concessions-and-food-service": "🍿",
-  "audio-visual-and-presentation": "📽️",
-  "games-and-entertainment": "🎯",
-};
-
 export function ListingCard({ listing }: { listing: MarketListing }) {
   const category = getCategory(listing.worldSlug, listing.categorySlug);
-  const icon = CATEGORY_ICONS[listing.categorySlug] ?? "📦";
+  const icon = categoryIcon(listing.worldSlug, listing.categorySlug);
   return (
     <Link href={`/market/listing/${listing.id}`} className="mk-card">
       <div className="mk-ph">
+        {listing.isPrelist ? (
+          <span className="mk-vpill" style={{ color: "var(--mk-amber)" }}>
+            Coming soon
+          </span>
+        ) : (
+          <span className="mk-vpill">✓ Verified seller</span>
+        )}
         {listing.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={listing.photoUrl} alt={listing.title} loading="lazy" />
@@ -39,15 +36,13 @@ export function ListingCard({ listing }: { listing: MarketListing }) {
           {listing.sellerDisplayName ?? "Local seller"}
           {category ? ` · ${category.label}` : ""}
         </div>
-        <div className="mk-card-m">
-          {listing.isPrelist ? (
-            <span className="mk-badge soon">Coming soon</span>
-          ) : (
-            <span className="mk-badge v">✔ Bookable</span>
-          )}
-        </div>
         <div className="mk-card-p">
-          {formatDollars(listing.dailyPriceCents)} <small>/ day</small>
+          <span>
+            {formatDollars(listing.dailyPriceCents)} <small>/ day</small>
+          </span>
+          {listing.depositCents > 0 ? (
+            <small>{formatDollars(listing.depositCents)} deposit</small>
+          ) : null}
         </div>
       </div>
     </Link>

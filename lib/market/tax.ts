@@ -21,20 +21,30 @@
 
 export type DmvStateCode = "DC" | "MD" | "VA";
 
-const DC_RATE_CHANGE = new Date("2026-10-01T00:00:00-04:00");
+// DC general rate steps: 6.0% → 6.5% on 2025-10-01 → 7.0% on 2026-10-01
+// (DC OTR; verified 2026-06-11 — the earlier encoding missed the 6.5%
+// intermediate step and under-collected by 0.5% from Oct 2025).
+const DC_650_FROM = new Date("2025-10-01T00:00:00-04:00");
+const DC_700_FROM = new Date("2026-10-01T00:00:00-04:00");
+
+function dcRate(on: Date): number {
+  if (on >= DC_700_FROM) return 0.07;
+  if (on >= DC_650_FROM) return 0.065;
+  return 0.06;
+}
 
 export function taxRateForState(state: string, on: Date = new Date()): number {
   switch (state) {
     case "DC":
-      return on >= DC_RATE_CHANGE ? 0.07 : 0.06;
+      return dcRate(on);
     case "MD":
       return 0.06;
     case "VA":
       return 0.06; // Northern Virginia combined rate
     default:
-      // Unknown state: collect at the highest DMV rate rather than
-      // under-collect; flagged for review via tax_state_code.
-      return 0.06;
+      // Unknown state: collect at the highest DMV rate (DC) rather
+      // than under-collect; flagged for review via tax_state_code.
+      return dcRate(on);
   }
 }
 

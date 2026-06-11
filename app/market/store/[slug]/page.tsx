@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getSellerListings, getSellerProfileBySlug } from "@/lib/market/data";
 import { metroBySlug } from "@/lib/market/registry";
 import { ListingCard } from "@/components/market/listing-card";
+import { worldPhoto } from "@/lib/market/photos";
 
 export const dynamic = "force-dynamic";
 
@@ -63,22 +64,47 @@ export default async function StorePage({ params }: { params: Promise<Params> })
     }
   }
 
+  const cover = listings.find((l) => l.photoUrl)?.photoUrl ?? worldPhoto("hosting-and-events");
+
   return (
     <main className="mk-wrap">
       <div className="mk-crumb">
         <Link href="/market">Marketplace</Link> · <b>{profile.displayName}</b>
       </div>
-      <h1>{profile.displayName}</h1>
-      <p className="mk-sub">
-        <span className="mk-badge v">✔ Verified seller</span>{" "}
-        {avgRating ? `· ★ ${avgRating.toFixed(1)} (${reviewCount})` : null}{" "}
-        {metro ? `· ${metro.label}` : null} · serves {profile.serviceRadiusMiles} mi
-        {profile.offersDelivery && profile.offersPickup
-          ? " · delivery & pickup"
-          : profile.offersDelivery
-            ? " · delivery"
-            : " · pickup"}
-      </p>
+      <div className="mk-cover" style={cover ? { backgroundImage: `url(${cover})` } : undefined} />
+      <div className="mk-store-head">
+        <div className="mk-store-avatar" aria-hidden>
+          {profile.displayName.trim().charAt(0).toUpperCase()}
+        </div>
+        <div style={{ paddingBottom: 4 }}>
+          <h1 style={{ margin: 0, fontSize: 26 }}>{profile.displayName}</h1>
+          <span className="mk-badge v">✔ Verified seller</span>
+        </div>
+      </div>
+      <div className="mk-stats">
+        <div className="mk-stat">
+          <b>{avgRating ? `★ ${avgRating.toFixed(1)}` : "New"}</b>
+          <span>{reviewCount} verified review{reviewCount === 1 ? "" : "s"}</span>
+        </div>
+        <div className="mk-stat">
+          <b>{listings.length}</b>
+          <span>live listing{listings.length === 1 ? "" : "s"}</span>
+        </div>
+        <div className="mk-stat">
+          <b>{profile.serviceRadiusMiles} mi</b>
+          <span>service radius · {metro?.label ?? "DMV"}</span>
+        </div>
+        <div className="mk-stat">
+          <b>
+            {profile.offersDelivery && profile.offersPickup
+              ? "Both"
+              : profile.offersDelivery
+                ? "Delivery"
+                : "Pickup"}
+          </b>
+          <span>fulfillment</span>
+        </div>
+      </div>
       {profile.bio ? <p className="mk-sub">{profile.bio}</p> : null}
 
       <h2>

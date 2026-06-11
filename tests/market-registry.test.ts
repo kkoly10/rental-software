@@ -191,14 +191,18 @@ test("§6 moderation: high-risk families require listing review; low-risk don't"
   assert.equal(resolve("hosting-and-events", "tables").listingReviewRequired, false);
 });
 
-test("facilitator tax: DMV rates incl. DC's Oct 2026 rate change; never taxes deposits' base", async () => {
+test("facilitator tax: DC's stepped rate (6% → 6.5% Oct 2025 → 7% Oct 2026); never taxes deposits' base", async () => {
   const { computeTaxCents, taxRateForState } = await import("../lib/market/tax.ts");
-  const before = new Date("2026-07-01T12:00:00Z");
-  const after = new Date("2026-11-01T12:00:00Z");
-  assert.equal(computeTaxCents(10_000, "DC", before), 600);
+  const early = new Date("2025-07-01T12:00:00Z"); // before both steps
+  const mid = new Date("2026-07-01T12:00:00Z"); // 6.5% window
+  const after = new Date("2026-11-01T12:00:00Z"); // 7.0%
+  assert.equal(computeTaxCents(10_000, "DC", early), 600);
+  assert.equal(computeTaxCents(10_000, "DC", mid), 650);
   assert.equal(computeTaxCents(10_000, "DC", after), 700);
-  assert.equal(computeTaxCents(10_000, "MD", before), 600);
-  assert.equal(computeTaxCents(10_000, "VA", before), 600);
-  assert.equal(computeTaxCents(0, "DC", before), 0);
-  assert.equal(taxRateForState("XX", before), 0.06); // unknown → never under-collect silently
+  assert.equal(computeTaxCents(10_000, "MD", mid), 600);
+  assert.equal(computeTaxCents(10_000, "VA", mid), 600);
+  assert.equal(computeTaxCents(0, "DC", mid), 0);
+  // unknown state → tracks the highest DMV rate (DC), never under-collects
+  assert.equal(taxRateForState("XX", mid), 0.065);
+  assert.equal(taxRateForState("XX", after), 0.07);
 });
