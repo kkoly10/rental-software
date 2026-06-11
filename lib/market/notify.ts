@@ -26,36 +26,53 @@ type NotifyKind =
   | "booking_completed" // → renter (review prompt)
   | "booking_completed_seller"; // → seller (follow-up prompt)
 
-const COPY: Record<NotifyKind, { subject: string; body: (d: NotifyData) => string }> = {
+// Where the recipient acts on the email. Renter surfaces live on the
+// marketplace subdomain; the Seller Hub lives in the operator app.
+const RENTALS_URL = "https://rent.korent.app/market/rentals";
+const MARKET_URL = "https://rent.korent.app/market";
+const SELLER_HUB_URL = "https://korent.app/dashboard/marketplace";
+
+type Cta = { label: string; url: string };
+
+const COPY: Record<
+  NotifyKind,
+  { subject: string; body: (d: NotifyData) => string; cta?: Cta }
+> = {
   request_received: {
     subject: "New booking request — respond within 24 hours",
     body: (d) =>
       `You have a new booking request for <b>${d.listingTitle}</b> (${d.dates}). Accept or decline within 24 hours — after that it auto-cancels and the renter is told you didn't respond.`,
+    cta: { label: "Respond in Seller Hub", url: SELLER_HUB_URL },
   },
   request_approved: {
     subject: "Approved! Pay now to lock in your rental",
     body: (d) =>
       `The seller approved your request for <b>${d.listingTitle}</b> (${d.dates}). Pay within 24 hours from My Rentals to confirm — after that the slot is released.`,
+    cta: { label: "Pay now", url: RENTALS_URL },
   },
   request_declined: {
     subject: "Your booking request was declined",
     body: (d) =>
       `The seller declined your request for <b>${d.listingTitle}</b> (${d.dates}). You weren't charged. Browse similar listings on the marketplace.`,
+    cta: { label: "Browse the marketplace", url: MARKET_URL },
   },
   request_unavailable: {
     subject: "Those dates just became unavailable",
     body: (d) =>
       `Your request for <b>${d.listingTitle}</b> (${d.dates}) couldn't be confirmed — the dates were booked by someone else first. You weren't charged.`,
+    cta: { label: "Browse the marketplace", url: MARKET_URL },
   },
   booking_confirmed_renter: {
     subject: "Booking confirmed 🎉",
     body: (d) =>
       `You're confirmed for <b>${d.listingTitle}</b> (${d.dates}). The refundable deposit authorizes close to handoff. Track everything in My Rentals.`,
+    cta: { label: "View my rentals", url: RENTALS_URL },
   },
   booking_confirmed_seller: {
     subject: "You got booked — payment received",
     body: (d) =>
       `<b>${d.listingTitle}</b> is booked and paid for ${d.dates}. Check the Seller Hub for handoff steps; your payout releases per your Stripe schedule.`,
+    cta: { label: "Open Seller Hub", url: SELLER_HUB_URL },
   },
   booking_cancelled: {
     subject: "Booking cancelled",
@@ -66,21 +83,25 @@ const COPY: Record<NotifyKind, { subject: string; body: (d: NotifyData) => strin
     subject: "Ready for pickup — bring your ID",
     body: (d) =>
       `<b>${d.listingTitle}</b> (${d.dates}) is ready for handoff. Bring the ID you verified with — the seller confirms it's you before the item leaves their hands.`,
+    cta: { label: "View pickup details", url: RENTALS_URL },
   },
   booking_completed: {
     subject: "Rental complete — how did it go?",
     body: (d) =>
       `Your rental of <b>${d.listingTitle}</b> is complete. Your deposit hold releases automatically in 24 hours unless an issue is reported. Leave a review from My Rentals — it's how good sellers rise.`,
+    cta: { label: "Leave a review", url: RENTALS_URL },
   },
   booking_completed_seller: {
     subject: "Rental complete — 30-second follow-up",
     body: (d) =>
       `<b>${d.listingTitle}</b> is complete. Take 30 seconds in the Seller Hub: confirm the item came back fine and flag anything off — it protects you and keeps bad actors off the marketplace.`,
+    cta: { label: "Open Seller Hub", url: SELLER_HUB_URL },
   },
   booking_overdue: {
     subject: "Your rental is overdue — late fees now apply",
     body: (d) =>
       `<b>${d.listingTitle}</b> was due back and is now overdue. Per policy, each started late day charges the daily rate + $20 to your card. Return it as soon as possible.`,
+    cta: { label: "View my rentals", url: RENTALS_URL },
   },
 };
 
@@ -90,8 +111,63 @@ type NotifyData = {
   extra?: string;
 };
 
-function wrap(body: string): string {
-  return `<div style="font-family:sans-serif;max-width:520px"><h2 style="margin:0 0 12px">Korent Marketplace</h2><p style="font-size:15px;line-height:1.6">${body}</p><p style="font-size:12px;color:#8a7565">rent.korent.app · questions? rent.korent.app/market/support</p></div>`;
+/**
+ * Sender identity: split from the operator side. SaaS emails go out as
+ * "{Business Name} <EMAIL_FROM_ADDRESS>"; marketplace emails as
+ * "Korent Marketplace <marketplace@same-verified-domain>" so inbox
+ * display, filters, and Resend analytics separate the two systems.
+ * Override the address with MARKET_EMAIL_FROM_ADDRESS if needed.
+ */
+function marketFromAddress(): string {
+  const explicit = process.env.MARKET_EMAIL_FROM_ADDRESS?.trim();
+  const base = process.env.EMAIL_FROM_ADDRESS ?? "noreply@korent.app";
+  const emailOnly = base.replace(/^.*<(.+)>$/, "$1").trim();
+  const domain = emailOnly.includes("@") ? emailOnly.split("@")[1] : "korent.app";
+  const address = explicit || `marketplace@${domain}`;
+  return `Korent Marketplace <${address}>`;
+}
+
+/**
+ * Marketplace email shell — same build quality as the operator
+ * templates (table layout, inlined styles, bulletproof in Gmail/
+ * Outlook) but in the marketplace's own warm palette (market.css):
+ * cream canvas, ink text, orange CTA.
+ */
+function wrap(body: string, cta?: Cta): string {
+  const button = cta
+    ? `<a href="${cta.url}" style="display:inline-block;padding:13px 28px;background:#ff8c42;color:#2d1f14;border:2px solid #2d1f14;border-radius:999px;font-weight:700;font-size:14px;text-decoration:none;margin:20px 0 4px;">${cta.label}</a>`
+    : "";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#fffaf5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#2d1f14;line-height:1.6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf5;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:1px solid #f0e4d8;overflow:hidden;">
+        <tr>
+          <td style="padding:22px 32px;border-bottom:1px solid #f0e4d8;">
+            <span style="font-size:20px;font-weight:800;color:#2d1f14;">korent<span style="color:#e8590c;">.</span></span>
+            <span style="font-size:12px;font-weight:600;color:#8a7565;letter-spacing:0.06em;text-transform:uppercase;margin-left:6px;">marketplace</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px;">
+            <p style="margin:0;font-size:15px;line-height:1.7;">${body}</p>
+            ${button}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 32px;border-top:1px solid #f0e4d8;color:#8a7565;font-size:12px;">
+            <a href="https://rent.korent.app" style="color:#8a7565;text-decoration:none;">rent.korent.app</a>
+            &nbsp;·&nbsp;
+            <a href="https://rent.korent.app/market/support" style="color:#8a7565;text-decoration:underline;">Questions? Get support</a>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }
 
 export async function notifyMarketEmail(input: {
@@ -108,6 +184,7 @@ export async function notifyMarketEmail(input: {
     const dates = `${formatMarketDate(input.startsAt)} → ${formatMarketDate(input.endsAt)}`;
     await sendEmail({
       to: input.to,
+      from: marketFromAddress(),
       subject: `${tpl.subject} · Korent Marketplace`,
       // Bug #32: listingTitle/extra are user-controlled (seller sets the
       // title) — escape before they reach email HTML. dates is built
@@ -118,6 +195,7 @@ export async function notifyMarketEmail(input: {
           dates,
           extra: input.extra ? escapeHtml(input.extra) : undefined,
         }),
+        tpl.cta,
       ),
     });
   } catch {
