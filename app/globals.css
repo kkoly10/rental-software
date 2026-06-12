@@ -610,7 +610,7 @@ a:focus-visible {
 .sidebar {
   background: var(--surface, #ffffff);
   color: var(--text, #2d1f14);
-  padding: 24px 18px;
+  padding: 18px 14px;
   display: flex;
   flex-direction: column;
   /* Stick the sidebar to the top of the viewport with its own internal
@@ -687,11 +687,11 @@ a:focus-visible {
 .sidebar a {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 12px;
-  border-radius: 12px;
-  margin-bottom: 2px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  margin-bottom: 1px;
+  font-size: 13.5px;
   color: var(--text-soft, #6b5545);
   transition: 0.15s ease;
 }
@@ -748,14 +748,14 @@ a:focus-visible {
   align-items: center;
   gap: 9px;
   width: 100%;
-  margin: 0 0 8px;
-  padding: 9px 12px;
+  margin: 0 0 6px;
+  padding: 7px 11px;
   border: 1px solid var(--border, #f0e0d0);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface-muted, #fff1e8);
   color: var(--text-soft, #6b5545);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   cursor: pointer;
   text-align: left;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -790,14 +790,14 @@ a:focus-visible {
   align-items: center;
   gap: 9px;
   width: 100%;
-  margin: 0 0 18px;
-  padding: 11px 14px;
+  margin: 0 0 12px;
+  padding: 8px 11px;
   border: 1px solid color-mix(in srgb, var(--secondary) 30%, transparent);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--secondary-bg, #e9edde);
   color: var(--secondary-strong, #333d29);
   font: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -834,11 +834,11 @@ a:focus-visible {
 }
 
 .sidebar-group {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .sidebar-group:first-child {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .sidebar-group-header {
@@ -846,15 +846,15 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 6px 14px 8px;
+  padding: 5px 10px 5px;
   background: transparent;
   border: none;
   color: var(--text-muted, #8a7565);
   font: inherit;
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   cursor: pointer;
 }
 
@@ -1028,14 +1028,51 @@ input[type="number"],
 input[type="password"],
 input[type="date"],
 input[type="time"],
+input[type="search"],
 select,
 textarea {
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
   min-height: 44px;
-  padding: 8px 12px;
+  padding: 9px 14px;
   background: white;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
   transition: border-color 0.15s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Strip WebKit's native search-field chrome (inset shadow, cancel
+   button styling) — it's what made the search boxes look cheap. */
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Responsive field grid — sizes to its CONTAINER, so the same form
+   works on a full-width page and inside a narrow aside (payments
+   "New payment" panel) without cramming columns. */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.form-field {
+  display: block;
+  font-size: 14px;
+  min-width: 0;
+}
+
+/* Always a full row — `span 2` would force an implicit column (and
+   overflow) when auto-fit resolves a single column in narrow asides. */
+.form-field--wide {
+  grid-column: 1 / -1;
 }
 
 input:focus,

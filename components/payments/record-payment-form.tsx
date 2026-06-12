@@ -52,13 +52,16 @@ export function RecordPaymentForm({
         </div>
       )}
 
-      <div className="grid grid-3">
-        <label className="order-card">
+      {/* form-grid stacks to a single column in narrow containers (the
+          payments-page aside) instead of cramming three ~100px columns
+          with letter-by-letter wrapping. */}
+      <div className="form-grid">
+        <label className="form-field">
           <strong>{m.amountLabel}</strong>
           <input name="amount" type="number" step="0.01" min="0.01" required style={{ marginTop: 8, width: "100%" }} />
         </label>
 
-        <label className="order-card">
+        <label className="form-field">
           <strong>{m.paymentTypeLabel}</strong>
           <select
             name="payment_type"
@@ -71,12 +74,9 @@ export function RecordPaymentForm({
             <option value="partial">{m.paymentTypes.partial}</option>
             <option value="refund">{m.paymentTypes.refund}</option>
           </select>
-          <span className="muted" style={{ fontSize: 12, marginTop: 6, display: "block" }}>
-            {m.paymentTypeHint}
-          </span>
         </label>
 
-        <label className="order-card">
+        <label className="form-field">
           <strong>{m.methodLabel}</strong>
           <select name="payment_method" defaultValue="cash" style={{ marginTop: 8, width: "100%" }}>
             <option value="cash">{m.methods.cash}</option>
@@ -89,13 +89,19 @@ export function RecordPaymentForm({
         </label>
       </div>
 
-      <div className="grid grid-3">
-        <label className="order-card">
+      {/* Hint lives once below the grid, full width, instead of blowing
+          up one column's height. */}
+      <p className="muted" style={{ fontSize: 12.5, margin: "2px 0 0", lineHeight: 1.55 }}>
+        {m.paymentTypeHint}
+      </p>
+
+      <div className="form-grid">
+        <label className="form-field">
           <strong>{m.datePaidLabel}</strong>
           <input name="paid_at" type="date" defaultValue={toLocalISODate()} style={{ marginTop: 8, width: "100%" }} />
         </label>
 
-        <label className="order-card" style={{ gridColumn: "span 2" }}>
+        <label className="form-field form-field--wide">
           <strong>{m.referenceNoteLabel}</strong>
           <input name="reference_note" type="text" placeholder={m.referenceNotePlaceholder} style={{ marginTop: 8, width: "100%" }} />
         </label>

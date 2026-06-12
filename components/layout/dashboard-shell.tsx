@@ -329,6 +329,10 @@ export function DashboardShell({
       key={item.href}
       href={item.href}
       onClick={onClick}
+      // Force full prefetch (default "auto" only prefetches the loading
+      // skeleton for dynamic routes) — tab switches render from the
+      // prefetched payload instead of showing "Loading…" for seconds.
+      prefetch={true}
       className={isNavItemActive(pathname, item.href) ? "active" : undefined}
       data-tour={item.tourId}
     >
@@ -509,25 +513,32 @@ export function DashboardShell({
 
         <div className="sidebar-nav-body">{renderSidebarNavBody()}</div>
 
-        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-          <div style={{ padding: "0 14px 12px" }}>
+        {/* Compact utility footer — quiet text rows, no boxed chrome.
+            The tinted Sign Out box read as a third CTA and crowded the
+            rail. */}
+        <div style={{ marginTop: 16, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+          <div style={{ padding: "2px 10px 8px" }}>
             <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
           </div>
-          <a href={publicSiteUrl} style={{ display: "block", padding: "12px 14px", borderRadius: 12, marginBottom: 8, color: "var(--text-soft)" }}>
-            {m.dashboard.nav.publicSite}
+          <a
+            href={publicSiteUrl}
+            style={{ display: "block", padding: "6px 10px", borderRadius: 8, fontSize: 13, color: "var(--text-soft)" }}
+          >
+            {m.dashboard.nav.publicSite} ↗
           </a>
           <button
             type="button"
             style={{
-              background: "var(--surface-muted)",
-              color: "var(--text-soft)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: "12px 14px",
+              background: "transparent",
+              color: "var(--text-muted)",
+              border: "none",
+              borderRadius: 8,
+              padding: "6px 10px",
               width: "100%",
               textAlign: "left",
               cursor: "pointer",
               font: "inherit",
+              fontSize: 13,
             }}
             onClick={async () => {
               const { signOut } = await import("@/lib/auth/actions");

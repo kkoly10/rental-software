@@ -124,5 +124,9 @@ export async function dismissMilestone(key: string) {
   }
   const milestones = [...state.dismissedMilestones, key];
   await upsertGuidance({ dismissed_milestones: milestones });
-  revalidatePath("/dashboard");
+  // No revalidatePath here: the toast calls this on mount to persist
+  // "celebrated once", and a revalidation would re-render the page and
+  // unmount the toast before its 6-second display finishes. The next
+  // natural navigation re-reads guidance state (the dashboard is fully
+  // dynamic), so the flag takes effect without a forced refresh.
 }

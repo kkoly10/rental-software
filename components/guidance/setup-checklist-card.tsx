@@ -27,22 +27,26 @@ export function SetupChecklistCard({
 }) {
   const { messages: m, t } = useI18n();
   const [dismissed, setDismissed] = useState(false);
-  const [expanded, setExpanded] = useState(true);
-  const [showAll, setShowAll] = useState(false);
-  const [, startTransition] = useTransition();
-
-  if (dismissed) return null;
-
   const phase1Items = items.slice(0, PHASE_1_COUNT);
   const phase2Items = items.slice(PHASE_1_COUNT);
   const phase1Completed = phase1Items.filter((i) => i.completed).length;
   const phase1Done = phase1Completed === PHASE_1_COUNT;
+  // Returning operators who already cleared Phase 1 get the slim
+  // collapsed row, not the full celebration list on every visit.
+  const [expanded, setExpanded] = useState(!phase1Done);
+  const [showAll, setShowAll] = useState(false);
+  const [, startTransition] = useTransition();
+
+  const allDone = completed === total;
+
+  // Fully set up → the card has done its job; remove it without
+  // requiring a manual dismiss. (The setup_complete milestone toast
+  // is the one-time celebration.)
+  if (dismissed || allDone) return null;
 
   const displayItems = showAll ? items : phase1Items;
   const displayCompleted = showAll ? completed : phase1Completed;
   const displayTotal = showAll ? total : PHASE_1_COUNT;
-
-  const allDone = completed === total;
 
   return (
     <div className="checklist-card" data-tour="setup-checklist">
@@ -72,18 +76,18 @@ export function SetupChecklistCard({
           >
             {expanded ? m.setupChecklist.collapse : m.setupChecklist.expand}
           </button>
-          {allDone && (
-            <button
-              className="ghost-btn"
-              onClick={() => {
-                setDismissed(true);
-                startTransition(() => { dismissChecklist(); });
-              }}
-              style={{ fontSize: 13, padding: "6px 12px" }}
-            >
-              {m.setupChecklist.dismiss}
-            </button>
-          )}
+          {/* Always dismissable (persisted server-side) — operators at
+              7/14 shouldn't be stuck with a permanent celebration card. */}
+          <button
+            className="ghost-btn"
+            onClick={() => {
+              setDismissed(true);
+              startTransition(() => { dismissChecklist(); });
+            }}
+            style={{ fontSize: 13, padding: "6px 12px" }}
+          >
+            {m.setupChecklist.dismiss}
+          </button>
         </div>
       </div>
 
