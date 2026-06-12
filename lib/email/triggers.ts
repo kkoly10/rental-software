@@ -114,6 +114,8 @@ type OrgBranding = {
   eventTimezone: string;
   currency: string;
   locale: string;
+  // Operator's explicitly-set brand color (hex) or null when uncustomized.
+  brandColor: string | null;
 };
 
 function buildFromAddress(businessName: string): string {
@@ -138,7 +140,7 @@ async function getOrgBranding(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("name, support_email, event_timezone, default_currency")
+    .select("name, support_email, event_timezone, default_currency, settings")
     .eq("id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -147,6 +149,8 @@ async function getOrgBranding(
   const supportEmail = org?.support_email ?? null;
   const eventTimezone = org?.event_timezone ?? "UTC";
   const currency = (org as { default_currency?: string | null } | null)?.default_currency ?? "USD";
+  const rawBrand =
+    ((org?.settings as Record<string, unknown> | null)?.brand_primary_color as string | undefined) ?? null;
 
   let operatorAlertEmail = supportEmail;
   if (!operatorAlertEmail) {
@@ -174,6 +178,7 @@ async function getOrgBranding(
     // No per-org locale today — default to English. When orgs gain a locale
     // setting, surface it here so emails honor it.
     locale: "en",
+    brandColor: rawBrand,
   };
 }
 
@@ -227,6 +232,7 @@ export async function triggerOrderConfirmationEmail(params: {
     subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.orderConfirmation(params.orderNumber, branding.businessName)),
     html: orderConfirmationEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       customerFirstName: params.customerFirstName,
       orderNumber: params.orderNumber,
       productName: params.productName,
@@ -254,6 +260,7 @@ export async function triggerOrderConfirmationEmail(params: {
       subject: sanitizeHeaderValue(`New order #${params.orderNumber} from website`),
       html: newOrderAlertEmail({
         businessName: branding.businessName,
+        brandColor: branding.brandColor,
         customerName: params.customerFirstName,
         customerEmail: params.customerEmail,
         orderNumber: params.orderNumber,
@@ -300,6 +307,7 @@ export async function triggerDashboardOrderEmail(params: {
       subject: sanitizeHeaderValue(`New order #${params.orderNumber} created from dashboard`),
       html: newOrderAlertEmail({
         businessName: branding.businessName,
+        brandColor: branding.brandColor,
         customerName: params.customerName,
         customerEmail: params.customerEmail,
         orderNumber: params.orderNumber,
@@ -356,6 +364,7 @@ export async function triggerPaymentReceivedEmail(params: {
       subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.refundProcessed(params.orderNumber, branding.businessName)),
       html: refundProcessedEmail({
         businessName: branding.businessName,
+        brandColor: branding.brandColor,
         customerFirstName: params.customerFirstName,
         orderNumber: params.orderNumber,
         amount: cfmt.money(params.amount),
@@ -373,6 +382,7 @@ export async function triggerPaymentReceivedEmail(params: {
       subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.paymentReceived(params.orderNumber, branding.businessName)),
       html: paymentReceivedEmail({
         businessName: branding.businessName,
+        brandColor: branding.brandColor,
         customerFirstName: params.customerFirstName,
         orderNumber: params.orderNumber,
         amount: cfmt.money(params.amount),
@@ -516,6 +526,7 @@ export async function triggerOrderStatusEmail(params: {
     ),
     html: orderStatusUpdateEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       customerFirstName: customer.first_name ?? "there",
       orderNumber: order.order_number,
       newStatus: params.newStatus,
@@ -585,6 +596,7 @@ export async function triggerDocumentsReadyEmail(params: {
     subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.documentsReady(order.order_number, branding.businessName)),
     html: documentsReadyEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       customerFirstName: customer.first_name ?? "there",
       orderNumber: order.order_number,
       documentTypes: params.documentTypes,
@@ -651,6 +663,7 @@ export async function triggerQuoteSentEmail(params: {
     subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.quoteSent(params.orderNumber, branding.businessName)),
     html: quoteSentEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       customerFirstName: customer.first_name ?? "there",
       orderNumber: params.orderNumber,
       eventDate,
@@ -718,6 +731,7 @@ export async function triggerDepositReminderEmail(params: {
     subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.depositReminder(params.orderNumber, branding.businessName)),
     html: depositReminderEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       customerFirstName: params.customerFirstName,
       orderNumber: params.orderNumber,
       productName: params.productName,
@@ -767,6 +781,7 @@ export async function triggerRefundOperatorAlertEmail(params: {
     subject: `Refund processed on order #${params.orderNumber} — ${branding.businessName}`,
     html: newOrderAlertEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       customerName: params.customerName,
       customerEmail: "",
       orderNumber: params.orderNumber,
@@ -821,6 +836,7 @@ export async function triggerOperatorActivityAlertEmail(params: {
     subject: subjectForEvent(params.event, params.orderNumber, branding.businessName),
     html: operatorActivityAlertEmail({
       businessName: branding.businessName,
+      brandColor: branding.brandColor,
       event: params.event,
       orderNumber: params.orderNumber,
       customerName: params.customerName,

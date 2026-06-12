@@ -1,11 +1,40 @@
 /**
- * Shared email layout wrapper.
- * Inlines all styles for maximum email client compatibility.
+ * Shared email layout + components — editorial skin.
+ *
+ * Matches the product's design language (storefront, marketing, dashboard,
+ * PDF documents): warm paper background, ink-on-white with hairline rules,
+ * a serif display face (Georgia — the web-safe serif every mail client
+ * ships, so no font embedding) over a sans body, square-cornered buttons,
+ * and left-rule callouts instead of filled rounded pills. The corporate
+ * blue gradient header band is gone.
+ *
+ * Brand accent: the operator's explicitly-set brand color drives the
+ * letterhead edge bar and attention callouts. Operators who never
+ * customized fall back to ink rather than the old platform blue — neutral,
+ * timeless transactional mail beats branding every tenant in our color.
+ *
+ * All styles are inlined for maximum email-client compatibility.
  */
 
 import { emailCopy, type EmailLocale } from "./email-i18n";
 
 export type { EmailLocale } from "./email-i18n";
+
+// ─── Editorial palette ─────────────────────────────────────────────────────
+const BG = "#f7f4ee"; // warm paper
+const CARD = "#ffffff";
+const INK = "#1f1c17";
+const MUTED = "#5c5651";
+const FAINT = "#8a847c";
+const HAIRLINE = "#e4ded3";
+const RULE = "#cfc7b7";
+const SUCCESS = "#3f5530";
+const SUCCESS_BG = "#eef2e6";
+const ATTENTION = "#9a3412"; // warm burnt — never a saturated alert red
+const ATTENTION_BG = "#f7ede3";
+const NOTE_BG = "#f3f0e9";
+const SERIF = "Georgia, 'Times New Roman', Times, serif";
+const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
 
 // Escapes the OWASP-recommended HTML5-context character set PLUS
 // backtick (some legacy IE parsers treated it as a quote) and
@@ -20,12 +49,26 @@ function esc(s: string | null | undefined): string {
   ));
 }
 
+/**
+ * Resolve the operator's brand color into a safe accent hex, or fall back
+ * to ink. Validates strictly (3- or 6-digit hex only) so the value is safe
+ * to interpolate into a style attribute, and treats the legacy platform
+ * default (#1e5dcf) as "never customized" → ink.
+ */
+export function emailAccent(brandColor?: string | null): string {
+  if (!brandColor) return INK;
+  const v = brandColor.trim().toLowerCase();
+  if (v === "#1e5dcf") return INK;
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(v) ? v : INK;
+}
+
 function layout(
   businessName: string,
   body: string,
   footer?: string,
   preheader?: string,
-  locale: EmailLocale = "en"
+  locale: EmailLocale = "en",
+  accent: string = INK
 ): string {
   const safeName = esc(businessName);
   const preheaderSpan = preheader
@@ -34,26 +77,28 @@ function layout(
   return `<!DOCTYPE html>
 <html lang="${esc(locale)}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#10233f;line-height:1.6;">
+<body style="margin:0;padding:0;background:${BG};font-family:${SANS};color:${INK};line-height:1.6;">
   ${preheaderSpan}
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:32px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};padding:32px 16px;">
     <tr><td align="center">
-      <table role="presentation" width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;border:1px solid #dbe6f4;box-shadow:0 4px 12px rgba(16,35,63,0.06);overflow:hidden;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:${CARD};border:1px solid ${HAIRLINE};border-radius:3px;overflow:hidden;max-width:600px;width:100%;">
+        <!-- Letterhead edge -->
+        <tr><td style="height:3px;line-height:3px;font-size:0;background:${accent};">&nbsp;</td></tr>
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#1e5dcf,#2d77f2);padding:24px 32px;">
-            <span style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.01em;">${safeName}</span>
+          <td style="padding:30px 40px 0;">
+            <span style="font-family:${SERIF};font-size:22px;font-weight:bold;color:${INK};letter-spacing:0.01em;">${safeName}</span>
           </td>
         </tr>
         <!-- Body -->
         <tr>
-          <td style="padding:32px;">
+          <td style="padding:24px 40px 36px;">
             ${body}
           </td>
         </tr>
         <!-- Footer -->
         <tr>
-          <td style="padding:20px 32px;border-top:1px solid #dbe6f4;color:#55708f;font-size:13px;">
+          <td style="padding:22px 40px;border-top:1px solid ${HAIRLINE};color:${FAINT};font-size:12px;">
             ${footer ?? `<p style="margin:0;">Sent by ${safeName}</p>`}
           </td>
         </tr>
@@ -64,22 +109,67 @@ function layout(
 </html>`;
 }
 
+// Re-exported under prefixed names so other modules (team invites,
+// onboarding welcome) compose editorial emails on the same chrome instead
+// of hand-rolling the old blue HTML.
+export {
+  esc as escapeEmailHtml,
+  layout as renderEmailLayout,
+  button as emailButton,
+  heading as emailHeading,
+  lead as emailLead,
+  detailTable as emailDetailTable,
+  callout as emailCallout,
+};
+
+/** Serif display heading. Pass raw text — escaped internally. */
+function heading(text: string): string {
+  return `<h1 style="margin:0 0 12px;font-family:${SERIF};font-size:25px;font-weight:normal;line-height:1.22;color:${INK};">${esc(text)}</h1>`;
+}
+
+/** Muted lede paragraph under the heading. Pass raw text — escaped. */
+function lead(text: string): string {
+  return `<p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:${MUTED};">${esc(text)}</p>`;
+}
+
+/** Ink-filled square CTA. Ink (not the brand accent) so the label stays
+ *  legible at any operator brand color. */
 function button(text: string, url: string): string {
-  return `<a href="${esc(url)}" style="display:inline-block;padding:14px 28px;background:#1e5dcf;color:#ffffff;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;margin:16px 0;">
-    ${esc(text)}
-  </a>`;
+  return `<a href="${esc(url)}" style="display:inline-block;padding:13px 30px;margin:8px 0;background:${INK};color:#fdfaf5;border-radius:2px;font-weight:600;font-size:14px;letter-spacing:0.02em;text-decoration:none;">${esc(text)}</a>`;
 }
 
 function detailRow(label: string, value: string): string {
   return `<tr>
-    <td style="padding:8px 0;color:#55708f;font-size:14px;width:140px;vertical-align:top;">${esc(label)}</td>
-    <td style="padding:8px 0;font-size:14px;font-weight:500;">${esc(value)}</td>
+    <td style="padding:11px 0;border-bottom:1px solid ${HAIRLINE};font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:${FAINT};width:44%;vertical-align:top;">${esc(label)}</td>
+    <td style="padding:11px 0;border-bottom:1px solid ${HAIRLINE};font-size:14px;color:${INK};text-align:right;vertical-align:top;">${esc(value)}</td>
   </tr>`;
 }
 
 function detailTable(rows: [string, string][]): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:20px 0;border-top:1px solid ${RULE};">
     ${rows.map(([label, value]) => detailRow(label, value)).join("")}
+  </table>`;
+}
+
+type CalloutTone = "positive" | "attention" | "note";
+
+/** Left-rule callout — replaces the old filled rounded pill boxes. Title
+ *  and body are pre-escaped HTML supplied by the caller. */
+function callout(
+  tone: CalloutTone,
+  titleHtml: string,
+  bodyHtml: string,
+  accent: string = INK,
+  align: "left" | "center" = "left"
+): string {
+  const text = tone === "positive" ? SUCCESS : tone === "attention" ? ATTENTION : INK;
+  const bg = tone === "positive" ? SUCCESS_BG : tone === "attention" ? ATTENTION_BG : NOTE_BG;
+  const bar = tone === "positive" ? SUCCESS : tone === "attention" ? (accent !== INK ? accent : ATTENTION) : RULE;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:20px 0;">
+    <tr><td style="border-left:3px solid ${bar};background:${bg};padding:15px 18px;text-align:${align};">
+      <strong style="font-size:14px;color:${text};">${titleHtml}</strong>
+      ${bodyHtml ? `<p style="margin:7px 0 0;font-size:13px;line-height:1.6;color:${text};">${bodyHtml}</p>` : ""}
+    </td></tr>
   </table>`;
 }
 
@@ -99,18 +189,18 @@ export type OrderConfirmationData = {
   siteUrl: string;
   portalUrl: string;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function orderConfirmationEmail(data: OrderConfirmationData): string {
   const t = emailCopy(data.locale);
   const c = t.orderConfirmation;
+  const accent = emailAccent(data.brandColor);
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName))}
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
@@ -121,22 +211,18 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
       [t.labels.total, data.total],
     ])}
 
-    <div style="background:#fff4e5;border:1px solid #fde2a7;border-radius:12px;padding:16px;margin:20px 0;">
-      <strong style="color:#a86a08;">${esc(c.depositRequired(data.depositDue))}</strong>
-      <p style="margin:8px 0 0;font-size:14px;color:#a86a08;">
-        ${esc(c.depositInstructions)}
-      </p>
-    </div>
+    ${callout("attention", esc(c.depositRequired(data.depositDue)), esc(c.depositInstructions), accent)}
 
     ${button(c.button, data.portalUrl)}
 
-    <p style="font-size:14px;color:#55708f;">
+    <p style="font-size:14px;color:${MUTED};">
       ${esc(t.questions.replyOrContact(data.supportEmail))}
     </p>
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    accent
   );
 }
 
@@ -152,16 +238,15 @@ export type NewOrderAlertData = {
   total: string;
   source: "website" | "dashboard";
   dashboardUrl: string;
+  brandColor?: string | null;
 };
 
 export function newOrderAlertEmail(data: NewOrderAlertData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">New order received</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      A new booking came in from your ${data.source === "website" ? "website" : "dashboard"}.
-    </p>
+    ${heading("New order received")}
+    ${lead(`A new booking came in from your ${data.source === "website" ? "website" : "dashboard"}.`)}
 
     ${detailTable([
       ["Order", `#${data.orderNumber}`],
@@ -173,7 +258,11 @@ export function newOrderAlertEmail(data: NewOrderAlertData): string {
     ])}
 
     ${button("View Order", data.dashboardUrl)}
-    `
+    `,
+    undefined,
+    undefined,
+    "en",
+    emailAccent(data.brandColor)
   );
 }
 
@@ -197,6 +286,7 @@ export type OperatorActivityAlertData = {
    *  "I need to reschedule…" */
   detail?: string;
   dashboardUrl: string;
+  brandColor?: string | null;
 };
 
 const EVENT_COPY: Record<OperatorActivityEvent, { headline: string; lead: string }> = {
@@ -237,13 +327,17 @@ export function operatorActivityAlertEmail(data: OperatorActivityAlertData): str
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${copy.headline}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">${copy.lead}</p>
+    ${heading(copy.headline)}
+    ${lead(copy.lead)}
 
     ${detailTable(rows)}
 
     ${button("Open order", data.dashboardUrl)}
-    `
+    `,
+    undefined,
+    undefined,
+    "en",
+    emailAccent(data.brandColor)
   );
 }
 
@@ -264,6 +358,7 @@ export type PaymentReceivedData = {
   // money strings (e.g. "0,00 €") wouldn't match that, so the trigger now
   // passes this explicitly.
   fullyPaid?: boolean;
+  brandColor?: string | null;
 };
 
 export function paymentReceivedEmail(data: PaymentReceivedData): string {
@@ -274,10 +369,8 @@ export function paymentReceivedEmail(data: PaymentReceivedData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName, data.paymentType))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName, data.paymentType))}
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
@@ -287,24 +380,20 @@ export function paymentReceivedEmail(data: PaymentReceivedData): string {
     ])}
 
     ${isFullyPaid
-      ? `<div style="background:#eaf9f4;border:1px solid #b6e8d3;border-radius:12px;padding:16px;margin:20px 0;">
-          <strong style="color:#188862;">${esc(c.fullyPaidTitle)}</strong>
-          <p style="margin:8px 0 0;font-size:14px;color:#188862;">
-            ${esc(c.fullyPaidBody)}
-          </p>
-        </div>`
-      : `<p style="font-size:14px;color:#55708f;">
+      ? callout("positive", esc(c.fullyPaidTitle), esc(c.fullyPaidBody))
+      : `<p style="font-size:14px;color:${MUTED};">
           ${esc(c.balanceDue(data.newBalance))}
         </p>`
     }
 
-    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:${MUTED};">
       ${esc(t.questions.contactAt(data.supportEmail))}
     </p>` : ""}
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
 
@@ -317,6 +406,7 @@ export type RefundProcessedData = {
   amount: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function refundProcessedEmail(data: RefundProcessedData): string {
@@ -325,23 +415,22 @@ export function refundProcessedEmail(data: RefundProcessedData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName))}
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
       [t.labels.refundAmount, data.amount],
     ])}
 
-    <p style="font-size:14px;color:#55708f;">
+    <p style="font-size:14px;color:${MUTED};">
       ${esc(c.timing)}${data.supportEmail ? esc(c.contactSuffix(data.supportEmail)) : ""}
     </p>
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
 
@@ -358,6 +447,7 @@ export type OrderStatusUpdateData = {
   crewName?: string;
   portalUrl?: string;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
@@ -382,28 +472,23 @@ export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(msg.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName))}
-    </p>
+    ${heading(msg.heading)}
+    ${lead(c.intro(data.customerFirstName))}
 
     ${detailTable(rows)}
 
-    <p style="font-size:14px;margin:16px 0;">${esc(msg.body)}</p>
+    <p style="font-size:14px;margin:16px 0;color:${INK};">${esc(msg.body)}</p>
 
-    ${data.portalUrl ? `<p style="margin:20px 0;">
-      <a href="${esc(data.portalUrl)}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;display:inline-block;">
-        ${esc(c.button)}
-      </a>
-    </p>` : ""}
+    ${data.portalUrl ? button(c.button, data.portalUrl) : ""}
 
-    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:${MUTED};">
       ${esc(t.questions.contactAt(data.supportEmail))}
     </p>` : ""}
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
 
@@ -417,6 +502,7 @@ export type DocumentsReadyData = {
   supportEmail: string | null;
   portalUrl?: string;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function documentsReadyEmail(data: DocumentsReadyData): string {
@@ -434,24 +520,19 @@ export function documentsReadyEmail(data: DocumentsReadyData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName, docList, data.orderNumber, plural))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName, docList, data.orderNumber, plural))}
 
-    ${data.portalUrl ? `<p style="margin:20px 0;">
-      <a href="${esc(data.portalUrl)}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;display:inline-block;">
-        ${esc(c.button)}
-      </a>
-    </p>` : ""}
+    ${data.portalUrl ? button(c.button, data.portalUrl) : ""}
 
-    <p style="font-size:14px;">
+    <p style="font-size:14px;color:${MUTED};">
       ${data.supportEmail ? esc(t.questions.contactAt(data.supportEmail)) : ""}
     </p>
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
 
@@ -468,6 +549,7 @@ export type EventReminderData = {
   setupInstructions?: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function eventReminderEmail(data: EventReminderData): string {
@@ -485,31 +567,27 @@ export function eventReminderEmail(data: EventReminderData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName))}
 
     ${detailTable(rows)}
 
     ${data.setupInstructions
-      ? `<div style="background:#f0f6ff;border:1px solid #c4d8f4;border-radius:12px;padding:16px;margin:20px 0;">
-          <strong style="color:#1e5dcf;">${esc(c.setupNotesTitle)}</strong>
-          <p style="margin:8px 0 0;font-size:14px;color:#10233f;">${esc(data.setupInstructions).replace(/\n/g, "<br />")}</p>
-        </div>`
+      ? callout("note", esc(c.setupNotesTitle), esc(data.setupInstructions).replace(/\n/g, "<br />"))
       : ""
     }
 
-    <p style="font-size:14px;color:#55708f;">
+    <p style="font-size:14px;color:${MUTED};">
       ${esc(c.accessNote)}
     </p>
-    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:${MUTED};">
       ${esc(t.questions.contactAt(data.supportEmail))}
     </p>` : ""}
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
 
@@ -529,22 +607,19 @@ export type DailyScheduleData = {
   date: string;
   events: DailyScheduleEvent[];
   dashboardUrl: string;
+  brandColor?: string | null;
 };
 
 export function dailyScheduleEmail(data: DailyScheduleData): string {
   const eventRows = data.events
     .map(
-      (e) => `
-      <tr style="border-bottom:1px solid #f0f3f8;">
-        <td style="padding:12px 8px;font-size:14px;font-weight:600;">#${esc(e.orderNumber)}</td>
-        <td style="padding:12px 8px;font-size:14px;">${esc(e.customerName)}</td>
-        <td style="padding:12px 8px;font-size:14px;">${esc(e.productName)}</td>
-        <td style="padding:12px 8px;font-size:14px;color:#55708f;">${esc(e.time ?? "TBD")}</td>
-        <td style="padding:12px 8px;font-size:14px;">
-          <span style="background:#eaf9f4;color:#188862;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;">
-            ${esc(e.status.replace(/_/g, " "))}
-          </span>
-        </td>
+      (e, i) => `
+      <tr>
+        <td style="padding:13px 8px 13px 0;font-size:14px;font-weight:600;color:${INK};border-top:${i === 0 ? "0" : `1px solid ${HAIRLINE}`};">#${esc(e.orderNumber)}</td>
+        <td style="padding:13px 8px;font-size:14px;color:${INK};border-top:${i === 0 ? "0" : `1px solid ${HAIRLINE}`};">${esc(e.customerName)}</td>
+        <td style="padding:13px 8px;font-size:14px;color:${MUTED};border-top:${i === 0 ? "0" : `1px solid ${HAIRLINE}`};">${esc(e.productName)}</td>
+        <td style="padding:13px 8px;font-size:14px;color:${MUTED};border-top:${i === 0 ? "0" : `1px solid ${HAIRLINE}`};">${esc(e.time ?? "TBD")}</td>
+        <td style="padding:13px 0 13px 8px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${FAINT};text-align:right;border-top:${i === 0 ? "0" : `1px solid ${HAIRLINE}`};">${esc(e.status.replace(/_/g, " "))}</td>
       </tr>
     `
     )
@@ -553,24 +628,28 @@ export function dailyScheduleEmail(data: DailyScheduleData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">Today&rsquo;s Schedule</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      You have <strong>${data.events.length}</strong> event${data.events.length === 1 ? "" : "s"} on <strong>${esc(data.date)}</strong>.
+    ${heading("Today’s Schedule")}
+    <p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:${MUTED};">
+      You have <strong style="color:${INK};">${data.events.length}</strong> event${data.events.length === 1 ? "" : "s"} on <strong style="color:${INK};">${esc(data.date)}</strong>.
     </p>
 
-    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border:1px solid #dbe6f4;border-radius:12px;overflow:hidden;">
-      <tr style="background:#f4f7fb;">
-        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Order</th>
-        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Customer</th>
-        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Item</th>
-        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Time</th>
-        <th style="padding:10px 8px;font-size:12px;color:#55708f;text-align:left;">Status</th>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border-top:1px solid ${RULE};">
+      <tr>
+        <th style="padding:10px 8px 10px 0;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:${FAINT};text-align:left;border-bottom:1px solid ${HAIRLINE};">Order</th>
+        <th style="padding:10px 8px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:${FAINT};text-align:left;border-bottom:1px solid ${HAIRLINE};">Customer</th>
+        <th style="padding:10px 8px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:${FAINT};text-align:left;border-bottom:1px solid ${HAIRLINE};">Item</th>
+        <th style="padding:10px 8px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:${FAINT};text-align:left;border-bottom:1px solid ${HAIRLINE};">Time</th>
+        <th style="padding:10px 0 10px 8px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:${FAINT};text-align:right;border-bottom:1px solid ${HAIRLINE};">Status</th>
       </tr>
       ${eventRows}
     </table>
 
     ${button("View Deliveries", data.dashboardUrl)}
-    `
+    `,
+    undefined,
+    undefined,
+    "en",
+    emailAccent(data.brandColor)
   );
 }
 
@@ -586,18 +665,18 @@ export type PostEventFollowUpData = {
   storefrontUrl: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
   const t = emailCopy(data.locale);
   const c = t.postEventFollowUp;
+  const accent = emailAccent(data.brandColor);
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName, data.eventDate, data.businessName))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName, data.eventDate, data.businessName))}
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
@@ -606,27 +685,23 @@ export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
     ])}
 
     ${data.reviewUrl
-      ? `<div style="background:#fff9e6;border:1px solid #fde2a7;border-radius:12px;padding:16px;margin:20px 0;text-align:center;">
-          <strong style="color:#a86a08;">${esc(c.reviewCallout)}</strong>
-          <p style="margin:12px 0 0;">
-            ${button(c.reviewButton, data.reviewUrl)}
-          </p>
-        </div>`
+      ? callout("attention", esc(c.reviewCallout), button(c.reviewButton, data.reviewUrl), accent, "center")
       : ""
     }
 
-    <div style="text-align:center;margin:24px 0;">
-      <p style="font-size:16px;font-weight:600;margin:0 0 8px;">${esc(c.bookAgainPrompt)}</p>
+    <div style="text-align:center;margin:28px 0;">
+      <p style="font-family:${SERIF};font-size:18px;margin:0 0 10px;color:${INK};">${esc(c.bookAgainPrompt)}</p>
       ${button(c.bookAgainButton, data.storefrontUrl)}
     </div>
 
-    ${data.supportEmail ? `<p style="font-size:14px;color:#55708f;">
+    ${data.supportEmail ? `<p style="font-size:14px;color:${MUTED};">
       ${esc(t.questions.feedbackContactAt(data.supportEmail))}
     </p>` : ""}
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    accent
   );
 }
 
@@ -640,16 +715,15 @@ export function quoteSentEmail(data: {
   portalUrl: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  brandColor?: string | null;
 }): string {
   const t = emailCopy(data.locale);
   const c = t.quoteSent;
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName))}
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
@@ -662,14 +736,15 @@ export function quoteSentEmail(data: {
       ${button(c.button, data.portalUrl)}
     </div>
 
-    <p style="font-size:13px;color:#55708f;text-align:center;">
+    <p style="font-size:13px;color:${MUTED};text-align:center;">
       ${esc(c.disclaimer)}${data.supportEmail ? `<br>
       ${esc(t.questions.contactAt(data.supportEmail))}` : ""}
     </p>
     `,
     undefined,
     undefined,
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
 
@@ -685,6 +760,7 @@ export type DepositReminderData = {
   portalUrl: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  brandColor?: string | null;
 };
 
 export function depositReminderEmail(data: DepositReminderData): string {
@@ -693,10 +769,8 @@ export function depositReminderEmail(data: DepositReminderData): string {
   return layout(
     data.businessName,
     `
-    <h1 style="margin:0 0 8px;font-size:24px;">${esc(c.heading)}</h1>
-    <p style="color:#55708f;margin:0 0 20px;">
-      ${esc(c.intro(data.customerFirstName))}
-    </p>
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName))}
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
@@ -708,13 +782,14 @@ export function depositReminderEmail(data: DepositReminderData): string {
     ${button(c.button, data.portalUrl)}
 
     ${data.supportEmail
-      ? `<p style="font-size:14px;color:#55708f;">
+      ? `<p style="font-size:14px;color:${MUTED};">
           ${esc(t.questions.contactAt(data.supportEmail))}
         </p>`
       : ""}
     `,
     undefined,
     c.preheader(data.depositDue, data.orderNumber),
-    data.locale
+    data.locale,
+    emailAccent(data.brandColor)
   );
 }
