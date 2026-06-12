@@ -365,7 +365,6 @@ export const fr: Messages = {
       subtitle: "Pas de contrat. Pas de frais d’installation. Annulez à tout moment. Évoluez à mesure de votre croissance.",
       mostPopular: "Le plus populaire",
       plans: [
-        { name: "Gratuit", price: "0 $", period: "/mois", cta: "Commencer gratuitement", features: ["5 produits", "10 commandes/mois", "1 membre d’équipe", "Vitrine en ligne", "Support par e-mail"] },
         { name: "Starter", price: "49 $", period: "/mois", cta: "Essayer Starter", features: ["25 produits", "50 commandes/mois", "1 membre d’équipe", "Vitrine en ligne", "Tournées de livraison", "Support par e-mail"] },
         { name: "Pro", price: "99 $", period: "/mois", cta: "Essayer Pro", features: ["100 produits", "200 commandes/mois", "5 membres d’équipe", "Paiements Stripe", "Décharges numériques", "Copilote IA", "Support prioritaire"] },
         { name: "Growth", price: "199 $", period: "/mois", cta: "Essayer Growth", features: ["Produits illimités", "Commandes illimitées", "15 membres d’équipe", "Export CSV", "Domaine personnalisé", "Support prioritaire", "Accompagnement dédié"] },

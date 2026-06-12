@@ -1,4 +1,15 @@
 import { jsPDF } from "jspdf";
+import {
+  PDF_INK,
+  PDF_MUTED,
+  PDF_FAINT,
+  PDF_RULE,
+  drawEyebrow,
+  drawHeader,
+  drawHairline,
+  drawFooter,
+  parseBrandColor,
+} from "@/lib/pdf/editorial";
 
 export type DocumentPdfData = {
   documentType: "rental_agreement" | "safety_waiver";
@@ -13,6 +24,9 @@ export type DocumentPdfData = {
   signerIp: string | null;
   signatureDataUrl: string | null;
   businessType?: string;
+  /** Operator's explicitly-set brand primary (hex). Null/undefined →
+   *  pure-ink document. */
+  brandColor?: string | null;
 };
 
 function formatTitle(type: string): string {
@@ -138,88 +152,72 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 48;
+  const margin = 52;
   const contentWidth = pageWidth - margin * 2;
-  let y = margin;
+  const accent = parseBrandColor(data.brandColor);
 
   const title = formatTitle(data.documentType);
   const terms = getTerms(data.documentType, data.businessType ?? "inflatable");
 
   // ─── Header ───────────────────────────────────────────────────────
-  doc.setFillColor(30, 93, 207);
-  doc.rect(0, 0, pageWidth, 80, "F");
+  let y = drawHeader(doc, {
+    businessName: data.businessName,
+    docLabel: title,
+    metaLines: [`Order #${data.orderNumber}`],
+    margin,
+    accent,
+  });
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
+  // ─── Party info — eyebrow labels over ink values, no fill box ─────
+  drawEyebrow(doc, "Customer", margin, y);
+  drawEyebrow(doc, "Event date", margin + 230, y);
+  drawEyebrow(doc, "Order", margin + 392, y);
+
+  doc.setFontSize(10.5);
+  doc.setTextColor(...PDF_INK);
   doc.setFont("helvetica", "bold");
-  doc.text(data.businessName, margin, 50);
-
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "normal");
-  doc.text(title.toUpperCase(), pageWidth - margin, 38, { align: "right" });
-  doc.setFontSize(10);
-  doc.text(`Order #${data.orderNumber}`, pageWidth - margin, 54, { align: "right" });
-
-  y = 106;
-  doc.setTextColor(16, 35, 63);
-
-  // ─── Party info ───────────────────────────────────────────────────
-  doc.setFillColor(244, 247, 251);
-  doc.roundedRect(margin, y, contentWidth, 52, 6, 6, "F");
-
-  doc.setFontSize(9);
-  doc.setTextColor(85, 112, 143);
-  doc.text("CUSTOMER", margin + 12, y + 16);
-  doc.text("EVENT DATE", margin + 220, y + 16);
-  doc.text("ORDER", margin + 380, y + 16);
-
-  doc.setFontSize(11);
-  doc.setTextColor(16, 35, 63);
-  doc.setFont("helvetica", "bold");
-  doc.text(data.customerName, margin + 12, y + 36);
-  doc.text(data.eventDate, margin + 220, y + 36);
-  doc.text(`#${data.orderNumber}`, margin + 380, y + 36);
+  doc.text(data.customerName, margin, y + 16);
+  doc.text(data.eventDate, margin + 230, y + 16);
+  doc.text(`#${data.orderNumber}`, margin + 392, y + 16);
   doc.setFont("helvetica", "normal");
 
-  y += 68;
+  y += 42;
 
   // Rental items
   if (data.items.length > 0) {
-    doc.setFontSize(9);
-    doc.setTextColor(85, 112, 143);
-    doc.text("RENTAL ITEMS", margin, y);
-    y += 14;
+    drawEyebrow(doc, "Rental items", margin, y);
+    y += 15;
     doc.setFontSize(10);
-    doc.setTextColor(16, 35, 63);
-    doc.text(data.items.join(" · ") || "—", margin, y);
+    doc.setTextColor(...PDF_INK);
+    doc.text(data.items.join("  ·  ") || "—", margin, y, { maxWidth: contentWidth });
     y += 22;
   }
 
-  // ─── Section divider ──────────────────────────────────────────────
-  doc.setDrawColor(219, 230, 244);
-  doc.line(margin, y, margin + contentWidth, y);
-  y += 18;
+  drawHairline(doc, margin, margin + contentWidth, y);
+  y += 26;
 
-  // ─── Terms heading ────────────────────────────────────────────────
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(16, 35, 63);
-  doc.text(`Terms & Conditions`, margin, y);
+  // ─── Terms heading — serif display ────────────────────────────────
+  doc.setFontSize(15);
+  doc.setFont("times", "bold");
+  doc.setTextColor(...PDF_INK);
+  doc.text("Terms & Conditions", margin, y);
   y += 20;
   doc.setFont("helvetica", "normal");
 
   // ─── Terms paragraphs ─────────────────────────────────────────────
   doc.setFontSize(9.5);
-  doc.setTextColor(40, 56, 80);
+  doc.setTextColor(...PDF_MUTED);
 
   for (const term of terms) {
     const lines = doc.splitTextToSize(term, contentWidth);
     const blockHeight = lines.length * 14 + 8;
 
     // New page if needed (leave room for signature section ~160pt)
-    if (y + blockHeight > pageHeight - 180) {
+    if (y + blockHeight > pageHeight - 190) {
       doc.addPage();
       y = margin;
+      doc.setFontSize(9.5);
+      doc.setTextColor(...PDF_MUTED);
     }
 
     doc.text(lines, margin, y);
@@ -227,26 +225,25 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
   }
 
   // ─── Signature section ────────────────────────────────────────────
-  const sigSectionHeight = data.signatureDataUrl ? 160 : 110;
-  if (y + sigSectionHeight > pageHeight - margin) {
+  const sigSectionHeight = data.signatureDataUrl ? 170 : 120;
+  if (y + sigSectionHeight > pageHeight - margin - 30) {
     doc.addPage();
     y = margin;
   }
 
   y += 10;
-  doc.setDrawColor(219, 230, 244);
-  doc.line(margin, y, margin + contentWidth, y);
-  y += 18;
+  drawHairline(doc, margin, margin + contentWidth, y);
+  y += 24;
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(16, 35, 63);
+  doc.setFontSize(13);
+  doc.setFont("times", "bold");
+  doc.setTextColor(...PDF_INK);
   doc.text("Electronic Signature", margin, y);
   y += 16;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(85, 112, 143);
+  doc.setTextColor(...PDF_MUTED);
 
   if (data.signerName && data.signedDate) {
     const legalText =
@@ -267,47 +264,38 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
     }
 
     // Signature line
-    doc.setDrawColor(16, 35, 63);
+    doc.setDrawColor(...PDF_INK);
+    doc.setLineWidth(0.8);
     doc.line(margin, y, margin + 220, y);
     y += 14;
 
     doc.setFontSize(10);
-    doc.setTextColor(16, 35, 63);
+    doc.setTextColor(...PDF_INK);
     doc.setFont("helvetica", "bold");
     doc.text(data.signerName, margin, y);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(85, 112, 143);
+    doc.setTextColor(...PDF_FAINT);
     doc.text(data.signedDate, margin + 240, y);
     if (data.signerIp) {
       doc.text(`IP: ${data.signerIp}`, margin + 240, y + 13);
     }
   } else {
     doc.setFontSize(10);
-    doc.setTextColor(85, 112, 143);
+    doc.setTextColor(...PDF_MUTED);
     doc.text("Awaiting customer signature.", margin, y);
-    y += 24;
+    y += 26;
 
-    doc.setDrawColor(85, 112, 143);
+    doc.setDrawColor(...PDF_RULE);
     doc.setLineDashPattern([3, 3], 0);
     doc.line(margin, y, margin + 240, y);
     doc.setLineDashPattern([], 0);
     y += 12;
-    doc.setFontSize(9);
-    doc.text("Customer signature", margin, y);
+    drawEyebrow(doc, "Customer signature", margin, y);
   }
 
   // ─── Footer ───────────────────────────────────────────────────────
-  const footerY = pageHeight - 32;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(85, 112, 143);
-  doc.text(
-    `${data.businessName} · ${data.supportEmail}`,
-    pageWidth / 2,
-    footerY,
-    { align: "center" }
-  );
+  drawFooter(doc, `${data.businessName} · ${data.supportEmail}`, margin);
 
   return doc.output("arraybuffer") as unknown as Uint8Array;
 }

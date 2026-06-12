@@ -366,7 +366,6 @@ const enValues = {
       subtitle: "No contracts. No setup fees. Cancel anytime. Upgrade or downgrade as your business grows.",
       mostPopular: "Most popular",
       plans: [
-        { name: "Free", price: "$0", period: "/month", cta: "Start Free", features: ["5 products", "10 orders/month", "1 team member", "Online storefront", "Email support"] },
         { name: "Starter", price: "$49", period: "/month", cta: "Start Starter Trial", features: ["25 products", "50 orders/month", "1 team member", "Online storefront", "Delivery routing", "Email support"] },
         { name: "Pro", price: "$99", period: "/month", cta: "Start Pro Trial", features: ["100 products", "200 orders/month", "5 team members", "Stripe payments", "Digital waivers", "AI copilot", "Priority email support"] },
         { name: "Growth", price: "$199", period: "/month", cta: "Start Growth Trial", features: ["Unlimited products", "Unlimited orders", "15 team members", "CSV export", "Custom domain", "Priority support", "Dedicated onboarding"] },

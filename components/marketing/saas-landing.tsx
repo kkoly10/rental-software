@@ -380,7 +380,7 @@ export async function SaasLanding() {
 
             <div className="mk-pricing-grid">
               {s.pricingSection.plans.map((plan, idx) => {
-                const popular = idx === 2; // Pro plan
+                const popular = idx === 1; // Pro plan
                 return (
                   <div key={plan.name} className={`mk-plan${popular ? " mk-plan--popular" : ""}`}>
                     {popular && <span className="mk-plan-tag">{s.pricingSection.mostPopular}</span>}

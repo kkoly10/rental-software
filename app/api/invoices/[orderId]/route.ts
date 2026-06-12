@@ -77,7 +77,7 @@ export async function GET(
       .eq("order_id", orderId),
     supabase
       .from("organizations")
-      .select("name, support_email, phone, event_timezone")
+      .select("name, support_email, phone, event_timezone, settings")
       .eq("id", ctx.organizationId)
       .is("deleted_at", null)
       .maybeSingle(),
@@ -160,6 +160,16 @@ export async function GET(
     total: totalAmount,
     depositPaid,
     balanceDue,
+    // Brand accent — only when the operator explicitly set a color. The
+    // platform default (#1e5dcf) means "never customized"; the invoice
+    // stays pure ink in that case.
+    brandColor: (() => {
+      const raw =
+        ((org?.settings as Record<string, unknown> | null)?.brand_primary_color as
+          | string
+          | undefined) ?? null;
+      return raw && raw.toLowerCase() !== "#1e5dcf" ? raw : null;
+    })(),
   };
 
   const pdfBytes = generateInvoicePdf(invoiceData);

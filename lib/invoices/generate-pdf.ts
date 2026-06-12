@@ -1,4 +1,15 @@
 import { jsPDF } from "jspdf";
+import {
+  PDF_INK,
+  PDF_MUTED,
+  PDF_FAINT,
+  PDF_SUCCESS,
+  drawEyebrow,
+  drawHeader,
+  drawHairline,
+  drawFooter,
+  parseBrandColor,
+} from "@/lib/pdf/editorial";
 
 export type InvoiceData = {
   businessName: string;
@@ -23,6 +34,9 @@ export type InvoiceData = {
   total: number;
   depositPaid: number;
   balanceDue: number;
+  /** Operator's explicitly-set brand primary (hex). Null/undefined →
+   *  pure-ink document. */
+  brandColor?: string | null;
 };
 
 function formatMoney(amount: number): string {
@@ -36,46 +50,35 @@ function formatMoney(amount: number): string {
 export function generateInvoicePdf(data: InvoiceData): Uint8Array {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 48;
+  const margin = 52;
   const contentWidth = pageWidth - margin * 2;
-  let y = margin;
+  const accent = parseBrandColor(data.brandColor);
 
   // ─── Header ───────────────────────────────────────────────────────
-  doc.setFillColor(30, 93, 207);
-  doc.rect(0, 0, pageWidth, 80, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.text(data.businessName, margin, 50);
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text("INVOICE", pageWidth - margin, 36, { align: "right" });
-  doc.setFontSize(10);
-  doc.text(`#${data.orderNumber}`, pageWidth - margin, 52, { align: "right" });
-  doc.text(data.invoiceDate, pageWidth - margin, 66, { align: "right" });
-
-  y = 110;
-  doc.setTextColor(16, 35, 63);
+  let y = drawHeader(doc, {
+    businessName: data.businessName,
+    docLabel: "Invoice",
+    metaLines: [`#${data.orderNumber}`, data.invoiceDate],
+    margin,
+    accent,
+  });
 
   // ─── From / To ────────────────────────────────────────────────────
   const colWidth = contentWidth / 2;
 
-  doc.setFontSize(9);
-  doc.setTextColor(85, 112, 143);
-  doc.text("FROM", margin, y);
-  doc.text("BILL TO", margin + colWidth, y);
+  drawEyebrow(doc, "From", margin, y);
+  drawEyebrow(doc, "Bill to", margin + colWidth, y);
 
   y += 16;
   doc.setFontSize(10);
-  doc.setTextColor(16, 35, 63);
+  doc.setTextColor(...PDF_INK);
   doc.setFont("helvetica", "bold");
   doc.text(data.businessName, margin, y);
   doc.text(data.customerName, margin + colWidth, y);
 
   y += 14;
   doc.setFont("helvetica", "normal");
+  doc.setTextColor(...PDF_MUTED);
   doc.text(data.supportEmail, margin, y);
   doc.text(data.customerEmail, margin + colWidth, y);
 
@@ -87,143 +90,140 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
 
   y += 14;
   if (data.deliveryAddress) {
-    doc.setTextColor(85, 112, 143);
+    doc.setTextColor(...PDF_FAINT);
     doc.text(data.deliveryAddress, margin + colWidth, y);
   }
 
-  y += 30;
+  y += 28;
 
-  // ─── Event details ────────────────────────────────────────────────
-  doc.setFillColor(244, 247, 251);
-  doc.roundedRect(margin, y, contentWidth, 36, 6, 6, "F");
-
-  doc.setFontSize(9);
-  doc.setTextColor(85, 112, 143);
-  doc.text("Event Date", margin + 12, y + 14);
-  doc.text("Order Number", margin + 180, y + 14);
-  doc.text("Status", margin + 360, y + 14);
+  // ─── Event details — hairline band, no fill ───────────────────────
+  drawHairline(doc, margin, margin + contentWidth, y);
+  y += 16;
+  drawEyebrow(doc, "Event date", margin, y);
+  drawEyebrow(doc, "Order number", margin + 190, y);
+  drawEyebrow(doc, "Status", margin + 380, y);
 
   doc.setFontSize(10);
-  doc.setTextColor(16, 35, 63);
+  doc.setTextColor(...PDF_INK);
   doc.setFont("helvetica", "bold");
-  doc.text(data.eventDate, margin + 12, y + 28);
-  doc.text(`#${data.orderNumber}`, margin + 180, y + 28);
-  doc.text(data.balanceDue <= 0 ? "Paid" : "Balance Due", margin + 360, y + 28);
+  doc.text(data.eventDate, margin, y + 15);
+  doc.text(`#${data.orderNumber}`, margin + 190, y + 15);
+  doc.text(data.balanceDue <= 0 ? "Paid" : "Balance Due", margin + 380, y + 15);
 
   doc.setFont("helvetica", "normal");
-  y += 54;
-
-  // ─── Line items table ─────────────────────────────────────────────
-  // Table header
-  doc.setFillColor(30, 93, 207);
-  doc.rect(margin, y, contentWidth, 26, "F");
-
-  doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.text("Item", margin + 12, y + 17);
-  doc.text("Qty", margin + 320, y + 17, { align: "right" });
-  doc.text("Unit Price", margin + 400, y + 17, { align: "right" });
-  doc.text("Total", margin + contentWidth - 12, y + 17, { align: "right" });
-
+  y += 28;
+  drawHairline(doc, margin, margin + contentWidth, y);
   y += 26;
-  doc.setTextColor(16, 35, 63);
+
+  // ─── Line items table — eyebrow heads, hairline rows, no zebra ────
+  drawEyebrow(doc, "Item", margin, y);
+  drawEyebrow(doc, "Qty", margin + 320, y, { align: "right" });
+  drawEyebrow(doc, "Unit price", margin + 400, y, { align: "right" });
+  drawEyebrow(doc, "Total", margin + contentWidth, y, { align: "right" });
+
+  y += 8;
+  doc.setDrawColor(...PDF_INK);
+  doc.setLineWidth(0.9);
+  doc.line(margin, y, margin + contentWidth, y);
+  doc.setLineWidth(0.6);
+
+  y += 4;
+  doc.setTextColor(...PDF_INK);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
 
   // Table rows
   const pageHeight = doc.internal.pageSize.getHeight();
-  for (let i = 0; i < data.items.length; i++) {
-    const item = data.items[i];
-    // Start a new page before a row would run off the bottom.
-    if (y + 24 > pageHeight - margin) {
+  const drawRow = (name: string, qty: string, unit: string, total: string) => {
+    if (y + 24 > pageHeight - margin - 30) {
       doc.addPage();
       y = margin;
     }
-    if (i % 2 === 0) {
-      doc.setFillColor(249, 251, 254);
-      doc.rect(margin, y, contentWidth, 24, "F");
-    }
-
     // Clamp the name to the name column so it can't overrun the numeric columns.
-    const nameLine = (doc.splitTextToSize(item.name, 290)[0] as string) ?? item.name;
-    doc.text(nameLine, margin + 12, y + 16);
-    doc.text(String(item.quantity), margin + 320, y + 16, { align: "right" });
-    doc.text(formatMoney(item.unitPrice), margin + 400, y + 16, { align: "right" });
-    doc.text(formatMoney(item.lineTotal), margin + contentWidth - 12, y + 16, { align: "right" });
+    const nameLine = (doc.splitTextToSize(name, 290)[0] as string) ?? name;
+    doc.setTextColor(...PDF_INK);
+    doc.text(nameLine, margin, y + 16);
+    doc.setTextColor(...PDF_MUTED);
+    if (qty) doc.text(qty, margin + 320, y + 16, { align: "right" });
+    if (unit) doc.text(unit, margin + 400, y + 16, { align: "right" });
+    doc.setTextColor(...PDF_INK);
+    doc.text(total, margin + contentWidth, y + 16, { align: "right" });
     y += 24;
+    drawHairline(doc, margin, margin + contentWidth, y);
+  };
+
+  for (const item of data.items) {
+    drawRow(
+      item.name,
+      String(item.quantity),
+      formatMoney(item.unitPrice),
+      formatMoney(item.lineTotal)
+    );
   }
 
-  // Delivery fee row
   if (data.deliveryFee > 0) {
-    doc.setFillColor(249, 251, 254);
-    doc.rect(margin, y, contentWidth, 24, "F");
-    doc.text("Delivery Fee", margin + 12, y + 16);
-    doc.text(formatMoney(data.deliveryFee), margin + contentWidth - 12, y + 16, { align: "right" });
-    y += 24;
+    drawRow("Delivery Fee", "", "", formatMoney(data.deliveryFee));
   }
 
-  y += 8;
+  y += 14;
 
   // ─── Totals ───────────────────────────────────────────────────────
-  const totalsX = margin + contentWidth - 200;
-
-  doc.setDrawColor(219, 230, 244);
-  doc.line(totalsX, y, margin + contentWidth, y);
-  y += 18;
+  const totalsX = margin + contentWidth - 210;
+  const amountX = margin + contentWidth;
 
   doc.setFontSize(10);
-  doc.setTextColor(85, 112, 143);
+  doc.setTextColor(...PDF_MUTED);
   doc.text("Subtotal", totalsX, y);
-  doc.text(formatMoney(data.subtotal), margin + contentWidth - 12, y, { align: "right" });
+  doc.text(formatMoney(data.subtotal), amountX, y, { align: "right" });
 
   y += 18;
   doc.text("Delivery", totalsX, y);
-  doc.text(formatMoney(data.deliveryFee), margin + contentWidth - 12, y, { align: "right" });
+  doc.text(formatMoney(data.deliveryFee), amountX, y, { align: "right" });
 
   if (data.tax > 0) {
     y += 18;
     doc.text(data.taxLabel ?? "Tax", totalsX, y);
-    doc.text(formatMoney(data.tax), margin + contentWidth - 12, y, { align: "right" });
+    doc.text(formatMoney(data.tax), amountX, y, { align: "right" });
   }
 
   y += 18;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(16, 35, 63);
+  doc.setTextColor(...PDF_INK);
   doc.text("Total", totalsX, y);
-  doc.text(formatMoney(data.total), margin + contentWidth - 12, y, { align: "right" });
+  doc.text(formatMoney(data.total), amountX, y, { align: "right" });
 
-  y += 22;
+  y += 20;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.setTextColor(85, 112, 143);
+  doc.setTextColor(...PDF_MUTED);
   // `depositPaid` carries total payments received, not just the deposit —
   // label it accordingly so a fully-paid invoice doesn't call the full
   // amount a "deposit".
   doc.text("Amount Paid", totalsX, y);
-  doc.setTextColor(24, 136, 98);
-  doc.text(`- ${formatMoney(data.depositPaid)}`, margin + contentWidth - 12, y, { align: "right" });
+  doc.setTextColor(...PDF_SUCCESS);
+  doc.text(`- ${formatMoney(data.depositPaid)}`, amountX, y, { align: "right" });
 
-  y += 22;
-  doc.setFillColor(30, 93, 207);
-  doc.roundedRect(totalsX - 8, y - 14, 208, 30, 6, 6, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Balance Due", totalsX, y + 4);
-  doc.text(formatMoney(data.balanceDue), margin + contentWidth - 12, y + 4, { align: "right" });
+  // Balance due — weighted rule + serif emphasis, brand accent when set.
+  y += 14;
+  doc.setDrawColor(...PDF_INK);
+  doc.setLineWidth(1.2);
+  doc.line(totalsX, y, amountX, y);
+  doc.setLineWidth(0.6);
+
+  y += 20;
+  doc.setFont("times", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(...PDF_INK);
+  doc.text("Balance Due", totalsX, y);
+  doc.setTextColor(...(accent ?? PDF_INK));
+  doc.text(formatMoney(data.balanceDue), amountX, y, { align: "right" });
 
   // ─── Footer ───────────────────────────────────────────────────────
-  const footerY = doc.internal.pageSize.getHeight() - 50;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(85, 112, 143);
-  doc.text(
-    `Thank you for choosing ${data.businessName}! Questions? ${data.supportEmail}`,
-    pageWidth / 2,
-    footerY,
-    { align: "center" }
+  drawFooter(
+    doc,
+    `Thank you — ${data.businessName} · Questions? ${data.supportEmail}`,
+    margin
   );
 
   return doc.output("arraybuffer") as unknown as Uint8Array;
