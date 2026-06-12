@@ -82,6 +82,8 @@ type OrgBranding = {
   // IANA tz used when rendering event times in customer-facing emails.
   // Defaults to "UTC" if the org hasn't set one (was: server-local-time).
   eventTimezone: string;
+  // Operator's explicitly-set brand color (hex) or null when uncustomized.
+  brandColor: string | null;
 };
 
 function buildFromAddress(businessName: string): string {
@@ -138,6 +140,7 @@ async function getOrgBrandings(
       googleReviewUrl: (settings.social_google_business as string) || undefined,
       slug: org.slug ?? undefined,
       eventTimezone: org.event_timezone ?? "UTC",
+      brandColor: (settings.brand_primary_color as string) || null,
     });
   }
 
@@ -267,6 +270,7 @@ async function sendDayBeforeReminders(
         subject: emailCopy(customerLocale).subjects.eventReminder(branding.businessName),
         html: eventReminderEmail({
           businessName: branding.businessName,
+          brandColor: branding.brandColor,
           customerFirstName: customer.first_name ?? "there",
           orderNumber: order.order_number,
           productName,
@@ -426,6 +430,7 @@ async function sendMorningDigests(
         subject: `Today's Schedule: ${events.length} event${events.length === 1 ? "" : "s"} — ${branding.businessName}`,
         html: dailyScheduleEmail({
           businessName: branding.businessName,
+          brandColor: branding.brandColor,
           date: formatDate(today),
           events,
           dashboardUrl: `${branding.siteUrl}/dashboard/deliveries`,
@@ -505,6 +510,7 @@ async function sendPostEventFollowUps(
         subject: emailCopy(customerLocale).subjects.postEventFollowUp(branding.businessName),
         html: postEventFollowUpEmail({
           businessName: branding.businessName,
+          brandColor: branding.brandColor,
           customerFirstName: customer.first_name ?? "there",
           orderNumber: order.order_number,
           productName,
