@@ -13,8 +13,9 @@ function isProtectedPath(pathname: string) {
  *  on the marketplace host these must bounce to the app domain, not
  *  be rewritten into /market/* (where they 404). */
 function isCrossSurfacePath(pathname: string) {
+  // /terms stays on the marketplace host now that /market/terms exists
+  // (the marketplace has its own participation agreement).
   return (
-    pathname === "/terms" ||
     pathname === "/privacy" ||
     pathname === "/pricing"
   );

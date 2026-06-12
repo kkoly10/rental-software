@@ -43,6 +43,12 @@ export function PhoneVerifyForm({ verified }: { verified: boolean }) {
             {sendState.message}
           </span>
         ) : null}
+        <span className="mk-card-m" style={{ width: "100%", fontSize: 11, lineHeight: 1.5 }}>
+          By providing your number, you agree to receive texts from Korent for
+          verification codes and rental notifications (booking updates, pickup
+          and return reminders). Message and data rates may apply. Reply STOP
+          to opt out, HELP for help.
+        </span>
       </form>
       <form action={confirmAction} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <input

@@ -39,8 +39,14 @@ export function RenterJoinForm() {
       <label style={{ fontSize: 12, display: "flex", gap: 8, alignItems: "flex-start", marginTop: 14 }}>
         <input type="checkbox" name="terms_accepted" required />
         <span>
-          I agree to the <a href="/terms" target="_blank">terms</a> and{" "}
-          <a href="/privacy" target="_blank">privacy policy</a>.
+          By creating an account, I agree to the{" "}
+          <a href="/terms" target="_blank" style={{ textDecoration: "underline" }}>
+            Marketplace Terms of Service
+          </a>{" "}
+          (including its arbitration agreement) and the{" "}
+          <a href="/privacy" target="_blank" style={{ textDecoration: "underline" }}>
+            Privacy Policy
+          </a>.
         </span>
       </label>
       <button type="submit" className="mk-btn" style={{ width: "100%", marginTop: 14 }} disabled={pending}>

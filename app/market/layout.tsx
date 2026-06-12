@@ -155,7 +155,10 @@ export default async function MarketLayout({ children }: { children: React.React
           refundable holds, not insurance.
         </p>
         <div className="mk-footer-bar">
-          <span>© {new Date().getFullYear()} Korent Marketplace</span>
+          <span>
+            © {new Date().getFullYear()} Korent Marketplace ·{" "}
+            <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a>
+          </span>
           <a href={`https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? "korent.app"}`}>korent.app — the software side</a>
         </div>
       </footer>
