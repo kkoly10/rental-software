@@ -33,6 +33,10 @@ export default async function StorePage({ params }: { params: Promise<Params> })
 
   const listings = await getSellerListings(profile.organizationId);
   const metro = metroBySlug.get(profile.metroSlug);
+  // The badge is earned, not decorative: it renders only when the
+  // seller has completed Stripe Connect KYC (the bookability gate).
+  const { sellerBookable } = await import("@/lib/market/bookability");
+  const idVerified = await sellerBookable(profile.organizationId);
 
   // Public trust signals: verified-rental reviews (anon-readable RLS).
   const { hasSupabaseEnv } = await import("@/lib/env");
@@ -78,7 +82,14 @@ export default async function StorePage({ params }: { params: Promise<Params> })
         </div>
         <div style={{ paddingBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 26 }}>{profile.displayName}</h1>
-          <span className="mk-badge v">✔ Verified seller</span>
+          {idVerified ? (
+            <span
+              className="mk-badge v"
+              title="Identity verified by our payments partner during payout setup — not a background check"
+            >
+              ✔ ID-verified seller
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="mk-stats">

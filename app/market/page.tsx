@@ -39,9 +39,9 @@ export default async function MarketHomePage() {
               <button type="submit">Search</button>
             </form>
             <div className="mk-hero-badges">
-              <span>🛡️ Deposit-protected</span>
-              <span>📸 Photo evidence built in</span>
-              <span>✅ Verified local sellers</span>
+              <span>🛡️ Deposit-backed</span>
+              <span>📸 Photo evidence tools</span>
+              <span>✅ Identity-verified sellers</span>
               <span>📍 {metro.label}</span>
             </div>
           </div>
@@ -113,8 +113,8 @@ export default async function MarketHomePage() {
               <span className="mk-stepnum">1</span>
               <b>Find it nearby</b>
               <p>
-                Browse verified local sellers in {metro.label}. Real photos,
-                honest condition notes, transparent daily prices.
+                Browse identity-verified local sellers in {metro.label}. Real
+                photos, honest condition notes, transparent daily prices.
               </p>
             </div>
             <div className="mk-step">

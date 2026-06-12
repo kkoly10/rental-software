@@ -8,7 +8,12 @@ import {
   resolveOperatingDefaults,
 } from "@/lib/market/registry";
 import { logDemandEvent } from "@/lib/market/actions";
-import { cancellationPresetForFamily } from "@/lib/market/cancellation";
+import {
+  cancellationPresetForFamily,
+  LATE_FLAT_FEE_CENTS,
+  LATE_DAYS_CAP,
+  LATE_GRACE_MS,
+} from "@/lib/market/cancellation";
 import { categoryIcon } from "@/lib/market/icons";
 import { sellerBookable } from "@/lib/market/bookability";
 import { BookingRequestForm } from "@/components/market/booking-request-form";
@@ -127,7 +132,7 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
             </div>
             {listing.proofVideoUrl ? (
               <div>
-                <b>Proof of function</b> ✓ verified working ·{" "}
+                <b>Proof of function</b> seller-provided demo ·{" "}
                 <a href={listing.proofVideoUrl} target="_blank" rel="noreferrer">
                   watch video
                 </a>
@@ -222,6 +227,14 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
               <p className="mk-note warn">
                 ⏱️ Sellers respond within 24 hours or your request auto-cancels
                 and you pay nothing.
+              </p>
+              <p className="mk-note">
+                ⏰ <b>Late returns:</b> after a {LATE_GRACE_MS / 3_600_000}-hour
+                grace window, each started late day costs the daily rate plus a
+                ${LATE_FLAT_FEE_CENTS / 100} late fee, for up to {LATE_DAYS_CAP}{" "}
+                days — then the rental is treated as a non-return. Need more
+                time? Request an extension in My rentals before the return time
+                and no late fees accrue while it&rsquo;s pending.
               </p>
               <p className="mk-note">
                 ↩️ <b>Cancellation ({cancellationPresetForFamily(listing.riskFamilySlug).name}):</b>{" "}

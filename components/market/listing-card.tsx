@@ -21,7 +21,7 @@ export function ListingCard({ listing }: { listing: MarketListing }) {
             Coming soon
           </span>
         ) : (
-          <span className="mk-vpill">✓ Verified seller</span>
+          <span className="mk-vpill">✓ Local seller</span>
         )}
         {listing.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

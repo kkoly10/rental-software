@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s · Korent Marketplace",
   },
   description:
-    "Rent tents, event gear, tools, cameras and more from verified local sellers. Deposit-protected with photo evidence on every rental.",
+    "Rent tents, event gear, tools, cameras and more from identity-verified local sellers. Deposit-backed, with photo evidence tools on every rental.",
 };
 
 /**
@@ -123,8 +123,8 @@ export default async function MarketLayout({ children }: { children: React.React
               <small>marketplace</small>
             </div>
             <p>
-              Rent expensive things from verified local sellers —
-              deposit-protected, with photo evidence on every rental.
+              Rent expensive things from identity-verified local sellers —
+              deposit-backed, with photo evidence tools on every rental.
             </p>
           </div>
           <div>
@@ -149,6 +149,11 @@ export default async function MarketLayout({ children }: { children: React.React
             <Link href="/market/support">Support</Link>
           </div>
         </div>
+        <p style={{ fontSize: 11, opacity: 0.55, margin: "14px 0 0", maxWidth: 640 }}>
+          Seller identity is verified by our payments partner during payout
+          setup. Identity verification is not a background check. Deposits are
+          refundable holds, not insurance.
+        </p>
         <div className="mk-footer-bar">
           <span>© {new Date().getFullYear()} Korent Marketplace</span>
           <a href={`https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? "korent.app"}`}>korent.app — the software side</a>

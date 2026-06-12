@@ -245,6 +245,18 @@ export default async function MyRentalsPage({
                       : ""}
                   </div>
                 </div>
+                {b.state === "awaiting_payment" ? (
+                  <div className="mk-card-m" style={{ width: "100%", lineHeight: 1.7 }}>
+                    Rental: ${(b.subtotal_cents / 100).toFixed(2)}
+                    {b.tax_cents ? <> · Tax: ${(b.tax_cents / 100).toFixed(2)}</> : null}
+                    {" · "}
+                    <b>Due today: ${((b.subtotal_cents + (b.tax_cents ?? 0)) / 100).toFixed(2)}</b>
+                    {b.deposit_cents > 0 ? (
+                      <> · Deposit: ${(b.deposit_cents / 100).toFixed(0)} refundable hold near handoff (never charged unless a damage claim is resolved against you)</>
+                    ) : null}
+                    {" · "}No renter service fee — Korent&rsquo;s fee is paid by the seller.
+                  </div>
+                ) : null}
                 <div style={{ display: "flex", gap: 8 }}>
                   {b.state === "awaiting_payment" ? (
                     <form action={payForBooking}>

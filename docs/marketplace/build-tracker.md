@@ -11,16 +11,16 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Phase 0 — Compliance fixes (de-risk what's already live)
 
-- [ ] "Verified" copy: define at every use ("identity verified through
+- [x] "Verified" copy: define at every use ("identity verified through
   our payments partner — not a background check"); soften "photo
   evidence built in" → "photo evidence tools on every rental"
   (market home, layout, world pages, store pages, PDP)
-- [ ] Late-fee disclosure on the PDP: exact formula (daily rate +
+- [x] Late-fee disclosure on the PDP: exact formula (daily rate +
   $20/day, capped 3 days, 2h grace) before booking
-- [ ] Cost line-items on the awaiting-payment card: subtotal / tax /
+- [x] Cost line-items on the awaiting-payment card: subtotal / tax /
   deposit hold (refundable) / total due today + "no renter platform
   fee" note
-- [ ] Overdue-flip pre-check: recheck pending/approved extensions +
+- [x] Overdue-flip pre-check: recheck pending/approved extensions +
   CAS guard in market-cleanup-holds before checked_out → overdue
 
 ## Phase 1 — Evidence ceremony (the locked flow)
@@ -136,4 +136,13 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Done log
 
-- (empty — build starts Phase 0)
+- **2026-06-12 — Phase 0 (compliance fixes):** "verified" copy made
+  precise everywhere (card pill → "Local seller"; store badge earned —
+  renders only on Stripe-KYC-complete sellers, retitled "ID-verified
+  seller" with tooltip; hero/world/meta/footer copy → identity-verified
+  / deposit-backed / evidence tools; PDP proof video → "seller-provided
+  demo"; footer clarifier: not a background check, deposits aren't
+  insurance), late-fee formula disclosed on the PDP from the actual
+  code constants, awaiting-payment card gained rental/tax/due-today/
+  deposit-hold lines + the no-renter-fee note, overdue flip now skips
+  bookings with pending extension requests (Hertz rule).
