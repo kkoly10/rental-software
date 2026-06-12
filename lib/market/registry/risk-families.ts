@@ -40,6 +40,16 @@ function family(
   return { slug, label, defaults: { ...base, ...overrides } };
 }
 
+/**
+ * Conservative posture for listings whose stored category no longer
+ * matches the registry (DB drift, category renames). No instant book,
+ * review required — the background categorizer re-files these rows.
+ */
+export const fallbackDefaults: OperatingDefaults = {
+  ...base,
+  listingReviewRequired: true,
+};
+
 export const riskFamilies: readonly RiskFamily[] = [
   family("passive-standard", "Passive standard", {
     instantBookAllowed: true,

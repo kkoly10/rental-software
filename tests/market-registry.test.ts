@@ -52,6 +52,17 @@ test("registry: every category resolves to a world, family, and full operating d
   }
 });
 
+test("registry: unknown category degrades to conservative fallback instead of throwing", () => {
+  // DB drift (bad seed data, future category renames) must not 500 the
+  // PDP/booking paths; the background categorizer re-files such rows.
+  const defaults = resolveOperatingDefaults("hosting-and-events", "no-such-category");
+  assert.equal(defaults.instantBookAllowed, false);
+  assert.equal(defaults.listingReviewRequired, true);
+  assert.ok(defaults.depositFloorCents > 0);
+  const badWorld = resolveOperatingDefaults("no-such-world", "tables");
+  assert.equal(badWorld.instantBookAllowed, false);
+});
+
 test("registry: every world has categories; category slugs unique per world", () => {
   for (const w of worlds) {
     const cats = listWorldCategories(w.slug);

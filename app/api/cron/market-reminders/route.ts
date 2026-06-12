@@ -173,5 +173,22 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, ...counts, lapsed, standbyListingsChecked: standbyOffers });
+  // Registry hygiene: re-file listings whose stored category drifted
+  // from the code registry (served with fallback defaults until then).
+  // No-op unless ANTHROPIC_API_KEY is configured.
+  let categoriesFixed = 0;
+  try {
+    const { fixUnknownCategories } = await import("@/lib/market/category-fixer");
+    categoriesFixed = (await fixUnknownCategories()).fixed;
+  } catch (err) {
+    console.error("market-reminders: category fixer failed", err);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    ...counts,
+    lapsed,
+    standbyListingsChecked: standbyOffers,
+    categoriesFixed,
+  });
 }
