@@ -28,7 +28,7 @@ export default async function PrivacyPage() {
             <div className="kicker">{m.footer.columns.legal}</div>
             <h1 style={{ margin: "8px 0 24px" }}>{m.legal.privacy.title}</h1>
             <p className="muted" style={{ marginBottom: 8 }}>
-              {m.legal.privacy.lastUpdated}: March 30, 2026
+              {m.legal.privacy.lastUpdated}: June 12, 2026
             </p>
 
             <div className="legal-content">
@@ -56,7 +56,33 @@ export default async function PrivacyPage() {
                   <strong>Usage data:</strong> pages visited, features used, and
                   actions taken within the dashboard.
                 </li>
+                <li>
+                  <strong>Marketplace data (Korent Marketplace at
+                  rent.korent.app):</strong> renter identity-verification
+                  photos (a government ID photo and a live selfie — see
+                  section 2a), verified phone numbers, messages between
+                  renters and sellers (screened by automated moderation),
+                  booking and payment records, item condition photos uploaded
+                  at handoff and return, reviews, and demand requests
+                  (searches and waitlist signups, including email).
+                </li>
               </ul>
+
+              <h2>2a. Identity Verification Photos</h2>
+              <p>
+                To make in-person handoffs safer, renters upload a government
+                ID photo and a live selfie before booking. These images are
+                stored in a private bucket and are viewable only by (a) the
+                seller at handoff through short-lived links so they can
+                visually confirm you are you, and (b) Korent personnel when a
+                dispute requires it. <strong>A human compares the photos. We
+                do not use facial recognition and do not create biometric
+                templates, faceprints, or scans of face geometry — from these
+                images or any others.</strong> Verification photos are
+                retained while your account is active because they are used
+                at each rental handoff, and are deleted within 30 days of an
+                account-deletion request.
+              </p>
 
               <h2>2. How We Use Your Information</h2>
               <p>We use collected information to:</p>
@@ -66,6 +92,11 @@ export default async function PrivacyPage() {
                 <li>Respond to support requests and inquiries</li>
                 <li>Enforce our Terms of Service and prevent abuse</li>
                 <li>Send product updates and service announcements (with opt-out)</li>
+                <li>
+                  Send text messages for verification codes and rental
+                  notifications when you provide your phone number (reply
+                  STOP to opt out; we do not send marketing texts)
+                </li>
               </ul>
 
               <h2>3. Data Sharing</h2>
@@ -77,7 +108,17 @@ export default async function PrivacyPage() {
                 <li><strong>Supabase</strong> — for database hosting and authentication</li>
                 <li><strong>Resend</strong> — for transactional email delivery</li>
                 <li><strong>Vercel</strong> — for application hosting</li>
+                <li>
+                  <strong>Anthropic</strong> — listing text (titles and
+                  descriptions) may be processed by an AI model to keep
+                  listings correctly categorized; no personal data, photos,
+                  or messages are sent
+                </li>
               </ul>
+              <p>
+                Identity-verification photos are shared with no one beyond
+                the handoff and dispute uses described in section 2a.
+              </p>
               <p>
                 Each provider processes data under their own privacy policies and
                 in compliance with applicable regulations.
@@ -95,8 +136,12 @@ export default async function PrivacyPage() {
               <p>
                 We retain account and business data for as long as your account is
                 active. Customer records entered by operators are retained per the
-                operator&apos;s use of the platform. You may request deletion of your
-                account and associated data at any time by contacting us.
+                operator&apos;s use of the platform. Marketplace booking records,
+                evidence photos, and dispute records are retained for as long as
+                needed to administer rentals, resolve disputes, and meet tax and
+                legal obligations. Identity-verification photos follow the rule in
+                section 2a. You may request deletion of your account and associated
+                data at any time by contacting us.
               </p>
 
               <h2>6. Your Rights</h2>
