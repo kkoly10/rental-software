@@ -1,5 +1,5 @@
 import { categories } from "./categories.ts";
-import { riskFamilies, riskFamilyBySlug } from "./risk-families.ts";
+import { fallbackDefaults, riskFamilies, riskFamilyBySlug } from "./risk-families.ts";
 import { worldBySlug, worlds } from "./worlds.ts";
 import type {
   MarketCategory,
@@ -85,8 +85,14 @@ export function getRiskFamily(slug: string): RiskFamily | undefined {
 
 /**
  * Resolve the full operating defaults for a category (spec §6):
- * risk-family defaults overlaid with category overrides. Throws on
- * unknown identifiers — callers should only pass registry slugs.
+ * risk-family defaults overlaid with category overrides.
+ *
+ * Unknown identifiers degrade to a conservative fallback instead of
+ * throwing: registry typos in CODE still crash at boot (validateRegistry
+ * above), but a stored slug that drifted from the registry (DB writes,
+ * category renames) must not 500 every page that touches the listing.
+ * The background categorizer (lib/market/category-fixer.ts) re-files
+ * such rows.
  */
 export function resolveOperatingDefaults(
   worldSlug: string,
@@ -94,15 +100,17 @@ export function resolveOperatingDefaults(
 ): OperatingDefaults {
   const category = getCategory(worldSlug, categorySlug);
   if (!category) {
-    throw new Error(
-      `Marketplace registry: unknown category "${worldSlug}/${categorySlug}"`,
+    console.error(
+      `Marketplace registry: unknown category "${worldSlug}/${categorySlug}" — serving fallback defaults`,
     );
+    return { ...fallbackDefaults };
   }
   const family = riskFamilyBySlug.get(category.riskFamilySlug);
   if (!family) {
-    throw new Error(
-      `Marketplace registry: unknown risk family "${category.riskFamilySlug}"`,
+    console.error(
+      `Marketplace registry: unknown risk family "${category.riskFamilySlug}" — serving fallback defaults`,
     );
+    return { ...fallbackDefaults, ...category.overrides };
   }
   return { ...family.defaults, ...category.overrides };
 }
