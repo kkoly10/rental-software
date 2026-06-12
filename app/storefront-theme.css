@@ -606,22 +606,23 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
 .st-avail {
   display: grid;
   /* Date gets the wider track — the native date input needs ~170px to
-   * render "mm/dd/yyyy" without clipping the year. At the previous
-   * 560px ceiling the whole bar read phone-sized on desktop and the
-   * date placeholder truncated to "mm/dd/y". */
+   * render "mm/dd/yyyy" without clipping the year. Spans the full
+   * container on desktop: the previous 720px cap read phone-sized on
+   * large monitors (operator feedback — the bar should spread across
+   * the screen, not float as a small island). */
   grid-template-columns: 1.15fr 1fr auto;
   gap: 0;
   border: 1px solid var(--st-line-strong);
   border-radius: var(--st-radius-2);
   background: var(--st-card);
-  max-width: 720px;
+  width: 100%;
 }
 .st-avail-field {
-  padding: 18px 24px;
+  padding: 24px 32px;
   border-right: 1px solid var(--st-line-strong);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 .st-avail-input {
@@ -629,9 +630,9 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   background: transparent;
   font-family: var(--st-font-body);
   /* 16px floor — iOS Safari auto-zooms on focus for any input
-     under 16px. The eyebrow above sets the visual hierarchy, so
-     16px reads as utility, not display. */
-  font-size: 16px;
+     under 16px. Desktop gets a larger 19px utility size to match
+     the full-width bar's scale. */
+  font-size: 19px;
   font-weight: 500;
   color: var(--st-ink);
   padding: 0;
@@ -658,12 +659,12 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
 }
 .st-avail-input::placeholder { color: var(--st-muted-2); font-weight: 400; }
 .st-avail-go {
-  padding: 0 28px;
+  padding: 0 56px;
   background: var(--st-ink);
   color: var(--st-bg);
   border: 0;
   font-family: var(--st-font-body);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -717,6 +718,9 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
     border-right: 0;
     border-bottom: 1px solid var(--st-line-strong);
     padding: 16px 18px;
+  }
+  .st-avail-input {
+    font-size: 16px;
   }
   .st-avail-go {
     width: 100%;

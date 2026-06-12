@@ -67,83 +67,96 @@
   font-weight: 400;
 }
 
-.mk-eyebrow {
+/* Eyebrows — Fraunces italic with a leading em-dash. The previous
+   letterspaced-uppercase sans read as generic template type; the serif
+   italic is the marketing pages' personality tell. */
+.mk-page .mk-eyebrow {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mk-accent);
-  margin: 0 0 14px;
+  font-family: var(--mk-font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--mk-accent-dim);
+  margin: 0 0 12px;
 }
 
-.mk-lede {
-  font-size: 1.08rem;
+.mk-page .mk-eyebrow::before {
+  content: "— ";
+}
+
+.mk-page .mk-lede {
+  font-size: 1.15rem;
   color: var(--mk-muted);
   line-height: 1.65;
 }
 
-.mk-muted {
+.mk-page .mk-muted {
   color: var(--mk-muted);
 }
 
-.mk-small {
+.mk-page .mk-small {
   font-size: 0.88rem;
 }
 
 /* ── Layout primitives ──────────────────────────────────────────── */
 
-.mk-container {
+.mk-page .mk-container {
   max-width: 1160px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
-.mk-container--narrow {
+.mk-page .mk-container--narrow {
   max-width: 760px;
 }
 
-.mk-container--mid {
+.mk-page .mk-container--mid {
   max-width: 980px;
 }
 
-.mk-section {
+.mk-page .mk-container--wide {
+  max-width: 1320px;
+}
+
+.mk-page .mk-section {
   padding: 88px 0;
 }
 
-.mk-section--tight {
+.mk-page .mk-section--tight {
   padding: 56px 0;
 }
 
-.mk-band {
+.mk-page .mk-band {
   background: var(--mk-bg-alt);
   border-top: 1px solid var(--mk-line);
   border-bottom: 1px solid var(--mk-line);
 }
 
-.mk-section-head {
+.mk-page .mk-section-head {
   max-width: 620px;
   margin: 0 auto 52px;
   text-align: center;
 }
 
-.mk-section-head p {
+.mk-page .mk-section-head p {
   margin: 14px auto 0;
   max-width: 520px;
 }
 
 @media (max-width: 860px) {
-  .mk-section {
+  .mk-page .mk-section {
     padding: 60px 0;
   }
-  .mk-section--tight {
+  .mk-page .mk-section--tight {
     padding: 44px 0;
   }
 }
 
 /* ── Header ─────────────────────────────────────────────────────── */
 
-.mk-header {
+.mk-page .mk-header {
   border-bottom: 1px solid var(--mk-line);
   background: var(--mk-bg);
   position: sticky;
@@ -151,7 +164,7 @@
   z-index: 40;
 }
 
-.mk-header-inner {
+.mk-page .mk-header-inner {
   max-width: 1160px;
   margin: 0 auto;
   padding: 14px 24px;
@@ -161,7 +174,7 @@
   gap: 12px;
 }
 
-.mk-nav-link {
+.mk-page .mk-nav-link {
   font-size: 0.92rem;
   font-weight: 500;
   color: var(--mk-ink-2);
@@ -169,14 +182,14 @@
   border-radius: 2px;
 }
 
-.mk-nav-link:hover {
+.mk-page .mk-nav-link:hover {
   color: var(--mk-ink);
   background: var(--mk-bg-alt);
 }
 
 /* ── Buttons ────────────────────────────────────────────────────── */
 
-.mk-btn {
+.mk-page .mk-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -192,35 +205,35 @@
     border-color 150ms cubic-bezier(0.16, 0.84, 0.32, 1);
 }
 
-.mk-btn--primary {
+.mk-page .mk-btn--primary {
   background: var(--mk-ink);
   color: var(--mk-bg);
 }
 
-.mk-btn--primary:hover {
+.mk-page .mk-btn--primary:hover {
   background: var(--mk-ink-2);
 }
 
-.mk-btn--accent {
+.mk-page .mk-btn--accent {
   background: var(--mk-accent);
   color: #fff;
 }
 
-.mk-btn--accent:hover {
+.mk-page .mk-btn--accent:hover {
   background: var(--mk-accent-dim);
 }
 
-.mk-btn--outline {
+.mk-page .mk-btn--outline {
   background: transparent;
   color: var(--mk-ink);
   border-color: var(--mk-line-strong);
 }
 
-.mk-btn--outline:hover {
+.mk-page .mk-btn--outline:hover {
   border-color: var(--mk-ink);
 }
 
-.mk-btn--lg {
+.mk-page .mk-btn--lg {
   font-size: 1.02rem;
   padding: 14px 32px;
 }
@@ -231,7 +244,7 @@
   outline-offset: 2px;
 }
 
-.mk-text-link {
+.mk-page .mk-text-link {
   color: var(--mk-accent-dim);
   font-weight: 600;
   text-decoration: underline;
@@ -239,63 +252,107 @@
   text-underline-offset: 3px;
 }
 
-.mk-text-link:hover {
+.mk-page .mk-text-link:hover {
   text-decoration-color: var(--mk-accent-dim);
 }
 
-/* ── Hero ───────────────────────────────────────────────────────── */
+/* ── Hero — full-bleed photography, white type over a dark scrim.
+      Same statement pattern as the tenant storefront hero. ────────── */
 
-.mk-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
-  gap: 56px;
-  align-items: center;
-  max-width: 1160px;
+.mk-page .mk-hero-bleed {
+  position: relative;
+  min-height: clamp(540px, 74vh, 800px);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.mk-page .mk-hero-bleed-photo {
+  position: absolute;
+  inset: 0;
+}
+
+.mk-page .mk-hero-bleed-photo img {
+  object-fit: cover;
+}
+
+.mk-page .mk-hero-bleed-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(18, 14, 10, 0.82) 0%,
+    rgba(18, 14, 10, 0.38) 45%,
+    rgba(18, 14, 10, 0.08) 75%,
+    rgba(18, 14, 10, 0.18) 100%
+  );
+}
+
+.mk-page .mk-hero-bleed-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 72px 24px 80px;
+  padding: 64px 24px 72px;
 }
 
-.mk-hero-copy .mk-lede {
+.mk-page .mk-hero-bleed-content .mk-eyebrow {
+  color: #f0c9a8;
+}
+
+.mk-page .mk-hero-bleed-content h1 {
+  color: #fdfaf5;
+  max-width: 17ch;
+  font-size: clamp(2.5rem, 5.4vw, 4.1rem);
+}
+
+.mk-page .mk-hero-bleed-content .mk-lede {
+  color: rgba(253, 250, 245, 0.88);
   margin: 20px 0 32px;
-  max-width: 480px;
+  max-width: 52ch;
 }
 
-.mk-hero-actions {
+.mk-page .mk-hero-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 14px 18px;
 }
 
-.mk-hero-image {
-  position: relative;
-  aspect-ratio: 4 / 3.2;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--mk-line);
+.mk-page .mk-hero-bleed-content .mk-text-link {
+  color: #f0c9a8;
+  text-decoration-color: rgba(240, 201, 168, 0.5);
 }
 
-.mk-hero-image img {
-  object-fit: cover;
+.mk-page .mk-hero-bleed-content .mk-btn--outline {
+  color: #fdfaf5;
+  border-color: rgba(253, 250, 245, 0.55);
+}
+
+.mk-page .mk-hero-bleed-content .mk-btn--outline:hover {
+  border-color: #fdfaf5;
 }
 
 @media (max-width: 860px) {
-  .mk-hero {
-    grid-template-columns: 1fr;
-    gap: 36px;
-    padding: 44px 24px 56px;
+  .mk-page .mk-hero-bleed {
+    min-height: clamp(480px, 80vh, 640px);
+  }
+  .mk-page .mk-hero-bleed-content {
+    padding: 44px 24px 52px;
   }
 }
 
 /* ── Trust strip ────────────────────────────────────────────────── */
 
-.mk-trust-strip {
+.mk-page .mk-trust-strip {
   border-top: 1px solid var(--mk-line);
   border-bottom: 1px solid var(--mk-line);
   background: var(--mk-bg-alt);
 }
 
-.mk-trust-strip-inner {
+.mk-page .mk-trust-strip-inner {
   max-width: 1160px;
   margin: 0 auto;
   padding: 14px 24px;
@@ -307,7 +364,7 @@
   row-gap: 6px;
 }
 
-.mk-trust-strip-inner span {
+.mk-page .mk-trust-strip-inner span {
   font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -315,96 +372,99 @@
   text-transform: uppercase;
 }
 
-.mk-trust-strip-inner span + span::before {
+.mk-page .mk-trust-strip-inner span + span::before {
   content: "·";
   margin-right: 12px;
   color: var(--mk-muted-2);
 }
 
-/* ── Vertical tiles ─────────────────────────────────────────────── */
+/* ── Vertical tiles — arched portrait photography, gallery style.
+      No card chrome: the arch shape and the serif caption carry it. ── */
 
-.mk-tile-grid {
+.mk-page .mk-tile-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
-  text-align: left;
+  gap: 44px 36px;
+  text-align: center;
 }
 
-.mk-tile {
+.mk-page .mk-tile {
   display: block;
-  background: var(--mk-card);
-  border: 1px solid var(--mk-line);
-  border-radius: 4px;
-  overflow: hidden;
-  transition: border-color 150ms cubic-bezier(0.16, 0.84, 0.32, 1);
 }
 
-.mk-tile:hover {
-  border-color: var(--mk-line-strong);
-}
-
-.mk-tile-image {
+.mk-page .mk-tile-image {
   display: block;
   position: relative;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 4 / 5;
   background: var(--mk-bg-alt);
+  border-radius: 999px 999px 14px 14px;
+  overflow: hidden;
 }
 
-.mk-tile-image img {
+.mk-page .mk-tile-image img {
   object-fit: cover;
   transition: transform 400ms cubic-bezier(0.16, 0.84, 0.32, 1);
 }
 
-.mk-tile:hover .mk-tile-image img {
-  transform: scale(1.025);
+.mk-page .mk-tile:hover .mk-tile-image img {
+  transform: scale(1.03);
 }
 
-.mk-tile-body {
+.mk-page .mk-tile-body {
   display: block;
-  padding: 16px 18px 18px;
+  padding: 18px 8px 0;
 }
 
-.mk-tile-body strong {
+.mk-page .mk-tile-body strong {
   display: block;
   font-family: var(--mk-font-display);
   font-weight: 500;
-  font-size: 1.12rem;
+  font-size: 1.45rem;
 }
 
-.mk-tile-body span {
+.mk-page .mk-tile-body span {
   display: block;
-  margin-top: 4px;
-  font-size: 0.86rem;
+  margin-top: 5px;
+  font-size: 0.92rem;
   color: var(--mk-muted);
 }
 
+.mk-page .mk-tile:hover .mk-tile-body span {
+  color: var(--mk-accent-dim);
+}
+
 @media (max-width: 960px) {
-  .mk-tile-grid {
+  .mk-page .mk-tile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 36px 24px;
   }
 }
 
 @media (max-width: 600px) {
-  .mk-tile-grid {
+  .mk-page .mk-tile-grid {
     grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .mk-page .mk-tile-image {
+    aspect-ratio: 1 / 1.05;
   }
 }
 
 /* ── Editorial numbered list (pain points, how-it-works) ────────── */
 
-.mk-numbered-grid {
+.mk-page .mk-numbered-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 40px 36px;
   text-align: left;
 }
 
-.mk-numbered-item {
+.mk-page .mk-numbered-item {
   border-top: 1px solid var(--mk-line-strong);
   padding-top: 18px;
 }
 
-.mk-numbered-item .mk-num {
+.mk-page .mk-numbered-item .mk-num {
   display: block;
   font-family: var(--mk-font-display);
   font-size: 1.7rem;
@@ -414,14 +474,14 @@
   margin-bottom: 10px;
 }
 
-.mk-numbered-item strong {
+.mk-page .mk-numbered-item strong {
   display: block;
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 6px;
 }
 
-.mk-numbered-item p {
+.mk-page .mk-numbered-item p {
   margin: 0;
   font-size: 0.92rem;
   color: var(--mk-muted);
@@ -429,7 +489,7 @@
 }
 
 @media (max-width: 860px) {
-  .mk-numbered-grid {
+  .mk-page .mk-numbered-grid {
     grid-template-columns: 1fr;
     gap: 26px;
   }
@@ -437,35 +497,78 @@
 
 /* ── Cards ──────────────────────────────────────────────────────── */
 
-.mk-card-grid {
+.mk-page .mk-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
-.mk-card-grid--2 {
+.mk-page .mk-card-grid--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.mk-card {
+.mk-page .mk-card {
   background: var(--mk-card);
   border: 1px solid var(--mk-line);
   border-radius: 4px;
   padding: 26px 26px 24px;
 }
 
-.mk-card strong {
+.mk-page .mk-card strong {
   display: block;
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 8px;
 }
 
-.mk-card .mk-eyebrow {
+.mk-page .mk-card .mk-eyebrow {
   margin-bottom: 8px;
 }
 
-.mk-card p {
+/* ── De-boxed flow list — em-dash items between hairlines. Used for
+      benefits and vertical feature grids so not everything on the page
+      sits inside a white rectangle. ─────────────────────────────────── */
+
+.mk-page .mk-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 36px 44px;
+  text-align: left;
+}
+
+.mk-page .mk-flow-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mk-page .mk-flow-item {
+  border-top: 1px solid var(--mk-line-strong);
+  padding-top: 18px;
+}
+
+.mk-page .mk-flow-item strong {
+  display: block;
+  font-family: var(--mk-font-display);
+  font-weight: 500;
+  font-size: 1.22rem;
+  margin-bottom: 8px;
+}
+
+.mk-page .mk-flow-item p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--mk-muted);
+  line-height: 1.65;
+}
+
+@media (max-width: 860px) {
+  .mk-page .mk-flow-grid,
+  .mk-page .mk-flow-grid--2 {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+}
+
+.mk-page .mk-card p {
   margin: 0;
   font-size: 0.92rem;
   color: var(--mk-muted);
@@ -473,146 +576,157 @@
 }
 
 @media (max-width: 860px) {
-  .mk-card-grid,
-  .mk-card-grid--2 {
+  .mk-page .mk-card-grid,
+  .mk-page .mk-card-grid--2 {
     grid-template-columns: 1fr;
   }
 }
 
-/* ── Photo banner ───────────────────────────────────────────────── */
+/* ── Photo banner — full bleed, edge to edge. ───────────────────── */
 
-.mk-banner {
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: 0 24px;
+.mk-page .mk-banner {
+  width: 100%;
 }
 
-.mk-banner-frame {
+.mk-page .mk-banner-frame {
   position: relative;
-  border-radius: 4px;
   overflow: hidden;
-  aspect-ratio: 21 / 9;
-  border: 1px solid var(--mk-line);
+  aspect-ratio: 21 / 8;
+  min-height: 340px;
 }
 
-.mk-banner-frame img {
+.mk-page .mk-banner-frame img {
   object-fit: cover;
 }
 
-.mk-banner-overlay {
+.mk-page .mk-banner-overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: flex-end;
-  padding: 32px 36px;
   background: linear-gradient(to top, rgba(20, 16, 12, 0.72) 0%, rgba(20, 16, 12, 0.12) 55%, transparent 100%);
 }
 
-.mk-banner-overlay .mk-eyebrow {
+.mk-page .mk-banner-overlay > div {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+}
+
+.mk-page .mk-banner-overlay .mk-eyebrow {
   color: #f0c9a8;
   margin-bottom: 8px;
 }
 
-.mk-banner-overlay h2 {
+.mk-page .mk-banner-overlay h2 {
   color: #fdfaf5;
   font-size: clamp(1.4rem, 3vw, 2.1rem);
   max-width: 560px;
 }
 
 @media (max-width: 640px) {
-  .mk-banner-frame {
+  .mk-page .mk-banner-frame {
     aspect-ratio: 4 / 3;
   }
-  .mk-banner-overlay {
-    padding: 20px 22px;
+  .mk-page .mk-banner-overlay > div {
+    padding: 0 22px 24px;
   }
 }
 
 /* ── Feature rows (photo + copy) ────────────────────────────────── */
 
-.mk-feature-row {
+.mk-page .mk-feature-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 56px;
   align-items: center;
 }
 
-.mk-feature-row + .mk-feature-row {
+.mk-page .mk-feature-row + .mk-feature-row {
   margin-top: 72px;
 }
 
-.mk-feature-row.reverse .mk-feature-image {
+.mk-page .mk-feature-row.reverse .mk-feature-image {
   order: 2;
 }
 
-.mk-feature-image {
+.mk-page .mk-feature-image {
   position: relative;
   aspect-ratio: 4 / 3;
-  border-radius: 4px;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--mk-line);
 }
 
-.mk-feature-image img {
+/* Alternating arch — the reversed feature row gets the arched crop so
+   facing photo pairs don't read as two identical rectangles. */
+.mk-page .mk-feature-row.reverse .mk-feature-image {
+  aspect-ratio: 4 / 4.4;
+  border-radius: 999px 999px 18px 18px;
+  max-width: 440px;
+  justify-self: center;
+}
+
+.mk-page .mk-feature-image img {
   object-fit: cover;
 }
 
-.mk-feature-copy h2,
-.mk-feature-copy h3 {
+.mk-page .mk-feature-copy h2,
+.mk-page .mk-feature-copy h3 {
   font-size: clamp(1.5rem, 2.8vw, 2rem);
   margin-bottom: 14px;
 }
 
-.mk-feature-copy p {
+.mk-page .mk-feature-copy p {
   margin: 0;
   color: var(--mk-muted);
   line-height: 1.65;
 }
 
 @media (max-width: 860px) {
-  .mk-feature-row {
+  .mk-page .mk-feature-row {
     grid-template-columns: 1fr;
     gap: 28px;
   }
-  .mk-feature-row + .mk-feature-row {
+  .mk-page .mk-feature-row + .mk-feature-row {
     margin-top: 48px;
   }
-  .mk-feature-row.reverse .mk-feature-image {
+  .mk-page .mk-feature-row.reverse .mk-feature-image {
     order: 0;
   }
 }
 
 /* ── Big product shot ───────────────────────────────────────────── */
 
-.mk-product-shot {
+.mk-page .mk-product-shot {
   display: block;
   position: relative;
   aspect-ratio: 16 / 9;
-  border-radius: 4px;
+  border-radius: 18px;
   overflow: hidden;
   border: 1px solid var(--mk-line);
   margin: 0 auto;
 }
 
-.mk-product-shot img {
+.mk-page .mk-product-shot img {
   object-fit: cover;
 }
 
 /* ── Stats ──────────────────────────────────────────────────────── */
 
-.mk-stat-row {
+.mk-page .mk-stat-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
-.mk-stat {
+.mk-page .mk-stat {
   border-top: 1px solid var(--mk-line-strong);
   padding-top: 16px;
   text-align: left;
 }
 
-.mk-stat .mk-stat-value {
+.mk-page .mk-stat .mk-stat-value {
   display: block;
   font-family: var(--mk-font-display);
   font-size: 2.4rem;
@@ -621,7 +735,7 @@
   line-height: 1.1;
 }
 
-.mk-stat .mk-stat-label {
+.mk-page .mk-stat .mk-stat-label {
   display: block;
   margin-top: 8px;
   font-size: 0.88rem;
@@ -629,14 +743,14 @@
 }
 
 @media (max-width: 640px) {
-  .mk-stat-row {
+  .mk-page .mk-stat-row {
     grid-template-columns: 1fr;
   }
 }
 
 /* ── Comparison rows ────────────────────────────────────────────── */
 
-.mk-compare {
+.mk-page .mk-compare {
   border: 1px solid var(--mk-line);
   border-radius: 4px;
   overflow: hidden;
@@ -644,97 +758,97 @@
   font-size: 0.92rem;
 }
 
-.mk-compare-row {
+.mk-page .mk-compare-row {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
 }
 
-.mk-compare-row + .mk-compare-row {
+.mk-page .mk-compare-row + .mk-compare-row {
   border-top: 1px solid var(--mk-line);
 }
 
-.mk-compare-row > div {
+.mk-page .mk-compare-row > div {
   padding: 13px 18px;
 }
 
-.mk-compare-header {
+.mk-page .mk-compare-header {
   background: var(--mk-bg-alt);
   font-weight: 600;
 }
 
-.mk-compare-header .mk-compare-korent {
+.mk-page .mk-compare-header .mk-compare-korent {
   color: var(--mk-accent-dim);
 }
 
-.mk-compare-cell {
+.mk-page .mk-compare-cell {
   text-align: center;
 }
 
-.mk-compare-check {
+.mk-page .mk-compare-check {
   display: inline-flex;
   color: var(--mk-success);
 }
 
-.mk-compare-dash {
+.mk-page .mk-compare-dash {
   color: var(--mk-muted-2);
 }
 
-.mk-compare-mobile-label {
+.mk-page .mk-compare-mobile-label {
   display: none;
 }
 
 @media (max-width: 640px) {
-  .mk-compare-row {
+  .mk-page .mk-compare-row {
     grid-template-columns: 1fr;
   }
-  .mk-compare-row > div {
+  .mk-page .mk-compare-row > div {
     padding: 10px 16px;
   }
-  .mk-compare-feature {
+  .mk-page .mk-compare-feature {
     font-weight: 600;
     padding-bottom: 2px;
   }
-  .mk-compare-cell {
+  .mk-page .mk-compare-cell {
     display: flex;
     justify-content: space-between;
     text-align: left;
     padding-top: 2px;
   }
-  .mk-compare-mobile-label {
+  .mk-page .mk-compare-mobile-label {
     display: inline;
     color: var(--mk-muted);
   }
-  .mk-compare-header {
+  .mk-page .mk-compare-header {
     display: none;
   }
 }
 
 /* ── "Hard way vs Korent way" rows ──────────────────────────────── */
 
-.mk-versus-row {
+.mk-page .mk-versus-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-.mk-versus-row + .mk-versus-row {
+.mk-page .mk-versus-row + .mk-versus-row {
   margin-top: 16px;
 }
 
-.mk-versus-cell {
+.mk-page .mk-versus-cell {
   border: 1px solid var(--mk-line);
   border-radius: 4px;
   padding: 18px 20px;
   background: var(--mk-bg-alt);
 }
 
-.mk-versus-cell--korent {
+.mk-page .mk-versus-cell--korent {
   background: var(--mk-card);
   border-color: var(--mk-line-strong);
 }
 
-.mk-versus-label {
+.mk-page .mk-versus-label {
   display: block;
   font-size: 0.7rem;
   font-weight: 700;
@@ -744,22 +858,22 @@
   margin-bottom: 6px;
 }
 
-.mk-versus-cell--korent .mk-versus-label {
+.mk-page .mk-versus-cell--korent .mk-versus-label {
   color: var(--mk-accent);
 }
 
-.mk-versus-cell p {
+.mk-page .mk-versus-cell p {
   margin: 0;
   font-size: 0.92rem;
   line-height: 1.55;
 }
 
-.mk-versus-cell:not(.mk-versus-cell--korent) p {
+.mk-page .mk-versus-cell:not(.mk-versus-cell--korent) p {
   color: var(--mk-muted);
 }
 
 @media (max-width: 720px) {
-  .mk-versus-row {
+  .mk-page .mk-versus-row {
     grid-template-columns: 1fr;
     gap: 10px;
   }
@@ -767,14 +881,14 @@
 
 /* ── Pricing ────────────────────────────────────────────────────── */
 
-.mk-pricing-grid {
+.mk-page .mk-pricing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 18px;
   align-items: stretch;
 }
 
-.mk-plan {
+.mk-page .mk-plan {
   position: relative;
   background: var(--mk-card);
   border: 1px solid var(--mk-line);
@@ -784,11 +898,11 @@
   flex-direction: column;
 }
 
-.mk-plan--popular {
+.mk-page .mk-plan--popular {
   border-color: var(--mk-ink);
 }
 
-.mk-plan-tag {
+.mk-page .mk-plan-tag {
   position: absolute;
   top: -11px;
   left: 22px;
@@ -802,40 +916,40 @@
   border-radius: 2px;
 }
 
-.mk-plan h3 {
+.mk-page .mk-plan h3 {
   font-size: 1.15rem;
   margin-bottom: 2px;
 }
 
-.mk-plan-price {
+.mk-page .mk-plan-price {
   font-family: var(--mk-font-display);
   font-size: 2.2rem;
   font-weight: 500;
   margin: 10px 0 0;
 }
 
-.mk-plan-price span {
+.mk-page .mk-plan-price span {
   font-family: var(--mk-font-body);
   font-size: 0.95rem;
   font-weight: 400;
   color: var(--mk-muted);
 }
 
-.mk-plan ul {
+.mk-page .mk-plan ul {
   list-style: none;
   padding: 0;
   margin: 18px 0 24px;
   flex: 1;
 }
 
-.mk-plan li {
+.mk-page .mk-plan li {
   position: relative;
   padding: 5px 0 5px 22px;
   font-size: 0.9rem;
   color: var(--mk-ink-2);
 }
 
-.mk-plan li::before {
+.mk-page .mk-plan li::before {
   content: "";
   position: absolute;
   left: 2px;
@@ -849,15 +963,15 @@
 
 /* ── FAQ ────────────────────────────────────────────────────────── */
 
-.mk-faq {
+.mk-page .mk-faq {
   border-top: 1px solid var(--mk-line-strong);
 }
 
-.mk-faq details {
+.mk-page .mk-faq details {
   border-bottom: 1px solid var(--mk-line);
 }
 
-.mk-faq summary {
+.mk-page .mk-faq summary {
   list-style: none;
   display: flex;
   justify-content: space-between;
@@ -869,11 +983,11 @@
   font-size: 0.98rem;
 }
 
-.mk-faq summary::-webkit-details-marker {
+.mk-page .mk-faq summary::-webkit-details-marker {
   display: none;
 }
 
-.mk-faq summary::after {
+.mk-page .mk-faq summary::after {
   content: "+";
   font-family: var(--mk-font-display);
   font-size: 1.3rem;
@@ -883,11 +997,11 @@
   line-height: 1;
 }
 
-.mk-faq details[open] summary::after {
+.mk-page .mk-faq details[open] summary::after {
   content: "−";
 }
 
-.mk-faq details p {
+.mk-page .mk-faq details p {
   margin: 0;
   padding: 0 2px 20px;
   font-size: 0.92rem;
@@ -898,23 +1012,23 @@
 
 /* ── Final CTA ──────────────────────────────────────────────────── */
 
-.mk-closing {
+.mk-page .mk-closing {
   text-align: center;
   padding: 96px 24px 104px;
   max-width: 680px;
   margin: 0 auto;
 }
 
-.mk-closing h2 {
+.mk-page .mk-closing h2 {
   font-size: clamp(1.9rem, 4.4vw, 3rem);
 }
 
-.mk-closing .mk-lede {
+.mk-page .mk-closing .mk-lede {
   margin: 18px auto 34px;
   max-width: 460px;
 }
 
-.mk-closing-trust {
+.mk-page .mk-closing-trust {
   margin-top: 22px;
   font-size: 0.82rem;
   color: var(--mk-muted-2);
@@ -922,7 +1036,7 @@
 
 /* ── Footer ─────────────────────────────────────────────────────── */
 
-.mk-footer {
+.mk-page .mk-footer {
   border-top: 1px solid var(--mk-line);
   background: var(--mk-bg-alt);
   padding: 40px 0 36px;
@@ -930,7 +1044,7 @@
   color: var(--mk-muted);
 }
 
-.mk-footer-links {
+.mk-page .mk-footer-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -938,16 +1052,16 @@
   margin-bottom: 14px;
 }
 
-.mk-footer-links a {
+.mk-page .mk-footer-links a {
   color: var(--mk-ink-2);
   font-weight: 500;
 }
 
-.mk-footer-links a:hover {
+.mk-page .mk-footer-links a:hover {
   color: var(--mk-ink);
 }
 
-.mk-footer-verticals {
+.mk-page .mk-footer-verticals {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -956,15 +1070,15 @@
   font-size: 0.82rem;
 }
 
-.mk-footer-verticals a {
+.mk-page .mk-footer-verticals a {
   color: var(--mk-muted);
 }
 
-.mk-footer-verticals a:hover {
+.mk-page .mk-footer-verticals a:hover {
   color: var(--mk-ink);
 }
 
-.mk-footer-tagline {
+.mk-page .mk-footer-tagline {
   text-align: center;
   font-size: 0.82rem;
   color: var(--mk-muted-2);
@@ -972,7 +1086,7 @@
 
 /* ── Sibling vertical links (vertical pages) ────────────────────── */
 
-.mk-sibling-links {
+.mk-page .mk-sibling-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -981,11 +1095,11 @@
   font-weight: 500;
 }
 
-.mk-sibling-links a {
+.mk-page .mk-sibling-links a {
   color: var(--mk-accent-dim);
 }
 
-.mk-sibling-links a:hover {
+.mk-page .mk-sibling-links a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }

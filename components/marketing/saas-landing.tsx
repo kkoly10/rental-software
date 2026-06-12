@@ -91,9 +91,18 @@ export async function SaasLanding() {
       </header>
 
       <main>
-        {/* ── Hero ───────────────────────────────────────────────── */}
-        <section className="mk-hero">
-          <div className="mk-hero-copy">
+        {/* ── Hero — full-bleed photo, white type over the scrim ──── */}
+        <section className="mk-hero-bleed">
+          <div className="mk-hero-bleed-photo">
+            <Image
+              src="/home/operator-with-ipad.jpg"
+              alt="Rental operator using the Korent dashboard on a tablet next to a branded delivery trailer"
+              fill
+              priority
+              sizes="100vw"
+            />
+          </div>
+          <div className="mk-hero-bleed-content">
             <span className="mk-eyebrow">{s.hero.kicker}</span>
             <h1>
               {headline.lead}
@@ -114,15 +123,6 @@ export async function SaasLanding() {
               </a>
             </div>
           </div>
-          <div className="mk-hero-image">
-            <Image
-              src="/home/operator-with-ipad.jpg"
-              alt="Rental operator using the Korent dashboard on a tablet next to a branded delivery trailer"
-              fill
-              priority
-              sizes="(max-width: 860px) 100vw, 520px"
-            />
-          </div>
         </section>
 
         {/* ── Trust strip ────────────────────────────────────────── */}
@@ -139,7 +139,7 @@ export async function SaasLanding() {
              six "<vertical> rental software" SEO pages. Tiles use each
              vertical's scenic marketing photo. ────────────────────── */}
         <section className="mk-section--tight" style={{ paddingTop: 64 }}>
-          <div className="mk-container">
+          <div className="mk-container mk-container--wide">
             <div className="mk-section-head">
               <span className="mk-eyebrow">{s.industries.kicker}</span>
               <h2>{s.industries.title}</h2>
@@ -241,9 +241,9 @@ export async function SaasLanding() {
                 <span className="mk-eyebrow">{s.benefits.kicker}</span>
                 <h2>{s.benefits.title}</h2>
               </div>
-              <div className="mk-card-grid">
+              <div className="mk-flow-grid">
                 {s.benefits.items.map((benefit) => (
-                  <div key={benefit.title} className="mk-card">
+                  <div key={benefit.title} className="mk-flow-item">
                     <strong>{benefit.title}</strong>
                     <p>{benefit.body}</p>
                   </div>
@@ -311,21 +311,21 @@ export async function SaasLanding() {
               />
             </div>
 
-            <div className="mk-card-grid mk-card-grid--2">
-              <div className="mk-card">
-                <span className="mk-eyebrow">{s.dashboardPreview.bookingCalendar}</span>
+            <div className="mk-flow-grid mk-flow-grid--2">
+              <div className="mk-flow-item">
+                <strong>{s.dashboardPreview.bookingCalendar}</strong>
                 <p>{s.dashboardPreview.bookingCalendarBody}</p>
               </div>
-              <div className="mk-card">
-                <span className="mk-eyebrow">{s.dashboardPreview.orderPipeline}</span>
+              <div className="mk-flow-item">
+                <strong>{s.dashboardPreview.orderPipeline}</strong>
                 <p>{s.dashboardPreview.orderPipelineBody}</p>
               </div>
-              <div className="mk-card">
-                <span className="mk-eyebrow">{s.dashboardPreview.deliveryRoutes}</span>
+              <div className="mk-flow-item">
+                <strong>{s.dashboardPreview.deliveryRoutes}</strong>
                 <p>{s.dashboardPreview.deliveryRoutesBody}</p>
               </div>
-              <div className="mk-card">
-                <span className="mk-eyebrow">{s.dashboardPreview.onlineCheckout}</span>
+              <div className="mk-flow-item">
+                <strong>{s.dashboardPreview.onlineCheckout}</strong>
                 <p>{s.dashboardPreview.onlineCheckoutBody}</p>
               </div>
             </div>
