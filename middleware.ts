@@ -154,6 +154,20 @@ export async function middleware(request: NextRequest) {
 
   // ── Standard auth flow (root domain / localhost / preview) ──
 
+  // Public root-domain paths (marketing pages, legal, marketplace browse,
+  // API routes with their own auth) need no auth decision here. Skip the
+  // supabase.auth.getUser() network round trip entirely — it was adding
+  // a Supabase Auth call to EVERY page view site-wide, which operators
+  // felt as a multi-second "Loading…" on each navigation. Session
+  // refresh still happens on every protected / auth-entry visit below.
+  const needsAuthDecision =
+    isProtectedPath(pathname) ||
+    isAuthEntryPath(pathname) ||
+    pathname === "/auth/verify-email";
+  if (!needsAuthDecision) {
+    return supabaseResponse;
+  }
+
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
   try {
     const { data } = await supabase.auth.getUser();
@@ -203,7 +217,35 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Membership lookups below add a DB round trip to every dashboard
+  // navigation. Cache a positive result in a short-lived cookie, scoped
+  // to the user id so switching accounts in the same browser can't reuse
+  // a stale hint. Worst case on staleness (operator removed from their
+  // org mid-window): middleware lets the request through and the pages'
+  // own org-context checks still deny/redirect — this is routing UX, not
+  // the permission boundary.
+  const MEMBERSHIP_HINT_COOKIE = "korent-mem";
+  const membershipHint = user ? `1:${user.id.slice(0, 8)}` : "";
+  const hasMembershipHint =
+    Boolean(user) &&
+    request.cookies.get(MEMBERSHIP_HINT_COOKIE)?.value === membershipHint;
+  const setMembershipHint = () => {
+    supabaseResponse.cookies.set(MEMBERSHIP_HINT_COOKIE, membershipHint, {
+      maxAge: 1800,
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: request.nextUrl.protocol === "https:",
+    });
+  };
+
   if (user && pathname === "/onboarding" && isConfirmed) {
+    if (hasMembershipHint) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
     const { data: membership } = await supabase
       .from("organization_memberships")
       .select("id")
@@ -216,11 +258,19 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       url.search = "";
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      redirectResponse.cookies.set(MEMBERSHIP_HINT_COOKIE, membershipHint, {
+        maxAge: 1800,
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: request.nextUrl.protocol === "https:",
+      });
+      return redirectResponse;
     }
   }
 
-  if (user && pathname.startsWith("/dashboard") && isConfirmed) {
+  if (user && pathname.startsWith("/dashboard") && isConfirmed && !hasMembershipHint) {
     const { data: membership } = await supabase
       .from("organization_memberships")
       .select("id")
@@ -235,6 +285,7 @@ export async function middleware(request: NextRequest) {
       url.search = "";
       return NextResponse.redirect(url);
     }
+    setMembershipHint();
   }
 
   return supabaseResponse;
