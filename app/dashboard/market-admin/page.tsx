@@ -109,11 +109,71 @@ export default async function MarketAdminPage() {
     .order("flagged_at", { ascending: false })
     .limit(25);
 
+  const { getMarketplaceOpsMetrics, getSaasOpsMetrics } = await import(
+    "@/lib/market/admin-metrics"
+  );
+  const [metrics, saas] = await Promise.all([
+    getMarketplaceOpsMetrics(admin),
+    getSaasOpsMetrics(admin),
+  ]);
+  const dollars = (cents: number) =>
+    `$${(cents / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  const activeStates = ["confirmed", "ready_for_handoff", "checked_out", "overdue"];
+  const activeRentals = activeStates.reduce(
+    (s, st) => s + (metrics.bookingsByState[st] ?? 0),
+    0,
+  );
+  const stat = (label: string, value: string | number, warn = false) => (
+    <div className="order-card" style={{ padding: "10px 14px", minWidth: 150, flex: 1 }}>
+      <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: warn ? "#b91c1c" : undefined }}>
+        {value}
+      </div>
+    </div>
+  );
+
   return (
     <DashboardShell
-      title="Marketplace trust queue"
-      description="Open disputes, oldest first. Resolution is the only path that captures a deposit. SLA: acknowledge immediately, simple resolution 72h."
+      title="Founder ops"
+      description="Marketplace health, trust queues and SaaS overview. Dispute resolution is the only path that captures a deposit. SLA: acknowledge immediately, simple resolution 72h."
     >
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="kicker">Marketplace health — last 30 days</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          {stat("GMV (30d)", dollars(metrics.gmv30dCents))}
+          {stat("Platform revenue (30d)", dollars(metrics.platformRevenue30dCents))}
+          {stat("Active rentals", activeRentals)}
+          {stat("Completed (all-time)", metrics.completedAllTime)}
+          {stat(
+            "Dispute rate",
+            metrics.disputeRatePct === null ? "—" : `${metrics.disputeRatePct}%`,
+            (metrics.disputeRatePct ?? 0) > 3,
+          )}
+          {stat(
+            "Open disputes",
+            metrics.openDisputes +
+              (metrics.oldestOpenDisputeDays !== null && metrics.oldestOpenDisputeDays > 0
+                ? ` (oldest ${metrics.oldestOpenDisputeDays}d)`
+                : ""),
+            metrics.openDisputes > 0,
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          {stat("Published listings", metrics.publishedListings)}
+          {stat("Sellers", metrics.sellers)}
+          {stat("Searches (30d)", metrics.searches30d)}
+          {stat("Waitlist joins (30d)", metrics.waitlistJoins30d)}
+          {stat("Standby queue", metrics.standbyWaiting)}
+          {stat("Deposit failures", metrics.depositFailures, metrics.depositFailures > 0)}
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+          SaaS: {saas.totalOrgs} orgs ({saas.marketplaceSellerOrgs} marketplace sellers) ·{" "}
+          {saas.newOrgs30d} new in 30d · {saas.errors24h} app errors in 24h
+        </div>
+      </section>
+
       {(pendingListings ?? []).length > 0 ? (
         <section className="panel" style={{ marginBottom: 20 }}>
           <div className="kicker">Listing moderation</div>
