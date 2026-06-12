@@ -25,34 +25,34 @@ import { buildStorefrontUrl } from "@/lib/storefront/url";
 import { headers } from "next/headers";
 import { getTranslator } from "@/lib/i18n/server";
 
-export default async function DashboardPage() {
-  // Marketplace mode (Amazon model): marketplace-only sellers land on
-  // their marketplace-branded Seller Hub, not the operator overview —
-  // until they explicitly unlock the full toolkit (/dashboard/unlock).
-  {
-    const { hasSupabaseEnv } = await import("@/lib/env");
-    if (hasSupabaseEnv()) {
-      const { getOrgContext } = await import("@/lib/auth/org-context");
-      const ctx = await getOrgContext();
-      if (ctx?.businessType === "marketplace_seller") {
-        const { createSupabaseServerClient } = await import("@/lib/supabase/server");
-        const { redirect } = await import("next/navigation");
-        const supabase = await createSupabaseServerClient();
-        const { data: org } = await supabase
-          .from("organizations")
-          .select("settings")
-          .eq("id", ctx.organizationId)
-          .maybeSingle();
-        const fullToolkit = Boolean(
-          (org?.settings as Record<string, unknown> | null)?.full_toolkit,
-        );
-        if (!fullToolkit) redirect("/market/hub");
-      }
-    }
-  }
+// Marketplace mode (Amazon model): marketplace-only sellers land on
+// their marketplace-branded Seller Hub, not the operator overview —
+// until they explicitly unlock the full toolkit (/dashboard/unlock).
+// Returns true when the request should bounce to /market/hub. Runs
+// inside the page's parallel fetch batch — as a serial pre-block it
+// was adding two extra round trips before any other data started.
+async function shouldRedirectToMarketHub(): Promise<boolean> {
+  const { hasSupabaseEnv } = await import("@/lib/env");
+  if (!hasSupabaseEnv()) return false;
+  const { getOrgContext } = await import("@/lib/auth/org-context");
+  const ctx = await getOrgContext();
+  if (ctx?.businessType !== "marketplace_seller") return false;
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("settings")
+    .eq("id", ctx.organizationId)
+    .maybeSingle();
+  return !Boolean(
+    (org?.settings as Record<string, unknown> | null)?.full_toolkit,
+  );
+}
 
-  const [summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList, { messages: m, t }] =
+export default async function DashboardPage() {
+  const [marketHubRedirect, summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList, { messages: m, t }] =
     await Promise.all([
+      shouldRedirectToMarketHub(),
       getDashboardSummary(),
       getGuidanceSnapshot(),
       getGuidanceState(),
@@ -63,6 +63,11 @@ export default async function DashboardPage() {
       headers(),
       getTranslator(),
     ]);
+
+  if (marketHubRedirect) {
+    const { redirect } = await import("next/navigation");
+    redirect("/market/hub");
+  }
 
   const checklist = computeChecklist(snapshot);
   const helpConfig = pageHelpMap["/dashboard"];

@@ -513,33 +513,14 @@ export function DashboardShell({
 
         <div className="sidebar-nav-body">{renderSidebarNavBody()}</div>
 
-        {/* Compact utility footer — quiet text rows, no boxed chrome.
-            The tinted Sign Out box read as a third CTA and crowded the
-            rail. */}
-        <div style={{ marginTop: 16, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
-          <div style={{ padding: "2px 10px 8px" }}>
-            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
-          </div>
-          <a
-            href={publicSiteUrl}
-            style={{ display: "block", padding: "6px 10px", borderRadius: 8, fontSize: 13, color: "var(--text-soft)" }}
-          >
-            {m.dashboard.nav.publicSite} ↗
-          </a>
+        {/* Quiet utility footer — one compact cluster. The language
+            select is restyled by .sidebar-footer (the global input
+            polish had turned it into a prominent 44px white box). */}
+        <div className="sidebar-footer">
+          <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} compact />
+          <a href={publicSiteUrl}>{m.dashboard.nav.publicSite} ↗</a>
           <button
             type="button"
-            style={{
-              background: "transparent",
-              color: "var(--text-muted)",
-              border: "none",
-              borderRadius: 8,
-              padding: "6px 10px",
-              width: "100%",
-              textAlign: "left",
-              cursor: "pointer",
-              font: "inherit",
-              fontSize: 13,
-            }}
             onClick={async () => {
               const { signOut } = await import("@/lib/auth/actions");
               await signOut();
