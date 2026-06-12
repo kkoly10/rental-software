@@ -184,11 +184,15 @@ export async function GET(request: NextRequest) {
     console.error("market-reminders: category fixer failed", err);
   }
 
-  return NextResponse.json({
+  const summary = {
     ok: true,
     ...counts,
     lapsed,
     standbyListingsChecked: standbyOffers,
     categoriesFixed,
-  });
+  };
+  // Response bodies aren't visible in the platform logs — echo the
+  // run summary so each hourly run is auditable from log search.
+  console.log("market-reminders:", JSON.stringify(summary));
+  return NextResponse.json(summary);
 }

@@ -69,7 +69,12 @@ async function suggestCategory(
 export async function fixUnknownCategories(
   limit = 10,
 ): Promise<{ scanned: number; mislabeled: number; fixed: number }> {
-  if (!hasAnthropicEnv()) return { scanned: 0, mislabeled: 0, fixed: 0 };
+  if (!hasAnthropicEnv()) {
+    console.log(
+      "category-fixer: ANTHROPIC_API_KEY not set in this environment — skipping",
+    );
+    return { scanned: 0, mislabeled: 0, fixed: 0 };
+  }
 
   const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
   const admin = createSupabaseAdminClient();
