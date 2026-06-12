@@ -73,7 +73,7 @@ export default async function WorldPage({
           <h1>
             {world.label} is coming to {metro.label}
           </h1>
-          <p className="mk-sub">{world.tagline} — from verified local sellers, deposit-protected.</p>
+          <p className="mk-sub">{world.tagline} — from identity-verified local sellers, deposit-backed.</p>
           <WaitlistForm worldSlug={world.slug} metroSlug={metro.slug} />
           <p className="mk-card-m">
             Launches when {graduationGates.minSellerPrelistings} local sellers have listed.

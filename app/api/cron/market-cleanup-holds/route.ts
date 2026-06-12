@@ -74,12 +74,26 @@ export async function GET(request: NextRequest) {
   // flip to overdue (the hourly deposit cron charges the Turo-model
   // late fees; 3 late days escalates to a non_return dispute there).
   const overdueCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-  const { data: overdueFlipped } = await admin
+  // Hertz rule: never escalate off stale state. The UPDATE's own WHERE
+  // re-checks ends_at (an approved extension moves it and no-ops the
+  // flip), and bookings with a PENDING extension request are excluded —
+  // late fees are already suppressed while pending, so the state flip
+  // must wait for the decision too.
+  const { data: pendingExt } = await admin
+    .from("market_extension_requests")
+    .select("booking_id")
+    .eq("state", "pending")
+    .limit(500);
+  const pendingIds = [...new Set((pendingExt ?? []).map((e) => e.booking_id))];
+  let flipQuery = admin
     .from("market_bookings")
     .update({ state: "overdue", updated_at: new Date().toISOString() })
     .eq("state", "checked_out")
-    .lt("ends_at", overdueCutoff)
-    .select("id");
+    .lt("ends_at", overdueCutoff);
+  if (pendingIds.length > 0) {
+    flipQuery = flipQuery.not("id", "in", `(${pendingIds.join(",")})`);
+  }
+  const { data: overdueFlipped } = await flipQuery.select("id");
   for (const b of overdueFlipped ?? []) {
     await admin.from("market_booking_events").insert({
       booking_id: b.id,
