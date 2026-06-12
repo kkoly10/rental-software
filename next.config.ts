@@ -30,6 +30,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "10mb",
     },
+    // Client router cache: keep visited dynamic pages (the dashboard is
+    // fully dynamic) reusable for 30s, so tab switches render instantly
+    // instead of re-fetching the whole RSC payload — operators reported
+    // a multi-second "Loading…" on every single navigation. Mutations
+    // still bust this via revalidatePath, and 30s-stale list data is an
+    // acceptable trade for snappy navigation.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   images: {
     remotePatterns: [

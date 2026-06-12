@@ -158,12 +158,14 @@ export default async function PaymentsPage({
             </div>
           ) : (
             <>
-              <label className="order-card">
-                <strong>{m.dashboard.payments.selectOrder}</strong>
-                <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+              {/* Plain header, not a card — the boxed label clipped its
+                  own hint text in the narrow aside. */}
+              <div style={{ margin: "4px 0 12px" }}>
+                <strong style={{ fontSize: 14 }}>{m.dashboard.payments.selectOrder}</strong>
+                <div className="muted" style={{ marginTop: 4, fontSize: 13, lineHeight: 1.5 }}>
                   {m.dashboard.payments.selectOrderHint}
                 </div>
-              </label>
+              </div>
               {orders.slice(0, 5).map((order) => (
                 <details key={order.id} style={{ marginBottom: 8 }}>
                   <summary

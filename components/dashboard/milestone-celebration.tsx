@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n/provider";
+import { dismissMilestone } from "@/lib/guidance/actions";
 
 type MilestoneKey =
   | "first_product"
@@ -36,6 +37,12 @@ export function MilestoneCelebration({
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Persist immediately on first render — each milestone celebrates
+    // exactly once. Without this the toast re-fired on every dashboard
+    // visit forever ("First product added!" months after the fact),
+    // because the 6s auto-hide and the × button were client-state only.
+    dismissMilestone(milestoneKey);
+
     const timer = setTimeout(() => {
       setExiting(true);
       exitTimerRef.current = setTimeout(() => setVisible(false), 400);
@@ -44,7 +51,7 @@ export function MilestoneCelebration({
       clearTimeout(timer);
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
     };
-  }, []);
+  }, [milestoneKey]);
 
   if (!visible || !config) return null;
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useI18n } from "@/lib/i18n/provider";
+import { dismissChecklist } from "@/lib/guidance/actions";
 
 export function SetupProgressBar({
   completed,
@@ -14,6 +15,7 @@ export function SetupProgressBar({
 }) {
   const { messages: m, t } = useI18n();
   const [dismissed, setDismissed] = useState(false);
+  const [, startTransition] = useTransition();
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   if (dismissed) return null;
@@ -41,7 +43,12 @@ export function SetupProgressBar({
         </div>
         <button
           type="button"
-          onClick={() => setDismissed(true)}
+          onClick={() => {
+            // Persisted — without this the green "setup complete" banner
+            // came back on every dashboard visit.
+            setDismissed(true);
+            startTransition(() => { dismissChecklist(); });
+          }}
           style={{
             background: "rgba(255,255,255,0.2)",
             border: "none",
