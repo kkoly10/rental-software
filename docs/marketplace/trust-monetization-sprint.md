@@ -11,6 +11,46 @@ transcript.
 
 ---
 
+## Strategic rescope (read this first)
+
+The research forces one reframe: **Korent is not "Airbnb for stuff."**
+Every horizontal rent-anything P2P died of the same disease — low
+rental frequency × low order value, with demand as the starving side
+(SnapGoods, NeighborGoods, Zilok, Rentoid, Loanables, Omni). Even the
+category winner, Fat Llama, needed a pandemic to break even and exited
+for $41.5M. The survivors share a shape: **vertical focus + a
+service/insurance layer + structural trust** (Turo/cars,
+ShareGrid/cinema gear, BabyQuip/baby gear).
+
+**Therefore:**
+
+- **Lead with Hosting & Events.** High order value ($150–$500),
+  inherently bundled (tent + tables + chairs + AV), naturally needs
+  delivery + setup, and has repeat buyers (planners, venues). The six
+  features below are the toolkit to win ONE vertical — they are much
+  weaker spread across every world at once.
+- **Keep the other worlds live but instrumented.** Demand capture is
+  the instrument; the demand panel in the founder admin is the
+  supply-acquisition to-do list that decides which world graduates
+  next. Measure search-to-fill, never listings count.
+- **Delivery + setup is the moat, not a fee.** BabyQuip's >85% gross
+  margins and 50% repeat rate come from the labor layer pure P2P
+  avoids. "Delivered and set up" is the pitch that separates Korent
+  from a classifieds page.
+- **Trust is structural, pre-built, never overstated.** The incident
+  playbook (stated guarantee cap, reachable escalation path, the
+  founder dispute queue) exists BEFORE launch volume — Airbnb's 2011
+  near-death was 24 hours of unreachability, not the ransacking
+  itself. And never claim a safety measure that isn't implemented:
+  Getaround's $950k fine was for overstating, not for lacking.
+- **Explicit non-builds** (research-confirmed traps or premature):
+  per-mile/after-hours/rush delivery pricing, `inventory_mode =
+  bundle`, multi-seller packages, stored/purchasable badges, paid
+  leads, B2B accounts, paid Pro plans, promoted listings, damage
+  waivers (until insurance counsel), full video infrastructure.
+
+---
+
 ## What the research says (the rules we build by)
 
 1. **Demand is the scarce side.** Every dead generalist (SnapGoods,
@@ -252,6 +292,105 @@ transcript.
 - **Deliberately NOT building:** "log in as user" impersonation
   (Sharetribe's top support tool, but a serious security/privacy
   footgun for a solo founder — revisit with real support volume).
+
+## Compliance audit: what's already built vs the research (2026-06-12)
+
+Full codebase audit against the 10 rules. Clean: pre-booking info
+hygiene (no serials/addresses/locations exposed — rule 9 ✓), demand
+instrumentation (every search logged incl. zero-results ✓), deposit
+labeling ("authorized, not charged, refundable" ✓), cancellation tiers
+disclosed ✓, server-side evidence timestamps ✓, claim window enforced ✓.
+
+**Fix list (ranked by risk):**
+
+- [ ] **"Verified" copy (CRITICAL — Getaround-class).** Marketing copy
+  says "verified local sellers" (market home, layout, world pages,
+  store pages) and "photo evidence built in". Reality: sellers pass
+  Stripe Connect KYC (a real identity verification of the payout
+  holder) but NO background check; evidence is optional, not built-in
+  as a guarantee. Fix: define "verified" precisely at every use
+  ("identity verified through our payments partner — not a background
+  check") and soften "photo evidence built in" to "photo evidence
+  tools on every rental". Getaround's $950k fine was for this exact
+  gap between copy and implementation.
+- [ ] **Late-fee formula undisclosed pre-rental (HIGH — the Home Depot
+  suit).** We charge daily rate + $20/day capped at 3 days
+  (lib/market/cancellation.ts) but the renter first learns fees exist
+  when overdue. Fix: state the exact formula on the PDP and in the
+  (future) contract packet.
+- [ ] **No cost line-items before payment (HIGH).** Renter sees a
+  combined total; platform fee never itemized; no cost preview at
+  request time. Fix: subtotal / tax / deposit-hold / total-due-today
+  lines on the awaiting-payment card (renter pays no separate platform
+  fee today — fee comes out of the seller side — so say THAT too; it's
+  a selling point).
+- [ ] **Overdue flip lacks a pre-flip recheck (HIGH — the Hertz rule).**
+  market-cleanup-holds flips checked_out → overdue without rechecking
+  whether an extension was just approved (cron race). Fix: recheck
+  pending/approved extensions + CAS guard before the flip.
+- [ ] **No seller condition baseline (HIGH — fraud is bidirectional).**
+  Evidence is optional both sides; disputes over pre-existing damage
+  are unadjudicable without a baseline. Fix: make the seller handoff
+  photo blocking before "checked out", per Turo/Outdoorsy condition-
+  form practice.
+- [ ] **High-value instant book has no extra guard (MEDIUM).**
+  Electronics instant book is now seller-discretion with no
+  value-tiered renter friction (Turo Deluxe pattern: extra checks +
+  deposits above value thresholds). Fix lands with the contracts
+  feature (e-sign tier gates payment anyway).
+- [ ] **`had_results` flag on demand events (LOW).** Zero-result
+  searches are only inferable; add the flag with feature 5.
+
+## Addendum review: "Live Verify" (founder draft, 2026-06-12)
+
+**Verdict: right instinct, wrong default shape.** Pre-booking condition
+confidence for high-value items is a real gap — but a REQUIRED
+synchronous 5-minute video call between two strangers re-creates the
+SnapGoods coordination friction that killed P2P conversion, and a live
+call raises four legal/trust problems the research flagged:
+
+1. **Serial/VIN reveal to unbooked strangers is theft casing**
+   (Getaround's app became a thieves' catalog; Turo's Hawaii fraudster
+   did exactly this recon). Never show serial/VIN/plate closeups or
+   location context to anyone without a verified identity AND an
+   active booking request.
+2. **"Verify" language creates platform liability.** If Korent brands
+   a checklist "Verified ✓", a renter with a defective item argues the
+   platform vouched for condition — and Getaround's $950k fine was for
+   overstating safety measures. The platform never verifies; the
+   SELLER demonstrates. Name it "Live Look" / "Condition Proof", record
+   results as "seller demonstrated X", and disclaim in the packet.
+3. **Recording a live call triggers two-party-consent wiretap laws**
+   (CA, WA, etc.). The draft correctly says no recording — but an
+   UNRECORDED call also produces NO retained evidence, which defeats
+   half the purpose.
+4. **A live call is an unmoderated leakage channel** — the moderation
+   engine can't see video; participants will swap numbers. Schedule
+   in-product, copy says "not a negotiation call", accept residual
+   risk.
+5. **Operational flaw: required-before-confirmation + two-sided
+   scheduling cannot fit inside hold TTLs.** Bookings would die
+   waiting for two calendars to align.
+
+**Reshaped v1 — "Condition Proof" (async), live call optional later:**
+- Required tier (≥$2,500 replacement, towable-road,
+  high-value-electronics, zero-history sellers on high-value): the
+  seller uploads a checklist-driven set of photos or a SHORT
+  SELF-RECORDED video (seller filming their own item = no consent
+  issue, and the evidence is RETAINED) within the booking-response
+  window. Async = no scheduling friction, no hold-TTL conflict.
+- Optional tier: renter can request a live look; seller
+  accepts/schedules in-product; no recording v1; checklist + photo
+  upload as the artifact. Keep the draft's tables (collapse to
+  requests + results; events ride market_booking_events; checklist
+  templates in code like the registry).
+- Serial/VIN items in the checklist unlock only after the renter is
+  verified and the booking request exists.
+- Badge copy: "Condition proof provided" (seller action), never
+  "Verified by Korent".
+- The draft's hierarchy is correct and stays: never replaces
+  contracts, deposits, or pickup/return evidence; never triggers early
+  deposit holds.
 
 ## Build order
 
