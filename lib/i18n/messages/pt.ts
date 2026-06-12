@@ -365,7 +365,6 @@ export const pt: Messages = {
       subtitle: "Sem contratos. Sem taxas de configuração. Cancele a qualquer momento. Atualize ou reduza à medida que o negócio cresce.",
       mostPopular: "Mais popular",
       plans: [
-        { name: "Grátis", price: "0 $", period: "/mês", cta: "Começar grátis", features: ["5 produtos", "10 encomendas/mês", "1 membro de equipa", "Loja online", "Suporte por e-mail"] },
         { name: "Starter", price: "49 $", period: "/mês", cta: "Experimentar Starter", features: ["25 produtos", "50 encomendas/mês", "1 membro de equipa", "Loja online", "Rotas de entrega", "Suporte por e-mail"] },
         { name: "Pro", price: "99 $", period: "/mês", cta: "Experimentar Pro", features: ["100 produtos", "200 encomendas/mês", "5 membros de equipa", "Pagamentos Stripe", "Termos digitais", "Copiloto IA", "Suporte prioritário"] },
         { name: "Growth", price: "199 $", period: "/mês", cta: "Experimentar Growth", features: ["Produtos ilimitados", "Encomendas ilimitadas", "15 membros de equipa", "Exportação CSV", "Domínio personalizado", "Suporte prioritário", "Onboarding dedicado"] },

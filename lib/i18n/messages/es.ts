@@ -365,7 +365,6 @@ export const es: Messages = {
       subtitle: "Sin contratos. Sin tarifas de configuración. Cancela cuando quieras. Sube o baja de plan según crezca tu negocio.",
       mostPopular: "Más popular",
       plans: [
-        { name: "Gratis", price: "$0", period: "/mes", cta: "Empezar gratis", features: ["5 productos", "10 pedidos/mes", "1 miembro de equipo", "Tienda en línea", "Soporte por correo"] },
         { name: "Starter", price: "$49", period: "/mes", cta: "Probar Starter", features: ["25 productos", "50 pedidos/mes", "1 miembro de equipo", "Tienda en línea", "Planificación de rutas", "Soporte por correo"] },
         { name: "Pro", price: "$99", period: "/mes", cta: "Probar Pro", features: ["100 productos", "200 pedidos/mes", "5 miembros de equipo", "Pagos Stripe", "Exenciones digitales", "Copiloto IA", "Soporte prioritario"] },
         { name: "Growth", price: "$199", period: "/mes", cta: "Probar Growth", features: ["Productos ilimitados", "Pedidos ilimitados", "15 miembros de equipo", "Exportación CSV", "Dominio personalizado", "Soporte prioritario", "Onboarding dedicado"] },
