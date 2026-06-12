@@ -392,6 +392,48 @@ call raises four legal/trust problems the research flagged:
   contracts, deposits, or pickup/return evidence; never triggers early
   deposit holds.
 
+## The canonical rental flow (LOCKED 2026-06-12)
+
+Founder-approved evidence ceremony for every rental. BLOCKING = the
+state machine refuses to advance; ELIGIBILITY = allowed to proceed,
+but skipping it weakens that party's standing in a dispute (the Turo
+lever — you can't physically stop someone leaving, so the presumption
+moves instead).
+
+1. **Phase 0 (built):** renter phone+ID+selfie verified; seller
+   Stripe-KYC bookable; PDP discloses prices, deposit handling,
+   cancellation tiers, late-fee formula, and this ceremony.
+2. **Booking (built):** request/instant → accept (24h) → pay →
+   confirmed; deposit AUTHORIZED at handoff−96h, never earlier.
+3. **Handoff:**
+   - Seller "before" photos — **BLOCKING** on "Mark checked out"
+     (2–4 angles + serial/label where the risk family requires).
+     No before-photos = no deposit capture for damage, ever.
+   - In-person ID check — **BLOCKING** (built).
+   - Renter pickup photos — **ELIGIBILITY** (window: ≤4h after
+     checkout). Protects the RENTER against pre-existing damage.
+4. **During (built):** extensions suppress late fees while pending;
+   approval retroactively un-lates; overdue flip gets a pre-flip
+   recheck (fix list).
+5. **Return:**
+   - Renter return photos — **ELIGIBILITY** (≤24h of return). The
+     renter's proof of returned condition.
+   - Seller inspects within the 24h claim window (built); a damage
+     dispute MUST include seller "after" photos to be eligible for
+     deposit capture.
+6. **Dispute (founder adjudicates):** evidence ladder in time order —
+   seller-before → renter-pickup → renter-return → seller-after. All
+   in-app, server-timestamped; timestamps are the eligibility test.
+   Presumptions: no seller-before = no deposit capture; no
+   renter-pickup = can't claim pre-existing; no renter-return =
+   weakened defense (judged on totality).
+
+**Deltas vs today:** multi-photo evidence upload (shared prerequisite
+with the quality score), seller-before made blocking, evidence
+presence/absence + presumption rules rendered as a checklist in the
+founder dispute card, ceremony disclosed pre-booking (and later in the
+contract packet).
+
 ## Build order
 
 1. Demand capture (smallest, most strategic, extends existing tables)
