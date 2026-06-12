@@ -82,9 +82,18 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
       </header>
 
       <main>
-        {/* ── 1. Hero — exact-match H1, outcome subhead, dual CTA ── */}
-        <section className="mk-hero">
-          <div className="mk-hero-copy">
+        {/* ── 1. Hero — full-bleed vertical photo, exact-match H1 ── */}
+        <section className="mk-hero-bleed">
+          <div className="mk-hero-bleed-photo">
+            <Image
+              src={vertical.imageSlugs.hero}
+              alt={`${vertical.label.en} rental operator managing bookings with Korent`}
+              fill
+              priority
+              sizes="100vw"
+            />
+          </div>
+          <div className="mk-hero-bleed-content">
             <span className="mk-eyebrow">{v.heroKicker}</span>
             <h1>{copy.h1}</h1>
             <p className="mk-lede">{copy.sub}</p>
@@ -96,15 +105,6 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
                 See a live demo storefront →
               </a>
             </div>
-          </div>
-          <div className="mk-hero-image">
-            <Image
-              src={vertical.imageSlugs.hero}
-              alt={`${vertical.label.en} rental operator managing bookings with Korent`}
-              fill
-              priority
-              sizes="(max-width: 860px) 100vw, 520px"
-            />
           </div>
         </section>
 
@@ -205,9 +205,9 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
               <span className="mk-eyebrow">Built for {verticalLabel} operators</span>
               <h2>Why {verticalLabel} businesses pick Korent</h2>
             </div>
-            <div className="mk-card-grid">
+            <div className="mk-flow-grid">
               {v.features.map((feature) => (
-                <div key={feature.title} className="mk-card">
+                <div key={feature.title} className="mk-flow-item">
                   <strong>{feature.title}</strong>
                   <p>{feature.body}</p>
                 </div>
