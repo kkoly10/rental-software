@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { getTranslator } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 import { listVerticals } from "@/lib/verticals/registry";
@@ -50,45 +50,21 @@ export async function SaasLanding() {
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "korent.app";
   const isLocalDev = appDomain.startsWith("localhost") || appDomain.startsWith("127.0.0.1");
   const demoUrl = isLocalDev ? "#" : `https://demo.${appDomain}`;
-  const { locale, messages: m } = await getTranslator();
+  const { messages: m } = await getTranslator();
   const s = m.saasLanding;
   const headline = splitHeadline(s.hero.headline);
   const verticals = listVerticals();
 
   return (
     <div className="mk-page">
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="mk-header">
-        <div className="mk-header-inner">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Korent" style={{ height: 34, width: "auto", display: "block" }} />
-          <nav className="saas-header-nav">
-            <a href="#pain" className="mk-nav-link">{s.nav.whyKorent}</a>
-            <a href="#features" className="mk-nav-link">{s.nav.features}</a>
-            <a href="#pricing" className="mk-nav-link">{s.nav.pricing}</a>
-            <a href="#faq" className="mk-nav-link">{s.nav.faq}</a>
-            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
-            <Link href="/login" className="mk-btn mk-btn--outline">{s.nav.logIn}</Link>
-            <Link href="/signup" className="mk-btn mk-btn--accent">{s.nav.startFree}</Link>
-          </nav>
-          <div className="mobile-header-controls">
-            <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} compact />
-            <MobileMenuToggle
-              isOperator={false}
-              navLinks={[
-                { key: "why_korent", label: s.nav.whyKorent, href: "#pain" },
-                { key: "features", label: s.nav.features, href: "#features" },
-                { key: "pricing", label: s.nav.pricing, href: "#pricing" },
-                { key: "faq", label: s.nav.faq, href: "#faq" },
-              ]}
-              cta={{ label: s.nav.startFree, href: "/signup" }}
-              authLabel={s.nav.logIn}
-              currentLocale={locale}
-              languageLabel={m.language.label}
-            />
-          </div>
-        </div>
-      </header>
+      <MarketingHeader
+        navLinks={[
+          { key: "why_korent", label: s.nav.whyKorent, href: "#pain" },
+          { key: "features", label: s.nav.features, href: "#features" },
+          { key: "pricing", label: s.nav.pricing, href: "#pricing" },
+          { key: "faq", label: s.nav.faq, href: "#faq" },
+        ]}
+      />
 
       <main>
         {/* ── Hero — full-bleed photo, white type over the scrim ──── */}
@@ -490,27 +466,7 @@ export async function SaasLanding() {
         </section>
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────────── */}
-      <footer className="mk-footer">
-        <div className="mk-container">
-          <div className="mk-footer-links">
-            <a href="#features">{s.nav.features}</a>
-            <a href="#pricing">{s.nav.pricing}</a>
-            <a href="#faq">{s.nav.faq}</a>
-            <Link href="/login">{s.nav.logIn}</Link>
-            <Link href="/signup">{m.common.signUp}</Link>
-            <a href="mailto:support@korent.app">{s.nav.contact}</a>
-          </div>
-          <div className="mk-footer-verticals">
-            {verticals.map((vertical) => (
-              <Link key={vertical.slug} href={`/${vertical.marketing.landingPageSlug}`}>
-                {vertical.label.en} rental software
-              </Link>
-            ))}
-          </div>
-          <div className="mk-footer-tagline">{s.footer.tagline}</div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

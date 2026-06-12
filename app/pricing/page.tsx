@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PublicHeader } from "@/components/layout/public-header";
-import { PublicFooter } from "@/components/public/public-footer";
+import { MarketingHeader } from "@/components/marketing/marketing-header";
+import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { PricingGrid } from "@/components/public/pricing-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { isTenantHost } from "@/lib/auth/org-context";
@@ -13,70 +14,73 @@ export async function generateMetadata(): Promise<Metadata> {
     description:
       "Simple, transparent pricing for party rental businesses. Start your 14-day free trial today.",
     path: "/pricing",
+    image: "/og-image.png",
   });
 }
 
+/**
+ * Root-domain pricing page — mk-page marketing chrome (the previous
+ * version rendered with the TENANT storefront header/footer, leaking
+ * "Serving your service area" chrome onto Korent's own marketing
+ * surface). Plan data stays on PricingGrid → PLAN_TIERS, the Stripe
+ * source of truth, with the monthly/yearly toggle.
+ */
 export default async function PricingPage() {
   if (await isTenantHost()) {
     redirect("/inventory");
   }
   const m = await getMessages();
+  const s = m.saasLanding;
 
   return (
-    <>
-      <PublicHeader />
+    <div className="mk-page">
+      <MarketingHeader
+        navLinks={[
+          { key: "why_korent", label: s.nav.whyKorent, href: "/#pain" },
+          { key: "features", label: s.nav.features, href: "/#features" },
+          { key: "faq", label: s.nav.faq, href: "/#faq" },
+        ]}
+      />
 
       <main>
-        <section className="section" style={{ paddingTop: 48, paddingBottom: 24 }}>
-          <div className="container" style={{ textAlign: "center" }}>
-            <div className="kicker">{m.pricing.title}</div>
-            <h1 style={{ margin: "8px 0 12px", fontSize: "clamp(2rem, 4vw, 3rem)" }}>
-              {m.pricing.onePlatform}
-            </h1>
-            <p className="muted" style={{ maxWidth: "56ch", margin: "0 auto", fontSize: "1.05rem" }}>
+        {/* ── Hero — text-led, editorial ─────────────────────────── */}
+        <section className="mk-section--tight" style={{ paddingTop: 72 }}>
+          <div className="mk-container" style={{ textAlign: "center" }}>
+            <span className="mk-eyebrow">{m.pricing.title}</span>
+            <h1>{m.pricing.onePlatform}</h1>
+            <p className="mk-lede" style={{ maxWidth: "52ch", margin: "16px auto 0" }}>
               {m.pricing.trialBlurb}
             </p>
           </div>
         </section>
 
-        <section className="section" style={{ paddingTop: 0 }}>
-          <div className="container">
+        {/* ── Plans — live PLAN_TIERS data + monthly/yearly toggle ── */}
+        <section className="mk-section--tight" style={{ paddingTop: 8 }}>
+          <div className="mk-container">
             <PricingGrid />
+            <div className="mk-trust-strip-inner" style={{ marginTop: 28, padding: 0 }}>
+              {s.pricingSection.trustSignals.map((signal) => (
+                <span key={signal}>{signal}</span>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="section" style={{ paddingTop: 0, paddingBottom: 48 }}>
-          <div className="container" style={{ maxWidth: 720, textAlign: "center" }}>
-            <h2 style={{ marginBottom: 12 }}>{m.pricing.everyPlan}</h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: 16,
-                marginTop: 24,
-                textAlign: "left",
-              }}
-            >
-              {m.pricing.features.map((feature) => (
-                <div
-                  key={feature}
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    background: "#f4f7fb",
-                    fontSize: 14,
-                    fontWeight: 500,
-                  }}
-                >
-                  {feature}
-                </div>
-              ))}
-            </div>
-
-            <div style={{ marginTop: 40 }}>
-              <p className="muted">
+        {/* ── Every plan includes ────────────────────────────────── */}
+        <section className="mk-band">
+          <div className="mk-section--tight">
+            <div className="mk-container mk-container--mid">
+              <div className="mk-section-head" style={{ marginBottom: 36 }}>
+                <h2>{m.pricing.everyPlan}</h2>
+              </div>
+              <ul className="mk-checklist">
+                {m.pricing.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+              <p className="mk-muted" style={{ textAlign: "center", margin: "32px 0 0" }}>
                 {m.pricing.haveQuestions}{" "}
-                <a href="mailto:support@korent.app" style={{ color: "var(--primary)", fontWeight: 600 }}>
+                <a href="mailto:support@korent.app" className="mk-text-link">
                   {m.pricing.emailUs}
                 </a>
               </p>
@@ -84,8 +88,18 @@ export default async function PricingPage() {
           </div>
         </section>
 
-        <PublicFooter />
+        {/* ── Closing CTA ────────────────────────────────────────── */}
+        <section className="mk-closing">
+          <h2>{s.finalCta.title}</h2>
+          <p className="mk-lede">{s.finalCta.subtitle}</p>
+          <Link href="/signup" className="mk-btn mk-btn--accent mk-btn--lg">
+            {s.finalCta.ctaPrimary}
+          </Link>
+          <p className="mk-closing-trust">{s.finalCta.trustLine}</p>
+        </section>
       </main>
-    </>
+
+      <MarketingFooter />
+    </div>
   );
 }
