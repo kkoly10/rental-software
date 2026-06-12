@@ -73,12 +73,20 @@ export async function GET(
   const [{ data: org }, primaryVertical] = await Promise.all([
     supabase
       .from("organizations")
-      .select("name, support_email")
+      .select("name, support_email, settings")
       .eq("id", ctx.organizationId)
       .is("deleted_at", null)
       .maybeSingle(),
     getPrimaryVerticalSlug(),
   ]);
+
+  // Brand accent for the PDF — only when the operator explicitly set a
+  // color. The platform default (#1e5dcf) means "never customized"; the
+  // document stays pure ink in that case.
+  const rawBrandColor =
+    ((org?.settings as Record<string, unknown> | null)?.brand_primary_color as string | undefined) ?? null;
+  const brandColor =
+    rawBrandColor && rawBrandColor.toLowerCase() !== "#1e5dcf" ? rawBrandColor : null;
 
   const order = document.orders as unknown as {
     order_number: string;
@@ -127,6 +135,7 @@ export async function GET(
     // event-rental block when the slug is unknown (#304), so
     // passing the raw slug is safe even for legacy orgs.
     businessType: primaryVertical ?? "",
+    brandColor,
   });
 
   const docTitle = document.document_type === "rental_agreement"
