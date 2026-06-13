@@ -295,8 +295,12 @@ export async function triggerDashboardOrderEmail(params: {
   eventDate: string;
   total: number;
 }) {
-  if (!params.customerEmail) return;
-
+  // NOTE: this trigger only emails the OPERATOR (new-order alert) and
+  // persists an in-app notification — it sends nothing to the customer.
+  // It must therefore fire regardless of whether the customer has an
+  // email on file. (Previously it early-returned on an empty
+  // customerEmail, silently dropping the operator's new-order alert for
+  // any dashboard order created without a customer email.)
   const branding = await getOrgBranding(params.organizationId);
   const fmt = makeFormatters(branding.currency, branding.locale);
 
