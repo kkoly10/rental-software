@@ -112,6 +112,19 @@ if (hasStripeEnv()) {
 
 export type PlanTier = keyof typeof PLAN_TIERS;
 
+/**
+ * Plan tiers on which outbound SMS/WhatsApp notifications are available.
+ * SMS carries a real per-tenant cost (Twilio + carrier A2P fees), so it's
+ * a paid-tier capability — Starter operators rely on email. Enforced
+ * server-side in lib/sms/send-notification.ts and surfaced in the
+ * SMS settings UI.
+ */
+export const SMS_PLAN_TIERS: PlanTier[] = ["pro", "growth"];
+
+export function planAllowsSms(plan: PlanTier | null | undefined): boolean {
+  return plan != null && SMS_PLAN_TIERS.includes(plan);
+}
+
 export function getPlanByPriceId(priceId: string): PlanTier | null {
   for (const [tier, plan] of Object.entries(PLAN_TIERS)) {
     if (

@@ -1880,6 +1880,9 @@ export const es: Messages = {
       submitting: "Guardando...",
     },
     smsSettings: {
+      proLockTitle: "Los SMS son una función Pro",
+      proLockBody: "Las notificaciones por mensaje de texto están disponibles en los planes Pro y Growth. Mejora tu plan para enviar avisos de pedidos, depósitos y entregas por SMS.",
+      proLockCta: "Mejorar plan",
       enableSmsTitle: "Activar notificaciones por SMS",
       enableSmsHelp: "Envía mensajes de texto a los clientes con actualizaciones de pedidos",
       notificationTypesHeading: "Tipos de notificación",

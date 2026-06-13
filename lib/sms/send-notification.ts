@@ -48,6 +48,16 @@ export async function sendSmsNotification(
     return;
   }
 
+  // SMS/WhatsApp is a paid-tier capability (Twilio + carrier A2P cost).
+  // Enforce by org id here — this dispatch runs from crons too, where
+  // there's no auth context for the usual checkFeatureAccess() path.
+  if (organizationId) {
+    const { orgPlanAllowsSms } = await import("@/lib/stripe/subscription");
+    if (!(await orgPlanAllowsSms(organizationId))) {
+      return;
+    }
+  }
+
   const settingKey = settingsMap[type];
   if (settingKey && !settings[settingKey]) {
     return;

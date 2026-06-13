@@ -1881,6 +1881,9 @@ const enValues = {
       submitting: "Saving...",
     },
     smsSettings: {
+      proLockTitle: "SMS is a Pro feature",
+      proLockBody: "Text notifications are available on the Pro and Growth plans. Upgrade to send order, deposit, and delivery updates by SMS.",
+      proLockCta: "Upgrade plan",
       enableSmsTitle: "Enable SMS notifications",
       enableSmsHelp: "Send text messages to customers for order updates",
       notificationTypesHeading: "Notification types",

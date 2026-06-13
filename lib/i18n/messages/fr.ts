@@ -1880,6 +1880,9 @@ export const fr: Messages = {
       submitting: "Enregistrement...",
     },
     smsSettings: {
+      proLockTitle: "Les SMS sont une fonctionnalité Pro",
+      proLockBody: "Les notifications par SMS sont disponibles sur les forfaits Pro et Growth. Passez à un forfait supérieur pour envoyer les mises à jour de commande, d'acompte et de livraison par SMS.",
+      proLockCta: "Améliorer le forfait",
       enableSmsTitle: "Activer les notifications par SMS",
       enableSmsHelp: "Envoyer des SMS aux clients pour les mises à jour des commandes",
       notificationTypesHeading: "Types de notifications",

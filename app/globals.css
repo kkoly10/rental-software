@@ -4014,6 +4014,35 @@ textarea[aria-invalid="true"] {
 
 /* ── SMS Settings ─────────────────────────── */
 
+/* SMS Pro-feature lock banner */
+.sms-pro-lock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  border: 1px solid var(--secondary, #3f4a33);
+  border-radius: var(--radius, 14px);
+  background: var(--secondary-bg, #e9edde);
+}
+.sms-pro-lock strong {
+  display: block;
+  font-size: 15px;
+  color: var(--secondary-strong, #333d29);
+}
+.sms-pro-lock p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  max-width: 52ch;
+}
+.sms-pro-lock .primary-btn {
+  flex-shrink: 0;
+}
+
 .sms-toggle-row {
   display: flex;
   align-items: center;

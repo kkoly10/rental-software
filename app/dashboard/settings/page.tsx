@@ -77,6 +77,9 @@ export default async function SettingsPage({
   ]);
   const guidanceState = await getGuidanceState();
   const helpConfig = pageHelpMap["/dashboard/settings"];
+  // SMS is a Pro-tier feature — lock the settings form below Pro.
+  const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+  const smsLocked = !(await checkFeatureAccess("sms")).allowed;
 
   return (
     <DashboardShell
@@ -251,7 +254,7 @@ export default async function SettingsPage({
             </div>
           </div>
 
-          <SmsSettingsForm defaults={smsSettings} />
+          <SmsSettingsForm defaults={smsSettings} locked={smsLocked} />
 
           <div style={{ marginTop: 24 }}>
             <div className="kicker">WhatsApp</div>
