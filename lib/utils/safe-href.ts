@@ -9,6 +9,7 @@ export function isSafeHref(value: string | null | undefined): boolean {
   if (!value) return false;
   const v = value.trim();
   if (v.startsWith("//")) return false; // protocol-relative → off-site
+  if (v.startsWith("#")) return true; // same-document fragment (anchor)
   if (v.startsWith("/")) return true; // same-site relative path
   return /^https?:\/\//i.test(v);
 }

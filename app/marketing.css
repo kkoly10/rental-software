@@ -154,6 +154,13 @@
   }
 }
 
+/* Anchor jumps (nav "Why Korent / Features / Pricing / FAQ") must clear
+   the sticky header, or the section title lands hidden underneath it.
+   ~62px header + breathing room. */
+.mk-page [id] {
+  scroll-margin-top: 88px;
+}
+
 /* ── Header ─────────────────────────────────────────────────────── */
 
 .mk-page .mk-header {
@@ -769,245 +776,15 @@
   background: var(--mk-bg);
   border-radius: 28px;
   overflow: hidden;
-  font-family: var(--mk-font-body);
+  line-height: 0;
 }
 
-.mk-page .mk-crew-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 12px;
-  background: #15110c;
-  color: #fdfaf5;
-}
-
-.mk-page .mk-crew-brand {
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.mk-page .mk-crew-status {
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #ffd9b8;
-  background: rgba(224, 122, 63, 0.22);
-  border: 1px solid rgba(224, 122, 63, 0.4);
-  padding: 3px 8px;
-  border-radius: 999px;
-}
-
-.mk-page .mk-crew-map {
-  position: relative;
-  height: 120px;
-  background:
-    radial-gradient(120% 90% at 20% 10%, #6f7a52 0%, #59643f 45%, #434c2f 100%);
-}
-
-.mk-page .mk-crew-map svg {
+.mk-page .mk-crew-shot {
+  display: block;
   width: 100%;
-  height: 100%;
-  display: block;
+  height: auto;
 }
 
-.mk-page .mk-crew-pin circle {
-  fill: #fdfaf5;
-  stroke: rgba(20, 14, 8, 0.25);
-  stroke-width: 1;
-}
-
-.mk-page .mk-crew-pin text {
-  font-size: 8px;
-  font-weight: 700;
-  fill: #15110c;
-  text-anchor: middle;
-  font-family: var(--mk-font-body);
-}
-
-.mk-page .mk-crew-pin--current circle {
-  fill: var(--mk-accent);
-}
-
-.mk-page .mk-crew-pin--current text {
-  fill: #fff;
-  font-size: 9px;
-}
-
-.mk-page .mk-crew-pin--done circle {
-  fill: #2f7d54;
-}
-
-.mk-page .mk-crew-pin--done text {
-  fill: #fff;
-}
-
-.mk-page .mk-crew-map-cta {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #15110c;
-  background: rgba(253, 250, 245, 0.94);
-  padding: 5px 10px;
-  border-radius: 999px;
-}
-
-.mk-page .mk-crew-routehead {
-  padding: 14px 16px 4px;
-}
-
-.mk-page .mk-crew-routehead strong {
-  display: block;
-  font-family: var(--mk-font-display);
-  font-size: 1.18rem;
-  font-weight: 500;
-  color: var(--mk-ink);
-}
-
-.mk-page .mk-crew-meta {
-  font-size: 0.74rem;
-  color: var(--mk-muted);
-  margin-top: 3px;
-}
-
-.mk-page .mk-crew-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.mk-page .mk-crew-segs {
-  display: flex;
-  gap: 3px;
-  flex: 1;
-}
-
-.mk-page .mk-crew-segs span {
-  flex: 1;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--mk-line-strong);
-}
-
-.mk-page .mk-crew-segs span.on {
-  background: var(--mk-accent);
-}
-
-.mk-page .mk-crew-progress-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--mk-ink-2);
-  white-space: nowrap;
-}
-
-.mk-page .mk-crew-stops {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 8px 12px 16px;
-}
-
-.mk-page .mk-crew-stop {
-  display: flex;
-  gap: 10px;
-  padding: 11px 10px;
-  border-radius: 12px;
-}
-
-.mk-page .mk-crew-stop + .mk-crew-stop {
-  margin-top: 4px;
-}
-
-.mk-page .mk-crew-stop--current {
-  background: rgba(224, 122, 63, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(224, 122, 63, 0.32);
-}
-
-.mk-page .mk-crew-stop--done {
-  opacity: 0.6;
-}
-
-.mk-page .mk-crew-stop-num {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  background: var(--mk-line);
-  color: var(--mk-ink-2);
-}
-
-.mk-page .mk-crew-stop--current .mk-crew-stop-num {
-  background: var(--mk-accent);
-  color: #fff;
-}
-
-.mk-page .mk-crew-stop--done .mk-crew-stop-num {
-  background: #2f7d54;
-  color: #fff;
-}
-
-.mk-page .mk-crew-stop-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.mk-page .mk-crew-stop-head strong {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--mk-ink);
-}
-
-.mk-page .mk-crew-stop-tag {
-  flex: none;
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--mk-muted);
-}
-
-.mk-page .mk-crew-stop-line {
-  font-size: 0.74rem;
-  color: var(--mk-muted);
-  margin-top: 2px;
-}
-
-.mk-page .mk-crew-stop-addr {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 0.74rem;
-  color: var(--mk-ink-2);
-  margin-top: 3px;
-}
-
-.mk-page .mk-crew-nav {
-  flex: none;
-  font-weight: 600;
-  color: var(--mk-accent-dim);
-}
-
-.mk-page .mk-crew-stop-note {
-  font-size: 0.7rem;
-  color: var(--mk-accent-dim);
-  margin-top: 5px;
-}
-
-.mk-page .mk-crew-stop-done {
-  font-size: 0.7rem;
-  color: var(--mk-muted);
-  margin-top: 4px;
-}
 
 /* ── Big product shot ───────────────────────────────────────────── */
 
@@ -1063,47 +840,101 @@
 
 /* ── Comparison rows ────────────────────────────────────────────── */
 
+/* Comparison — the Korent column is a single soft accent band that runs
+   the full height of the table and reads as the winner, instead of a
+   flat bordered grid with bare em-dashes (which read as antique). No
+   drop shadows: an accent top-edge + warm tint carry the hierarchy, in
+   keeping with the editorial skin. */
 .mk-page .mk-compare {
-  border: 1px solid var(--mk-line);
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--mk-card);
-  font-size: 0.92rem;
+  font-size: 0.98rem;
 }
 
 .mk-page .mk-compare-row {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center;
-}
-
-.mk-page .mk-compare-row + .mk-compare-row {
-  border-top: 1px solid var(--mk-line);
+  grid-template-columns: minmax(0, 2.3fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .mk-page .mk-compare-row > div {
-  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  padding: 17px 22px;
 }
 
-.mk-page .mk-compare-header {
-  background: var(--mk-bg-alt);
-  font-weight: 600;
+/* Hairline between feature rows — drawn on the outer columns; the band
+   gets its own fainter accent divider so it reads as one continuous panel. */
+.mk-page .mk-compare-row + .mk-compare-row > div {
+  border-top: 1px solid var(--mk-line);
 }
 
-.mk-page .mk-compare-header .mk-compare-korent {
-  color: var(--mk-accent-dim);
+.mk-page .mk-compare-feature {
+  font-weight: 500;
+  font-size: 1.04rem;
+  color: var(--mk-ink);
 }
 
 .mk-page .mk-compare-cell {
+  justify-content: center;
+}
+
+/* ── The highlighted Korent band ── */
+.mk-page .mk-compare-korent-cell {
+  background: var(--mk-accent-soft);
+}
+
+.mk-page .mk-compare-row + .mk-compare-row > .mk-compare-korent-cell {
+  border-top-color: rgba(194, 65, 12, 0.16);
+}
+
+.mk-page .mk-compare-header .mk-compare-korent-cell {
+  border-radius: 16px 16px 0 0;
+  border-top: 3px solid var(--mk-accent);
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.mk-page .mk-compare-row:last-child .mk-compare-korent-cell {
+  border-radius: 0 0 16px 16px;
+  padding-bottom: 20px;
+}
+
+.mk-page .mk-compare-korent-chip {
+  font-family: var(--mk-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--mk-accent-dim);
+  letter-spacing: -0.01em;
+}
+
+.mk-page .mk-compare-other-head {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mk-muted-2);
   text-align: center;
 }
 
+/* ── Yes / no glyphs ── */
 .mk-page .mk-compare-check {
   display: inline-flex;
-  color: var(--mk-success);
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mk-accent);
+  color: #fff;
 }
 
-.mk-page .mk-compare-dash {
+.mk-page .mk-compare-cross {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--mk-line-strong);
   color: var(--mk-muted-2);
 }
 
@@ -1112,28 +943,52 @@
 }
 
 @media (max-width: 640px) {
+  /* Stack to one column: each feature becomes a small card, Korent's
+     answer led by the accent check, the old way muted beneath it. */
+  .mk-page .mk-compare {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .mk-page .mk-compare-header {
+    display: none;
+  }
   .mk-page .mk-compare-row {
-    grid-template-columns: 1fr;
+    display: block;
+    border: 1px solid var(--mk-line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--mk-card);
+  }
+  .mk-page .mk-compare-row + .mk-compare-row > div {
+    border-top: 0;
   }
   .mk-page .mk-compare-row > div {
-    padding: 10px 16px;
+    padding: 13px 16px;
   }
   .mk-page .mk-compare-feature {
     font-weight: 600;
-    padding-bottom: 2px;
+    background: var(--mk-bg-alt);
+    border-bottom: 1px solid var(--mk-line);
   }
   .mk-page .mk-compare-cell {
-    display: flex;
-    justify-content: space-between;
-    text-align: left;
-    padding-top: 2px;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  /* Reset the desktop band treatment in the stacked card. */
+  .mk-page .mk-compare-korent-cell,
+  .mk-page .mk-compare-row:last-child .mk-compare-korent-cell {
+    background: transparent;
+    border-radius: 0;
+    border-top: 0;
+  }
+  .mk-page .mk-compare-row > .mk-compare-korent-cell {
+    border-bottom: 1px solid var(--mk-line);
   }
   .mk-page .mk-compare-mobile-label {
     display: inline;
     color: var(--mk-muted);
-  }
-  .mk-page .mk-compare-header {
-    display: none;
+    font-size: 0.92rem;
   }
 }
 

@@ -65,6 +65,40 @@ export function MobileMenuToggle({
     toggleRef.current?.focus();
   }, []);
 
+  // Same-page anchor links ("#pricing", or "/#pricing" while already on
+  // "/"): the drawer locks body scroll (overflow:hidden), so the browser's
+  // native anchor jump is swallowed and the page never moves — this is
+  // why the menu items "didn't lead anywhere". Close first (which releases
+  // the scroll lock on the next frame), then scroll to the target
+  // ourselves. scroll-margin-top on the section clears the sticky header.
+  const handleFragmentClick = useCallback(
+    (e: React.MouseEvent, href: string) => {
+      const hashIndex = href.indexOf("#");
+      const targetPath = href.slice(0, hashIndex) || "/";
+      const id = href.slice(hashIndex + 1);
+      const samePage = targetPath === pathname;
+      if (!samePage || !id) {
+        // Cross-page anchor — let the native <a> do a full load + scroll.
+        close();
+        return;
+      }
+      e.preventDefault();
+      close();
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            history.replaceState(null, "", href);
+          } else {
+            window.location.hash = id;
+          }
+        })
+      );
+    },
+    [close, pathname]
+  );
+
   // Close on Escape
   useEffect(() => {
     if (!open) return;
@@ -170,20 +204,21 @@ export function MobileMenuToggle({
               {links.map((link) => {
                 const safe = sanitizeHref(link.href);
                 const hasFragment = safe.includes("#");
-                const targetPath = hasFragment
-                  ? safe.slice(0, safe.indexOf("#")) || "/"
-                  : safe;
-                const isCrossPageAnchor = hasFragment && targetPath !== pathname;
-                // Cross-page fragment links use a plain <a> tag so the
-                // browser does a full document load and natively scrolls
-                // to the fragment. next/link intercepts those clicks
-                // before our handler can run e.preventDefault(), even
-                // when we tried to call window.location.assign — so we
-                // can't fix this with an onClick handler alone, we have
-                // to take next/link out of the equation entirely.
-                if (isCrossPageAnchor) {
+                // Any fragment link — same-page ("#pricing") or cross-page
+                // ("/#pricing") — uses a plain <a>. next/link intercepts
+                // the click and, for a bare hash on the App Router, often
+                // fails to scroll to the section at all (the bug behind
+                // "the menu items don't lead anywhere"). A native anchor
+                // does the document scroll reliably; for cross-page it
+                // does a full load + scroll. Non-fragment routes keep
+                // next/link for client-side navigation.
+                if (hasFragment) {
                   return (
-                    <a key={link.key} href={safe} onClick={close}>
+                    <a
+                      key={link.key}
+                      href={safe}
+                      onClick={(e) => handleFragmentClick(e, safe)}
+                    >
                       {link.label}
                     </a>
                   );

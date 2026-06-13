@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatMessage } from "@/lib/i18n/format";
@@ -16,12 +16,32 @@ export function LocationShareButton({ routeId }: { routeId: string }) {
 
   const watchIdRef = useRef<number | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]> | null>(null);
+  type SupabaseClient = ReturnType<typeof createSupabaseBrowserClient>;
+  const channelRef = useRef<ReturnType<SupabaseClient["channel"]> | null>(null);
   const lastPublishRef = useRef<number>(0);
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  // Created lazily on first share, not at render. Building the browser
+  // client throws when Supabase env vars are absent (e.g. demo/preview
+  // builds), and doing it in render crashed the whole crew page via the
+  // route error boundary. Deferring it keeps the route renderable and
+  // only surfaces an env problem if someone actually taps "share".
+  const supabaseRef = useRef<SupabaseClient | null>(null);
+  function getSupabase(): SupabaseClient {
+    if (!supabaseRef.current) {
+      supabaseRef.current = createSupabaseBrowserClient();
+    }
+    return supabaseRef.current;
+  }
 
   async function startSharing() {
     if (!("geolocation" in navigator)) {
+      setError(t.geolocationUnsupported);
+      return;
+    }
+
+    let supabase: SupabaseClient;
+    try {
+      supabase = getSupabase();
+    } catch {
       setError(t.geolocationUnsupported);
       return;
     }
@@ -81,7 +101,7 @@ export function LocationShareButton({ routeId }: { routeId: string }) {
       wakeLockRef.current = null;
     }
     if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+      supabaseRef.current?.removeChannel(channelRef.current);
       channelRef.current = null;
     }
     setSharing(false);
