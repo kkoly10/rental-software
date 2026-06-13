@@ -1808,6 +1808,10 @@ const enValues = {
       basePriceLabel: "Base price ($/day)",
       basePricePlaceholder: "e.g., 175",
       securityDepositLabel: "Security deposit ($)",
+      quantityOnHandLabel: "Quantity on hand",
+      quantityOnHandPlaceholder: "Leave blank for serialized items",
+      quantityOnHandHelp:
+        "How many of this item you own. Used to stop overbooking — once it's all reserved for a date, the storefront says sold out. Leave blank to count individual asset records instead.",
       visibilityLabel: "Visibility",
       visibilities: {
         public: "Public",

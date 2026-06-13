@@ -331,6 +331,8 @@ export async function getProductById(productId: string) {
       typeof data.damage_waiver_rate_bps === "number"
         ? data.damage_waiver_rate_bps
         : null,
+    quantityOnHand:
+      typeof data.quantity_on_hand === "number" ? data.quantity_on_hand : null,
   };
 }
 

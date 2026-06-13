@@ -58,6 +58,8 @@ export function ProductForm({
     capacityValue?: number | null;
     minimumOrderQuantity?: number | null;
     damageWaiverRateBps?: number | null;
+    // Pooled inventory count for bulk/per-unit products.
+    quantityOnHand?: number | null;
   } | null;
   categories: { id: string; name: string; vertical: string }[];
 }) {
@@ -157,6 +159,22 @@ export function ProductForm({
           </select>
         </label>
       </div>
+
+      <label className="order-card">
+        <strong>{m.quantityOnHandLabel}</strong>
+        <input
+          name="quantity_on_hand"
+          type="number"
+          step="1"
+          min="0"
+          defaultValue={product?.quantityOnHand ?? ""}
+          placeholder={m.quantityOnHandPlaceholder}
+          style={{ marginTop: 10, width: "100%" }}
+        />
+        <span style={{ display: "block", marginTop: 6, fontSize: 13, color: "var(--muted)" }}>
+          {m.quantityOnHandHelp}
+        </span>
+      </label>
 
       <label className="order-card">
         <strong>{m.shortDescriptionLabel}</strong>

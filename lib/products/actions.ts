@@ -161,6 +161,13 @@ function readOrderMinimumFields(formData: FormData) {
   };
 }
 
+function readInventoryFields(formData: FormData) {
+  const raw = String(formData.get("quantity_on_hand") ?? "").trim();
+  return {
+    quantityOnHand: raw === "" ? undefined : Number(raw),
+  };
+}
+
 function readDamageWaiverFields(formData: FormData) {
   // Operator inputs a %; convert to basis points for the DB so cents
   // round predictably across the codebase. 8.5% → 850 bps.
@@ -326,6 +333,7 @@ export async function createProduct(
     ...readCapacityFields(formData),
     ...readOrderMinimumFields(formData),
     ...readDamageWaiverFields(formData),
+    ...readInventoryFields(formData),
   });
 
   if (!parsed.success) {
@@ -364,6 +372,7 @@ export async function createProduct(
     capacityValue,
     minimumOrderQuantity,
     damageWaiverRateBps,
+    quantityOnHand,
   } = parsed.data;
 
   const perHourCents = reconcilePerHourCents(
@@ -504,6 +513,7 @@ export async function createProduct(
     capacity_value: capacity.capacity_value,
     minimum_order_quantity: orderMin.minimum_order_quantity,
     damage_waiver_rate_bps: waiver.damage_waiver_rate_bps,
+    quantity_on_hand: quantityOnHand ?? null,
   }).select("id").single();
 
   if (error) {
@@ -588,6 +598,7 @@ export async function updateProduct(
     ...readCapacityFields(formData),
     ...readOrderMinimumFields(formData),
     ...readDamageWaiverFields(formData),
+    ...readInventoryFields(formData),
   });
 
   if (!parsed.success) {
@@ -734,6 +745,7 @@ export async function updateProduct(
       capacity_value: updateCapacity.capacity_value,
       minimum_order_quantity: updateOrderMin.minimum_order_quantity,
       damage_waiver_rate_bps: updateWaiver.damage_waiver_rate_bps,
+      quantity_on_hand: parsed.data.quantityOnHand ?? null,
     })
     .eq("id", parsed.data.productId)
     .eq("organization_id", ctx.organizationId)

@@ -20,8 +20,15 @@ export async function reserveProductAvailabilityBlock(options: {
   endTime?: string | null;
   rentalEndDate?: string | null;
   source?: "checkout" | "dashboard";
+  /**
+   * Units to reserve. Per-unit products (tables, chairs) reserve the
+   * ordered count against the product's pooled capacity; serialized
+   * single-unit rentals default to 1. Clamped to >= 1.
+   */
+  quantity?: number;
 }) {
   const isCheckout = options.source === "checkout";
+  const quantity = Math.max(1, Math.trunc(options.quantity ?? 1));
   const supabase = await createSupabaseServerClient();
 
   // PR-1 #3 — match the check path: the reserved block must extend
@@ -63,6 +70,7 @@ export async function reserveProductAvailabilityBlock(options: {
     p_reason: isCheckout ? "Temporary hold during checkout" : "Reserved through dashboard",
     p_source_order_id: options.orderId,
     p_expires_at: expiresAt,
+    p_quantity: quantity,
   });
 
   if (error) {
