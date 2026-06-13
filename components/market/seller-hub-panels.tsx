@@ -440,11 +440,18 @@ export async function SellerHubPanels() {
                           🪪 Identity confirmed {new Date(r.identity_verified_at).toLocaleString()}
                         </div>
                       ) : null}
+                      {r.state === "ready_for_handoff" && r.identity_verified_at ? (
+                        <div className="muted" style={{ fontSize: 12, marginTop: 6, color: "var(--mk-amber)" }}>
+                          📸 Upload 2+ condition photos below before &ldquo;Mark checked
+                          out&rdquo; — without them you can&rsquo;t claim the deposit for
+                          damage later.
+                        </div>
+                      ) : null}
                       {r.state === "ready_for_handoff" || r.state === "checked_out" ? (
-                        <EvidenceForm bookingId={r.id} phase="handoff" />
+                        <EvidenceForm bookingId={r.id} phase="handoff" actor="seller" />
                       ) : null}
                       {["checked_out", "overdue", "returned_pending_review"].includes(r.state) ? (
-                        <EvidenceForm bookingId={r.id} phase="return" />
+                        <EvidenceForm bookingId={r.id} phase="return" actor="seller" />
                       ) : null}
                     </article>
                   );

@@ -94,6 +94,26 @@ export async function advanceBooking(formData: FormData): Promise<void> {
     return;
   }
 
+  // Phase 1 blocking gate (locked rental flow): no checkout without a
+  // seller condition baseline. No before-photos = no deposit capture
+  // for damage later, so the gate is here, not a convention.
+  if (step.to === "checked_out") {
+    const { countSellerHandoffPhotos, SELLER_HANDOFF_MIN_PHOTOS } = await import(
+      "@/lib/market/evidence"
+    );
+    const have = await countSellerHandoffPhotos(admin, booking.id);
+    if (have < SELLER_HANDOFF_MIN_PHOTOS) {
+      await admin.from("market_booking_events").insert({
+        booking_id: booking.id,
+        event: "lifecycle.blocked_missing_handoff_photos",
+        actor: "system",
+        payload: { have, need: SELLER_HANDOFF_MIN_PHOTOS },
+      });
+      revalidatePath(SELLER_HUB_PATH);
+      return;
+    }
+  }
+
   const { data: updated } = await admin
     .from("market_bookings")
     .update({ state: step.to, updated_at: new Date().toISOString() })

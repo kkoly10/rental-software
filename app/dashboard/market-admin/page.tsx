@@ -109,6 +109,19 @@ export default async function MarketAdminPage() {
     .order("flagged_at", { ascending: false })
     .limit(25);
 
+  // Phase 1: evidence ladder per open dispute, for the presumption
+  // rules rendered in each dispute card.
+  const { getBookingEvidenceSummary } = await import("@/lib/market/evidence");
+  const evidenceByBooking = new Map<
+    string,
+    Awaited<ReturnType<typeof getBookingEvidenceSummary>>
+  >();
+  for (const d of disputes) {
+    const bId = d.market_bookings?.id;
+    if (!bId || evidenceByBooking.has(bId)) continue;
+    evidenceByBooking.set(bId, await getBookingEvidenceSummary(admin, bId));
+  }
+
   const { getMarketplaceOpsMetrics, getSaasOpsMetrics } = await import(
     "@/lib/market/admin-metrics"
   );
@@ -369,6 +382,40 @@ export default async function MarketAdminPage() {
                   ) : (
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                       No identity on file for this renter.
+                    </div>
+                  );
+                })()}
+                {(() => {
+                  const ev = d.market_bookings?.id
+                    ? evidenceByBooking.get(d.market_bookings.id)
+                    : undefined;
+                  if (!ev) return null;
+                  const row = (label: string, set: typeof ev.sellerHandoff) => (
+                    <div style={{ fontSize: 12, marginTop: 2 }}>
+                      {set.photoCount > 0 ? "✅" : "⛔"} {label}:{" "}
+                      {set.photoCount > 0
+                        ? `${set.photoCount} photo${set.photoCount === 1 ? "" : "s"}${set.lastAt ? ` · ${new Date(set.lastAt).toLocaleString()}` : ""}`
+                        : "none"}
+                    </div>
+                  );
+                  return (
+                    <div
+                      className="order-card"
+                      style={{ marginTop: 8, padding: "10px 12px", background: "#faf7f1" }}
+                    >
+                      <strong style={{ fontSize: 12 }}>Evidence ladder</strong>
+                      {row("Seller before (handoff)", ev.sellerHandoff)}
+                      {row("Renter pickup", ev.renterHandoff)}
+                      {row("Renter return", ev.renterReturn)}
+                      {row("Seller after (return)", ev.sellerReturn)}
+                      <div className="muted" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.55 }}>
+                        {ev.sellerBaselinePresent
+                          ? "✓ Seller has a condition baseline — a damage capture is permitted if the evidence supports it."
+                          : "⛔ No seller baseline — a deposit capture for damage is blocked (you can still refund or close no-fault)."}{" "}
+                        Renter without pickup photos can&rsquo;t claim pre-existing
+                        damage; renter without return photos has a weaker defense
+                        (judge on the whole picture).
+                      </div>
                     </div>
                   );
                 })()}
