@@ -12,6 +12,7 @@ import type { VerticalConfig } from "./types.ts";
  */
 export const danceFloorsVertical: VerticalConfig = {
   slug: "dance-floors",
+  operatorDefaults: { depositPercentage: 50, orderMinimum: 300, deliveryFee: 125 },
   label: {
     en: "Dance floors",
     es: "Pistas de baile",

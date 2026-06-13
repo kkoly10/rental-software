@@ -18,6 +18,7 @@ import type { VerticalConfig } from "./types.ts";
  */
 export const tentsVertical: VerticalConfig = {
   slug: "tents",
+  operatorDefaults: { depositPercentage: 50, orderMinimum: 500, deliveryFee: 150 },
   label: {
     en: "Tents",
     es: "Carpas",

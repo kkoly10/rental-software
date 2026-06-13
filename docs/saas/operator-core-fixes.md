@@ -70,8 +70,20 @@ File:line references live in the session notes; this is the plan.
   signup page). Picker now leads the signup form; the choice is stored on
   auth metadata, survives email-verify, and pre-selects the onboarding
   card (still editable as a fallback)
-- [ ] Decide: should the wizard branch by vertical (collect
-  vertical-specific config), and what per-vertical config — DECISION NEEDED
+- [x] Decide: should the wizard branch by vertical — DECIDED. Researched
+  how leaders do it (Shopify/Square industry pick → tailored
+  defaults/checklist; Housecall Pro/ServiceTitan "preset structure, not
+  prices"; Goodshuffle = closest rental peer, sets deposit + cancellation
+  in onboarding; Turo/Airbnb deposit-as-hold framing). Chosen model:
+  per-vertical smart defaults (editable) + a deposit/cancellation step,
+  NOT a heavy vertical-branching wizard
+- [x] Per-vertical money defaults on `VerticalConfig.operatorDefaults`
+  (deposit %, order minimum, delivery fee); wizard pre-fills them
+  (editable) and seeds `organizations.settings.deposit_percentage` —
+  closing the flat-30%-for-everyone gap
+- Note: operator activation checklist already exists
+  (`components/guidance/setup-checklist-card.tsx` on the dashboard) —
+  making it vertical-aware is a possible future enhancement, not missing
 
 ## Phase B — Order notifications (planned)
 
@@ -110,6 +122,19 @@ File:line references live in the session notes; this is the plan.
 
 ## Done log
 
+- **2026-06-13 — Phase A part 3 (per-vertical onboarding defaults):**
+  research-backed model (see decision above). Added
+  `VerticalConfig.operatorDefaults` (deposit %, order minimum, delivery
+  fee) to all 6 verticals — inflatables 30/$100/$50, tents 50/$500/$150,
+  tables & chairs 30/$150/$75, dance floors 50/$300/$125, photo booths
+  50/$200/$50, concessions 30/$150/$75. The wizard pre-fills delivery
+  fee + order minimum from the chosen vertical (editable, re-seeds on
+  vertical change) and adds a Step 3 "Deposit & cancellation" with a
+  per-vertical deposit % (editable) shown alongside the cancellation
+  policy and a "hold near pickup, not a charge" framing. completeOnboarding
+  persists deposit_percentage into org settings (the key checkout reads via
+  getBookingPolicies), closing the flat-30% gap. New i18n across 4 locales;
+  registry test pins sane operator defaults. tsc/496 tests/build green.
 - **2026-06-13 — Phase A part 2 (vertical pick moves to signup):** the
   vertical picker now leads the signup form (registry-driven cards via
   the shared `buildVerticalOptions()`); `signUpWithPassword` validates

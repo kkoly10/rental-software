@@ -29,6 +29,14 @@ export async function completeOnboarding(
   const zipCode = String(formData.get("zip_code") ?? "").trim().slice(0, 20);
   const deliveryFee = parseFloat(String(formData.get("delivery_fee") ?? "25"));
   const minimumOrder = parseFloat(String(formData.get("minimum_order") ?? "100"));
+  // Deposit % is pre-filled per vertical in the wizard (editable) and
+  // seeds organizations.settings.deposit_percentage — the same key
+  // checkout reads via getBookingPolicies. Clamp to a sane 0-100; fall
+  // back to the prior flat 30% if the field is missing/garbage.
+  const rawDeposit = parseFloat(String(formData.get("deposit_percentage") ?? "30"));
+  const depositPercentage = Number.isFinite(rawDeposit)
+    ? Math.max(0, Math.min(100, rawDeposit))
+    : 30;
   // Multi-vertical signup picker. The accepted set is the vertical
   // registry itself (the single source of truth) — no hardcoded list to
   // drift, and the dead legacy car/equipment values are no longer
@@ -146,6 +154,9 @@ export async function completeOnboarding(
         settings: {
           ...existingSettings,
           onboarding_completed_at: new Date().toISOString(),
+          // Seed the per-vertical deposit chosen in onboarding so it's
+          // intentional from day one rather than the hidden flat 30%.
+          deposit_percentage: depositPercentage,
         },
       })
       .eq("id", orgId)

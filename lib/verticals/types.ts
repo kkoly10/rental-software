@@ -130,4 +130,22 @@ export type VerticalConfig = {
   /** Editorial storefront defaults. Optional during the migration window
    *  — verticals without it fall back to the inflatable defaults. */
   storefrontDefaults?: VerticalStorefrontDefaults;
+  /**
+   * Operator-side money defaults pre-filled (and editable) in the
+   * onboarding wizard. Required so adding a vertical forces an explicit
+   * decision — there is no sensible one-size default across a $40
+   * popcorn machine and a $4,000 tent install. depositPercentage seeds
+   * organizations.settings.deposit_percentage; deliveryFee +
+   * orderMinimum seed the primary service area.
+   */
+  operatorDefaults: VerticalOperatorDefaults;
+};
+
+export type VerticalOperatorDefaults = {
+  /** Percent of order total held to reserve, 0-100. */
+  depositPercentage: number;
+  /** Default order minimum in whole dollars. */
+  orderMinimum: number;
+  /** Default round-trip delivery fee in whole dollars. */
+  deliveryFee: number;
 };

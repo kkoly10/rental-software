@@ -13,6 +13,7 @@ import type { VerticalConfig } from "./types.ts";
  */
 export const tablesAndChairsVertical: VerticalConfig = {
   slug: "tables-and-chairs",
+  operatorDefaults: { depositPercentage: 30, orderMinimum: 150, deliveryFee: 75 },
   label: {
     en: "Tables & chairs",
     es: "Mesas y sillas",
