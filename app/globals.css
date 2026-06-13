@@ -5758,6 +5758,9 @@ textarea[aria-invalid="true"] {
 .auth-notice strong { display: block; }
 .auth-terms { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; line-height: 1.5; color: var(--text-soft); }
 .auth-terms input { width: auto; min-height: 0; margin-top: 3px; flex-shrink: 0; }
+.auth-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 480px) { .auth-grid-2 { grid-template-columns: 1fr; } }
+.auth-next { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-soft); }
 
 /* ── Order financial summary ── */
 .summary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }

@@ -445,6 +445,7 @@ export const fr: Messages = {
       termsAgreement: "En créant un compte, vous acceptez nos",
       terms: "Conditions",
       privacy: "Politique de confidentialité",
+      nextStep: "Ensuite : confirmez votre e-mail, puis configurez votre entreprise — nom, zone de service et catégorie de location.",
     },
     forgotPassword: {
       kicker: "Récupération du compte",
@@ -1555,20 +1556,6 @@ export const fr: Messages = {
       businessType: {
         label: "Quel type de locations proposez-vous ?",
         hint: "Nous créerons les catégories et les conditions de location par défaut en fonction de ce choix. Choisissez ce qui correspond le mieux.",
-        options: {
-          inflatable: {
-            label: "Structures gonflables et matériel de fête",
-            description: "Châteaux gonflables, toboggans à eau, tables, chaises, matériel de fête.",
-          },
-          car: {
-            label: "Véhicules et flotte",
-            description: "Voitures, camionnettes, camions, véhicules de luxe.",
-          },
-          equipment: {
-            label: "Équipements et outils",
-            description: "Groupes électrogènes, nacelles, compresseurs, matériel de chantier.",
-          },
-        },
       },
       whereDoYouDeliver: "Où livrez-vous ?",
       deliveryBlurb: "Les clients ne peuvent passer commande en ligne que dans votre zone de service. Vous pourrez ajouter d’autres zones de livraison plus tard dans le tableau de bord.",

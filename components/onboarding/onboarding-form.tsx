@@ -6,6 +6,15 @@ import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "", storefrontUrl: "" };
 
+export type VerticalOption = {
+  value: string;
+  label: string;
+  /** Short preview of the seeded categories. */
+  description: string;
+  /** One-line summary of the cancellation + lead-time policy this pick locks in. */
+  policySummary: string;
+};
+
 function generateSlugClient(name: string): string {
   return name
     .toLowerCase()
@@ -19,7 +28,7 @@ function getAppDomain() {
   return process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
 }
 
-export function OnboardingForm() {
+export function OnboardingForm({ verticalOptions }: { verticalOptions: VerticalOption[] }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
   const appDomain = getAppDomain();
@@ -29,9 +38,10 @@ export function OnboardingForm() {
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   // No default selection: forcing an explicit pick is the whole point of
-  // the chooser. A pre-checked "inflatable" radio recreates the old
-  // hardcoded behavior for anyone who skims the form.
-  const [businessType, setBusinessType] = useState<"" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors" | "photo-booths" | "concessions">("");
+  // the chooser. A pre-checked first option recreates the old hardcoded
+  // behavior for anyone who skims the form. Options come from the
+  // vertical registry (server-built prop), so this can never drift.
+  const [businessType, setBusinessType] = useState<string>("");
 
   // Detect the browser timezone so a UK or Pacific operator isn't silently
   // defaulted to Eastern US time. Only honour it when it matches one of the
@@ -80,7 +90,7 @@ export function OnboardingForm() {
         businessName?: string;
         slug?: string;
         slugEdited?: boolean;
-        businessType?: "" | "inflatable" | "tents" | "tables-and-chairs" | "dance-floors" | "photo-booths" | "concessions";
+        businessType?: string;
       };
       let hydrated = false;
       if (draft.businessName) {
@@ -92,7 +102,9 @@ export function OnboardingForm() {
         hydrated = true;
       }
       if (draft.slugEdited) setSlugEdited(true);
-      if (draft.businessType) {
+      // Only restore a vertical that still exists in the registry — a
+      // stale draft from a removed/renamed vertical is dropped.
+      if (draft.businessType && verticalOptions.some((o) => o.value === draft.businessType)) {
         setBusinessType(draft.businessType);
         hydrated = true;
       }
@@ -194,45 +206,8 @@ export function OnboardingForm() {
             marginTop: 12,
           }}
         >
-          {(
-            [
-              {
-                value: "inflatable",
-                label: "Inflatables",
-                description: "Bounce houses, water slides, combos",
-              },
-              {
-                value: "tents",
-                label: "Tents",
-                description: "Frame + pole tents, sidewalls, lighting",
-              },
-              {
-                value: "tables-and-chairs",
-                label: "Tables & Chairs",
-                description: "Chiavari, banquet tables, linens",
-              },
-              {
-                value: "dance-floors",
-                label: "Dance Floors",
-                description: "Parquet, LED, stage sections",
-              },
-              {
-                value: "photo-booths",
-                label: "Photo Booths",
-                description: "Open-air, enclosed, 360°, mirror, selfie",
-              },
-              {
-                value: "concessions",
-                label: "Concessions",
-                description: "Popcorn, snow cone, cotton candy, frozen drink",
-              },
-            ] as const
-          ).map(({ value, label, description }) => {
+          {verticalOptions.map(({ value, label, description, policySummary }) => {
             const selected = businessType === value;
-            // Phase 3 — multi-vertical signup picker. The 4 options
-            // map to lib/verticals/registry.ts so the server-side
-            // bootstrap RPC seeds the right default categories.
-            const opt = { label, description };
             // Keeping the radio input visible (rather than opacity:0)
             // keeps keyboard focus visible — when the operator tabs in,
             // the browser's native focus ring lands on something they
@@ -265,10 +240,15 @@ export function OnboardingForm() {
                   style={{ marginTop: 3, flexShrink: 0 }}
                 />
                 <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <strong style={{ fontSize: 14 }}>{opt.label}</strong>
+                  <strong style={{ fontSize: 14 }}>{label}</strong>
                   <span className="muted" style={{ fontSize: 12 }}>
-                    {opt.description}
+                    {description}
                   </span>
+                  {selected ? (
+                    <span style={{ fontSize: 11.5, color: "var(--primary)", marginTop: 2 }}>
+                      {policySummary}
+                    </span>
+                  ) : null}
                 </span>
               </label>
             );
