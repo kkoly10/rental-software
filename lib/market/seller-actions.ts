@@ -17,6 +17,7 @@ import {
   resolveOperatingDefaults,
 } from "@/lib/market/registry";
 import { computeDepositCents, type ItemCondition } from "@/lib/market/fees";
+import { scoreListing, SCORE_LOW_THRESHOLD, LISTING_PHOTO_CAP } from "@/lib/market/listing-score";
 
 /**
  * Seller Hub v1 actions (spec §32 / build plan M1): seller profile
@@ -255,29 +256,40 @@ export async function createMarketListing(
         }).depositCents
       : defaults.depositFloorCents;
 
-  // Listing photo (the eBay-feel requirement — emoji placeholders
-  // don't sell tents). Optional but strongly encouraged by the form.
+  // Listing photos (the eBay-feel requirement — emoji placeholders
+  // don't sell tents). Up to LISTING_PHOTO_CAP, ordered; the first is
+  // mirrored to photo_url for back-compat (cards/ranking/existing
+  // reads), the full set lands in market_listing_photos for the PDP
+  // gallery. Optional but strongly encouraged — and the quality score
+  // weights photo count as the #1 conversion lever.
   let photoUrl: string | null = null;
-  const photo = formData.get("photo");
-  if (photo instanceof File && photo.size > 0) {
+  const photoUrls: string[] = [];
+  const photoFiles = formData
+    .getAll("photo")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, LISTING_PHOTO_CAP);
+  if (photoFiles.length > 0) {
     const IMG_TYPES = ["image/jpeg", "image/png", "image/webp"];
-    if (!IMG_TYPES.includes(photo.type) || photo.size > 15 * 1024 * 1024) {
-      return { ok: false, message: "Photo must be JPEG/PNG/WebP under 15 MB." };
-    }
     const { sniffImageType } = await import("@/lib/utils/image-signature");
-    const sniffed = await sniffImageType(photo);
-    if (!sniffed || !IMG_TYPES.includes(sniffed)) {
-      return { ok: false, message: "Photo content doesn't match a supported image format." };
-    }
     const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
     const adminClient = createSupabaseAdminClient();
-    const ext = sniffed === "image/png" ? "png" : sniffed === "image/webp" ? "webp" : "jpg";
-    const path = `market-listings/${auth.orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
-    const { error: uploadError } = await adminClient.storage
-      .from(PUBLIC_MEDIA_BUCKET)
-      .upload(path, photo, { contentType: sniffed, upsert: false });
-    if (uploadError) return { ok: false, message: "Photo upload failed — try again." };
-    photoUrl = adminClient.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+    for (const photo of photoFiles) {
+      if (!IMG_TYPES.includes(photo.type) || photo.size > 15 * 1024 * 1024) {
+        return { ok: false, message: "Each photo must be JPEG/PNG/WebP under 15 MB." };
+      }
+      const sniffed = await sniffImageType(photo);
+      if (!sniffed || !IMG_TYPES.includes(sniffed)) {
+        return { ok: false, message: "Photo content doesn't match a supported image format." };
+      }
+      const ext = sniffed === "image/png" ? "png" : sniffed === "image/webp" ? "webp" : "jpg";
+      const path = `market-listings/${auth.orgId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+      const { error: uploadError } = await adminClient.storage
+        .from(PUBLIC_MEDIA_BUCKET)
+        .upload(path, photo, { contentType: sniffed, upsert: false });
+      if (uploadError) return { ok: false, message: "Photo upload failed — try again." };
+      photoUrls.push(adminClient.storage.from(PUBLIC_MEDIA_BUCKET).getPublicUrl(path).data.publicUrl);
+    }
+    photoUrl = photoUrls[0] ?? null;
   }
 
   // Proof-of-function: required at creation time for categories that
@@ -296,7 +308,7 @@ export async function createMarketListing(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("market_listings").insert({
+  const { data: created, error } = await supabase.from("market_listings").insert({
     organization_id: auth.orgId,
     product_id: parsed.data.productId || null,
     world_slug: world.slug,
@@ -331,13 +343,31 @@ export async function createMarketListing(
     // publish as browsable-but-not-bookable demand signals.
     is_prelist: world.status === "smoke_test",
     status: "draft",
-  });
+  })
+  .select("id")
+  .maybeSingle();
 
-  if (error) {
-    if (error.code === "23503") {
+  if (error || !created) {
+    if (error?.code === "23503") {
       return { ok: false, message: "Create your store page first — listings hang off it." };
     }
     return { ok: false, message: "Couldn't create the listing. Are you an owner or admin?" };
+  }
+
+  // Gallery rows for the PDP (service-role write, like the uploads).
+  // Best-effort: the primary photo already lives on photo_url, so a
+  // gallery hiccup never fails the create.
+  if (photoUrls.length > 0) {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/server");
+    const admin = createSupabaseAdminClient();
+    await admin.from("market_listing_photos").insert(
+      photoUrls.map((url, position) => ({
+        listing_id: created.id,
+        organization_id: auth.orgId,
+        url,
+        position,
+      })),
+    );
   }
 
   revalidatePath(MARKET_DASHBOARD_PATH);
@@ -364,10 +394,13 @@ async function setListingStatus(
   // going live. published_at doubles as the "approved once" marker —
   // re-publishing after a pause skips re-review.
   let effectiveStatus: string = status;
+  let lowScoreWarning: string | null = null;
   if (status === "published") {
     const { data: listing } = await supabase
       .from("market_listings")
-      .select("world_slug, category_slug, published_at, proof_video_url")
+      .select(
+        "world_slug, category_slug, published_at, proof_video_url, title, description, photo_url, replacement_value_cents, weekend_price_cents, weekly_price_cents",
+      )
       .eq("id", listingId)
       .eq("organization_id", auth.orgId)
       .maybeSingle();
@@ -382,6 +415,26 @@ async function setListingStatus(
       }
       if (defaults.listingReviewRequired && !listing.published_at) {
         effectiveStatus = "pending_review";
+      }
+
+      // Quality-score nudge (sprint §6): publishing is NEVER blocked on
+      // score — but a weak listing wastes the seller's time, so we warn.
+      const { count: photoCount } = await supabase
+        .from("market_listing_photos")
+        .select("id", { count: "exact", head: true })
+        .eq("listing_id", listingId);
+      const { score } = scoreListing({
+        photoCount: photoCount ?? (listing.photo_url ? 1 : 0),
+        title: listing.title ?? "",
+        description: listing.description,
+        hasWeekendPrice: listing.weekend_price_cents != null,
+        hasWeeklyPrice: listing.weekly_price_cents != null,
+        replacementValueCents: listing.replacement_value_cents,
+        proofVideoPresent: Boolean(listing.proof_video_url),
+        proofRequired: defaults.proofOfFunctionRequired,
+      });
+      if (score < SCORE_LOW_THRESHOLD) {
+        lowScoreWarning = ` Its quality score is ${score}/100 — add more photos and a fuller description to get found and booked.`;
       }
     } catch {
       effectiveStatus = "pending_review"; // unknown category = review it
@@ -412,7 +465,10 @@ async function setListingStatus(
       message: "Submitted for review — this category requires a quick trust check before going live.",
     };
   }
-  return { ok: true, message: status === "published" ? "Listing published." : "Listing paused." };
+  if (status === "published") {
+    return { ok: true, message: `Listing published.${lowScoreWarning ?? ""}` };
+  }
+  return { ok: true, message: "Listing paused." };
 }
 
 export async function publishListing(formData: FormData): Promise<void> {

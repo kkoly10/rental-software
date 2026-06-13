@@ -101,13 +101,23 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
       <div className="mk-pdp">
         <div>
           <div className="mk-gallery">
-            {listing.photoUrl ? (
+            {listing.photos[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={listing.photoUrl} alt={listing.title} />
+              <img src={listing.photos[0]} alt={listing.title} />
             ) : (
               <span aria-hidden>{categoryIcon(listing.worldSlug, listing.categorySlug)}</span>
             )}
           </div>
+          {listing.photos.length > 1 ? (
+            <div className="mk-thumbs">
+              {listing.photos.map((url, i) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`${listing.title} — photo ${i + 1}`} />
+                </a>
+              ))}
+            </div>
+          ) : null}
           <h1 style={{ marginTop: 18 }}>{listing.title}</h1>
           <p className="mk-card-m" style={{ fontSize: 14 }}>
             {listing.sellerDisplayName ?? "Local seller"}

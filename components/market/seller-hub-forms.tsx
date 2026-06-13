@@ -233,8 +233,11 @@ export function CreateListingForm({
       </div>
 
       <div>
-        <label style={labelStyle}>Photo (listings with photos get booked — don't skip this)</label>
-        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" style={{ fontSize: 12 }} />
+        <label style={labelStyle}>Photos — up to 6 (more photos = more bookings; the biggest lever on your quality score)</label>
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" multiple style={{ fontSize: 12 }} />
+        <div style={{ fontSize: 11, color: "var(--mk-ink-soft)", marginTop: 4 }}>
+          The first photo is your cover. Add shots from different angles, plus any labels or wear.
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
