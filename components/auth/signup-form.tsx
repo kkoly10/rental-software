@@ -51,6 +51,7 @@ export function SignupForm({ verticalOptions }: { verticalOptions: VerticalOptio
                   value={opt.value}
                   checked={selected}
                   onChange={() => setBusinessType(opt.value)}
+                  required
                 />
                 <span className="auth-vertical-body">
                   <strong>{opt.label}</strong>

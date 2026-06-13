@@ -149,6 +149,19 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 
 ## Done log
 
+- **2026-06-13 — New-operator journey polish (path-to-10 items 1–3):**
+  signup now REQUIRES the vertical pick (native required on the radios) —
+  the account can no longer be created without it. Onboarding rebuilt onto
+  the branded auth-card chrome (gradient bg, Korent logo, auth-title) so
+  the whole pre-dashboard journey — login, signup, verify-email, error,
+  onboarding — is now one consistent design instead of dropping to the
+  generic panel look after signup. Onboarding is now a real 3-step wizard
+  (vertical+business → service area → deposit) with a "Step n of 3"
+  segmented progress bar and Back/Continue gating, instead of one long
+  scroll; all fields stay mounted so the single submit + slug-check +
+  draft persistence + per-vertical money defaults are unchanged. New i18n
+  across 4 locales. Remaining path-to-10 item: document/invoice logo
+  upload. tsc/503/build green.
 - **2026-06-13 — Auth confirmation hardening (signup bug from founder
   testing):** founder signed up in Chrome on mobile, opened the email in
   Gmail's in-app browser, and hit a raw "PKCE code verifier not found"
