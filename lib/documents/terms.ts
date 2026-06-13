@@ -170,3 +170,17 @@ export function getTerms(
     documentType === "rental_agreement" ? EVENT_RENTAL_TERMS : EVENT_SAFETY_WAIVER_TERMS;
   return map[businessType] ?? fallback;
 }
+
+/**
+ * Resolve the clauses a document should render: an operator's saved
+ * custom clauses (from document_templates) win when present and non-empty
+ * (after trimming blanks); otherwise the built-in per-vertical defaults.
+ */
+export function resolveDocumentClauses(
+  custom: readonly string[] | null | undefined,
+  documentType: DocumentTermsType,
+  businessType: string,
+): string[] {
+  const cleaned = (custom ?? []).map((c) => c.trim()).filter((c) => c.length > 0);
+  return cleaned.length > 0 ? cleaned : getTerms(documentType, businessType);
+}

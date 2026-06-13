@@ -103,6 +103,19 @@ export async function GET(
     .is("deleted_at", null)
     .maybeSingle();
 
+  // Operator-edited clauses for this document type (Phase D). When a
+  // template row exists with clauses, it replaces the built-in
+  // per-vertical defaults; otherwise the generator falls back to them.
+  const { data: template } = await supabase
+    .from("document_templates")
+    .select("clauses")
+    .eq("organization_id", ctx.organizationId)
+    .eq("document_type", document.document_type)
+    .maybeSingle();
+  const customClauses = Array.isArray(template?.clauses)
+    ? (template.clauses as unknown[]).filter((c): c is string => typeof c === "string" && c.trim().length > 0)
+    : [];
+
   let renterAddressLines: string[] = [];
   if (order.delivery_address_id) {
     const { data: address } = await supabase
@@ -215,6 +228,8 @@ export async function GET(
     // Pass the raw primary-vertical slug; getTerms() lands on the generic
     // event-rental block when the slug is unknown (#304).
     businessType: primaryVertical ?? "",
+    // Operator-edited clauses override the per-vertical defaults when set.
+    terms: customClauses.length > 0 ? customClauses : undefined,
     brandColor,
   });
 

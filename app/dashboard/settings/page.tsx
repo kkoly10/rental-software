@@ -230,6 +230,10 @@ export default async function SettingsPage({
               <strong>{m.dashboard.settings.billingTitle}</strong>
               <div className="muted">{m.dashboard.settings.billingBody}</div>
             </a>
+            <a href="/dashboard/settings/documents" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+              <strong>Document templates</strong>
+              <div className="muted">Edit the clauses on your rental agreement and safety waiver.</div>
+            </a>
             <a href="#sms-notifications" className="order-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
               <strong>{m.dashboard.settings.smsNotificationsLinkTitle}</strong>
               <div className="muted">{m.dashboard.settings.smsNotificationsLinkBody}</div>

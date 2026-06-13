@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getTerms } from "../lib/documents/terms.ts";
+import { getTerms, resolveDocumentClauses } from "../lib/documents/terms.ts";
 import { listVerticalSlugs } from "../lib/verticals/registry.ts";
 
 test("every registry vertical resolves non-empty terms for both doc types", () => {
@@ -34,4 +34,23 @@ test("attended verticals get on-topic agreement terms", () => {
 test("an unknown vertical still falls back to non-empty generic terms", () => {
   assert.ok(getTerms("rental_agreement", "totally-unknown").length > 0);
   assert.ok(getTerms("safety_waiver", "totally-unknown").length > 0);
+});
+
+test("resolveDocumentClauses: custom clauses win when present", () => {
+  const custom = ["1. CUSTOM CLAUSE A", "2. CUSTOM CLAUSE B"];
+  assert.deepEqual(resolveDocumentClauses(custom, "rental_agreement", "tents"), custom);
+});
+
+test("resolveDocumentClauses: blank/empty custom falls back to defaults", () => {
+  const defaults = getTerms("safety_waiver", "tents");
+  assert.deepEqual(resolveDocumentClauses(undefined, "safety_waiver", "tents"), defaults);
+  assert.deepEqual(resolveDocumentClauses([], "safety_waiver", "tents"), defaults);
+  assert.deepEqual(resolveDocumentClauses(["  ", ""], "safety_waiver", "tents"), defaults);
+});
+
+test("resolveDocumentClauses trims blanks but keeps real custom clauses", () => {
+  assert.deepEqual(
+    resolveDocumentClauses(["  keep me  ", "  "], "rental_agreement", "tents"),
+    ["keep me"],
+  );
 });

@@ -124,9 +124,13 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 - [x] Real terms for photo-booths & concessions (attended/per-hour;
   no more generic "no climbing on tents" fallback). Terms extracted to
   `lib/documents/terms.ts` (alias-free, unit-tested)
-- [ ] Operator CUSTOM-CLAUSE editor + logo upload — the remaining
-  "can't edit" gap. DECISION NEEDED (schema + how much editing + legal
-  sensitivity); terms are still hardcoded constants today
+- [x] Operator CUSTOM-CLAUSE editor — DECIDED (founder: full clause
+  editor). `document_templates` table (per org + doc type, applied to
+  prod); `/dashboard/settings/documents` lets owners/admins edit every
+  clause of the agreement + waiver, with reset-to-default; the PDF route
+  prefers stored clauses over the built-in defaults
+- [ ] ~ Logo upload on documents — deferred (needs a storage bucket +
+  drawHeader change; the clause editor was the core "can't edit" ask)
 
 ## Phase E — Vertical depth (planned, partly decision-gated)
 
@@ -140,6 +144,17 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 
 ## Done log
 
+- **2026-06-13 — Phase D slice 2 (full document clause editor):** new
+  `document_templates` table (per org + doc type, RLS owner/admin-write,
+  applied to prod). `/dashboard/settings/documents` (linked from Settings)
+  lets owners/admins edit, add, and remove every clause of the rental
+  agreement and safety waiver, seeded from the org's per-vertical defaults,
+  with a per-document reset-to-default and a "keep your liability clauses"
+  warning. `saveDocumentTemplate`/`resetDocumentTemplate` actions
+  (owner/admin-gated). The document PDF route loads the org's template and
+  passes the clauses; the generator resolves operator clauses over the
+  built-in defaults via the new pure `resolveDocumentClauses` (4 unit
+  tests). 503/503, tsc/build green.
 - **2026-06-13 — Phase D slice 1 (document discoverability + vertical terms):**
   verified the doc generator already captures both parties + dates +
   prices + financials (the early "captures nothing" recon was stale).
