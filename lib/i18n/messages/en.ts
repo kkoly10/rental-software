@@ -446,7 +446,8 @@ const enValues = {
       termsAgreement: "By creating an account you agree to our",
       terms: "Terms",
       privacy: "Privacy Policy",
-      nextStep: "Next: confirm your email, then set up your business — name, service area, and your rental category.",
+      nextStep: "Next: confirm your email, then set up your business — name, service area, and storefront URL.",
+      verticalLabel: "What do you rent? (pick your main category)",
     },
     forgotPassword: {
       kicker: "Account recovery",

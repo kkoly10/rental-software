@@ -5790,6 +5790,14 @@ textarea[aria-invalid="true"] {
 .auth-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 480px) { .auth-grid-2 { grid-template-columns: 1fr; } }
 .auth-next { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-soft); }
+.auth-verticals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+@media (max-width: 480px) { .auth-verticals { grid-template-columns: 1fr; } }
+.auth-vertical { display: flex; gap: 9px; padding: 10px 11px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; background: var(--surface); transition: border-color 0.12s, background 0.12s; }
+.auth-vertical.is-selected { border-color: var(--primary); background: var(--primary-bg); }
+.auth-vertical input { margin-top: 2px; flex-shrink: 0; width: auto; min-height: 0; }
+.auth-vertical-body { display: flex; flex-direction: column; gap: 2px; }
+.auth-vertical-body strong { font-size: 13.5px; }
+.auth-vertical-body .muted { font-size: 11.5px; line-height: 1.35; }
 
 /* ── Order financial summary ── */
 .summary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }

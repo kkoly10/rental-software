@@ -445,7 +445,8 @@ export const fr: Messages = {
       termsAgreement: "En créant un compte, vous acceptez nos",
       terms: "Conditions",
       privacy: "Politique de confidentialité",
-      nextStep: "Ensuite : confirmez votre e-mail, puis configurez votre entreprise — nom, zone de service et catégorie de location.",
+      nextStep: "Ensuite : confirmez votre e-mail, puis configurez votre entreprise — nom, zone de service et URL de votre boutique.",
+      verticalLabel: "Que louez-vous ? (choisissez votre catégorie principale)",
     },
     forgotPassword: {
       kicker: "Récupération du compte",

@@ -3,17 +3,9 @@
 import { useActionState, useState, useEffect } from "react";
 import { completeOnboarding } from "@/lib/onboarding/actions";
 import { useI18n } from "@/lib/i18n/provider";
+import type { VerticalOption } from "@/lib/verticals/options";
 
 const initialState = { ok: false, message: "", storefrontUrl: "" };
-
-export type VerticalOption = {
-  value: string;
-  label: string;
-  /** Short preview of the seeded categories. */
-  description: string;
-  /** One-line summary of the cancellation + lead-time policy this pick locks in. */
-  policySummary: string;
-};
 
 function generateSlugClient(name: string): string {
   return name
@@ -28,7 +20,15 @@ function getAppDomain() {
   return process.env.NEXT_PUBLIC_APP_DOMAIN ?? "localhost:3000";
 }
 
-export function OnboardingForm({ verticalOptions }: { verticalOptions: VerticalOption[] }) {
+export function OnboardingForm({
+  verticalOptions,
+  initialVertical = "",
+}: {
+  verticalOptions: VerticalOption[];
+  /** Vertical picked on the signup page (from auth metadata); pre-selects
+   *  the card here. Empty when they didn't choose one at signup. */
+  initialVertical?: string;
+}) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
   const appDomain = getAppDomain();
@@ -37,11 +37,13 @@ export function OnboardingForm({ verticalOptions }: { verticalOptions: VerticalO
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  // No default selection: forcing an explicit pick is the whole point of
-  // the chooser. A pre-checked first option recreates the old hardcoded
-  // behavior for anyone who skims the form. Options come from the
-  // vertical registry (server-built prop), so this can never drift.
-  const [businessType, setBusinessType] = useState<string>("");
+  // Pre-selected from the signup-page pick when present; otherwise no
+  // default, so an operator who skipped it still makes an explicit
+  // choice. Options come from the vertical registry (server-built prop),
+  // so this can never drift. A localStorage draft (below) can override.
+  const [businessType, setBusinessType] = useState<string>(
+    verticalOptions.some((o) => o.value === initialVertical) ? initialVertical : "",
+  );
 
   // Detect the browser timezone so a UK or Pacific operator isn't silently
   // defaulted to Eastern US time. Only honour it when it matches one of the

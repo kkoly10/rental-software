@@ -445,7 +445,8 @@ export const es: Messages = {
       termsAgreement: "Al crear una cuenta, aceptas nuestros",
       terms: "Términos",
       privacy: "Política de privacidad",
-      nextStep: "Siguiente: confirma tu correo y luego configura tu negocio: nombre, área de servicio y tu categoría de alquiler.",
+      nextStep: "Siguiente: confirma tu correo y luego configura tu negocio: nombre, área de servicio y URL de tu tienda.",
+      verticalLabel: "¿Qué alquilas? (elige tu categoría principal)",
     },
     forgotPassword: {
       kicker: "Recuperación de cuenta",
