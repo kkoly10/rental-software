@@ -28,8 +28,9 @@ export async function MarketingHeader({ navLinks }: { navLinks: MarketingNavLink
               {link.label}
             </a>
           ))}
-          <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} />
-          <Link href="/login" className="mk-btn mk-btn--outline">{s.nav.logIn}</Link>
+          <span className="mk-nav-divider" aria-hidden="true" />
+          <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} compact bare className="mk-nav-lang" />
+          <Link href="/login" className="mk-nav-link mk-nav-link--login">{s.nav.logIn}</Link>
           <Link href="/signup" className="mk-btn mk-btn--accent">{s.nav.startFree}</Link>
         </nav>
         <div className="mobile-header-controls">

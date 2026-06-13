@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { CrewRoutePreview } from "@/components/marketing/crew-route-preview";
 import { getTranslator } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 import { listVerticals } from "@/lib/verticals/registry";
@@ -249,13 +250,8 @@ export async function SaasLanding() {
             </div>
 
             <div className="mk-feature-row reverse">
-              <div className="mk-feature-image">
-                <Image
-                  src="/home/crew-loading-trailer.jpg"
-                  alt="Two crew members in branded shirts loading an inflatable into a delivery trailer"
-                  fill
-                  sizes="(max-width: 860px) 100vw, 540px"
-                />
+              <div className="mk-feature-device-col">
+                <CrewRoutePreview />
               </div>
               <div className="mk-feature-copy">
                 <span className="mk-eyebrow">{s.featureDelivery.kicker}</span>
