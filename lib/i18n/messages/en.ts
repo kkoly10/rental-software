@@ -470,6 +470,9 @@ const enValues = {
       resend: "Resend verification email",
       resending: "Sending…",
       sent: "Verification email sent.",
+      tipTitle: "Open the link in this browser",
+      tipBody: "Tap the link from the same browser you signed up in. Mail apps sometimes open links in a separate in-app browser, which can't complete the confirmation.",
+      didntGet: "Didn't get it, or the link failed? Send a fresh one:",
     },
     verified: {
       kicker: "Email confirmed",
@@ -480,6 +483,8 @@ const enValues = {
     error: {
       title: "Authentication error",
       description: "We couldn’t complete that action. Please try again.",
+      linkProblem: "This link couldn't be completed. It may have expired, already been used, or been opened in a different browser than the one you signed up in.",
+      linkProblemHint: "Enter your email and we'll send a fresh link — then open it in this same browser:",
     },
   },
 

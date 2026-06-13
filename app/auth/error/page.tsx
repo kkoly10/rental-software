@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMessages } from "@/lib/i18n/server";
+import { ResendVerificationForm } from "@/components/auth/resend-verification-form";
 
 export default async function AuthErrorPage({
   searchParams,
@@ -7,34 +8,53 @@ export default async function AuthErrorPage({
   searchParams: Promise<{ message?: string }>;
 }) {
   const [params, m] = await Promise.all([searchParams, getMessages()]);
-  const message = params.message || m.auth.error.description;
+  const raw = params.message ?? "";
+
+  // A confirmation/recovery link that can't be completed is almost always
+  // one of: expired, already used, or opened in a different browser than
+  // the user signed up in (the mobile mail-app in-app-browser + PKCE
+  // case). Detect those and show a friendly, actionable message with a
+  // resend form instead of leaking the raw Supabase/PKCE error text.
+  const isLinkProblem =
+    !raw || /verifier|pkce|expired|invalid|otp|token|code/i.test(raw);
 
   return (
-    <main className="page">
-      <div className="container" style={{ maxWidth: 620 }}>
-        <section className="panel">
-          <div className="section-header">
-            <div>
-              <div className="kicker">{m.auth.error.title}</div>
-              <h1 style={{ margin: "6px 0 8px" }}>{m.errors.generic.title}</h1>
-              <div className="muted">{m.auth.error.description}</div>
+    <main className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/korent-icon.svg" alt="" />
+          <b>Korent</b>
+        </div>
+
+        <div className="eyebrow eyebrow--accent">{m.auth.error.title}</div>
+        <h1 className="auth-title">{m.errors.generic.title}</h1>
+        <div className="auth-sub">
+          {isLinkProblem ? m.auth.error.linkProblem : m.auth.error.description}
+        </div>
+
+        {isLinkProblem ? (
+          <div style={{ marginTop: 18 }}>
+            <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
+              {m.auth.error.linkProblemHint}
             </div>
+            <ResendVerificationForm />
           </div>
-
-          <div className="order-card" style={{ marginTop: 16 }}>
+        ) : (
+          <div className="auth-notice">
             <strong>{m.auth.login.notice}</strong>
-            <div className="muted" style={{ marginTop: 8 }}>{message}</div>
+            <div className="muted" style={{ marginTop: 8 }}>{raw}</div>
           </div>
+        )}
 
-          <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/login" className="primary-btn">
-              {m.auth.forgotPassword.backToLogin}
-            </Link>
-            <Link href="/forgot-password" className="ghost-btn">
-              {m.auth.form.resetPassword}
-            </Link>
-          </div>
-        </section>
+        <div className="auth-alt">
+          <Link href="/login" className="secondary-btn">
+            {m.auth.forgotPassword.backToLogin}
+          </Link>
+          <Link href="/forgot-password" className="ghost-btn">
+            {m.auth.form.resetPassword}
+          </Link>
+        </div>
       </div>
     </main>
   );
