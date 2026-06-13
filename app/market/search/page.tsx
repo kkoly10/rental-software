@@ -4,6 +4,7 @@ import { DEFAULT_METRO_SLUG } from "@/lib/market/registry";
 import { getPublishedListings } from "@/lib/market/data";
 import { logDemandEvent } from "@/lib/market/actions";
 import { ListingCard } from "@/components/market/listing-card";
+import { DemandRequestForm } from "@/components/market/demand-request-form";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +18,21 @@ export default async function MarketSearchPage({
   const { q } = await searchParams;
   const query = (q ?? "").trim().slice(0, 200);
 
-  if (query) {
-    // Search demand is the strongest §31 graduation signal — log it
-    // even (especially) when there are zero results.
-    void logDemandEvent({ kind: "search", query, metroSlug: DEFAULT_METRO_SLUG });
-  }
-
   const listings = query
     ? await getPublishedListings({ query, metroSlug: DEFAULT_METRO_SLUG, limit: 30 })
     : [];
+
+  if (query) {
+    // Search demand is the strongest graduation signal — log it even
+    // (especially) when there are zero results. result_count makes a
+    // zero-result search distinguishable downstream.
+    void logDemandEvent({
+      kind: "search",
+      query,
+      metroSlug: DEFAULT_METRO_SLUG,
+      resultCount: listings.length,
+    });
+  }
 
   return (
     <main className="mk-wrap">
@@ -46,12 +53,14 @@ export default async function MarketSearchPage({
           ))}
         </div>
       ) : query ? (
-        <div className="mk-panel">
-          <b>Nothing yet for “{query}”.</b>
-          <p className="mk-sub" style={{ margin: "8px 0 0" }}>
-            We log every search — sellers see what renters want, and new
-            categories open where demand shows up. Check back soon.
-          </p>
+        <div style={{ marginTop: 16 }}>
+          <DemandRequestForm
+            sourcePage={`search:${query}`}
+            metroSlug={DEFAULT_METRO_SLUG}
+            defaultQuery={query}
+            heading={`Nothing yet for “${query}”.`}
+            blurb="We log every search, and new categories open where demand shows up. Leave your email and we'll reach out the moment a local seller lists this."
+          />
         </div>
       ) : null}
     </main>

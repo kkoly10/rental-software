@@ -122,6 +122,36 @@ export default async function MarketAdminPage() {
     evidenceByBooking.set(bId, await getBookingEvidenceSummary(admin, bId));
   }
 
+  // Phase 2: open demand requests (the supply-acquisition to-do list)
+  // and the top zero-result searches of the last 30 days.
+  const { updateDemandRequestStatus } = await import("@/lib/market/demand-admin-actions");
+  const { data: demandRequests } = await admin
+    .from("market_demand_requests")
+    .select(
+      "id, query, world_slug, category_slug, metro_slug, zip_code, needed_start_date, needed_end_date, delivery_required, budget_cents, email, notes, source_page, status, created_at",
+    )
+    .in("status", ["new", "notified"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const since30d = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { data: zeroResultRows } = await admin
+    .from("market_demand_events")
+    .select("query")
+    .eq("kind", "search")
+    .eq("result_count", 0)
+    .gte("created_at", since30d)
+    .limit(1000);
+  const zeroResultCounts = new Map<string, number>();
+  for (const r of zeroResultRows ?? []) {
+    const q = (r.query ?? "").trim().toLowerCase();
+    if (!q) continue;
+    zeroResultCounts.set(q, (zeroResultCounts.get(q) ?? 0) + 1);
+  }
+  const topZeroResults = [...zeroResultCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+
   const { getMarketplaceOpsMetrics, getSaasOpsMetrics } = await import(
     "@/lib/market/admin-metrics"
   );
@@ -185,6 +215,91 @@ export default async function MarketAdminPage() {
           SaaS: {saas.totalOrgs} orgs ({saas.marketplaceSellerOrgs} marketplace sellers) ·{" "}
           {saas.newOrgs30d} new in 30d · {saas.errors24h} app errors in 24h
         </div>
+      </section>
+
+      {/* Phase 2: demand — the supply-acquisition to-do list. */}
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <div className="kicker">Demand — what renters want next</div>
+        <h2 style={{ margin: "6px 0 12px" }}>
+          {(demandRequests ?? []).length} open request
+          {(demandRequests ?? []).length === 1 ? "" : "s"}
+          {topZeroResults.length > 0
+            ? ` · ${topZeroResults.length} unmet search term${topZeroResults.length === 1 ? "" : "s"} (30d)`
+            : ""}
+        </h2>
+
+        {topZeroResults.length > 0 ? (
+          <div className="order-card" style={{ padding: "10px 12px", marginBottom: 12 }}>
+            <strong style={{ fontSize: 12 }}>Top zero-result searches (30d)</strong>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {topZeroResults.map(([q, n]) => (
+                <span
+                  key={q}
+                  className="badge"
+                  style={{ fontSize: 12 }}
+                  title={`${n} search${n === 1 ? "" : "es"} with no results`}
+                >
+                  {q} · {n}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {(demandRequests ?? []).length === 0 ? (
+          <span className="muted" style={{ fontSize: 13 }}>
+            No open demand requests.
+          </span>
+        ) : (
+          <div className="list">
+            {(demandRequests ?? []).map((d) => (
+              <article key={d.id} className="order-card">
+                <strong>{d.query}</strong>
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {d.email} · {d.metro_slug}
+                  {d.zip_code ? ` (${d.zip_code})` : ""} ·{" "}
+                  {d.world_slug ? `${d.world_slug}${d.category_slug ? `/${d.category_slug}` : ""} · ` : ""}
+                  {d.needed_start_date
+                    ? `${new Date(d.needed_start_date).toLocaleDateString()}${d.needed_end_date ? `→${new Date(d.needed_end_date).toLocaleDateString()}` : ""} · `
+                    : ""}
+                  {d.delivery_required ? "delivery · " : ""}
+                  {d.budget_cents != null ? `budget $${(d.budget_cents / 100).toFixed(0)} · ` : ""}
+                  {new Date(d.created_at).toLocaleDateString()}
+                  {d.source_page ? ` · via ${d.source_page}` : ""}
+                  {d.status === "notified" ? " · ✓ notified" : ""}
+                </div>
+                {d.notes ? (
+                  <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>“{d.notes}”</p>
+                ) : null}
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  {d.status !== "notified" ? (
+                    <form action={updateDemandRequestStatus}>
+                      <input type="hidden" name="request_id" value={d.id} />
+                      <input type="hidden" name="status" value="notified" />
+                      <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                        Mark notified
+                      </button>
+                    </form>
+                  ) : null}
+                  <form action={updateDemandRequestStatus}>
+                    <input type="hidden" name="request_id" value={d.id} />
+                    <input type="hidden" name="status" value="matched" />
+                    <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                      Matched
+                    </button>
+                  </form>
+                  <form action={updateDemandRequestStatus}>
+                    <input type="hidden" name="request_id" value={d.id} />
+                    <input type="hidden" name="status" value="closed" />
+                    <button type="submit" className="secondary-btn" style={{ fontSize: 13 }}>
+                      Close
+                    </button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       {(pendingListings ?? []).length > 0 ? (

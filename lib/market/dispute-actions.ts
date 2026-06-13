@@ -205,6 +205,28 @@ export async function resolveDispute(
     .maybeSingle();
   if (!booking) return { ok: false, message: "Booking not found." };
 
+  // Phase 1 presumption rule (enforced, not advisory): a seller who
+  // never recorded a condition baseline at handoff cannot capture the
+  // deposit for damage — there is nothing to prove the item left in
+  // better shape. Checked BEFORE any Stripe call so a blocked capture
+  // can't leave a half-applied refund behind. Refund/no-fault outcomes
+  // (wantsCapture false) are unaffected.
+  const wantsCapture =
+    parsed.data.captureCents > 0 &&
+    (parsed.data.outcome === "resolved_renter_liable" ||
+      parsed.data.outcome === "resolved_split");
+  if (wantsCapture) {
+    const { getBookingEvidenceSummary } = await import("@/lib/market/evidence");
+    const ev = await getBookingEvidenceSummary(admin, booking.id);
+    if (!ev.sellerBaselinePresent) {
+      return {
+        ok: false,
+        message:
+          "Capture blocked: the seller has no handoff condition photos for this booking, so a damage claim can't be substantiated. You can still refund the renter or close with no fault.",
+      };
+    }
+  }
+
   // Refund lever (review fix 2026-06-11): seller-liable/split/no-fault
   // outcomes can now send rental money back to the renter — the same
   // proportional Stripe call the cancellation engine uses (reverses
@@ -246,28 +268,9 @@ export async function resolveDispute(
 
   // §9/§17: deposit capture happens HERE and only here. Renter-liable
   // (or split) outcomes may capture up to the held amount; everything
-  // else releases the hold.
+  // else releases the hold. (The seller-baseline guard above already
+  // refused this path when no baseline exists.)
   let captured = 0;
-  const wantsCapture =
-    parsed.data.captureCents > 0 &&
-    (parsed.data.outcome === "resolved_renter_liable" ||
-      parsed.data.outcome === "resolved_split");
-
-  // Phase 1 presumption rule (enforced, not advisory): a seller who
-  // never recorded a condition baseline at handoff cannot capture the
-  // deposit for damage — there is nothing to prove the item left in
-  // better shape. Other outcomes (refunds, release) are unaffected.
-  if (wantsCapture) {
-    const { getBookingEvidenceSummary } = await import("@/lib/market/evidence");
-    const ev = await getBookingEvidenceSummary(admin, booking.id);
-    if (!ev.sellerBaselinePresent) {
-      return {
-        ok: false,
-        message:
-          "Capture blocked: the seller has no handoff condition photos for this booking, so a damage claim can't be substantiated. You can still refund the renter or close with no fault.",
-      };
-    }
-  }
 
   if (booking.deposit_status === "held" && booking.stripe_deposit_intent_id) {
     // Bug #8: CAS held → capturing BEFORE touching Stripe, so the

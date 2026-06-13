@@ -39,15 +39,15 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Phase 2 — Demand capture
 
-- [ ] Widen demand schema: `market_demand_requests` (or extend
+- [x] Widen demand schema: `market_demand_requests` (or extend
   waitlist) — category, query, dates, zip, budget, delivery_required,
   notes, status new|matched|notified|closed
-- [ ] `had_results` flag on market_demand_events search logging
-- [ ] No-results search form + coming-soon category form + homepage
+- [x] `had_results` flag on market_demand_events search logging
+- [x] No-results search form + coming-soon category form + homepage
   "Can't find what you need?" CTA
-- [ ] Founder admin demand panel (requests by category/metro — the
+- [x] Founder admin demand panel (requests by category/metro — the
   supply-acquisition to-do list)
-- [ ] Service-type requests logged too (photographer, DJ — feeds the
+- [x] Service-type requests logged too (photographer, DJ — feeds the
   operated-rentals decision)
 
 ## Phase 3 — Listing quality score
@@ -136,6 +136,18 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Done log
 
+- **2026-06-13 — Phase 2 (demand capture):** market_demand_requests
+  table (query/dates/zip/budget/delivery/email/notes/source/status,
+  service-role-only, applied to prod) + result_count on
+  market_demand_events; DemandRequestForm (compact query+email, expands
+  to dates/budget/delivery) on no-results search, smoke-test world
+  pages, and a homepage "looking for something we don't have?" CTA;
+  search page fetches results first then logs result_count so
+  zero-result searches are distinguishable; founder admin demand panel
+  (open requests with full intent + status triage new→notified→matched
+  →closed, plus top zero-result search terms over 30d); service
+  requests (photographer/DJ) flow through the same free-text query —
+  feeds the operated-rentals decision. tsc clean · 483/483 · build green.
 - **2026-06-13 — Phase 1 (evidence ceremony):** multi-photo evidence
   upload (up to 6 per submit, one row each); seller before-photos
   BLOCKING at checkout (lifecycle gate: <2 seller handoff photos →

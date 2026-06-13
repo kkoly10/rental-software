@@ -12,6 +12,7 @@ import { getPublishedListings } from "@/lib/market/data";
 import { logDemandEvent } from "@/lib/market/actions";
 import { ListingCard } from "@/components/market/listing-card";
 import { WaitlistForm } from "@/components/market/waitlist-form";
+import { DemandRequestForm } from "@/components/market/demand-request-form";
 import { worldPhoto } from "@/lib/market/photos";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,17 @@ export default async function WorldPage({
             </div>
           </>
         ) : null}
+
+        <div style={{ maxWidth: 560, margin: "24px auto 0" }}>
+          <DemandRequestForm
+            sourcePage={`world-soon:${world.slug}${activeCategory ? `:${activeCategory}` : ""}`}
+            worldSlug={world.slug}
+            categorySlug={activeCategory ?? ""}
+            metroSlug={metro.slug}
+            heading={`Need a specific ${world.label.toLowerCase()} item now?`}
+            blurb="Tell us exactly what you're after — the more requests we see, the faster this category opens, and we'll reach out the moment a match lists."
+          />
+        </div>
       </main>
     );
   }
