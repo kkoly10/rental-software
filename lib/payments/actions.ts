@@ -48,6 +48,20 @@ export async function recordPayment(
     parsed.data;
 
   if (!hasSupabaseEnv()) {
+    // A DEPLOYED runtime with no database must never report a payment as
+    // recorded — the operator would believe money was collected when
+    // nothing persisted. Fail loudly; only local `next dev` keeps the
+    // demo-success path below.
+    const { isProductionRuntime } = await import("@/lib/env/demo-mode");
+    if (isProductionRuntime()) {
+      console.error(
+        "[payments] CRITICAL: hasSupabaseEnv() is false on a deployed runtime — refusing to fake a recorded payment."
+      );
+      return {
+        ok: false,
+        message: "Payments aren't available right now — this deployment isn't fully configured. Nothing was recorded.",
+      };
+    }
     // Re-audit follow-up #3b: be explicit that the order's auto-confirm
     // didn't fire either. Without this the dev gets the success toast,
     // expects the order to flip to "confirmed", then stays confused

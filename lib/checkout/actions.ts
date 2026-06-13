@@ -300,6 +300,18 @@ export async function createCheckoutOrder(
   }
 
   if (!hasSupabaseEnv()) {
+    // A DEPLOYED checkout with no database must never tell the customer
+    // their order succeeded — that's a silent lost booking with no charge.
+    // Fail loudly here; only local `next dev` keeps the demo-success path.
+    const { isProductionRuntime } = await import("@/lib/env/demo-mode");
+    if (isProductionRuntime()) {
+      console.error(
+        "[checkout] CRITICAL: hasSupabaseEnv() is false on a deployed runtime — refusing to fake order success. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY."
+      );
+      return fail({
+        message: "Checkout is temporarily unavailable. Please try again shortly.",
+      });
+    }
     const orderNumber = createOrderNumber("DEMO");
     return {
       ok: true,
