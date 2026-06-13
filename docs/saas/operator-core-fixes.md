@@ -132,13 +132,18 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 - [ ] ~ Logo upload on documents — deferred (needs a storage bucket +
   drawHeader change; the clause editor was the core "can't edit" ask)
 
-## Phase E — Vertical depth (planned, partly decision-gated)
+## Phase E — Vertical depth (in progress)
 
-- [ ] Reconcile category-seed drift (registry vs SQL bootstrap RPC)
-- [ ] Generalize the inflatable-only product-form setup accordion
+- [x] Reconcile category-seed drift (registry vs SQL bootstrap RPC) —
+  `bootstrap_organization` recreated so tents / tables-and-chairs /
+  dance-floors seed the same names+slugs as the registry (and the
+  add-vertical path); legacy car/equipment seed branches removed.
+  Applied to prod; no live org uses car/equipment (all 5 are inflatable)
+- [ ] Remove remaining orphaned legacy car/equipment (dead terms.ts keys,
+  nav allowlist) — cosmetic; no live org has those business types
+- [ ] Generalize the inflatable-only product-form setup accordion so
+  tents (anchoring/surface) get the rich UI too
 - [ ] Per-vertical dashboard nav (or decide the uniform nav is correct)
-- [ ] Decide per-vertical deposit/risk defaults on the operator side
-- [ ] Retire orphaned legacy car/equipment paths (SQL seeds, PDF terms, nav)
 
 ---
 
