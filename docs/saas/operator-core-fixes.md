@@ -85,12 +85,14 @@ File:line references live in the session notes; this is the plan.
   (`components/guidance/setup-checklist-card.tsx` on the dashboard) —
   making it vertical-aware is a possible future enhancement, not missing
 
-## Phase B — Order notifications (planned)
+## Phase B — Order notifications
 
-- [ ] `getOrgBranding()` → admin client for the owner-email + org reads
-  (mirror `app/api/cron/reminders/route.ts`)
-- [ ] Collect/require `support_email` at onboarding
-- [ ] Log/observe when `operatorAlertEmail` resolves null (no silent drop)
+- [x] `getOrgBranding()` → admin client for the owner-email + org reads
+  (mirror `app/api/cron/reminders/route.ts`) — fixes the silent drop on
+  the Stripe-webhook + no-support_email paths
+- [x] Log/observe when `operatorAlertEmail` resolves null (no silent drop)
+- [ ] Collect/require `support_email` at onboarding (owner-email fallback
+  now works, so this is hardening, not required)
 - [ ] Optional: a "new order" toggle in operator email preferences
 
 ## Phase C — Customer invoice (planned)
@@ -122,6 +124,16 @@ File:line references live in the session notes; this is the plan.
 
 ## Done log
 
+- **2026-06-13 — Phase B (operator new-order email fix):** root cause was
+  `getOrgBranding()` (lib/email/triggers.ts) resolving the recipient with
+  the request-scoped anon/RLS client — which returns zero rows for
+  `organizations` + `organization_memberships` in the Stripe-webhook /
+  no-session context, so both `support_email` and the owner-email
+  fallback came back null and the `if (operatorAlertEmail)` guard silently
+  skipped the send. Switched both reads to the admin client (mirroring the
+  cron reminder path), and added a `logAppError` when no recipient
+  resolves so it can't regress silently. Customer confirmations were
+  unaffected (they don't depend on that lookup). tsc/496 tests/build green.
 - **2026-06-13 — Phase A part 3 (per-vertical onboarding defaults):**
   research-backed model (see decision above). Added
   `VerticalConfig.operatorDefaults` (deposit %, order minimum, delivery

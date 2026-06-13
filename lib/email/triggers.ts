@@ -134,9 +134,17 @@ function buildFromAddress(businessName: string): string {
 async function getOrgBranding(
   organizationId: string
 ): Promise<OrgBranding> {
-  // Dynamic import to avoid circular dependencies
-  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
-  const supabase = await createSupabaseServerClient();
+  // Use the ADMIN client, not the request-scoped anon client. Triggers
+  // run from contexts with NO auth session and no x-storefront-slug
+  // header — most importantly the Stripe webhook (the common
+  // deposit-paid path). Under those conditions RLS returns zero rows for
+  // both `organizations` and `organization_memberships`, so the org's
+  // support_email AND the owner-email fallback resolved to null and the
+  // operator new-order alert was silently skipped. The cron reminder
+  // path already resolves branding with the admin client; mirror it.
+  // (Dynamic import also avoids circular dependencies.)
+  const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createSupabaseAdminClient();
 
   const { data: org } = await supabase
     .from("organizations")
@@ -165,6 +173,24 @@ async function getOrgBranding(
     const ownerEmail = (ownerMembership as { profiles?: { email?: string | null } | null } | null)
       ?.profiles?.email;
     operatorAlertEmail = ownerEmail ?? null;
+  }
+
+  // The whole point of the admin-client switch above is that this should
+  // now resolve. If it still doesn't (org with neither a support_email
+  // nor an active owner), the operator alert is skipped — make that
+  // visible instead of silent, so it can't regress unnoticed again.
+  if (!operatorAlertEmail) {
+    try {
+      const { logAppError } = await import("@/lib/observability/server");
+      await logAppError({
+        organizationId,
+        source: "email.operator_alert",
+        message:
+          "No operator alert recipient resolved (no support_email and no active owner email) — new-order alert skipped",
+      });
+    } catch {
+      /* never let logging break the email path */
+    }
   }
 
   return {
