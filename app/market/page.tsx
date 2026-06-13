@@ -2,6 +2,7 @@ import Link from "next/link";
 import { worlds, DEFAULT_METRO_SLUG, metroBySlug } from "@/lib/market/registry";
 import { getPublishedListings, getWorldListingCounts } from "@/lib/market/data";
 import { ListingCard } from "@/components/market/listing-card";
+import { DemandRequestForm } from "@/components/market/demand-request-form";
 import { HERO_PHOTO, worldPhoto } from "@/lib/market/photos";
 
 export const dynamic = "force-dynamic";
@@ -136,6 +137,16 @@ export default async function MarketHomePage() {
               </p>
             </div>
           </div>
+        </section>
+
+        {/* ── Demand capture (research rule #1: demand is the scarce side) ── */}
+        <section className="mk-section">
+          <DemandRequestForm
+            sourcePage="homepage"
+            metroSlug={DEFAULT_METRO_SLUG}
+            heading="Looking for something we don't have yet?"
+            blurb="Tents, tools, baby gear, trailers, a photographer for your event — tell us what you need in the DMV and we'll notify you when it's available."
+          />
         </section>
       </div>
     </main>
