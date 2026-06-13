@@ -40,11 +40,12 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
   const v = vertical.marketing;
   const copy = getVerticalLandingCopy(vertical.slug);
   const verticalLabel = vertical.label.en.toLowerCase();
-  // Real screenshot of the demo storefront UI — one honest product shot
-  // beats six per-vertical stock photos posing as storefronts. The
-  // per-vertical storefrontDefaults hero photo still serves as the OG
-  // image (see app/[vertical]/page.tsx).
-  const storefrontShot = "/marketing/product/storefront-demo.jpg";
+  // Real screenshot of a live storefront seeded for THIS vertical —
+  // captured from production (per-vertical hero photo + headline +
+  // availability bar), so a tent operator sees a tent storefront, not a
+  // bounce house. The per-vertical storefrontDefaults hero photo still
+  // serves as the OG image (see app/[vertical]/page.tsx).
+  const storefrontShot = `/marketing/product/storefront-${vertical.slug}.jpg`;
   const bannerImage = vertical.imageSlugs.transitionBanner;
   const crewImage = vertical.imageSlugs.crew;
 
