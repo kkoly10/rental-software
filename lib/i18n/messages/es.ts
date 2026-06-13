@@ -1807,6 +1807,10 @@ export const es: Messages = {
       basePriceLabel: "Precio base ($/día)",
       basePricePlaceholder: "p. ej. 175",
       securityDepositLabel: "Depósito de garantía ($)",
+      quantityOnHandLabel: "Cantidad disponible",
+      quantityOnHandPlaceholder: "Dejar en blanco para artículos serializados",
+      quantityOnHandHelp:
+        "Cuántas unidades de este artículo posees. Evita el exceso de reservas: cuando todas están reservadas para una fecha, la tienda muestra agotado. Déjalo en blanco para contar los registros de activos individuales.",
       visibilityLabel: "Visibilidad",
       visibilities: {
         public: "Público",

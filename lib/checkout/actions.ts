@@ -1017,7 +1017,10 @@ export async function createCheckoutOrder(
       eventDate,
       startTime,
       endTime,
-      rentalEndDate
+      rentalEndDate,
+      // Per-unit products consume the ordered count against pooled
+      // capacity; everything else reserves a single unit.
+      requestedQuantity: billedUnitsForLineItem ?? 1,
     });
 
     if (!availability.available) {
@@ -1501,7 +1504,8 @@ export async function createCheckoutOrder(
       startTime,
       endTime,
       rentalEndDate,
-      source: willUseStripe ? "checkout" : "dashboard"
+      source: willUseStripe ? "checkout" : "dashboard",
+      quantity: billedUnitsForLineItem ?? 1,
     });
 
     if (!reserveResult.ok) {

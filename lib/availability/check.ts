@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase/admin";
 import { getAvailabilityWindowForDate } from "@/lib/availability/window";
 import { BOOKABLE_ASSET_STATUSES } from "@/lib/assets/operational-status";
+import { hasAvailableCapacity } from "@/lib/availability/capacity";
 
 export type AvailabilityCheckResult = {
   available: boolean;
@@ -22,6 +23,14 @@ export async function checkProductAvailability(options: {
   startTime?: string | null;
   endTime?: string | null;
   rentalEndDate?: string | null;
+  /**
+   * Units the caller intends to reserve. Per-unit products book many
+   * units per order (e.g. 200 chairs); a default of 1 preserves the
+   * historical "is there any capacity left" behavior for serialized
+   * single-unit rentals. The atomic reserve RPC enforces the same
+   * math authoritatively — this is the matching pre-check for the UI.
+   */
+  requestedQuantity?: number;
 }): Promise<AvailabilityCheckResult> {
   // Use the admin client when available. The customer-facing checkout path
   // calls this with no authenticated session, so the cookie-bound RLS-scoped
@@ -40,7 +49,7 @@ export async function checkProductAvailability(options: {
   // block Friday evening, letting the operator double-book crew.
   const { data: productMeta } = await supabase
     .from("products")
-    .select("setup_minutes_before, breakdown_minutes_after")
+    .select("setup_minutes_before, breakdown_minutes_after, quantity_on_hand")
     .eq("id", options.productId)
     .eq("organization_id", options.organizationId)
     .maybeSingle();
@@ -69,7 +78,16 @@ export async function checkProductAvailability(options: {
   // assets with an open maintenance_record (status='open') are unavailable
   // until the operator closes the record. Matches Booqable / EZRentOut
   // "schedule downtime blocks availability" default.
-  const [{ data: bookableAssets }, { count: overlappingCount }] =
+  // A pooled count (quantity_on_hand) wins when the operator set one:
+  // bulk products (e.g. 500 chairs) are sold by the unit and usually
+  // tracked as a single pool, not N asset rows. NULL falls back to the
+  // historical asset-row capacity below.
+  const quantityOnHand =
+    typeof (productMeta as { quantity_on_hand?: unknown })?.quantity_on_hand === "number"
+      ? ((productMeta as { quantity_on_hand?: unknown }).quantity_on_hand as number)
+      : null;
+
+  const [{ data: bookableAssets }, { data: overlappingBlocks }] =
     await Promise.all([
       supabase
         .from("assets")
@@ -78,10 +96,12 @@ export async function checkProductAvailability(options: {
         .eq("product_id", options.productId)
         .is("deleted_at", null)
         .in("operational_status", BOOKABLE_ASSET_STATUSES as unknown as string[]),
-      // Count overlapping blocks, excluding any that have already expired
+      // Overlapping non-expired blocks. Select the quantity so we can sum
+      // units consumed (per-unit products book many units per block),
+      // not just count rows.
       supabase
         .from("availability_blocks")
-        .select("id", { count: "exact", head: true })
+        .select("quantity")
         .eq("organization_id", options.organizationId)
         .eq("product_id", options.productId)
         .lt("starts_at", window.endsAt)
@@ -89,32 +109,56 @@ export async function checkProductAvailability(options: {
         .or(`expires_at.is.null,expires_at.gt.${now}`),
     ]);
 
-  let assetCapacity = bookableAssets?.length ?? 0;
-  if (assetCapacity > 0 && bookableAssets) {
-    const assetIds = bookableAssets.map((a) => String(a.id));
-    const { data: maintAssets } = await supabase
-      .from("maintenance_records")
-      .select("asset_id")
-      .eq("organization_id", options.organizationId)
-      .in("status", ["open", "in_progress"])
-      .in("asset_id", assetIds);
-    if (maintAssets && maintAssets.length > 0) {
-      const inMaintenance = new Set(
-        maintAssets.map((m) => String(m.asset_id))
-      );
-      assetCapacity = assetIds.filter((id) => !inMaintenance.has(id)).length;
+  let assetCapacity: number;
+  if (quantityOnHand !== null) {
+    assetCapacity = quantityOnHand;
+  } else {
+    assetCapacity = bookableAssets?.length ?? 0;
+    if (assetCapacity > 0 && bookableAssets) {
+      const assetIds = bookableAssets.map((a) => String(a.id));
+      const { data: maintAssets } = await supabase
+        .from("maintenance_records")
+        .select("asset_id")
+        .eq("organization_id", options.organizationId)
+        .in("status", ["open", "in_progress"])
+        .in("asset_id", assetIds);
+      if (maintAssets && maintAssets.length > 0) {
+        const inMaintenance = new Set(
+          maintAssets.map((m) => String(m.asset_id))
+        );
+        assetCapacity = assetIds.filter((id) => !inMaintenance.has(id)).length;
+      }
     }
   }
-  const reservedCount = overlappingCount ?? 0;
+  const reservedCount = (overlappingBlocks ?? []).reduce(
+    (sum, b) =>
+      sum +
+      (typeof (b as { quantity?: unknown }).quantity === "number"
+        ? ((b as { quantity?: unknown }).quantity as number)
+        : 1),
+    0
+  );
 
-  // A product with no asset records has no physical inventory — treat as
+  const requestedQuantity = Math.max(1, Math.trunc(options.requestedQuantity ?? 1));
+
+  // A product with no inventory has nothing to book — treat as
   // unavailable. Same applies when every asset is currently held by an open
-  // maintenance record (decision 2.4).
-  if (assetCapacity === 0 || reservedCount >= assetCapacity) {
+  // maintenance record (decision 2.4), or when the requested units would
+  // exceed the units still free in the window. Shared pure helper keeps
+  // this arithmetic identical to the atomic reserve RPC.
+  if (
+    !hasAvailableCapacity({
+      capacity: assetCapacity,
+      reserved: reservedCount,
+      requested: requestedQuantity,
+    })
+  ) {
     return {
       available: false,
       reason: assetCapacity === 0
-        ? "This item is currently under service and not available to book."
+        ? (quantityOnHand !== null
+            ? "This item is not currently available for booking."
+            : "This item is currently under service and not available to book.")
         : "This rental is already reserved for the selected date.",
       assetCapacity,
       reservedCount,

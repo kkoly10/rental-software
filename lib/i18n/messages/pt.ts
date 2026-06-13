@@ -1807,6 +1807,10 @@ export const pt: Messages = {
       basePriceLabel: "Preço base ($/dia)",
       basePricePlaceholder: "ex. 175",
       securityDepositLabel: "Caução ($)",
+      quantityOnHandLabel: "Quantidade em estoque",
+      quantityOnHandPlaceholder: "Deixe em branco para itens serializados",
+      quantityOnHandHelp:
+        "Quantas unidades deste item você possui. Evita reservas em excesso: quando todas estão reservadas para uma data, a loja mostra esgotado. Deixe em branco para contar os registros de ativos individuais.",
       visibilityLabel: "Visibilidade",
       visibilities: {
         public: "Público",

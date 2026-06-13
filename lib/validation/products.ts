@@ -159,6 +159,18 @@ const damageWaiverShape = {
     .optional(),
 };
 
+// Pooled inventory count for bulk/per-unit products ("we own 500
+// chairs"). Optional and nullable: blank means "derive capacity from
+// asset rows" (the historical serialized behavior).
+const inventoryShape = {
+  quantityOnHand: z
+    .number()
+    .int()
+    .min(0, "Quantity on hand cannot be negative.")
+    .max(1000000, "Quantity on hand above 1,000,000 is likely a typo.")
+    .optional(),
+};
+
 export const createProductSchema = z.object({
   name: requiredText("Product name", 120),
   categoryId: z.string().trim().uuid().optional().or(z.literal("")).transform((value) => value || undefined),
@@ -178,6 +190,7 @@ export const createProductSchema = z.object({
   ...capacityCalculatorShape,
   ...orderMinimumShape,
   ...damageWaiverShape,
+  ...inventoryShape,
 });
 
 export const updateProductSchema = createProductSchema.extend({
