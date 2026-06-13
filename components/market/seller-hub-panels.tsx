@@ -1,7 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-import { worlds, listWorldCategories } from "@/lib/market/registry";
+import { worlds, listWorldCategories, resolveOperatingDefaults } from "@/lib/market/registry";
+import { scoreListing, type ListingScore } from "@/lib/market/listing-score";
 import {
   CreateListingForm,
   SellerProfileForm,
@@ -49,6 +50,12 @@ type ListingRow = {
   is_prelist: boolean;
   daily_price_cents: number;
   deposit_cents: number;
+  description: string | null;
+  photo_url: string | null;
+  proof_video_url: string | null;
+  replacement_value_cents: number | null;
+  weekend_price_cents: number | null;
+  weekly_price_cents: number | null;
 };
 
 type RequestRow = {
@@ -76,6 +83,7 @@ export async function SellerHubPanels() {
 
   let profile: ProfileRow | null = null;
   let listings: ListingRow[] = [];
+  const scoresByListing = new Map<string, ListingScore>();
   let products: Array<{ id: string; name: string }> = [];
   let requests: RequestRow[] = [];
   let sellerFollowedUp = new Set<string>();
@@ -129,7 +137,9 @@ export async function SellerHubPanels() {
         .maybeSingle(),
       supabase
         .from("market_listings")
-        .select("id, title, world_slug, category_slug, status, is_prelist, daily_price_cents, deposit_cents")
+        .select(
+          "id, title, world_slug, category_slug, status, is_prelist, daily_price_cents, deposit_cents, description, photo_url, proof_video_url, replacement_value_cents, weekend_price_cents, weekly_price_cents",
+        )
         .eq("organization_id", ctx.organizationId)
         .order("created_at", { ascending: false })
         .limit(100),
@@ -143,6 +153,42 @@ export async function SellerHubPanels() {
     profile = (profileRes.data as ProfileRow | null) ?? null;
     listings = (listingsRes.data as ListingRow[] | null) ?? [];
     products = (productsRes.data as Array<{ id: string; name: string }> | null) ?? [];
+
+    // Phase 3 quality score: count gallery photos per listing, then
+    // compute the deterministic 0–100 + top-3 suggestions on read.
+    if (listings.length > 0) {
+      const photoCounts = new Map<string, number>();
+      const { data: photoRows } = await supabase
+        .from("market_listing_photos")
+        .select("listing_id")
+        .in("listing_id", listings.map((l) => l.id));
+      for (const p of (photoRows ?? []) as { listing_id: string }[]) {
+        photoCounts.set(p.listing_id, (photoCounts.get(p.listing_id) ?? 0) + 1);
+      }
+      for (const l of listings) {
+        let proofRequired = false;
+        try {
+          proofRequired = resolveOperatingDefaults(l.world_slug, l.category_slug).proofOfFunctionRequired;
+        } catch {
+          proofRequired = false;
+        }
+        scoresByListing.set(
+          l.id,
+          scoreListing({
+            // Fall back to photo_url for listings created before the
+            // gallery table existed.
+            photoCount: photoCounts.get(l.id) ?? (l.photo_url ? 1 : 0),
+            title: l.title,
+            description: l.description,
+            hasWeekendPrice: l.weekend_price_cents != null,
+            hasWeeklyPrice: l.weekly_price_cents != null,
+            replacementValueCents: l.replacement_value_cents,
+            proofVideoPresent: Boolean(l.proof_video_url),
+            proofRequired,
+          }),
+        );
+      }
+    }
     const requestsRes = await requestsPromise;
     requests = (requestsRes.data as unknown as RequestRow[] | null) ?? [];
     if (requests.length > 0) {
@@ -476,7 +522,15 @@ export async function SellerHubPanels() {
             </div>
           ) : (
             <div className="list">
-              {listings.map((l) => (
+              {listings.map((l) => {
+                const score = scoresByListing.get(l.id);
+                const scoreColor =
+                  !score || score.score >= 80
+                    ? "var(--mk-green)"
+                    : score.score >= 60
+                      ? "var(--mk-amber)"
+                      : "#b91c1c";
+                return (
                 <article key={l.id} className="order-card">
                   <div
                     style={{
@@ -495,12 +549,22 @@ export async function SellerHubPanels() {
                         {(l.deposit_cents / 100).toFixed(0)}
                         {l.is_prelist ? " · pre-list (not bookable until world opens)" : ""}
                       </div>
-                      <span
-                        className={`badge ${l.status === "published" ? "success" : ""}`}
-                        style={{ marginTop: 6 }}
-                      >
-                        {l.status}
-                      </span>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                        <span
+                          className={`badge ${l.status === "published" ? "success" : ""}`}
+                        >
+                          {l.status}
+                        </span>
+                        {score ? (
+                          <span
+                            className="badge"
+                            title="Listing quality score — higher listings get found and booked more."
+                            style={{ color: scoreColor, background: "#fff", border: "1px solid var(--mk-line)" }}
+                          >
+                            ⭐ {score.score}/100
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       {l.status !== "published" ? (
@@ -520,8 +584,22 @@ export async function SellerHubPanels() {
                       )}
                     </div>
                   </div>
+                  {score && score.suggestions.length > 0 ? (
+                    <div
+                      className="muted"
+                      style={{ fontSize: 12, marginTop: 8, borderTop: "1px dashed var(--mk-line)", paddingTop: 8 }}
+                    >
+                      <b style={{ color: "var(--mk-ink)" }}>Raise this score:</b>
+                      <ul style={{ margin: "4px 0 0", paddingLeft: 18, lineHeight: 1.5 }}>
+                        {score.suggestions.map((s) => (
+                          <li key={s}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
 

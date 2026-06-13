@@ -27,6 +27,9 @@ export type MarketListing = {
   offersPickup: boolean;
   metroSlug: string;
   photoUrl: string | null;
+  /** Ordered gallery (Phase 3). Defaults to [photoUrl] for back-compat;
+   *  getListingById replaces it with the full market_listing_photos set. */
+  photos: string[];
   isPrelist: boolean;
   status: string;
   inventoryMode: string;
@@ -103,6 +106,7 @@ function mapListing(row: ListingRow): MarketListing {
     offersPickup: row.offers_pickup,
     metroSlug: row.metro_slug,
     photoUrl: row.photo_url,
+    photos: row.photo_url ? [row.photo_url] : [],
     isPrelist: row.is_prelist,
     status: row.status,
     inventoryMode: row.inventory_mode,
@@ -234,6 +238,17 @@ export async function getListingById(id: string): Promise<MarketListing | null> 
   // Defense in depth: a listing whose world no longer exists in the
   // registry should never render.
   if (!getWorld(listing.worldSlug)) return null;
+
+  // Phase 3 gallery: pull the ordered multi-photo set. Falls back to
+  // the single photo_url already set by mapListing if there are none
+  // (older listings created before multi-photo upload).
+  const { data: photoRows } = await supabase
+    .from("market_listing_photos")
+    .select("url, position")
+    .eq("listing_id", listing.id)
+    .order("position", { ascending: true });
+  const gallery = (photoRows ?? []).map((p: { url: string }) => p.url);
+  if (gallery.length > 0) listing.photos = gallery;
   return listing;
 }
 

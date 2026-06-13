@@ -52,11 +52,11 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Phase 3 — Listing quality score
 
-- [ ] Multi-photo listing upload (up to 6; gallery on PDP)
-- [ ] `scoreListing()` compute-on-read engine (weights per sprint doc;
+- [x] Multi-photo listing upload (up to 6; gallery on PDP)
+- [x] `scoreListing()` compute-on-read engine (weights per sprint doc;
   photos component scales with real photo count)
-- [ ] Seller hub: score + top-3 suggestions per listing
-- [ ] Low-score warning on publish (not a block)
+- [x] Seller hub: score + top-3 suggestions per listing
+- [x] Low-score warning on publish (not a block)
 
 ## Phase 4 — Trust badges
 
@@ -136,6 +136,20 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Done log
 
+- **2026-06-13 — Phase 3 (listing quality score):** multi-photo listing
+  upload (up to 6, ordered) — new `market_listing_photos` table
+  (public-read for published listings, service-role writes, applied to
+  prod); the create action uploads each photo to the public market-media
+  bucket, mirrors the first to photo_url for back-compat, and inserts the
+  gallery rows; PDP renders the cover + a thumbnail strip. Deterministic
+  `scoreListing()` engine (pure, no table, unit-tested) weights photos 35
+  (scales with real count, capped at 4), description 20, title 10, proof
+  video 15 (required-aware), replacement value 10, pricing tiers 10 — all
+  seller-controllable; condition/fulfillment intentionally unscored.
+  Seller hub shows ⭐ score/100 per listing (green/amber/red) + top-3
+  point-gain suggestions. Publish never blocks on score, but below 60 the
+  success toast warns with the number. 6 new tests (489/489). tsc clean ·
+  build green.
 - **2026-06-13 — Phase 2 (demand capture):** market_demand_requests
   table (query/dates/zip/budget/delivery/email/notes/source/status,
   service-role-only, applied to prod) + result_count on
