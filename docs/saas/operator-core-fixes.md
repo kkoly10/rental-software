@@ -105,15 +105,28 @@ File:line references live in the session notes; this is the plan.
 - [x] Retire the hand-rolled `invoice-download.tsx` generator (now a link
   to the route)
 
-## Phase D — Agreements & waivers (planned)
+## Phase D — Agreements & waivers
 
-- [ ] Data: inject both parties' details, rental dates, prices, deposit,
-  totals into the document
-- [ ] Operator template editor (custom clauses + logo + business address)
-  — new `document_templates` table or columns; `getTerms()` prefers
-  stored content over the constants
-- [ ] Add a download/preview link on the Documents tab
-- [ ] Legal terms for photo-booths & concessions (no generic fallback)
+CORRECTION (verified against current code, not the early recon): the
+document generator + route are ALREADY built out — both parties'
+name/address/phone/email, rental period (start–end), itemized line items
+with prices, full financials, business address + representative name (set
+in Settings → business profile), brand color, and customer e-signature
+all flow through. The earlier "captures nothing" finding was stale. The
+founder's blank result was discoverability (no Documents-tab download)
+plus testing with a bare order (no customer/items/dates → renders blank).
+
+- [x] ~~Inject party/date/price data~~ — already present in
+  `generate-pdf.ts` + the document route; business address +
+  representative name already editable in Settings
+- [x] Add a download link on the Documents tab (was only on the
+  order-detail page — the likely reason "I tried them and got nothing")
+- [x] Real terms for photo-booths & concessions (attended/per-hour;
+  no more generic "no climbing on tents" fallback). Terms extracted to
+  `lib/documents/terms.ts` (alias-free, unit-tested)
+- [ ] Operator CUSTOM-CLAUSE editor + logo upload — the remaining
+  "can't edit" gap. DECISION NEEDED (schema + how much editing + legal
+  sensitivity); terms are still hardcoded constants today
 
 ## Phase E — Vertical depth (planned, partly decision-gated)
 
@@ -127,6 +140,18 @@ File:line references live in the session notes; this is the plan.
 
 ## Done log
 
+- **2026-06-13 — Phase D slice 1 (document discoverability + vertical terms):**
+  verified the doc generator already captures both parties + dates +
+  prices + financials (the early "captures nothing" recon was stale).
+  Added a Download link for the agreement and waiver on the Documents tab
+  (previously only reachable from the order-detail page — the likely
+  cause of the founder's blank result). Wrote dedicated rental-agreement
+  + safety-waiver terms for photo-booths and concessions (attended,
+  per-hour, power/space/food-handling) so they no longer inherit the
+  generic "no climbing on tents" block. Terms extracted to alias-free
+  `lib/documents/terms.ts` with `getTerms` exported + 4 unit tests
+  (500/500). The custom-clause editor + logo (the "can't edit" gap)
+  remains decision-gated. tsc/build green.
 - **2026-06-13 — Phase C (professional customer invoice):** the customer
   "Download invoice" button previously ran a separate hand-rolled
   client-side jsPDF (≈3 of 14 fields, platform blue, bare item names, no
