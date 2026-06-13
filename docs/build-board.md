@@ -19,7 +19,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `~` deferred
 
 ## ▶ Current focus
 
-Operator **Wave 1 (P0 correctness)** — the silent money/trust/compliance breakers. Not started.
+Operator **Wave 1 (P0 correctness)** — 2 of 4 shipped (#413: operator email + no-op guard). Remaining: quantity-aware availability + maintenance hold, blocked on the **capacity-model decision** (recommend A: add `quantity_on_hand`).
 
 ---
 
@@ -30,10 +30,10 @@ Operator **Wave 1 (P0 correctness)** — the silent money/trust/compliance break
 - [ ] Twilio: now a Pro feature (shipped) — only needed when re-enabling SMS for paid orgs
 
 **Wave 1 — stop the bleeding (P0)**
-- [ ] Quantity-aware availability (block overselling)
-- [ ] Production no-op guard (no silent "success" without charge/persist)
-- [ ] Operator new-order email (decouple from customer-email gate + verify Resend)
-- [ ] Maintenance "out of service" hold blocks availability
+- [ ] Quantity-aware availability (block overselling) — *blocked on capacity-model decision (A: add `quantity_on_hand`)*
+- [x] Production no-op guard (no silent "success" without charge/persist) — #413
+- [x] Operator new-order email (decouple from customer-email gate) — #413 *(Resend domain verify is founder config, Wave 0)*
+- [ ] Maintenance "out of service" hold blocks availability — *fold into the availability PR (exclude maint-held assets in the reserve RPC)*
 
 **Wave 2 — originating complaints**
 - [ ] Rental docs overhaul (full party details, rental period, itemized, two-party signature)
@@ -97,3 +97,5 @@ Operator **Wave 1 (P0 correctness)** — the silent money/trust/compliance break
 | #409 | Operator operational gap audit (doc) |
 | #410 | Operator fix plan + Vercel env reference (doc) |
 | #411 | SMS gated behind Pro plan |
+| #412 | Master build board (this doc) |
+| #413 | P0 — operator new-order email always fires + no fake success on misconfigured deploys |
