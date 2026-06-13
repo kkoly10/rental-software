@@ -10,6 +10,7 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { getOrderFinancialsAdmin } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
+import { fetchLogoDataUrl } from "@/lib/pdf/logo";
 import { safeFilenameToken } from "@/lib/security/header-safe";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 
@@ -124,6 +125,9 @@ export async function GET(request: NextRequest) {
   const depositPaid = financials?.totalPaid ?? 0;
   const balanceDue = financials?.remainingBalance ?? totalAmount;
   const timezone = org?.event_timezone ?? "UTC";
+  const logoDataUrl = await fetchLogoDataUrl(
+    ((org?.settings as Record<string, unknown> | null)?.brand_logo_url as string | undefined) ?? null,
+  );
 
   const invoiceData: InvoiceData = {
     businessName: org?.name ?? "Rental Company",
@@ -171,6 +175,7 @@ export async function GET(request: NextRequest) {
           | undefined) ?? null;
       return raw && raw.toLowerCase() !== "#1e5dcf" ? raw : null;
     })(),
+    logoDataUrl,
   };
 
   const pdfBytes = generateInvoicePdf(invoiceData);

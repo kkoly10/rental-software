@@ -73,16 +73,41 @@ export function drawHeader(
     metaLines: string[];
     margin: number;
     accent?: Rgb | null;
+    /** Operator logo as a base64 data URL (fetched server-side). When
+     *  present it replaces the serif business-name wordmark; on any
+     *  failure we fall back to the name so a logo is purely additive. */
+    logoDataUrl?: string | null;
   }
 ): number {
   const pageWidth = doc.internal.pageSize.getWidth();
   const { margin } = opts;
   const right = pageWidth - margin;
 
-  doc.setFont("times", "bold");
-  doc.setFontSize(23);
-  doc.setTextColor(...PDF_INK);
-  doc.text(opts.businessName, margin, margin + 18, { maxWidth: pageWidth * 0.55 });
+  let logoDrawn = false;
+  if (opts.logoDataUrl) {
+    try {
+      const props = doc.getImageProperties(opts.logoDataUrl);
+      const maxH = 38;
+      const maxW = pageWidth * 0.42;
+      let h = maxH;
+      let w = (props.width / props.height) * h;
+      if (w > maxW) {
+        w = maxW;
+        h = (props.height / props.width) * w;
+      }
+      doc.addImage(opts.logoDataUrl, (props.fileType || "PNG").toUpperCase(), margin, margin, w, h);
+      logoDrawn = true;
+    } catch {
+      // Malformed/unsupported image — fall back to the name wordmark.
+    }
+  }
+
+  if (!logoDrawn) {
+    doc.setFont("times", "bold");
+    doc.setFontSize(23);
+    doc.setTextColor(...PDF_INK);
+    doc.text(opts.businessName, margin, margin + 18, { maxWidth: pageWidth * 0.55 });
+  }
 
   drawEyebrow(doc, opts.docLabel, right, margin + 6, {
     align: "right",

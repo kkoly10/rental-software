@@ -149,6 +149,16 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 
 ## Done log
 
+- **2026-06-13 — Document/invoice logo (path-to-10 item 4):** operators
+  already upload a logo (settings.brand_logo_url, with storage + UI), it
+  just wasn't used on the PDFs. drawHeader now renders the logo (scaled to
+  aspect, max 38pt tall) in place of the name wordmark when present, and
+  falls back to the business name on any failure (logo is purely
+  additive — no logo = clean name letterhead, unchanged). New
+  best-effort fetchLogoDataUrl helper (validates image type, 3MB cap)
+  wired into all three PDF routes — operator invoice, customer portal
+  invoice, and documents. tsc/503/build green. All four path-to-10 items
+  now complete.
 - **2026-06-13 — New-operator journey polish (path-to-10 items 1–3):**
   signup now REQUIRES the vertical pick (native required on the radios) —
   the account can no longer be created without it. Onboarding rebuilt onto

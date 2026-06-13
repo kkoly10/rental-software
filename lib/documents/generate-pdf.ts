@@ -67,6 +67,9 @@ export type DocumentPdfData = {
   /** Operator's explicitly-set brand primary (hex). Null/undefined →
    *  pure-ink document. */
   brandColor?: string | null;
+  /** Operator logo as a base64 data URL; replaces the name wordmark in
+   *  the header when present. */
+  logoDataUrl?: string | null;
 };
 
 function formatMoney(amount: number): string {
@@ -141,6 +144,7 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
     metaLines: [`Order #${data.orderNumber}`],
     margin,
     accent,
+    logoDataUrl: data.logoDataUrl,
   });
 
   // ─── Parties — Lessor (business) and Renter (customer) ────────────
