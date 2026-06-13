@@ -5765,6 +5765,10 @@ textarea[aria-invalid="true"] {
   overflow: hidden;
 }
 .auth-card--wide { width: min(520px, 100%); }
+.auth-card--xwide { width: min(600px, 100%); }
+/* Taller cards (onboarding wizard) sit toward the top rather than
+   vertically centered, so the content doesn't jump as steps change height. */
+.auth-wrap--top { align-items: start; }
 .auth-card::before {
   content: "";
   position: absolute;

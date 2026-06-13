@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import type { VerticalOption } from "@/lib/verticals/options";
 
 const initialState = { ok: false, message: "", storefrontUrl: "" };
+const TOTAL_STEPS = 3;
 
 function generateSlugClient(name: string): string {
   return name
@@ -33,10 +34,16 @@ export function OnboardingForm({
   const [state, formAction, pending] = useActionState(completeOnboarding, initialState);
   const appDomain = getAppDomain();
 
+  // Multi-step wizard. All step sections stay mounted (toggled with the
+  // `hidden` attribute) so every field is still part of the single form
+  // submission on the final step — only the active step is visible.
+  const [step, setStep] = useState(1);
+
   const [businessName, setBusinessName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [zip, setZip] = useState("");
   // Pre-selected from the signup-page pick when present; otherwise no
   // default, so an operator who skipped it still makes an explicit
   // choice. Options come from the vertical registry (server-built prop),
@@ -174,21 +181,13 @@ export function OnboardingForm({
     };
   }, [slug]);
 
-  const submitDisabled =
-    pending ||
-    !businessType ||
-    slugStatus === "taken" ||
-    slugStatus === "invalid" ||
-    slugStatus === "checking";
-
   const f = m.onboarding.form;
 
   // Money defaults pre-filled from the chosen vertical (editable). The
   // inputs are uncontrolled with a `key` tied to businessType, so they
   // re-mount with the new vertical's defaults when the operator changes
-  // their category — same pattern the timezone select uses. Manual edits
-  // persist within a vertical; switching vertical re-seeds the suggested
-  // numbers (all still editable, and changeable later in Settings).
+  // their category. Manual edits persist within a vertical; switching
+  // vertical re-seeds the suggested numbers (all still editable later).
   const selected = verticalOptions.find((o) => o.value === businessType);
   const money = selected?.defaults ?? {
     depositPercentage: 30,
@@ -196,226 +195,264 @@ export function OnboardingForm({
     deliveryFee: 25,
   };
 
+  const slugBlocked = ["taken", "invalid", "checking"].includes(slugStatus);
+  const step1Valid = Boolean(businessType) && businessName.trim().length > 0 && !slugBlocked;
+  const step2Valid = zip.trim().length > 0;
+  const submitDisabled = pending || !step1Valid || slugStatus === "taken" || slugStatus === "invalid";
+
+  const stepValid = step === 1 ? step1Valid : step === 2 ? step2Valid : true;
+  const goNext = () => setStep((s) => Math.min(TOTAL_STEPS, s + 1));
+  const goBack = () => setStep((s) => Math.max(1, s - 1));
+
+  // Success — onboarding complete. Replaces the wizard entirely.
+  if (state.ok && state.storefrontUrl) {
+    return (
+      <div
+        className="panel"
+        style={{ padding: "20px 24px", background: "#f0fdf4", borderLeft: "4px solid #22c55e", marginTop: 16 }}
+      >
+        <strong style={{ fontSize: 16, color: "#166534" }}>{f.siteLive}</strong>
+        <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>{f.customersCanFindYou}</div>
+        <div style={{ marginTop: 6 }}>
+          <a
+            href={state.storefrontUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 600, color: "var(--primary)" }}
+          >
+            {state.storefrontUrl} &#8599;
+          </a>
+        </div>
+        <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>{f.bookmarkHint}</div>
+        <div style={{ marginTop: 16 }}>
+          <a href="/dashboard" className="primary-btn">{f.goToDashboard}</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
-      <div style={{ marginBottom: 4 }}>
-        <div className="kicker">{f.step1}</div>
-        <strong style={{ fontSize: 15 }}>{f.yourBusiness}</strong>
+      {/* Progress indicator */}
+      <div>
+        <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
+          {f.stepOf.replace("{current}", String(step)).replace("{total}", String(TOTAL_STEPS))}
+        </div>
+        <div className="segmented-progress">
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <span
+              key={i}
+              className={`segmented-progress__seg${i < step ? " segmented-progress__seg--on" : ""}`}
+            />
+          ))}
+        </div>
       </div>
 
-      <fieldset
-        className="order-card"
-        style={{ border: "none", padding: 16, margin: 0 }}
-      >
-        <legend style={{ padding: 0 }}>
-          <strong>{f.businessType.label}</strong>
-        </legend>
-        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          {f.businessType.hint}
+      {/* ── Step 1 — vertical + business ─────────────────────────────── */}
+      <div hidden={step !== 1} className="list">
+        <div style={{ marginBottom: 4 }}>
+          <div className="kicker">{f.step1}</div>
+          <strong style={{ fontSize: 15 }}>{f.yourBusiness}</strong>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 8,
-            marginTop: 12,
-          }}
-        >
-          {verticalOptions.map(({ value, label, description, policySummary }) => {
-            const selected = businessType === value;
-            // Keeping the radio input visible (rather than opacity:0)
-            // keeps keyboard focus visible — when the operator tabs in,
-            // the browser's native focus ring lands on something they
-            // can see. The label/card highlight is the *selection*
-            // affordance, the radio is the *focus* affordance.
-            return (
-              <label
-                key={value}
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  padding: 12,
-                  border: selected
-                    ? "2px solid var(--primary)"
-                    : "1px solid var(--border)",
-                  // -1px on padding when selected so the 2px border
-                  // doesn't shift surrounding cards as selection moves.
-                  margin: selected ? 0 : 1,
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  background: selected ? "var(--primary-bg)" : "transparent",
-                }}
-              >
-                <input
-                  type="radio"
-                  name="business_type"
-                  value={value}
-                  checked={selected}
-                  onChange={() => setBusinessType(value)}
-                  style={{ marginTop: 3, flexShrink: 0 }}
-                />
-                <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <strong style={{ fontSize: 14 }}>{label}</strong>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    {description}
-                  </span>
-                  {selected ? (
-                    <span style={{ fontSize: 11.5, color: "var(--primary)", marginTop: 2 }}>
-                      {policySummary}
-                    </span>
-                  ) : null}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
 
-      <label className="order-card">
-        <strong>{f.businessName}</strong>
-        <input
-          name="business_name"
-          type="text"
-          placeholder={f.businessNamePlaceholder}
-          required
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          style={{ marginTop: 10, width: "100%" }}
-        />
-      </label>
-
-      <div className="order-card">
-        <strong>{f.storefrontUrl}</strong>
-        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          {f.storefrontHint}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10 }}>
-          <input
-            name="slug"
-            type="text"
-            value={slug}
-            onChange={(e) => {
-              const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
-              setSlug(v);
-              setSlugEdited(true);
+        <fieldset className="order-card" style={{ border: "none", padding: 16, margin: 0 }}>
+          <legend style={{ padding: 0 }}>
+            <strong>{f.businessType.label}</strong>
+          </legend>
+          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+            {f.businessType.hint}
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 8,
+              marginTop: 12,
             }}
-            style={{ width: 200, fontFamily: "monospace" }}
-            maxLength={63}
-          />
-          <span className="muted" style={{ fontSize: 14 }}>.{appDomain}</span>
-        </div>
-        {slugStatus === "checking" && (
-          <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>{f.slugStatus.checking}</div>
-        )}
-        {slugStatus === "available" && (
-          <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>{f.slugStatus.available}</div>
-        )}
-        {slugStatus === "taken" && (
-          <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>{f.slugStatus.taken}</div>
-        )}
-        {slugStatus === "invalid" && (
-          <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>
-            {f.slugStatus.invalid}
+          >
+            {verticalOptions.map(({ value, label, description, policySummary }) => {
+              const isSel = businessType === value;
+              return (
+                <label
+                  key={value}
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    padding: 12,
+                    border: isSel ? "2px solid var(--primary)" : "1px solid var(--border)",
+                    margin: isSel ? 0 : 1,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    background: isSel ? "var(--primary-bg)" : "transparent",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="business_type"
+                    value={value}
+                    checked={isSel}
+                    onChange={() => setBusinessType(value)}
+                    style={{ marginTop: 3, flexShrink: 0 }}
+                  />
+                  <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <strong style={{ fontSize: 14 }}>{label}</strong>
+                    <span className="muted" style={{ fontSize: 12 }}>{description}</span>
+                    {isSel ? (
+                      <span style={{ fontSize: 11.5, color: "var(--primary)", marginTop: 2 }}>
+                        {policySummary}
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              );
+            })}
           </div>
-        )}
-      </div>
+        </fieldset>
 
-      <label className="order-card">
-        <strong>{f.timezone}</strong>
-        <select
-          key={defaultTimezone}
-          name="timezone"
-          defaultValue={defaultTimezone}
-          style={{ marginTop: 10, width: "100%" }}
-        >
-          <option value="America/New_York">{f.timezoneOptions.eastern}</option>
-          <option value="America/Chicago">{f.timezoneOptions.central}</option>
-          <option value="America/Denver">{f.timezoneOptions.mountain}</option>
-          <option value="America/Los_Angeles">{f.timezoneOptions.pacific}</option>
-        </select>
-      </label>
-
-      <div style={{ marginTop: 8, marginBottom: 4 }}>
-        <div className="kicker">{f.step2}</div>
-        <strong style={{ fontSize: 15 }}>{f.whereDoYouDeliver}</strong>
-        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          {f.deliveryBlurb}
-        </div>
-      </div>
-
-      <div className="grid grid-3">
         <label className="order-card">
-          <strong>{f.primaryZip}</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.primaryZipHint}</div>
+          <strong>{f.businessName}</strong>
           <input
-            name="zip_code"
+            name="business_name"
             type="text"
-            placeholder={f.primaryZipPlaceholder}
-            required
-            inputMode="numeric"
+            placeholder={f.businessNamePlaceholder}
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
 
-        <label className="order-card">
-          <strong>{f.defaultDeliveryFee}</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.defaultDeliveryFeeHint}</div>
-          <input
-            key={`fee-${businessType}`}
-            name="delivery_fee"
-            type="number"
-            step="1"
-            min="0"
-            defaultValue={money.deliveryFee}
-            style={{ marginTop: 10, width: "100%" }}
-          />
-        </label>
-
-        <label className="order-card">
-          <strong>{f.orderMinimum}</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.orderMinimumHint}</div>
-          <input
-            key={`min-${businessType}`}
-            name="minimum_order"
-            type="number"
-            step="1"
-            min="0"
-            defaultValue={money.orderMinimum}
-            style={{ marginTop: 10, width: "100%" }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginTop: 8, marginBottom: 4 }}>
-        <div className="kicker">{f.step3}</div>
-        <strong style={{ fontSize: 15 }}>{f.depositPolicy}</strong>
-        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-          {f.depositBlurb}
-        </div>
-      </div>
-
-      <label className="order-card">
-        <strong>{f.depositLabel}</strong>
-        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.depositHint}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-          <input
-            key={`dep-${businessType}`}
-            name="deposit_percentage"
-            type="number"
-            step="1"
-            min="0"
-            max="100"
-            defaultValue={money.depositPercentage}
-            style={{ width: 90 }}
-          />
-          <span className="muted" style={{ fontSize: 14 }}>%</span>
-        </div>
-        {selected ? (
-          <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            {f.cancellationLabel}: {selected.policySummary}
+        <div className="order-card">
+          <strong>{f.storefrontUrl}</strong>
+          <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>{f.storefrontHint}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10 }}>
+            <input
+              name="slug"
+              type="text"
+              value={slug}
+              onChange={(e) => {
+                const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                setSlug(v);
+                setSlugEdited(true);
+              }}
+              style={{ width: 200, fontFamily: "monospace" }}
+              maxLength={63}
+            />
+            <span className="muted" style={{ fontSize: 14 }}>.{appDomain}</span>
           </div>
-        ) : null}
-      </label>
+          {slugStatus === "checking" && (
+            <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>{f.slugStatus.checking}</div>
+          )}
+          {slugStatus === "available" && (
+            <div style={{ marginTop: 6, fontSize: 13, color: "#16a34a" }}>{f.slugStatus.available}</div>
+          )}
+          {slugStatus === "taken" && (
+            <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>{f.slugStatus.taken}</div>
+          )}
+          {slugStatus === "invalid" && (
+            <div style={{ marginTop: 6, fontSize: 13, color: "#dc2626" }}>{f.slugStatus.invalid}</div>
+          )}
+        </div>
+
+        <label className="order-card">
+          <strong>{f.timezone}</strong>
+          <select
+            key={defaultTimezone}
+            name="timezone"
+            defaultValue={defaultTimezone}
+            style={{ marginTop: 10, width: "100%" }}
+          >
+            <option value="America/New_York">{f.timezoneOptions.eastern}</option>
+            <option value="America/Chicago">{f.timezoneOptions.central}</option>
+            <option value="America/Denver">{f.timezoneOptions.mountain}</option>
+            <option value="America/Los_Angeles">{f.timezoneOptions.pacific}</option>
+          </select>
+        </label>
+      </div>
+
+      {/* ── Step 2 — service area ────────────────────────────────────── */}
+      <div hidden={step !== 2} className="list">
+        <div style={{ marginBottom: 4 }}>
+          <div className="kicker">{f.step2}</div>
+          <strong style={{ fontSize: 15 }}>{f.whereDoYouDeliver}</strong>
+          <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>{f.deliveryBlurb}</div>
+        </div>
+
+        <div className="grid grid-3">
+          <label className="order-card">
+            <strong>{f.primaryZip}</strong>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.primaryZipHint}</div>
+            <input
+              name="zip_code"
+              type="text"
+              placeholder={f.primaryZipPlaceholder}
+              inputMode="numeric"
+              value={zip}
+              onChange={(e) => setZip(e.target.value)}
+              style={{ marginTop: 10, width: "100%" }}
+            />
+          </label>
+
+          <label className="order-card">
+            <strong>{f.defaultDeliveryFee}</strong>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.defaultDeliveryFeeHint}</div>
+            <input
+              key={`fee-${businessType}`}
+              name="delivery_fee"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={money.deliveryFee}
+              style={{ marginTop: 10, width: "100%" }}
+            />
+          </label>
+
+          <label className="order-card">
+            <strong>{f.orderMinimum}</strong>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.orderMinimumHint}</div>
+            <input
+              key={`min-${businessType}`}
+              name="minimum_order"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={money.orderMinimum}
+              style={{ marginTop: 10, width: "100%" }}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* ── Step 3 — deposit & cancellation ──────────────────────────── */}
+      <div hidden={step !== 3} className="list">
+        <div style={{ marginBottom: 4 }}>
+          <div className="kicker">{f.step3}</div>
+          <strong style={{ fontSize: 15 }}>{f.depositPolicy}</strong>
+          <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>{f.depositBlurb}</div>
+        </div>
+
+        <label className="order-card">
+          <strong>{f.depositLabel}</strong>
+          <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.depositHint}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+            <input
+              key={`dep-${businessType}`}
+              name="deposit_percentage"
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              defaultValue={money.depositPercentage}
+              style={{ width: 90 }}
+            />
+            <span className="muted" style={{ fontSize: 14 }}>%</span>
+          </div>
+          {selected ? (
+            <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              {f.cancellationLabel}: {selected.policySummary}
+            </div>
+          ) : null}
+        </label>
+      </div>
 
       {state.message && !state.ok && (
         <div className="badge warning" style={{ padding: "10px 14px" }}>
@@ -423,7 +460,7 @@ export function OnboardingForm({
         </div>
       )}
 
-      {resumedDraft && !state.ok && (
+      {resumedDraft && (
         <div
           role="status"
           className="badge info"
@@ -433,39 +470,29 @@ export function OnboardingForm({
         </div>
       )}
 
-      {state.ok && state.storefrontUrl ? (
-        <div
-          className="panel"
-          style={{ padding: "20px 24px", background: "#f0fdf4", borderLeft: "4px solid #22c55e" }}
-        >
-          <strong style={{ fontSize: 16, color: "#166534" }}>{f.siteLive}</strong>
-          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
-            {f.customersCanFindYou}
-          </div>
-          <div style={{ marginTop: 6 }}>
-            <a
-              href={state.storefrontUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 600, color: "var(--primary)" }}
-            >
-              {state.storefrontUrl} &#8599;
-            </a>
-          </div>
-          <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>
-            {f.bookmarkHint}
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <a href="/dashboard" className="primary-btn">{f.goToDashboard}</a>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: "flex", gap: 12 }}>
+      {/* ── Wizard navigation ────────────────────────────────────────── */}
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        {step > 1 && (
+          <button type="button" className="secondary-btn" onClick={goBack} disabled={pending}>
+            {f.back}
+          </button>
+        )}
+        {step < TOTAL_STEPS ? (
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={goNext}
+            disabled={!stepValid}
+            title={!stepValid ? f.completeStepHint : undefined}
+          >
+            {f.continue}
+          </button>
+        ) : (
           <button className="primary-btn" type="submit" disabled={submitDisabled}>
             {pending ? f.submitting : f.submit}
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </form>
   );
 }
