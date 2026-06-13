@@ -25,17 +25,17 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Phase 1 — Evidence ceremony (the locked flow)
 
-- [ ] Multi-photo evidence upload (evidence form: up to 6 photos per
+- [x] Multi-photo evidence upload (evidence form: up to 6 photos per
   party per phase; shared prerequisite with Phase 3 listing photos)
-- [ ] Seller "before" photos BLOCKING on "Mark checked out" (count ≥2;
+- [x] Seller "before" photos BLOCKING on "Mark checked out" (count ≥2;
   serial/label prompt where risk family requires)
-- [ ] Renter pickup-photo window (≤4h post-checkout) + return-photo
+- [x] Renter pickup-photo window (≤4h post-checkout) + return-photo
   window (≤24h) with nag UI on My rentals
-- [ ] Dispute card: evidence checklist (which sets exist, timestamps,
+- [x] Dispute card: evidence checklist (which sets exist, timestamps,
   windows met?) + presumption rules rendered for the founder
-- [ ] No-seller-before-photos = deposit capture disabled in
+- [x] No-seller-before-photos = deposit capture disabled in
   resolution form (enforced, not just convention)
-- [ ] Pre-booking disclosure of the ceremony on the PDP
+- [x] Pre-booking disclosure of the ceremony on the PDP
 
 ## Phase 2 — Demand capture
 
@@ -136,6 +136,18 @@ what we build, in order, checked off as it ships). Same convention as
 
 ## Done log
 
+- **2026-06-13 — Phase 1 (evidence ceremony):** multi-photo evidence
+  upload (up to 6 per submit, one row each); seller before-photos
+  BLOCKING at checkout (lifecycle gate: <2 seller handoff photos →
+  "Mark checked out" refuses, alongside the existing identity gate);
+  renter pickup/return forms carry the ≤4h/≤24h window copy as
+  dispute-eligibility nudges; founder dispute card renders the evidence
+  ladder (seller-before / renter-pickup / renter-return / seller-after
+  with counts + timestamps) and the presumption rules; deposit-capture
+  guard enforces "no seller baseline → no capture" in resolveDispute
+  (refund/no-fault still allowed); PDP pre-booking disclosure of the
+  photo ceremony. Pure summarizer extracted to evidence-summary.ts +
+  4 unit tests (483/483). No migration — reuses market_handoff_evidence.
 - **2026-06-12 — Phase 0 (compliance fixes):** "verified" copy made
   precise everywhere (card pill → "Local seller"; store badge earned —
   renders only on Stripe-KYC-complete sellers, retitled "ID-verified

@@ -25,6 +25,7 @@ export type EvidenceState = { ok: boolean; message: string };
 const EVIDENCE_BUCKET = "market-evidence";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 20 * 1024 * 1024;
+const MAX_PHOTOS = 6;
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -104,13 +105,17 @@ export async function submitEvidence(
     };
   }
 
-  // Photo is optional only when a note is present; §16 wants photos,
-  // so the UI labels the photo as the primary input.
-  const file = formData.get("photo");
-  // Holds the PRIVATE-bucket storage path (not a public URL) — see #39.
-  let photoPath: string | null = null;
+  // Phase 1 (locked rental flow): up to 6 photos per submit, one
+  // evidence row each. The seller before-photos gate (≥2) is enforced
+  // at checkout in lifecycle-actions; here we just store what's given.
+  const files = formData
+    .getAll("photo")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, MAX_PHOTOS);
+  // Each entry is a PRIVATE-bucket storage path (#39), never a URL.
+  const photoPaths: string[] = [];
 
-  if (file instanceof File && file.size > 0) {
+  for (const file of files) {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return { ok: false, message: "Only JPEG, PNG, or WebP photos are allowed." };
     }
@@ -119,41 +124,63 @@ export async function submitEvidence(
       return { ok: false, message: "File content doesn't match a supported image format." };
     }
     if (file.size > MAX_SIZE) {
-      return { ok: false, message: "Photo must be under 20 MB." };
+      return { ok: false, message: "Each photo must be under 20 MB." };
     }
-
     const ext = MIME_TO_EXT[sniffed] ?? "jpg";
-    const filePath = `${booking.id}/${parsed.data.phase}-${party}-${Date.now()}.${ext}`;
+    const filePath = `${booking.id}/${parsed.data.phase}-${party}-${Date.now()}-${photoPaths.length}.${ext}`;
     const { error: uploadError } = await admin.storage
       .from(EVIDENCE_BUCKET)
       .upload(filePath, file, { contentType: sniffed, upsert: false });
     if (uploadError) {
       return { ok: false, message: "Upload failed — please try again." };
     }
-    // Private bucket: store the path; admin/dispute views read it via
-    // createSignedUrl(). Never getPublicUrl() here.
-    photoPath = filePath;
-  } else if (!parsed.data.note) {
-    return { ok: false, message: "Add a photo (or at least a note)." };
+    photoPaths.push(filePath);
   }
 
-  const { error } = await admin.from("market_handoff_evidence").insert({
-    booking_id: booking.id,
-    phase: parsed.data.phase,
-    party,
-    photo_url: photoPath,
-    note: parsed.data.note || null,
-  });
+  if (photoPaths.length === 0 && !parsed.data.note) {
+    return { ok: false, message: "Add at least one photo (or a note)." };
+  }
+
+  // One row per photo; a note-only submit writes a single row.
+  const rows =
+    photoPaths.length > 0
+      ? photoPaths.map((p, i) => ({
+          booking_id: booking.id,
+          phase: parsed.data.phase,
+          party,
+          photo_url: p,
+          // Attach the note to the first photo only.
+          note: i === 0 ? parsed.data.note || null : null,
+        }))
+      : [
+          {
+            booking_id: booking.id,
+            phase: parsed.data.phase,
+            party,
+            photo_url: null,
+            note: parsed.data.note || null,
+          },
+        ];
+
+  const { error } = await admin.from("market_handoff_evidence").insert(rows);
   if (error) return { ok: false, message: "Couldn't save the evidence." };
 
   await admin.from("market_booking_events").insert({
     booking_id: booking.id,
     event: `evidence.${parsed.data.phase}.${party}`,
     actor: party,
-    payload: { has_photo: Boolean(photoPath) },
+    payload: { photo_count: photoPaths.length },
   });
 
   revalidatePath("/market/rentals");
   revalidatePath("/dashboard/marketplace");
-  return { ok: true, message: "Evidence saved — it's attached to the booking." };
+  revalidatePath("/market/hub");
+  const n = photoPaths.length;
+  return {
+    ok: true,
+    message:
+      n > 0
+        ? `Saved ${n} photo${n === 1 ? "" : "s"} — attached to the booking.`
+        : "Note saved — attached to the booking.",
+  };
 }

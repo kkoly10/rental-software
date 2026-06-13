@@ -253,6 +253,22 @@ export async function resolveDispute(
     (parsed.data.outcome === "resolved_renter_liable" ||
       parsed.data.outcome === "resolved_split");
 
+  // Phase 1 presumption rule (enforced, not advisory): a seller who
+  // never recorded a condition baseline at handoff cannot capture the
+  // deposit for damage — there is nothing to prove the item left in
+  // better shape. Other outcomes (refunds, release) are unaffected.
+  if (wantsCapture) {
+    const { getBookingEvidenceSummary } = await import("@/lib/market/evidence");
+    const ev = await getBookingEvidenceSummary(admin, booking.id);
+    if (!ev.sellerBaselinePresent) {
+      return {
+        ok: false,
+        message:
+          "Capture blocked: the seller has no handoff condition photos for this booking, so a damage claim can't be substantiated. You can still refund the renter or close with no fault.",
+      };
+    }
+  }
+
   if (booking.deposit_status === "held" && booking.stripe_deposit_intent_id) {
     // Bug #8: CAS held → capturing BEFORE touching Stripe, so the
     // claim-window release cron can't act on the same intent. If the CAS

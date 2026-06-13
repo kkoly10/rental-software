@@ -277,7 +277,7 @@ export default async function MyRentalsPage({
                 <Stepper state={b.state} />
                 {b.state === "ready_for_handoff" || b.state === "checked_out" ? (
                   <div style={{ width: "100%" }}>
-                    <EvidenceForm bookingId={b.id} phase="handoff" />
+                    <EvidenceForm bookingId={b.id} phase="handoff" actor="renter" />
                   </div>
                 ) : null}
                 {["checked_out", "overdue"].includes(b.state) ? (
@@ -306,7 +306,7 @@ export default async function MyRentalsPage({
                 ) : null}
                 {["checked_out", "overdue", "returned_pending_review"].includes(b.state) ? (
                   <div style={{ width: "100%" }}>
-                    <EvidenceForm bookingId={b.id} phase="return" />
+                    <EvidenceForm bookingId={b.id} phase="return" actor="renter" />
                     <DisputeForm bookingId={b.id} />
                   </div>
                 ) : null}

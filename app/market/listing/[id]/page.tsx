@@ -229,6 +229,12 @@ export default async function ListingPage({ params }: { params: Promise<Params> 
                 and you pay nothing.
               </p>
               <p className="mk-note">
+                📸 <b>Photos protect both sides:</b> the seller photographs the
+                item&rsquo;s condition before handoff, and you photograph it at
+                pickup and at return. Snapping a few quick pickup photos is your
+                proof against being blamed for damage you didn&rsquo;t cause.
+              </p>
+              <p className="mk-note">
                 ⏰ <b>Late returns:</b> after a {LATE_GRACE_MS / 3_600_000}-hour
                 grace window, each started late day costs the daily rate plus a
                 ${LATE_FLAT_FEE_CENTS / 100} late fee, for up to {LATE_DAYS_CAP}{" "}
