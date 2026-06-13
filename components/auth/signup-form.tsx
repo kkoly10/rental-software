@@ -29,39 +29,58 @@ export function SignupForm() {
   }, [state.fullName, state.phone, state.email]);
 
   return (
-    <form action={formAction} className="list" style={{ marginTop: 16 }}>
-      <label className="order-card">
-        <strong>{m.auth.form.name}</strong>
-        <input name="full_name" type="text" placeholder={m.auth.form.namePlaceholder} value={fullName} onChange={(e) => setFullName(e.target.value)} style={{ marginTop: 10, width: "100%" }} />
-      </label>
+    <form action={formAction} className="auth-fields">
+      <div className="auth-grid-2">
+        <label className="auth-field">
+          <span>{m.auth.form.name}</span>
+          <input
+            name="full_name"
+            type="text"
+            autoComplete="name"
+            placeholder={m.auth.form.namePlaceholder}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        </label>
 
-      <label className="order-card">
-        <strong>Phone</strong>
-        <input name="phone" type="tel" placeholder="(540) 555-0100" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ marginTop: 10, width: "100%" }} />
-      </label>
+        <label className="auth-field">
+          <span>Phone</span>
+          <input
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="(540) 555-0100"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </label>
+      </div>
 
-      <label className="order-card">
-        <strong>{m.auth.form.email}</strong>
-        <input name="email" type="email" placeholder={m.auth.form.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} style={{ marginTop: 10, width: "100%" }} />
-      </label>
-
-      <label className="order-card">
-        <strong>{m.auth.form.password}</strong>
-        <input name="password" type="password" placeholder={m.auth.form.passwordPlaceholder} style={{ marginTop: 10, width: "100%" }} />
-      </label>
-
-      <label
-        className="order-card"
-        style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
-      >
+      <label className="auth-field">
+        <span>{m.auth.form.email}</span>
         <input
-          name="terms_accepted"
-          type="checkbox"
-          required
-          value="true"
-          style={{ marginTop: 3, width: "auto", flexShrink: 0 }}
+          name="email"
+          type="email"
+          autoComplete="email"
+          placeholder={m.auth.form.emailPlaceholder}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
-        <span style={{ fontSize: 14, lineHeight: 1.5 }}>
+      </label>
+
+      <label className="auth-field">
+        <span>{m.auth.form.password}</span>
+        <input
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          placeholder={m.auth.form.passwordPlaceholder}
+        />
+      </label>
+
+      <label className="auth-terms">
+        <input name="terms_accepted" type="checkbox" required value="true" />
+        <span>
           {m.auth.signup.termsAgreement}{" "}
           <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: 600 }}>
             {m.auth.signup.terms}
@@ -73,13 +92,19 @@ export function SignupForm() {
         </span>
       </label>
 
-      {state.message ? <div role="alert" aria-live="assertive" className="muted">{state.message}</div> : null}
+      {state.message ? (
+        <div role="alert" aria-live="assertive" className="muted">
+          {state.message}
+        </div>
+      ) : null}
 
-      <div style={{ display: "flex", gap: 12 }}>
+      <div className="auth-actions">
         <button className="primary-btn" type="submit" disabled={pending}>
           {pending ? m.auth.form.signingUp : m.auth.form.signUp}
         </button>
       </div>
+
+      <p className="auth-next">{m.auth.signup.nextStep}</p>
     </form>
   );
 }

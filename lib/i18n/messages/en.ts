@@ -446,6 +446,7 @@ const enValues = {
       termsAgreement: "By creating an account you agree to our",
       terms: "Terms",
       privacy: "Privacy Policy",
+      nextStep: "Next: confirm your email, then set up your business — name, service area, and your rental category.",
     },
     forgotPassword: {
       kicker: "Account recovery",
@@ -1556,20 +1557,6 @@ const enValues = {
       businessType: {
         label: "What kind of rentals do you offer?",
         hint: "We'll seed default categories and rental terms based on this. Pick the closest fit.",
-        options: {
-          inflatable: {
-            label: "Inflatables & party rentals",
-            description: "Bounce houses, water slides, tables, chairs, party gear.",
-          },
-          car: {
-            label: "Vehicles & fleet",
-            description: "Cars, vans, trucks, luxury vehicles.",
-          },
-          equipment: {
-            label: "Equipment & tools",
-            description: "Generators, lifts, compressors, construction gear.",
-          },
-        },
       },
       whereDoYouDeliver: "Where do you deliver?",
       deliveryBlurb: "Customers can only place online orders within your service area. You can add more delivery zones from your dashboard later.",

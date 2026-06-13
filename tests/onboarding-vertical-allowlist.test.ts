@@ -1,61 +1,48 @@
 /**
- * Sprint 5.8 — onboarding vertical chooser allowlist pin.
+ * Onboarding vertical chooser — registry is the single source of truth.
  *
- * Two surfaces have to agree on which verticals exist:
- *   - the i18n options the chooser renders (en/es/fr/pt)
- *   - the server action allowlist that validates the form submission
- *
- * If they drift — someone adds "boat" to en.ts but forgets the action,
- * or adds a vertical to the action but forgets es/fr/pt — the form
- * silently funnels the operator into the wrong category seed. This
- * test re-states both lists and pins them equal.
+ * The signup wizard's vertical cards are now built from the vertical
+ * registry (app/onboarding/page.tsx → buildVerticalOptions), and the
+ * server action (lib/onboarding/actions.ts) validates the submission
+ * against listVerticalSlugs(). So the old drift risk — the i18n option
+ * list disagreeing with the action's hardcoded allowlist — is gone by
+ * construction. This test pins the registry itself: the expected
+ * day-one 6 verticals, and that each carries the fields the wizard card
+ * renders (label.en, a non-empty category seed list, and a policy).
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { en } from "../lib/i18n/messages/en.ts";
-import { es } from "../lib/i18n/messages/es.ts";
-import { fr } from "../lib/i18n/messages/fr.ts";
-import { pt } from "../lib/i18n/messages/pt.ts";
+import { listVerticals, listVerticalSlugs } from "../lib/verticals/registry.ts";
 
-// Duplicated from lib/onboarding/actions.ts. Source of truth lives there;
-// this is the safety net.
-const ACTION_ALLOWED = ["inflatable", "car", "equipment"] as const;
+const EXPECTED = [
+  "inflatable",
+  "tents",
+  "tables-and-chairs",
+  "dance-floors",
+  "photo-booths",
+  "concessions",
+].sort();
 
-test("every locale exposes the same vertical options as the action accepts", () => {
-  for (const [locale, messages] of [
-    ["en", en],
-    ["es", es],
-    ["fr", fr],
-    ["pt", pt],
-  ] as const) {
-    const options = messages.onboarding.form.businessType.options;
-    const localeKeys = Object.keys(options).sort();
-    assert.deepEqual(
-      localeKeys,
-      [...ACTION_ALLOWED].sort(),
-      `locale ${locale} options drifted from action allowlist`,
-    );
-  }
+test("registry exposes exactly the day-one 6 verticals", () => {
+  assert.deepEqual([...listVerticalSlugs()].sort(), EXPECTED);
 });
 
-test("each vertical option has a non-empty label + description in every locale", () => {
-  for (const [locale, messages] of [
-    ["en", en],
-    ["es", es],
-    ["fr", fr],
-    ["pt", pt],
-  ] as const) {
-    const options = messages.onboarding.form.businessType.options;
-    for (const vertical of ACTION_ALLOWED) {
-      const opt = options[vertical];
-      assert.ok(
-        opt.label.length > 0,
-        `${locale}.${vertical}.label is empty`,
-      );
-      assert.ok(
-        opt.description.length > 0,
-        `${locale}.${vertical}.description is empty`,
-      );
-    }
+test("the dead legacy car/equipment verticals are gone from the registry", () => {
+  const slugs = listVerticalSlugs();
+  assert.ok(!slugs.includes("car"), "car should no longer be a vertical");
+  assert.ok(!slugs.includes("equipment"), "equipment should no longer be a vertical");
+});
+
+test("every vertical carries the fields the signup card renders", () => {
+  for (const v of listVerticals()) {
+    assert.ok(v.label.en.length > 0, `${v.slug} missing label.en`);
+    assert.ok(
+      v.defaultCategorySeeds.length > 0,
+      `${v.slug} has no default category seeds for the card preview`,
+    );
+    assert.ok(
+      Number.isFinite(v.policies.minLeadTimeHours),
+      `${v.slug} missing a lead-time policy`,
+    );
   }
 });

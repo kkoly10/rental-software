@@ -1,8 +1,37 @@
 import Link from "next/link";
-import { OnboardingForm } from "@/components/onboarding/onboarding-form";
+import { OnboardingForm, type VerticalOption } from "@/components/onboarding/onboarding-form";
 import { getMessages } from "@/lib/i18n/server";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { listVerticals } from "@/lib/verticals/registry";
+
+/**
+ * Build the signup vertical picker straight from the vertical registry
+ * so the wizard can never drift from the verticals the app actually
+ * supports (the old form hardcoded the list, which had already gone
+ * stale against lib/verticals). Each card previews the seeded
+ * categories and the cancellation/lead-time policy the pick locks in —
+ * making the choice visibly consequential instead of cosmetic.
+ */
+function buildVerticalOptions(): VerticalOption[] {
+  return listVerticals().map((v) => {
+    const { refundWindowDays, forfeitPct, minLeadTimeHours } = v.policies;
+    const lead =
+      minLeadTimeHours >= 48
+        ? `${Math.round(minLeadTimeHours / 24)}-day min lead`
+        : `${minLeadTimeHours}h min lead`;
+    const refund =
+      forfeitPct === 0
+        ? "Always fully refundable"
+        : `${forfeitPct}% deposit forfeit within ${refundWindowDays} days`;
+    return {
+      value: v.slug,
+      label: v.label.en,
+      description: v.defaultCategorySeeds.slice(0, 4).join(" · "),
+      policySummary: `${refund} · ${lead}`,
+    };
+  });
+}
 
 export default async function OnboardingPage({
   searchParams,
@@ -78,7 +107,7 @@ export default async function OnboardingPage({
             ))}
           </div>
 
-          <OnboardingForm />
+          <OnboardingForm verticalOptions={buildVerticalOptions()} />
 
           <div style={{ marginTop: 16 }}>
             <Link href="/login" className="ghost-btn">

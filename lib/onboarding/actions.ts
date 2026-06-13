@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { generateSlug, isSlugAvailable, isValidSlugFormat, getAppDomain } from "@/lib/auth/resolve-org";
+import { listVerticalSlugs } from "@/lib/verticals/registry";
 import { escapeHtml } from "@/lib/maps/escape-html";
 import {
   renderEmailLayout,
@@ -28,24 +29,15 @@ export async function completeOnboarding(
   const zipCode = String(formData.get("zip_code") ?? "").trim().slice(0, 20);
   const deliveryFee = parseFloat(String(formData.get("delivery_fee") ?? "25"));
   const minimumOrder = parseFloat(String(formData.get("minimum_order") ?? "100"));
-  // Phase 3/2d — multi-vertical signup picker. The form now offers
-  // the 6 registry verticals (inflatable + the wedding/banquet triad
-  // + photo-booths + concessions); car/equipment stay accepted for
-  // any half-completed legacy session that posts an old value. The
-  // bootstrap RPC's per-vertical category seed branches keep these
-  // values in lockstep (migration 20260608_170000).
-  const businessType = [
-    "inflatable",
-    "tents",
-    "tables-and-chairs",
-    "dance-floors",
-    "photo-booths",
-    "concessions",
-    "car",
-    "equipment",
-  ].includes(String(formData.get("business_type") ?? ""))
-    ? String(formData.get("business_type"))
-    : "inflatable";
+  // Multi-vertical signup picker. The accepted set is the vertical
+  // registry itself (the single source of truth) — no hardcoded list to
+  // drift, and the dead legacy car/equipment values are no longer
+  // accepted. An unknown post falls back to the first registry vertical.
+  const validVerticals = listVerticalSlugs();
+  const postedType = String(formData.get("business_type") ?? "");
+  const businessType = validVerticals.includes(postedType)
+    ? postedType
+    : validVerticals[0];
   let slugInput = String(formData.get("slug") ?? "").trim();
 
   if (!businessName) {
