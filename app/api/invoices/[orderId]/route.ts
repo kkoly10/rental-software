@@ -5,6 +5,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getActiveMemberRole, FINANCIAL_DOC_ROLES } from "@/lib/auth/member-role";
 import { getOrderFinancials } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
+import { fetchLogoDataUrl } from "@/lib/pdf/logo";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { safeFilenameToken } from "@/lib/security/header-safe";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
@@ -123,6 +124,10 @@ export async function GET(
   const depositPaid = financials?.totalPaid ?? 0;
   const balanceDue = financials?.remainingBalance ?? totalAmount;
 
+  const logoDataUrl = await fetchLogoDataUrl(
+    ((org?.settings as Record<string, unknown> | null)?.brand_logo_url as string | undefined) ?? null,
+  );
+
   const invoiceData: InvoiceData = {
     businessName: org?.name ?? "Rental Company",
     supportEmail: org?.support_email ?? profile?.email ?? "",
@@ -170,6 +175,7 @@ export async function GET(
           | undefined) ?? null;
       return raw && raw.toLowerCase() !== "#1e5dcf" ? raw : null;
     })(),
+    logoDataUrl,
   };
 
   const pdfBytes = generateInvoicePdf(invoiceData);

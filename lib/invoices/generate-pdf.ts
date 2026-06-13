@@ -37,6 +37,9 @@ export type InvoiceData = {
   /** Operator's explicitly-set brand primary (hex). Null/undefined →
    *  pure-ink document. */
   brandColor?: string | null;
+  /** Operator logo as a base64 data URL; replaces the name wordmark in
+   *  the header when present. */
+  logoDataUrl?: string | null;
 };
 
 function formatMoney(amount: number): string {
@@ -61,6 +64,7 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
     metaLines: [`#${data.orderNumber}`, data.invoiceDate],
     margin,
     accent,
+    logoDataUrl: data.logoDataUrl,
   });
 
   // ─── From / To ────────────────────────────────────────────────────

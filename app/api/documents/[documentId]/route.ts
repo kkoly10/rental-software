@@ -6,6 +6,7 @@ import { getActiveMemberRole, FINANCIAL_DOC_ROLES } from "@/lib/auth/member-role
 import { generateDocumentPdf } from "@/lib/documents/generate-pdf";
 import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
 import { getOrderFinancials } from "@/lib/payments/financials";
+import { fetchLogoDataUrl } from "@/lib/pdf/logo";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
@@ -188,6 +189,10 @@ export async function GET(
     ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
     : "Customer";
 
+  const logoDataUrl = await fetchLogoDataUrl(
+    (settings.brand_logo_url as string | undefined) ?? null,
+  );
+
   const pdfBytes = generateDocumentPdf({
     documentType: document.document_type as "rental_agreement" | "safety_waiver",
     business: {
@@ -231,6 +236,7 @@ export async function GET(
     // Operator-edited clauses override the per-vertical defaults when set.
     terms: customClauses.length > 0 ? customClauses : undefined,
     brandColor,
+    logoDataUrl,
   });
 
   const docTitle = document.document_type === "rental_agreement"
