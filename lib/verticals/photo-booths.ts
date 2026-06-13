@@ -18,6 +18,7 @@ import type { VerticalConfig } from "./types.ts";
  */
 export const photoBoothsVertical: VerticalConfig = {
   slug: "photo-booths",
+  operatorDefaults: { depositPercentage: 50, orderMinimum: 200, deliveryFee: 50 },
   label: {
     en: "Photo booths",
     es: "Cabinas de fotos",

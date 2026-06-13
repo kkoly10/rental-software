@@ -12,6 +12,12 @@ export type VerticalOption = {
   description: string;
   /** One-line summary of the cancellation + lead-time policy this pick locks in. */
   policySummary: string;
+  /** Money settings pre-filled (editable) in the onboarding wizard. */
+  defaults: {
+    depositPercentage: number;
+    orderMinimum: number;
+    deliveryFee: number;
+  };
 };
 
 /**
@@ -36,6 +42,7 @@ export function buildVerticalOptions(): VerticalOption[] {
       label: v.label.en,
       description: v.defaultCategorySeeds.slice(0, 4).join(" · "),
       policySummary: `${refund} · ${lead}`,
+      defaults: { ...v.operatorDefaults },
     };
   });
 }

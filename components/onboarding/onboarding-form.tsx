@@ -183,6 +183,19 @@ export function OnboardingForm({
 
   const f = m.onboarding.form;
 
+  // Money defaults pre-filled from the chosen vertical (editable). The
+  // inputs are uncontrolled with a `key` tied to businessType, so they
+  // re-mount with the new vertical's defaults when the operator changes
+  // their category — same pattern the timezone select uses. Manual edits
+  // persist within a vertical; switching vertical re-seeds the suggested
+  // numbers (all still editable, and changeable later in Settings).
+  const selected = verticalOptions.find((o) => o.value === businessType);
+  const money = selected?.defaults ?? {
+    depositPercentage: 30,
+    orderMinimum: 100,
+    deliveryFee: 25,
+  };
+
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       <div style={{ marginBottom: 4 }}>
@@ -348,11 +361,12 @@ export function OnboardingForm({
           <strong>{f.defaultDeliveryFee}</strong>
           <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.defaultDeliveryFeeHint}</div>
           <input
+            key={`fee-${businessType}`}
             name="delivery_fee"
             type="number"
             step="1"
             min="0"
-            defaultValue={25}
+            defaultValue={money.deliveryFee}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
@@ -361,15 +375,47 @@ export function OnboardingForm({
           <strong>{f.orderMinimum}</strong>
           <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.orderMinimumHint}</div>
           <input
+            key={`min-${businessType}`}
             name="minimum_order"
             type="number"
             step="1"
             min="0"
-            defaultValue={100}
+            defaultValue={money.orderMinimum}
             style={{ marginTop: 10, width: "100%" }}
           />
         </label>
       </div>
+
+      <div style={{ marginTop: 8, marginBottom: 4 }}>
+        <div className="kicker">{f.step3}</div>
+        <strong style={{ fontSize: 15 }}>{f.depositPolicy}</strong>
+        <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+          {f.depositBlurb}
+        </div>
+      </div>
+
+      <label className="order-card">
+        <strong>{f.depositLabel}</strong>
+        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{f.depositHint}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+          <input
+            key={`dep-${businessType}`}
+            name="deposit_percentage"
+            type="number"
+            step="1"
+            min="0"
+            max="100"
+            defaultValue={money.depositPercentage}
+            style={{ width: 90 }}
+          />
+          <span className="muted" style={{ fontSize: 14 }}>%</span>
+        </div>
+        {selected ? (
+          <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            {f.cancellationLabel}: {selected.policySummary}
+          </div>
+        ) : null}
+      </label>
 
       {state.message && !state.ok && (
         <div className="badge warning" style={{ padding: "10px 14px" }}>

@@ -15,6 +15,7 @@ import type { VerticalConfig } from "./types.ts";
  */
 export const inflatableVertical: VerticalConfig = {
   slug: "inflatable",
+  operatorDefaults: { depositPercentage: 30, orderMinimum: 100, deliveryFee: 50 },
   label: {
     en: "Inflatables",
     es: "Inflables",

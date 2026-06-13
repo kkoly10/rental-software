@@ -46,3 +46,15 @@ test("every vertical carries the fields the signup card renders", () => {
     );
   }
 });
+
+test("every vertical defines sane operator money defaults for onboarding", () => {
+  for (const v of listVerticals()) {
+    const d = v.operatorDefaults;
+    assert.ok(
+      d.depositPercentage >= 0 && d.depositPercentage <= 100,
+      `${v.slug} deposit % out of range: ${d.depositPercentage}`,
+    );
+    assert.ok(d.orderMinimum >= 0, `${v.slug} order minimum negative`);
+    assert.ok(d.deliveryFee >= 0, `${v.slug} delivery fee negative`);
+  }
+});
