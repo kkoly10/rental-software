@@ -469,6 +469,9 @@ export const fr: Messages = {
       resend: "Renvoyer l’e-mail de vérification",
       resending: "Envoi…",
       sent: "E-mail de vérification envoyé.",
+      tipTitle: "Ouvrez le lien dans ce navigateur",
+      tipBody: "Touchez le lien depuis le même navigateur que celui utilisé pour l'inscription. Les applis de messagerie ouvrent parfois les liens dans un navigateur intégré qui ne peut pas finaliser la confirmation.",
+      didntGet: "Pas reçu, ou le lien a échoué ? Envoyez-en un nouveau :",
     },
     verified: {
       kicker: "E-mail confirmé",
@@ -479,6 +482,8 @@ export const fr: Messages = {
     error: {
       title: "Erreur d’authentification",
       description: "Nous n’avons pas pu terminer cette action. Veuillez réessayer.",
+      linkProblem: "Ce lien n’a pas pu être validé. Il a peut-être expiré, déjà été utilisé, ou été ouvert dans un navigateur différent de celui utilisé pour l’inscription.",
+      linkProblemHint: "Saisissez votre e-mail et nous vous enverrons un nouveau lien — ouvrez-le ensuite dans ce même navigateur :",
     },
   },
 

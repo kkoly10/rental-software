@@ -149,6 +149,20 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 
 ## Done log
 
+- **2026-06-13 — Auth confirmation hardening (signup bug from founder
+  testing):** founder signed up in Chrome on mobile, opened the email in
+  Gmail's in-app browser, and hit a raw "PKCE code verifier not found"
+  error — the confirmation link is a PKCE `?code=` link whose verifier
+  lives only in the originating browser, so any mail-app in-app browser
+  fails (near-universal on mobile). Code side: rebuilt `/auth/error` and
+  `/auth/verify-email` on the branded auth-card system, mapped link
+  failures to friendly copy (no raw PKCE jargon), added a self-serve
+  ResendVerificationForm to both, and fixed the verify-email page reusing
+  password-reset copy ("we sent a reset link"). ROOT-CAUSE FIX is a
+  founder dashboard change: switch the Supabase email templates to the
+  stateless token_hash format pointing at /auth/confirm (the route
+  already supports verifyOtp/token_hash) — see chat for exact snippets.
+  tsc/503/build green.
 - **2026-06-13 — Phase D slice 2 (full document clause editor):** new
   `document_templates` table (per org + doc type, RLS owner/admin-write,
   applied to prod). `/dashboard/settings/documents` (linked from Settings)

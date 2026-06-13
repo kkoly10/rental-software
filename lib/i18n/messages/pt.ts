@@ -469,6 +469,9 @@ export const pt: Messages = {
       resend: "Reenviar e-mail de verificação",
       resending: "A enviar…",
       sent: "E-mail de verificação enviado.",
+      tipTitle: "Abra o link neste navegador",
+      tipBody: "Toque no link a partir do mesmo navegador onde se registou. As apps de e-mail às vezes abrem os links num navegador interno que não consegue concluir a confirmação.",
+      didntGet: "Não recebeu, ou o link falhou? Envie um novo:",
     },
     verified: {
       kicker: "E-mail confirmado",
@@ -479,6 +482,8 @@ export const pt: Messages = {
     error: {
       title: "Erro de autenticação",
       description: "Não foi possível concluir esta ação. Por favor, tente novamente.",
+      linkProblem: "Não foi possível concluir este link. Pode ter expirado, já ter sido usado, ou ter sido aberto num navegador diferente daquele onde se registou.",
+      linkProblemHint: "Escreva o seu e-mail e enviaremos um link novo — depois abra-o neste mesmo navegador:",
     },
   },
 

@@ -469,6 +469,9 @@ export const es: Messages = {
       resend: "Reenviar correo de verificación",
       resending: "Enviando…",
       sent: "Correo de verificación enviado.",
+      tipTitle: "Abre el enlace en este navegador",
+      tipBody: "Toca el enlace desde el mismo navegador en el que te registraste. Las apps de correo a veces abren los enlaces en un navegador interno que no puede completar la confirmación.",
+      didntGet: "¿No llegó, o el enlace falló? Envía uno nuevo:",
     },
     verified: {
       kicker: "Correo confirmado",
@@ -479,6 +482,8 @@ export const es: Messages = {
     error: {
       title: "Error de autenticación",
       description: "No pudimos completar esa acción. Inténtalo de nuevo.",
+      linkProblem: "No se pudo completar este enlace. Puede haber caducado, ya haberse usado o haberse abierto en un navegador distinto al que usaste para registrarte.",
+      linkProblemHint: "Escribe tu correo y te enviaremos un enlace nuevo; ábrelo en este mismo navegador:",
     },
   },
 
