@@ -92,7 +92,13 @@ export async function orgPlanAllowsSms(organizationId: string): Promise<boolean>
   if (!hasSupabaseEnv()) return true;
   if (!organizationId) return false;
 
-  const supabase = await createSupabaseServerClient();
+  // Use the service-role client: this runs from cron/dispatch where there's
+  // no authenticated session, and anon SELECT on organizations excludes
+  // subscription_status/subscription_plan (migration 20260601_041000) — so
+  // the anon client would read nothing and falsely suppress SMS for every
+  // paid org. Service role bypasses RLS for this trusted by-org-id read.
+  const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createSupabaseAdminClient();
   const { data: org } = await supabase
     .from("organizations")
     .select("subscription_status, subscription_plan")
