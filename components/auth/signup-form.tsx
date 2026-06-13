@@ -3,33 +3,65 @@
 import { useActionState, useEffect, useState } from "react";
 import { signUpWithPassword, type AuthActionState } from "@/lib/auth/actions";
 import { useI18n } from "@/lib/i18n/provider";
+import type { VerticalOption } from "@/lib/verticals/options";
 
 const initialState: AuthActionState = {
   ok: false,
   message: "",
 };
 
-export function SignupForm() {
+export function SignupForm({ verticalOptions }: { verticalOptions: VerticalOption[] }) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState(signUpWithPassword, initialState);
 
   // Controlled inputs so the text-field values stick after a failed
-  // submit. signUpWithPassword echoes email + fullName + phone back on
-  // every error path; useEffect syncs the latest server echo into local
-  // state. Password + terms are intentionally NOT preserved — password
-  // for security, terms to force a fresh acknowledgment on retry.
+  // submit. signUpWithPassword echoes email + fullName + phone + the
+  // vertical pick back on every error path; useEffect syncs the latest
+  // server echo into local state. Password + terms are intentionally NOT
+  // preserved — password for security, terms to force a fresh
+  // acknowledgment on retry.
   const [fullName, setFullName] = useState(state.fullName ?? "");
   const [phone, setPhone] = useState(state.phone ?? "");
   const [email, setEmail] = useState(state.email ?? "");
+  const [businessType, setBusinessType] = useState(state.businessType ?? "");
   useEffect(() => {
     if (typeof state.fullName === "string" && state.fullName !== fullName) setFullName(state.fullName);
     if (typeof state.phone === "string" && state.phone !== phone) setPhone(state.phone);
     if (typeof state.email === "string" && state.email !== email) setEmail(state.email);
+    if (typeof state.businessType === "string" && state.businessType !== businessType) {
+      setBusinessType(state.businessType);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.fullName, state.phone, state.email]);
+  }, [state.fullName, state.phone, state.email, state.businessType]);
 
   return (
     <form action={formAction} className="auth-fields">
+      <fieldset className="auth-field" style={{ border: "none", padding: 0, margin: 0 }}>
+        <legend style={{ padding: 0 }}>
+          <span>{m.auth.signup.verticalLabel}</span>
+        </legend>
+        <div className="auth-verticals">
+          {verticalOptions.map((opt) => {
+            const selected = businessType === opt.value;
+            return (
+              <label key={opt.value} className={`auth-vertical${selected ? " is-selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="business_type"
+                  value={opt.value}
+                  checked={selected}
+                  onChange={() => setBusinessType(opt.value)}
+                />
+                <span className="auth-vertical-body">
+                  <strong>{opt.label}</strong>
+                  <span className="muted">{opt.description}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <div className="auth-grid-2">
         <label className="auth-field">
           <span>{m.auth.form.name}</span>

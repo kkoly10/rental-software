@@ -66,8 +66,10 @@ File:line references live in the session notes; this is the plan.
   vertical
 - [x] Remove the stale `businessType.options` i18n block (en/es/fr/pt)
   and repoint the allowlist test at the registry as source of truth
-- [ ] Decide: collect the vertical at SIGNUP (founder's mental model) vs
-  keep it the first onboarding step — DECISION NEEDED
+- [x] Decide: collect the vertical at SIGNUP — DECIDED (founder: move to
+  signup page). Picker now leads the signup form; the choice is stored on
+  auth metadata, survives email-verify, and pre-selects the onboarding
+  card (still editable as a fallback)
 - [ ] Decide: should the wizard branch by vertical (collect
   vertical-specific config), and what per-vertical config — DECISION NEEDED
 
@@ -108,6 +110,15 @@ File:line references live in the session notes; this is the plan.
 
 ## Done log
 
+- **2026-06-13 — Phase A part 2 (vertical pick moves to signup):** the
+  vertical picker now leads the signup form (registry-driven cards via
+  the shared `buildVerticalOptions()`); `signUpWithPassword` validates
+  the pick against the registry and stores it on the auth user's
+  metadata (`business_type`), so it survives the email-verify round trip
+  (the user is signed out after signUp). Onboarding reads that metadata
+  and pre-selects the matching card (still editable for anyone who
+  skipped it). Option-builder extracted to `lib/verticals/options.ts` and
+  shared by both surfaces. tsc/tests/build green.
 - **2026-06-13 — Phase A part 1 (signup + registry-driven onboarding):**
   signup rebuilt on the `auth-card`/`auth-field`/`auth-terms` system with
   the Korent logo, two-column name/phone, and a "what's next" bridge to

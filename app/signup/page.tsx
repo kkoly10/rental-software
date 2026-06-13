@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SignupForm } from "@/components/auth/signup-form";
 import { isTenantHost } from "@/lib/auth/org-context";
 import { getMessages } from "@/lib/i18n/server";
+import { buildVerticalOptions } from "@/lib/verticals/options";
 
 export default async function SignupPage({
   searchParams,
@@ -35,7 +36,7 @@ export default async function SignupPage({
           </div>
         ) : null}
 
-        <SignupForm />
+        <SignupForm verticalOptions={buildVerticalOptions()} />
 
         <div className="auth-alt">
           <Link href="/login" className="secondary-btn">

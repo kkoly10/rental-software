@@ -15,6 +15,7 @@ import {
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { logAppError, logAppEvent } from "@/lib/observability/server";
+import { listVerticalSlugs } from "@/lib/verticals/registry";
 
 export type AuthActionState = {
   ok: boolean;
@@ -35,6 +36,10 @@ export type AuthActionState = {
       acceptance is NOT echoed (force a fresh acknowledgment on retry). */
   fullName?: string;
   phone?: string;
+  /** Vertical the operator picked on the signup page, echoed back so the
+      picker stays selected after a failed submit. Stored on the auth
+      user's metadata at signUp and pre-selected in onboarding. */
+  businessType?: string;
 };
 
 function getValidationMessage(error: ZodError) {
@@ -298,10 +303,18 @@ export async function signUpWithPassword(
   const submittedEmail = String(formData.get("email") ?? "");
   const submittedFullName = String(formData.get("full_name") ?? "");
   const submittedPhone = String(formData.get("phone") ?? "");
+  // Vertical chosen on the signup page (optional — operators can also
+  // pick/confirm it in onboarding). Validated against the registry so a
+  // tampered post can't smuggle a bogus business type into metadata.
+  const submittedBusinessType = String(formData.get("business_type") ?? "");
+  const businessType = listVerticalSlugs().includes(submittedBusinessType)
+    ? submittedBusinessType
+    : "";
   const stickyEcho = {
     email: submittedEmail,
     fullName: submittedFullName,
     phone: submittedPhone,
+    businessType,
   };
 
   if (!hasSupabaseEnv()) {
@@ -367,6 +380,9 @@ export async function signUpWithPassword(
       data: {
         full_name: fullName ?? null,
         phone: phone ?? null,
+        // Carried across the email-verify round trip (the user is signed
+        // out after signUp) so onboarding can pre-select their vertical.
+        business_type: businessType || null,
       },
     },
   });

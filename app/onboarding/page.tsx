@@ -1,37 +1,10 @@
 import Link from "next/link";
-import { OnboardingForm, type VerticalOption } from "@/components/onboarding/onboarding-form";
+import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { getMessages } from "@/lib/i18n/server";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { listVerticals } from "@/lib/verticals/registry";
-
-/**
- * Build the signup vertical picker straight from the vertical registry
- * so the wizard can never drift from the verticals the app actually
- * supports (the old form hardcoded the list, which had already gone
- * stale against lib/verticals). Each card previews the seeded
- * categories and the cancellation/lead-time policy the pick locks in —
- * making the choice visibly consequential instead of cosmetic.
- */
-function buildVerticalOptions(): VerticalOption[] {
-  return listVerticals().map((v) => {
-    const { refundWindowDays, forfeitPct, minLeadTimeHours } = v.policies;
-    const lead =
-      minLeadTimeHours >= 48
-        ? `${Math.round(minLeadTimeHours / 24)}-day min lead`
-        : `${minLeadTimeHours}h min lead`;
-    const refund =
-      forfeitPct === 0
-        ? "Always fully refundable"
-        : `${forfeitPct}% deposit forfeit within ${refundWindowDays} days`;
-    return {
-      value: v.slug,
-      label: v.label.en,
-      description: v.defaultCategorySeeds.slice(0, 4).join(" · "),
-      policySummary: `${refund} · ${lead}`,
-    };
-  });
-}
+import { buildVerticalOptions } from "@/lib/verticals/options";
+import { listVerticalSlugs } from "@/lib/verticals/registry";
 
 export default async function OnboardingPage({
   searchParams,
@@ -46,13 +19,24 @@ export default async function OnboardingPage({
   // walked into operator-org creation. ?business=1 is the deliberate
   // "yes, I also want a business account" ceremony.
   let isRenter = false;
-  if (hasSupabaseEnv() && business !== "1") {
+  // Vertical the operator picked on the signup page, stashed in auth
+  // metadata so it survives the email-verify round trip. Used to
+  // pre-select the onboarding picker; empty when they signed up without
+  // choosing (or via a path that doesn't set it).
+  let initialVertical = "";
+  if (hasSupabaseEnv()) {
     try {
       const supabase = await createSupabaseServerClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      isRenter = user?.user_metadata?.korent_role === "renter";
+      if (business !== "1") {
+        isRenter = user?.user_metadata?.korent_role === "renter";
+      }
+      const picked = user?.user_metadata?.business_type;
+      if (typeof picked === "string" && listVerticalSlugs().includes(picked)) {
+        initialVertical = picked;
+      }
     } catch {
       // fall through to the normal onboarding form
     }
@@ -107,7 +91,10 @@ export default async function OnboardingPage({
             ))}
           </div>
 
-          <OnboardingForm verticalOptions={buildVerticalOptions()} />
+          <OnboardingForm
+            verticalOptions={buildVerticalOptions()}
+            initialVertical={initialVertical}
+          />
 
           <div style={{ marginTop: 16 }}>
             <Link href="/login" className="ghost-btn">
