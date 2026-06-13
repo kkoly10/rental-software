@@ -5,6 +5,8 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getActiveMemberRole, FINANCIAL_DOC_ROLES } from "@/lib/auth/member-role";
 import { generateDocumentPdf } from "@/lib/documents/generate-pdf";
 import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
+import { getOrderFinancials } from "@/lib/payments/financials";
+import { formatDateInTimeZone } from "@/lib/datetime/event-time";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(
@@ -48,14 +50,8 @@ export async function GET(
   const { data: document } = await supabase
     .from("documents")
     .select(`
-      id, document_type, document_status,
-      signed_date, signer_name, signer_ip, signature_data_url,
-      orders!inner(
-        order_number, event_date,
-        order_items(item_name_snapshot),
-        customers!inner(first_name, last_name),
-        organization_id
-      )
+      id, document_type, document_status, order_id,
+      signed_date, signer_name, signer_ip, signature_data_url
     `)
     .eq("id", documentId)
     .eq("organization_id", ctx.organizationId)
@@ -65,45 +61,99 @@ export async function GET(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  // Resolve the org's primary vertical via the join-table helper —
-  // for multi-vertical orgs the operator may have promoted a
-  // different vertical after signup, and organizations.business_type
-  // can be stale. The helper falls back to business_type when no
-  // join row exists.
-  const [{ data: org }, primaryVertical] = await Promise.all([
-    supabase
-      .from("organizations")
-      .select("name, support_email, settings")
-      .eq("id", ctx.organizationId)
-      .is("deleted_at", null)
-      .maybeSingle(),
-    getPrimaryVerticalSlug(),
-  ]);
+  // Order + items + org + primary vertical in parallel. Resolve the org's
+  // primary vertical via the join-table helper — for multi-vertical orgs
+  // organizations.business_type can be stale; the helper falls back to it.
+  const [{ data: order }, { data: items }, { data: org }, primaryVertical] =
+    await Promise.all([
+      supabase
+        .from("orders")
+        .select(`
+          order_number, event_date, rental_end_date,
+          subtotal_amount, delivery_fee_amount, tax_amount, total_amount,
+          customer_id, delivery_address_id
+        `)
+        .eq("id", document.order_id)
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      supabase
+        .from("order_items")
+        .select("item_name_snapshot, quantity, unit_price, line_total")
+        .eq("order_id", document.order_id),
+      supabase
+        .from("organizations")
+        .select("name, support_email, phone, event_timezone, settings")
+        .eq("id", ctx.organizationId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      getPrimaryVerticalSlug(),
+    ]);
+
+  if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  // Customer (renter) + their delivery address, scoped to the org.
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("first_name, last_name, email, phone")
+    .eq("id", order.customer_id)
+    .eq("organization_id", ctx.organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  let renterAddressLines: string[] = [];
+  if (order.delivery_address_id) {
+    const { data: address } = await supabase
+      .from("customer_addresses")
+      .select("line1, line2, city, state, postal_code")
+      .eq("id", order.delivery_address_id)
+      .maybeSingle();
+    if (address) {
+      renterAddressLines = [
+        address.line1,
+        address.line2,
+        [address.city, address.state, address.postal_code].filter(Boolean).join(", "),
+      ].filter((l): l is string => Boolean(l && l.trim()));
+    }
+  }
+
+  const settings = (org?.settings as Record<string, unknown> | null) ?? {};
+  const settingStr = (key: string) =>
+    typeof settings[key] === "string" ? (settings[key] as string).trim() : "";
+
+  const businessAddressLines = [
+    settingStr("business_address_line1"),
+    settingStr("business_address_line2"),
+    [
+      settingStr("business_city"),
+      settingStr("business_state"),
+      settingStr("business_postal_code"),
+    ]
+      .filter(Boolean)
+      .join(", "),
+  ].filter((l) => Boolean(l && l.trim()));
 
   // Brand accent for the PDF — only when the operator explicitly set a
   // color. The platform default (#1e5dcf) means "never customized"; the
   // document stays pure ink in that case.
   const rawBrandColor =
-    ((org?.settings as Record<string, unknown> | null)?.brand_primary_color as string | undefined) ?? null;
+    (settings.brand_primary_color as string | undefined) ?? null;
   const brandColor =
     rawBrandColor && rawBrandColor.toLowerCase() !== "#1e5dcf" ? rawBrandColor : null;
 
-  const order = document.orders as unknown as {
-    order_number: string;
-    event_date: string | null;
-    order_items: { item_name_snapshot: string }[];
-    customers: { first_name: string; last_name: string };
-  };
-
-  const customer = order.customers;
-  const customerName = `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim();
-
-  const eventDate = order.event_date
-    ? new Date(order.event_date + "T00:00:00").toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
+  const tz = org?.event_timezone ?? "UTC";
+  const fmtDate = (d: string) =>
+    formatDateInTimeZone(`${d}T12:00:00Z`, tz, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  const rentalPeriod = order.event_date
+    ? order.rental_end_date && order.rental_end_date !== order.event_date
+      ? `${fmtDate(order.event_date)} – ${fmtDate(order.rental_end_date)}`
+      : fmtDate(order.event_date)
     : "TBD";
 
   const signedDate = document.signed_date
@@ -117,23 +167,53 @@ export async function GET(
       })
     : null;
 
+  // Financials from the payments ledger (never the stale stored balance).
+  const financialsRollup = await getOrderFinancials(document.order_id, ctx.organizationId);
+  const totalAmount = Number(order.total_amount ?? 0);
+
+  const customerName = customer
+    ? `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim()
+    : "Customer";
+
   const pdfBytes = generateDocumentPdf({
     documentType: document.document_type as "rental_agreement" | "safety_waiver",
-    businessName: org?.name ?? "Rental Co",
+    business: {
+      name: org?.name ?? "Rental Co",
+      email: org?.support_email ?? "",
+      phone: org?.phone ?? "",
+      addressLines: businessAddressLines,
+      representativeName: settingStr("business_representative_name") || null,
+    },
+    renter: {
+      name: customerName,
+      email: customer?.email ?? "",
+      phone: customer?.phone ?? "",
+      addressLines: renterAddressLines,
+    },
     supportEmail: org?.support_email ?? "",
     orderNumber: order.order_number,
-    customerName,
-    eventDate,
-    items: (order.order_items ?? []).map((i) => i.item_name_snapshot ?? "Item"),
+    rentalPeriod,
+    items: (items ?? []).map((i) => ({
+      name: i.item_name_snapshot ?? "Rental item",
+      quantity: Number(i.quantity ?? 1),
+      unitPrice: Number(i.unit_price ?? 0),
+      lineTotal: Number(i.line_total ?? 0),
+    })),
+    financials: {
+      subtotal: Number(order.subtotal_amount ?? 0),
+      deliveryFee: Number(order.delivery_fee_amount ?? 0),
+      tax: Number(order.tax_amount ?? 0),
+      taxLabel: null,
+      total: totalAmount,
+      depositPaid: financialsRollup?.totalPaid ?? 0,
+      balanceDue: financialsRollup?.remainingBalance ?? totalAmount,
+    },
     signedDate,
     signerName: document.signer_name ?? null,
     signerIp: document.signer_ip ?? null,
     signatureDataUrl: document.signature_data_url ?? null,
-    // Phase 4 follow-up — use the primary-vertical helper, not
-    // a hardcoded "inflatable" fallback. getTerms() in
-    // lib/documents/generate-pdf.ts now lands on the generic
-    // event-rental block when the slug is unknown (#304), so
-    // passing the raw slug is safe even for legacy orgs.
+    // Pass the raw primary-vertical slug; getTerms() lands on the generic
+    // event-rental block when the slug is unknown (#304).
     businessType: primaryVertical ?? "",
     brandColor,
   });

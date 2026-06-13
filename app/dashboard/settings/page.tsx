@@ -105,6 +105,12 @@ export default async function SettingsPage({
               supportEmail: editableSettings.supportEmail || orgSettings.supportEmail,
               phone: editableSettings.phone || orgSettings.phone,
               timezone: editableSettings.timezone || orgSettings.timezone,
+              addressLine1: editableSettings.businessAddressLine1,
+              addressLine2: editableSettings.businessAddressLine2,
+              city: editableSettings.businessCity,
+              state: editableSettings.businessState,
+              postalCode: editableSettings.businessPostalCode,
+              representativeName: editableSettings.businessRepresentativeName,
             }}
           />
         </section>
