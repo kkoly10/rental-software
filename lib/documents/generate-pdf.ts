@@ -10,7 +10,7 @@ import {
   drawFooter,
   parseBrandColor,
 } from "@/lib/pdf/editorial";
-import { getTerms } from "@/lib/documents/terms";
+import { resolveDocumentClauses } from "@/lib/documents/terms";
 
 export type DocumentParty = {
   name: string;
@@ -61,6 +61,9 @@ export type DocumentPdfData = {
   signerIp: string | null;
   signatureDataUrl: string | null;
   businessType?: string;
+  /** Operator-edited clauses (from document_templates). When present and
+   *  non-empty, these REPLACE the built-in per-vertical defaults. */
+  terms?: string[];
   /** Operator's explicitly-set brand primary (hex). Null/undefined →
    *  pure-ink document. */
   brandColor?: string | null;
@@ -122,7 +125,12 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
   const accent = parseBrandColor(data.brandColor);
 
   const title = formatTitle(data.documentType);
-  const terms = getTerms(data.documentType, data.businessType ?? "inflatable");
+  // Operator-edited clauses win; otherwise the built-in per-vertical set.
+  const terms = resolveDocumentClauses(
+    data.terms,
+    data.documentType,
+    data.businessType ?? "inflatable",
+  );
   const showFinancials =
     data.documentType === "rental_agreement" && data.financials !== null;
 
