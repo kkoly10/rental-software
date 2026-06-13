@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
-import { CrewRoutePreview } from "@/components/marketing/crew-route-preview";
 import { getTranslator } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 import { listVerticals } from "@/lib/verticals/registry";
@@ -39,9 +38,28 @@ function CheckIcon() {
       <path
         d="M2.5 7.5L5.5 10.5L11.5 3.5"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CrossIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 3L9 9M9 3L3 9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -251,7 +269,18 @@ export async function SaasLanding() {
 
             <div className="mk-feature-row reverse">
               <div className="mk-feature-device-col">
-                <CrewRoutePreview />
+                <div className="mk-crew-device">
+                  <div className="mk-crew-screen">
+                    <Image
+                      src="/marketing/product/crew-route.jpg"
+                      alt="The Korent Crew Mobile route view on a phone — a delivery route mapped across three stops with addresses, times, and one-tap navigation"
+                      width={402}
+                      height={880}
+                      sizes="(max-width: 860px) 78vw, 300px"
+                      className="mk-crew-shot"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="mk-feature-copy">
                 <span className="mk-eyebrow">{s.featureDelivery.kicker}</span>
@@ -338,18 +367,18 @@ export async function SaasLanding() {
             </div>
             <div className="mk-compare" role="table" aria-label={s.comparison.title}>
               <div className="mk-compare-row mk-compare-header" role="row">
-                <div role="columnheader" />
-                <div role="columnheader" className="mk-compare-cell mk-compare-korent">
-                  {s.comparison.korentColumn}
+                <div role="columnheader" className="mk-compare-feature" />
+                <div role="columnheader" className="mk-compare-cell mk-compare-korent-cell">
+                  <span className="mk-compare-korent-chip">{s.comparison.korentColumn}</span>
                 </div>
-                <div role="columnheader" className="mk-compare-cell">
+                <div role="columnheader" className="mk-compare-cell mk-compare-other-head">
                   {s.comparison.otherColumn}
                 </div>
               </div>
               {s.comparison.rows.map((feature) => (
                 <div key={feature} className="mk-compare-row" role="row">
                   <div role="cell" className="mk-compare-feature">{feature}</div>
-                  <div role="cell" className="mk-compare-cell">
+                  <div role="cell" className="mk-compare-cell mk-compare-korent-cell">
                     <span className="mk-compare-mobile-label" aria-hidden="true">{s.comparison.korentColumn}</span>
                     <span className="mk-compare-check" aria-label={`${s.comparison.korentColumn}: yes`}>
                       <CheckIcon />
@@ -357,7 +386,9 @@ export async function SaasLanding() {
                   </div>
                   <div role="cell" className="mk-compare-cell">
                     <span className="mk-compare-mobile-label" aria-hidden="true">{s.comparison.otherColumn}</span>
-                    <span className="mk-compare-dash" aria-label={`${s.comparison.otherColumn}: no`}>—</span>
+                    <span className="mk-compare-cross" aria-label={`${s.comparison.otherColumn}: no`}>
+                      <CrossIcon />
+                    </span>
                   </div>
                 </div>
               ))}
