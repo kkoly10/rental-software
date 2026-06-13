@@ -95,6 +95,17 @@ export default async function DocumentsPage({
                       label={doc.agreementLabel}
                       tone={doc.agreementStatus === "signed" ? "success" : "warning"}
                     />
+                    {doc.agreementId && (
+                      <a
+                        href={`/api/documents/${doc.agreementId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ghost-btn"
+                        style={{ fontSize: 12 }}
+                      >
+                        {m.dashboard.documents.download}
+                      </a>
+                    )}
                     {doc.agreementId && doc.agreementStatus !== "signed" && (
                       <>
                         <DocumentStatusButton
@@ -126,6 +137,17 @@ export default async function DocumentsPage({
                       label={doc.waiverLabel}
                       tone={doc.waiverStatus === "signed" ? "success" : "warning"}
                     />
+                    {doc.waiverId && (
+                      <a
+                        href={`/api/documents/${doc.waiverId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ghost-btn"
+                        style={{ fontSize: 12 }}
+                      >
+                        {m.dashboard.documents.download}
+                      </a>
+                    )}
                     {doc.waiverId && doc.waiverStatus !== "signed" && (
                       <>
                         <DocumentStatusButton
