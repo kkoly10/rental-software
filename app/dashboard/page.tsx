@@ -49,10 +49,27 @@ async function shouldRedirectToMarketHub(): Promise<boolean> {
   );
 }
 
+// Crew-role members land on their field tool, not the operator overview
+// — the dashboard nav hides most items from them anyway, so the overview
+// was a dead end for the people Crew Mobile is built for.
+async function isCrewRoleViewer(): Promise<boolean> {
+  const { hasSupabaseEnv } = await import("@/lib/env");
+  if (!hasSupabaseEnv()) return false;
+  const { getOrgContext } = await import("@/lib/auth/org-context");
+  const ctx = await getOrgContext();
+  if (!ctx) return false;
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const { getActiveMemberRole } = await import("@/lib/auth/member-role");
+  const supabase = await createSupabaseServerClient();
+  const role = await getActiveMemberRole(supabase, ctx.organizationId, ctx.userId);
+  return role === "crew";
+}
+
 export default async function DashboardPage() {
-  const [marketHubRedirect, summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList, { messages: m, t }] =
+  const [marketHubRedirect, crewViewer, summary, snapshot, guidanceState, settings, notifications, subscriptionStatus, domainSettings, headersList, { messages: m, t }] =
     await Promise.all([
       shouldRedirectToMarketHub(),
+      isCrewRoleViewer(),
       getDashboardSummary(),
       getGuidanceSnapshot(),
       getGuidanceState(),
@@ -67,6 +84,10 @@ export default async function DashboardPage() {
   if (marketHubRedirect) {
     const { redirect } = await import("next/navigation");
     redirect("/market/hub");
+  }
+  if (crewViewer) {
+    const { redirect } = await import("next/navigation");
+    redirect("/crew/today");
   }
 
   const checklist = computeChecklist(snapshot);
