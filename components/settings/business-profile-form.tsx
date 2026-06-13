@@ -9,7 +9,18 @@ const initialState = { ok: false, message: "" };
 export function BusinessProfileForm({
   defaults,
 }: {
-  defaults: { name: string; supportEmail: string; phone: string; timezone: string };
+  defaults: {
+    name: string;
+    supportEmail: string;
+    phone: string;
+    timezone: string;
+    addressLine1: string;
+    addressLine2: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    representativeName: string;
+  };
 }) {
   const [state, formAction, pending] = useActionState(updateBusinessProfile, initialState);
   const { messages } = useI18n();
@@ -43,6 +54,46 @@ export function BusinessProfileForm({
           </select>
         </label>
       </div>
+
+      <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+        <legend style={{ fontWeight: 600, fontSize: 14, padding: 0, marginBottom: 4 }}>
+          {m.documentDetailsLegend}
+        </legend>
+        <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
+          {m.documentDetailsHelp}
+        </p>
+
+        <label className="order-card">
+          <strong>{m.addressLine1Label}</strong>
+          <input name="business_address_line1" type="text" defaultValue={defaults.addressLine1} placeholder={m.addressLine1Placeholder} style={{ marginTop: 8, width: "100%" }} />
+        </label>
+
+        <label className="order-card" style={{ marginTop: 12 }}>
+          <strong>{m.addressLine2Label}</strong>
+          <input name="business_address_line2" type="text" defaultValue={defaults.addressLine2} style={{ marginTop: 8, width: "100%" }} />
+        </label>
+
+        <div className="grid grid-3" style={{ marginTop: 12 }}>
+          <label className="order-card">
+            <strong>{m.cityLabel}</strong>
+            <input name="business_city" type="text" defaultValue={defaults.city} style={{ marginTop: 8, width: "100%" }} />
+          </label>
+          <label className="order-card">
+            <strong>{m.stateLabel}</strong>
+            <input name="business_state" type="text" defaultValue={defaults.state} style={{ marginTop: 8, width: "100%" }} />
+          </label>
+          <label className="order-card">
+            <strong>{m.postalCodeLabel}</strong>
+            <input name="business_postal_code" type="text" defaultValue={defaults.postalCode} style={{ marginTop: 8, width: "100%" }} />
+          </label>
+        </div>
+
+        <label className="order-card" style={{ marginTop: 12 }}>
+          <strong>{m.representativeNameLabel}</strong>
+          <input name="business_representative_name" type="text" defaultValue={defaults.representativeName} placeholder={m.representativeNamePlaceholder} style={{ marginTop: 8, width: "100%" }} />
+          <span className="muted" style={{ display: "block", marginTop: 6, fontSize: 12 }}>{m.representativeNameHelp}</span>
+        </label>
+      </fieldset>
 
       {state.message && (
         <div className={state.ok ? "badge success" : "badge warning"} style={{ padding: "10px 14px" }}>

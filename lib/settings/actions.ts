@@ -37,6 +37,17 @@ export async function updateBusinessProfile(
   const phone = String(formData.get("phone") ?? "").trim().slice(0, 50);
   const timezone = String(formData.get("timezone") ?? "").trim().slice(0, 100);
 
+  // Business details that appear on rental documents (agreement/waiver/
+  // invoice). Stored in settings jsonb — no schema columns needed.
+  const field = (key: string, max: number) =>
+    String(formData.get(key) ?? "").trim().slice(0, max);
+  const businessAddressLine1 = field("business_address_line1", 200);
+  const businessAddressLine2 = field("business_address_line2", 200);
+  const businessCity = field("business_city", 120);
+  const businessState = field("business_state", 120);
+  const businessPostalCode = field("business_postal_code", 20);
+  const businessRepresentativeName = field("business_representative_name", 160);
+
   if (!name) {
     return { ok: false, message: "Business name is required." };
   }
@@ -86,6 +97,19 @@ export async function updateBusinessProfile(
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  // Document business details → settings jsonb (atomic shallow merge).
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    business_address_line1: businessAddressLine1 || null,
+    business_address_line2: businessAddressLine2 || null,
+    business_city: businessCity || null,
+    business_state: businessState || null,
+    business_postal_code: businessPostalCode || null,
+    business_representative_name: businessRepresentativeName || null,
+  });
+  if (!merged.ok) {
+    return { ok: false, message: merged.message };
   }
 
   revalidatePath("/dashboard/settings");

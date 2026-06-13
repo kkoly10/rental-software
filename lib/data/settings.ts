@@ -16,6 +16,13 @@ export type OrgSettings = {
   socialInstagram: string;
   socialTiktok: string;
   socialGoogleBusiness: string;
+  // Business details shown on rental documents (agreement/waiver/invoice).
+  businessAddressLine1: string;
+  businessAddressLine2: string;
+  businessCity: string;
+  businessState: string;
+  businessPostalCode: string;
+  businessRepresentativeName: string;
 };
 
 const fallbackSettings: OrgSettings = {
@@ -32,6 +39,12 @@ const fallbackSettings: OrgSettings = {
   socialInstagram: "",
   socialTiktok: "",
   socialGoogleBusiness: "",
+  businessAddressLine1: "",
+  businessAddressLine2: "",
+  businessCity: "",
+  businessState: "",
+  businessPostalCode: "",
+  businessRepresentativeName: "",
 };
 
 export async function getOrgSettings(): Promise<OrgSettings> {
@@ -70,5 +83,11 @@ export async function getOrgSettings(): Promise<OrgSettings> {
     socialInstagram: (settings.social_instagram as string) ?? "",
     socialTiktok: (settings.social_tiktok as string) ?? "",
     socialGoogleBusiness: (settings.social_google_business as string) ?? "",
+    businessAddressLine1: (settings.business_address_line1 as string) ?? "",
+    businessAddressLine2: (settings.business_address_line2 as string) ?? "",
+    businessCity: (settings.business_city as string) ?? "",
+    businessState: (settings.business_state as string) ?? "",
+    businessPostalCode: (settings.business_postal_code as string) ?? "",
+    businessRepresentativeName: (settings.business_representative_name as string) ?? "",
   };
 }
