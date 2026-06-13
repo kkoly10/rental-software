@@ -3,7 +3,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
-import { PLAN_TIERS, type PlanTier } from "./config";
+import { PLAN_TIERS, planAllowsSms, type PlanTier } from "./config";
 
 export type SubscriptionInfo = {
   plan: PlanTier | null;
@@ -80,4 +80,29 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
       ? PLAN_TIERS[plan].limits
       : FREE_LIMITS,
   };
+}
+
+/**
+ * Whether an org's plan allows outbound SMS/WhatsApp — resolved BY ORG ID,
+ * not by auth context, so it works from cron-dispatched notifications
+ * where there is no logged-in user. Demo mode (no Supabase) returns true
+ * to match getSubscriptionInfo's demo behavior.
+ */
+export async function orgPlanAllowsSms(organizationId: string): Promise<boolean> {
+  if (!hasSupabaseEnv()) return true;
+  if (!organizationId) return false;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("subscription_status, subscription_plan")
+    .eq("id", organizationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!org?.subscription_plan) return false;
+  const isActive = ["active", "trialing", "past_due"].includes(
+    org.subscription_status as string
+  );
+  return isActive && planAllowsSms(org.subscription_plan as PlanTier);
 }

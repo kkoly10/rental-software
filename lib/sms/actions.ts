@@ -57,6 +57,19 @@ export async function updateSmsSettings(
     return { ok: false, message: "Only owners and admins can update SMS settings." };
   }
 
+  // SMS is a Pro-tier feature — block enabling it below Pro even if the
+  // toggle is forced on via a direct POST (the UI also disables it).
+  if (smsEnabled) {
+    const { checkFeatureAccess } = await import("@/lib/stripe/gate");
+    const access = await checkFeatureAccess("sms");
+    if (!access.allowed) {
+      return {
+        ok: false,
+        message: "SMS notifications are a Pro feature. Upgrade your plan to enable them.",
+      };
+    }
+  }
+
   const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
     sms_settings: {
       sms_enabled: smsEnabled,

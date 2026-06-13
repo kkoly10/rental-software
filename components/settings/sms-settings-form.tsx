@@ -1,13 +1,22 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { updateSmsSettings } from "@/lib/sms/actions";
 import type { SmsSettings } from "@/lib/data/sms-settings";
 import { useI18n } from "@/lib/i18n/provider";
 
 const initialState = { ok: false, message: "" };
 
-export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
+export function SmsSettingsForm({
+  defaults,
+  locked = false,
+}: {
+  defaults: SmsSettings;
+  /** True when the org's plan doesn't include SMS — renders an upgrade
+      notice and disables every control. */
+  locked?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(
     updateSmsSettings,
     initialState
@@ -17,6 +26,21 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
 
   return (
     <form action={formAction} className="list" style={{ marginTop: 12 }}>
+      {locked && (
+        <div className="sms-pro-lock">
+          <div>
+            <strong>{m.proLockTitle}</strong>
+            <p>{m.proLockBody}</p>
+          </div>
+          <Link href="/dashboard/settings/billing" className="primary-btn">
+            {m.proLockCta}
+          </Link>
+        </div>
+      )}
+      <fieldset
+        disabled={locked}
+        style={{ border: 0, padding: 0, margin: 0, opacity: locked ? 0.55 : 1 }}
+      >
       <div className="sms-toggle-row order-card">
         <div>
           <strong>{m.enableSmsTitle}</strong>
@@ -148,6 +172,7 @@ export function SmsSettingsForm({ defaults }: { defaults: SmsSettings }) {
           {pending ? m.submitting : m.submit}
         </button>
       </div>
+      </fieldset>
     </form>
   );
 }

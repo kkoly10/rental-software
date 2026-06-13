@@ -1,7 +1,7 @@
 "use server";
 
 import { getSubscriptionInfo, type SubscriptionInfo } from "./subscription";
-import { PLAN_TIERS, type PlanTier } from "./config";
+import { PLAN_TIERS, SMS_PLAN_TIERS, type PlanTier } from "./config";
 
 export type GateResult = {
   allowed: boolean;
@@ -46,6 +46,7 @@ export async function checkFeatureAccess(
     | "csv_export"
     | "quickbooks_export"
     | "priority_support"
+    | "sms"
 ): Promise<GateResult> {
   const sub = await getSubscriptionInfo();
 
@@ -60,6 +61,8 @@ export async function checkFeatureAccess(
     csv_export: ["growth"],
     quickbooks_export: ["pro", "growth"],
     priority_support: ["growth"],
+    // SMS/WhatsApp carries per-tenant Twilio + carrier cost → paid tiers.
+    sms: SMS_PLAN_TIERS,
   };
 
   const requiredPlans = featurePlanRequirements[feature];
