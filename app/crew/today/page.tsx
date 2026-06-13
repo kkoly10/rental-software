@@ -134,7 +134,7 @@ export default async function CrewTodayPage() {
                     <div className="crew-stop-head">
                       <strong>{stop.label}</strong>
                       <span className={`crew-stop-type crew-stop-type--${stop.type.toLowerCase()}`}>
-                        {stop.type === "pickup" ? m.crew.pickup : m.crew.delivery}
+                        {stop.type.toLowerCase() === "pickup" ? m.crew.pickup : m.crew.delivery}
                       </span>
                     </div>
                     <div className="crew-stop-meta">
