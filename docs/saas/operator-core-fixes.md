@@ -95,12 +95,15 @@ File:line references live in the session notes; this is the plan.
   now works, so this is hardening, not required)
 - [ ] Optional: a "new order" toggle in operator email preferences
 
-## Phase C — Customer invoice (planned)
+## Phase C — Customer invoice
 
-- [ ] Token-authed portal invoice route reusing `lib/invoices/generate-pdf.ts`
-- [ ] Widen `PortalOrder`/`buildPortalOrder`: operator branding, tax,
-  full line items (qty/unit price/line total)
-- [ ] Retire the hand-rolled `invoice-download.tsx` generator
+- [x] Token-authed portal invoice route reusing `lib/invoices/generate-pdf.ts`
+  (`app/api/portal/invoice/route.ts`)
+- [x] ~~Widen `PortalOrder`~~ — not needed: the route queries the DB
+  directly (admin client) for operator branding, tax, and full line
+  items, so no page-payload bloat
+- [x] Retire the hand-rolled `invoice-download.tsx` generator (now a link
+  to the route)
 
 ## Phase D — Agreements & waivers (planned)
 
@@ -124,6 +127,17 @@ File:line references live in the session notes; this is the plan.
 
 ## Done log
 
+- **2026-06-13 — Phase C (professional customer invoice):** the customer
+  "Download invoice" button previously ran a separate hand-rolled
+  client-side jsPDF (≈3 of 14 fields, platform blue, bare item names, no
+  tax). New token-authed route `app/api/portal/invoice` reuses the same
+  `generateInvoicePdf` as the operator side — branded to the operator,
+  From/Bill-To, itemized table (qty/unit/line total), tax line, amount
+  paid + balance due. Authorized by the order's portal access token
+  (both magic-link and order#/email lookups already produce one); anon
+  reads via the admin client with strict orgId filtering; financials via
+  `getOrderFinancialsAdmin` so deposits-paid are reflected.
+  `invoice-download.tsx` is now just a link to the route. tsc/496/build green.
 - **2026-06-13 — Phase B (operator new-order email fix):** root cause was
   `getOrgBranding()` (lib/email/triggers.ts) resolving the recipient with
   the request-scoped anon/RLS client — which returns zero rows for

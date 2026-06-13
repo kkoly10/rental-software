@@ -187,7 +187,7 @@ export function OrderLookupForm({ initialState }: Props) {
             )}
 
             <div className="action-row-end" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              <InvoiceDownload order={state.order} />
+              <InvoiceDownload portalToken={activeToken} />
               {state.order.status !== "Quote Sent" && state.order.status !== "Inquiry" && (
                 <PayBalanceButton portalToken={activeToken} balanceDue={state.order.balanceDue} />
               )}
