@@ -89,9 +89,9 @@ export const tablesAndChairsVertical: VerticalConfig = {
     lede: "Bring your vision to the table. Curated chairs, table styles, and linens across {area}, delivered, styled, and broken down by our crew.",
     taglineLabel: "Event rentals",
     trustBadges: [
-      { kicker: "Curated", statement: "Hand-selected silhouettes and linens — never warehouse-grade banquet stock." },
-      { kicker: "Counted", statement: "Inventory tied to your guest count; we deliver exactly what's needed, no fillers." },
-      { kicker: "On time", statement: "Setup completed before guests arrive across {area}." },
+      { kicker: "Book online", statement: "Check availability and book online in minutes." },
+      { kicker: "Local", statement: "Serving {area}." },
+      { kicker: "Upfront pricing", statement: "See itemized pricing before you book — no surprises." },
     ],
     vibeTiles: [
       { kicker: "For the couple", label: "Weddings", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory?vibe=weddings" },

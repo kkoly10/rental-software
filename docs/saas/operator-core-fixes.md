@@ -145,10 +145,48 @@ plus testing with a bare order (no customer/items/dates → renders blank).
   tents (anchoring/surface) get the rich UI too
 - [ ] Per-vertical dashboard nav (or decide the uniform nav is correct)
 
+## Phase F — Storefront 10/10 (in progress)
+
+- [x] Trust claims: removed hardcoded "insured / inspected / on-time
+  guaranteed / 500+ events / permitted" defaults from all 6 verticals
+  (Getaround-class overstatement — platform offers no insurance/
+  inspection). Defaults are now platform-true (online booking, local,
+  upfront pricing); operators add real credentials (e.g. insurance) via
+  the trust-badges editor, which is now seeded from the LIVE values so
+  they can see/edit/delete what's shown, with guidance that Korent
+  provides no insurance/inspection
+- [x] Reviews: removed the fabricated hero "5.0 · N+ reviews" rating chip
+  (it was an average of operator-typed testimonials presented as
+  third-party review scores). Testimonials remain as testimonials
+- [ ] Service-area map vs ZIP mismatch: geocode + store lat/lng at save,
+  validate city/state against ZIP, replace the US-center (Kansas)
+  geocode-failure fallback with an empty state
+- [ ] Real social proof option: surface the operator's Google rating
+  (google_business link already collected) — competitor-standard
+- [ ] Make "How it works" + browse-by-occasion tiles editable (currently
+  hardcoded); integrate the "How it works" island visually
+- [ ] Optional: vertical landing pages use the homepage's route-screen
+  phone mockup (currently a plain crew photo)
+
 ---
 
 ## Done log
 
+- **2026-06-14 — Storefront honesty (P0 from founder audit):** removed
+  unverified, hardcoded trust claims (commercial insurance, inspection,
+  on-time guarantees, "500+ events", food permits) from all 6 verticals'
+  storefront defaults + ledes — they were asserted for every operator by
+  default with no basis (Getaround risk; the platform provides no
+  insurance/inspection). New defaults are platform-true (online booking /
+  local / upfront pricing). The trust-badges editor is now seeded from the
+  LIVE effective badges (was empty) so operators can see/edit/remove what's
+  shown, with explicit guidance to only claim credentials they hold and
+  that Korent provides no insurance/inspection. Removed the hero "5.0 · N+
+  reviews" chip — it was the average of operator-typed testimonials shown
+  as a third-party review score (no storefront review system exists;
+  verified reviews live only on the marketplace). tsc/503/build green.
+  Remaining storefront items tracked in Phase F (map mismatch, Google
+  reviews, editable how-it-works/browse tiles).
 - **2026-06-13 — Document/invoice logo (path-to-10 item 4):** operators
   already upload a logo (settings.brand_logo_url, with storage + UI), it
   just wasn't used on the PDFs. drawHeader now renders the logo (scaled to
