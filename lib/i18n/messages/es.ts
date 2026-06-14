@@ -124,6 +124,7 @@ export const es: Messages = {
       deliveryIncludedLabel: "Entrega + montaje incluidos",
       insuredInline: "Totalmente asegurado",
       sameDayQuotes: "Presupuestos en el día",
+      browseCatalogCta: "O explora todo el catálogo",
     },
     popularRentals: {
       kicker: "Explorar por alquileres",
@@ -152,6 +153,15 @@ export const es: Messages = {
     },
     themeChips: {
       all: "Todas las categorías",
+    },
+    browseTiles: {
+      kicker: "Explora por ocasión",
+      title: "Hecho para el día, planeado para el año.",
+      allLink: "Todas las categorías",
+    },
+    closing: {
+      headlineLead: "Cuando estés listo.",
+      headlineEmphasis: "Elige una fecha.",
     },
     press: {
       label: "Visto en",

@@ -125,6 +125,7 @@ const enValues = {
       deliveryIncludedLabel: "Delivery + setup included",
       insuredInline: "Fully insured",
       sameDayQuotes: "Same-day quotes",
+      browseCatalogCta: "Or browse the full catalog",
     },
     popularRentals: {
       kicker: "Explore by rentals",
@@ -153,6 +154,15 @@ const enValues = {
     },
     themeChips: {
       all: "All categories",
+    },
+    browseTiles: {
+      kicker: "Browse by occasion",
+      title: "Made for the day, planned for the year.",
+      allLink: "All categories",
+    },
+    closing: {
+      headlineLead: "Ready when you are.",
+      headlineEmphasis: "Check a date.",
     },
     press: {
       label: "As seen on",

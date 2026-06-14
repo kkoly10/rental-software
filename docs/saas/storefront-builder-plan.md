@@ -167,8 +167,12 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 - [ ] **Legacy ZIP geocoding loop is sequential** on the client for rows
   without stored coords (`service-area-map.tsx:52-61`) — parallelize.
   (New rows already store coords from the recent map fix.)
-- [ ] **Hardcoded English copy** bypasses i18n: hero "Or browse the full
-  catalog →" (`hero.tsx:119`), browse-tiles kicker/title, closing headline.
+- [x] **Hardcoded English copy** bypasses i18n — FIXED: hero's "Or browse
+  the full catalog", the browse-tiles kicker/title/all-link, and the
+  closing headline now read from i18n (`storefront.hero.browseCatalogCta`,
+  `storefront.browseTiles.*`, `storefront.closing.*`) across en/es/fr/pt.
+  (The browse-tiles content being *operator-editable* is separate G1/G3
+  builder work; this just removes the i18n bypass.)
 - [ ] **Generic, non-editable PDP boilerplate** — "what to expect" / "best
   fit" are fixed i18n strings identical across all operators
   (`en.ts:1366-1380`); section headings are hardcoded.
