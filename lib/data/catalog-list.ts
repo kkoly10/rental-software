@@ -4,6 +4,52 @@ import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-imag
 import { getPublicOrgId } from "@/lib/auth/org-context";
 import type { CatalogProduct } from "@/lib/types";
 
+/**
+ * Format a card's price to match the product's real pricing model — mirrors
+ * the PDP, which already shows per-hour / per-unit correctly. Cards previously
+ * always said "$X/day" even for per-hour or per-unit products. Returns both the
+ * display string and a numeric `priceCents` so catalog sort uses a real number
+ * instead of re-parsing the formatted string. `base_price` is in dollars; the
+ * hourly/unit rates are in cents.
+ */
+function formatPricing(p: {
+  base_price: number | null;
+  capability_slugs: string[] | null;
+  hourly_rate_cents: number | null;
+  unit_price_cents: number | null;
+  unit_label: string | null;
+}): { price: string; priceCents: number } {
+  const slugs = Array.isArray(p.capability_slugs) ? p.capability_slugs : [];
+  const money = (cents: number) =>
+    `$${(cents / 100).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+
+  if (
+    slugs.includes("pricing.per-hour") &&
+    typeof p.hourly_rate_cents === "number" &&
+    p.hourly_rate_cents > 0
+  ) {
+    return { price: `${money(p.hourly_rate_cents)}/hr`, priceCents: p.hourly_rate_cents };
+  }
+
+  if (
+    slugs.includes("pricing.per-unit") &&
+    typeof p.unit_price_cents === "number" &&
+    p.unit_price_cents > 0
+  ) {
+    const label = p.unit_label?.trim() || "unit";
+    return { price: `${money(p.unit_price_cents)}/${label}`, priceCents: p.unit_price_cents };
+  }
+
+  if (typeof p.base_price === "number") {
+    return { price: `$${p.base_price}/day`, priceCents: Math.round(p.base_price * 100) };
+  }
+
+  return { price: "$0/day", priceCents: 0 };
+}
+
 const fallbackCatalog: CatalogProduct[] = [
   {
     id: "prod_castle_bouncer",
@@ -11,6 +57,7 @@ const fallbackCatalog: CatalogProduct[] = [
     slug: "castle-bouncer",
     category: "Bounce House",
     price: "$165/day",
+    priceCents: 16500,
     description:
       "Classic inflatable for backyard birthdays and neighborhood events.",
     status: "Available",
@@ -22,6 +69,7 @@ const fallbackCatalog: CatalogProduct[] = [
     slug: "mega-splash-water-slide",
     category: "Water Slide",
     price: "$279/day",
+    priceCents: 27900,
     description:
       "Premium slide with delivery-first setup workflow and deposit support.",
     status: "Available",
@@ -36,6 +84,7 @@ const fallbackCatalog: CatalogProduct[] = [
     slug: "tropical-combo",
     category: "Combo Unit",
     price: "$235/day",
+    priceCents: 23500,
     description:
       "Balanced combo unit for families that want variety without full obstacle size.",
     status: "Limited",
@@ -57,7 +106,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, base_price, short_description, is_active, deleted_at, categories(name, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
+      "id, name, slug, base_price, capability_slugs, hourly_rate_cents, unit_price_cents, unit_label, short_description, is_active, deleted_at, categories(name, deleted_at), product_images(image_url, is_primary, sort_order, deleted_at)"
     )
     .eq("organization_id", organizationId)
     .eq("visibility", "public")
@@ -103,15 +152,22 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
     const resolvedCategory =
       category && !category.deleted_at ? category.name : "Rental";
 
+    const p = product as Record<string, unknown>;
+    const pricing = formatPricing({
+      base_price: typeof product.base_price === "number" ? product.base_price : null,
+      capability_slugs: Array.isArray(p.capability_slugs) ? (p.capability_slugs as string[]) : null,
+      hourly_rate_cents: typeof p.hourly_rate_cents === "number" ? (p.hourly_rate_cents as number) : null,
+      unit_price_cents: typeof p.unit_price_cents === "number" ? (p.unit_price_cents as number) : null,
+      unit_label: typeof p.unit_label === "string" ? (p.unit_label as string) : null,
+    });
+
     return {
       id: product.id,
       name: product.name ?? "Unnamed Product",
       slug: product.slug ?? "product",
       category: resolvedCategory,
-      price:
-        typeof product.base_price === "number"
-          ? `$${product.base_price}/day`
-          : "$0/day",
+      price: pricing.price,
+      priceCents: pricing.priceCents,
       description:
         product.short_description ??
         "Rental product available for booking.",

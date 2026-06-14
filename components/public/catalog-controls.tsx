@@ -30,6 +30,12 @@ function parsePrice(formatted: string): number {
   return parseFloat(match[0]);
 }
 
+// Prefer the numeric headline rate from the loader; fall back to parsing the
+// formatted string for any caller that didn't set priceCents.
+function priceValue(p: CatalogProduct): number {
+  return typeof p.priceCents === "number" ? p.priceCents : parsePrice(p.price);
+}
+
 export function CatalogControls({
   products,
   date,
@@ -57,10 +63,10 @@ export function CatalogControls({
       out = [...out];
       switch (sort) {
         case "price-asc":
-          out.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+          out.sort((a, b) => priceValue(a) - priceValue(b));
           break;
         case "price-desc":
-          out.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+          out.sort((a, b) => priceValue(b) - priceValue(a));
           break;
         case "name-asc":
           out.sort((a, b) => a.name.localeCompare(b.name));

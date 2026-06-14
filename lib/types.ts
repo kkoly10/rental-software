@@ -6,6 +6,11 @@ export type CatalogProduct = {
   slug: string;
   category: string;
   price: string;
+  /** Headline rate in cents for reliable numeric sorting — avoids re-parsing
+   *  the formatted `price` string (which varies by pricing model). Optional so
+   *  loosely-typed callers (e.g. the PDP's inline listing) don't have to set it;
+   *  sort falls back to parsing `price` when absent. */
+  priceCents?: number;
   description: string;
   status: string;
   imageUrl?: string;

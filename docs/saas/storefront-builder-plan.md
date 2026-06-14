@@ -122,11 +122,15 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   (en/es/fr/pt).
 - [ ] **No trust elements on catalog or PDP** (no ratings/reviews/insured/
   guarantees). Competitive rental PDPs lead with these.
-- [ ] **Pricing display is inconsistent.** Cards always say "$X/day"
-  (`catalog-list.ts:111-114`) regardless of the product's real model
-  (per-hour/per-unit shown correctly only on the PDP) — three different
-  price representations across the journey; card sort re-parses the
-  formatted string.
+- [x] **Pricing display is inconsistent.** FIXED: `catalog-list.ts` now
+  formats each card's price to the product's real model — "$X/hr" for
+  `pricing.per-hour`, "$X/{unit}" for `pricing.per-unit`, "$X/day"
+  otherwise — mirroring the PDP (same capability_slugs + rate fields, added
+  to the list query as plain columns, no extra join). Also added a numeric
+  `priceCents` to `CatalogProduct` so the catalog sort uses a real number
+  instead of re-parsing the formatted string (`CatalogControls` now sorts on
+  `priceCents`, falling back to the old `parsePrice` only when absent).
+  Files: `catalog-list.ts`, `types.ts`, `catalog-controls.tsx`.
 - [ ] **Unsplash stock photos are the inflatable fallback** (`storefront-
   fallback-images.ts:13-23`) on cards, PDP hero, AND gallery — the
   classic "this is a template" tell. Worse: inflatable fallbacks are
