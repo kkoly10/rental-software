@@ -2702,6 +2702,7 @@ export const fr: Messages = {
     description: "Carte interactive de vos zones de livraison configurées. Cliquez n’importe où sur la carte pour voir les coordonnées.",
     coordinates: "Coordonnées : {lat}, {lng}",
     mapFailed: "Le chargement de la carte a échoué. Veuillez rafraîchir la page.",
+    noCoverage: "La carte de couverture apparaîtra une fois les codes postaux de votre zone de service définis.",
   },
 
   pricingRulesManager: {

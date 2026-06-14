@@ -2703,6 +2703,7 @@ const enValues = {
     description: "Interactive map of your configured delivery zones. Click anywhere on the map to see coordinates.",
     coordinates: "Coordinates: {lat}, {lng}",
     mapFailed: "Map failed to load. Please refresh the page.",
+    noCoverage: "Coverage map will appear once your service-area ZIPs are set.",
   },
 
   pricingRulesManager: {

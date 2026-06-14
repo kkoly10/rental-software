@@ -11,6 +11,7 @@ import {
 } from "@/lib/validation/service-areas";
 import { getActionClientKey } from "@/lib/security/action-client";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { geocodeZipServer } from "@/lib/maps/geocode-server";
 
 export type ServiceAreaActionState = {
   ok: boolean;
@@ -173,6 +174,12 @@ export async function createServiceArea(
     };
   }
 
+  // Geocode the primary ZIP once, at save time, so the storefront map
+  // renders the correct pin instantly without a live browser lookup
+  // (and never falls back to the US-center default). Best-effort: a
+  // failed lookup stores null and the map falls back to client geocode.
+  const coords = await geocodeZipServer(parsed.data.primaryPostalCode);
+
   const { error } = await supabase.from("service_areas").insert({
     organization_id: ctx.organizationId,
     label: parsed.data.label,
@@ -183,6 +190,8 @@ export async function createServiceArea(
     delivery_fee: parsed.data.deliveryFee,
     minimum_order_amount: parsed.data.minimumOrderAmount,
     is_active: parsed.data.isActive,
+    latitude: coords?.lat ?? null,
+    longitude: coords?.lng ?? null,
   });
 
   if (error) {
@@ -283,6 +292,9 @@ export async function updateServiceArea(
     };
   }
 
+  // Re-geocode on update so a changed primary ZIP moves the pin.
+  const coords = await geocodeZipServer(parsed.data.primaryPostalCode);
+
   const { error } = await supabase
     .from("service_areas")
     .update({
@@ -294,6 +306,8 @@ export async function updateServiceArea(
       delivery_fee: parsed.data.deliveryFee,
       minimum_order_amount: parsed.data.minimumOrderAmount,
       is_active: parsed.data.isActive,
+      latitude: coords?.lat ?? null,
+      longitude: coords?.lng ?? null,
     })
     .eq("id", parsed.data.serviceAreaId)
     .eq("organization_id", ctx.organizationId)

@@ -158,9 +158,10 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 - [x] Reviews: removed the fabricated hero "5.0 · N+ reviews" rating chip
   (it was an average of operator-typed testimonials presented as
   third-party review scores). Testimonials remain as testimonials
-- [ ] Service-area map vs ZIP mismatch: geocode + store lat/lng at save,
-  validate city/state against ZIP, replace the US-center (Kansas)
-  geocode-failure fallback with an empty state
+- [x] Service-area map vs ZIP mismatch: geocode + store lat/lng at save
+  (migration + create/update actions), render the pin from stored coords
+  (client geocode only as legacy fallback), and replace the US-center
+  (Kansas) geocode-failure fallback with an empty state. Demo backfilled
 - [ ] Real social proof option: surface the operator's Google rating
   (google_business link already collected) — competitor-standard
 - [ ] Make "How it works" + browse-by-occasion tiles editable (currently
@@ -172,6 +173,15 @@ plus testing with a bare order (no customer/items/dates → renders blank).
 
 ## Done log
 
+- **2026-06-14 — Service-area map fix (Phase F):** the storefront map
+  geocoded each ZIP live in the browser and fell back to the US center
+  (Kansas) on any failure — making the pin look wrong vs the operator's
+  ZIP. Now: `service_areas` gains latitude/longitude (migration, prod);
+  the create/update actions geocode the primary ZIP once at save
+  (`geocodeZipServer`) and store it; the map renders from stored coords
+  (live client geocode only as a legacy fallback) and shows an empty
+  "coverage map" state instead of a Kansas pin when nothing resolves.
+  Demo org coords backfilled + seed script updated. tsc/503/build green.
 - **2026-06-14 — Storefront honesty (P0 from founder audit):** removed
   unverified, hardcoded trust claims (commercial insurance, inspection,
   on-time guarantees, "500+ events", food permits) from all 6 verticals'
