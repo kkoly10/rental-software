@@ -95,11 +95,16 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   working checkout. Single-product checkout only — **no multi-item cart**
   (renting a bounce house + tables + tent = three separate checkouts), a
   real gap for party rentals.
-- [ ] **PDP has no date picker / availability calendar.** `app/inventory/
-  [slug]/page.tsx` reads `date`/`zip` from the URL but offers no way to
-  pick them — the core booking gesture is missing on the page where
-  customers decide (and where Google/JSON-LD lands them). No customer-
-  facing availability calendar exists anywhere.
+- [x] **PDP has no date picker / availability calendar.** FIXED: the PDP
+  now has a compact date + ZIP form (native GET, no client JS) that reloads
+  the page with `?date&zip`. That re-runs availability enrichment (status
+  chip updates), resolves the real per-ZIP delivery fee (pairs with the
+  deposit/delivery work), and threads the values into the checkout link and
+  back-to-catalog link. Reuses the hero's i18n field labels (no new keys)
+  and `.st-pdp-input`; new `.st-pdp-availability` styling. (A full
+  month-grid availability *calendar* is still a larger future item; this
+  delivers the core date/ZIP gesture on the decision page.) Files:
+  `app/inventory/[slug]/page.tsx`, `storefront-theme.css`.
 - [x] **Deposit amount + delivery info hidden until checkout.** FIXED: the
   PDP price row now shows the deposit **percentage** ("30% deposit", or "No
   deposit"), with a "balance due before your event" line + minimum-deposit

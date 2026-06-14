@@ -1882,6 +1882,58 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   line-height: 1.5;
 }
 
+/* PDP date + ZIP picker — compact availability form inside the summary
+   aside (the hero's full-width .st-avail bar is too large here). */
+.st-pdp-availability {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--st-line-strong);
+  border-radius: var(--st-radius-2);
+  background: var(--st-bg-alt);
+}
+
+.st-pdp-availability-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.st-pdp-availability-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.st-pdp-availability-field .st-pdp-input {
+  width: 100%;
+}
+
+.st-pdp-availability-go {
+  padding: 12px 20px;
+  background: var(--st-ink);
+  color: var(--st-bg);
+  border: 0;
+  border-radius: var(--st-radius-2);
+  font-family: var(--st-font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-pdp-availability-go:hover {
+  background: var(--st-primary);
+}
+
+@media (max-width: 560px) {
+  .st-pdp-availability-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Highlight list — quiet vertical stack of one-liners, not chunky cards. */
 .st-pdp-highlights {
   display: flex;
