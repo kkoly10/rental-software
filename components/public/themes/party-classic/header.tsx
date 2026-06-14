@@ -83,6 +83,9 @@ export async function PartyClassicHeader() {
             <Link href="/contact" className="st-nav-cta">
               {m.nav.contact ?? "Inquire"}
             </Link>
+            <Link href="/inventory" className="st-nav-book">
+              {m.common.bookNow}
+            </Link>
           </nav>
 
           <div className="st-nav-mobile">

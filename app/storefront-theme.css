@@ -452,6 +452,24 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   color: var(--st-primary);
   border-color: var(--st-primary);
 }
+/* Primary desktop CTA — a real filled button so the main conversion
+ * action reads as a button, not a faint text link. Ink-on-cream per the
+ * editorial convention; hovers to the operator's brand primary. */
+.st-nav-book {
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-bg);
+  background: var(--st-ink);
+  padding: 9px 18px;
+  border-radius: var(--st-radius-md);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--st-duration-1) var(--st-ease);
+}
+.st-nav-book:hover { background: var(--st-primary); }
 .st-nav-mobile { display: none; gap: 8px; align-items: center; }
 @media (max-width: 760px) {
   .st-nav-links { display: none; }
