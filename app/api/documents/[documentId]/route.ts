@@ -170,8 +170,12 @@ export async function GET(
       : fmtDate(order.event_date)
     : "TBD";
 
+  // Render the signature timestamp in the org's event timezone — the same
+  // tz used for the rental period above. Previously this used
+  // `new Date(...).toLocaleString()` with no `timeZone`, so the signed time
+  // (and its tz abbreviation) rendered in the *server's* local time.
   const signedDate = document.signed_date
-    ? new Date(document.signed_date).toLocaleString("en-US", {
+    ? formatDateInTimeZone(document.signed_date, tz, {
         month: "short",
         day: "numeric",
         year: "numeric",
