@@ -4,7 +4,6 @@ import { useActionState, useState } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   CURATED_FONTS,
-  SCALE_RATIOS,
   type ThemeTokens,
 } from "@/lib/data/storefront-tokens-schema";
 import { contrastRatio } from "@/lib/utils/contrast";
@@ -163,19 +162,10 @@ export function StorefrontTokenEditor({ initialTokens }: { initialTokens: ThemeT
             style={{ width: "100%" }}
           />
         </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle} htmlFor="scaleRatio">{m.scaleRatio}</label>
-          <select
-            id="scaleRatio"
-            value={tokens.typography.scaleRatio}
-            onChange={(e) => setTypography("scaleRatio", Number(e.target.value))}
-            style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}
-          >
-            {SCALE_RATIOS.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </div>
+        {/* Heading type-scale (scaleRatio) is intentionally NOT exposed: the
+            editorial heading hierarchy (--st-text-22…72) is part of the curated,
+            layout-safe design. The stored scaleRatio stays at its schema default;
+            a future enhancement can recompute the heading scale deliberately. */}
 
         <h3 style={{ margin: "20px 0 12px", fontSize: 15 }}>{m.shapeHeading}</h3>
         <div style={fieldStyle}>
