@@ -58,11 +58,11 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 
 ### P1 — competitiveness / conversion
 
-- [~] **Header isn't sticky; desktop CTA is weak.** Sticky header DONE in
-  G1 (`.st-header` now `position: sticky; top:0; z-index:50`). STILL TODO:
-  promote the desktop CTA from an underlined "Inquire" text link to a real
-  "Book" button (the button exists only in the mobile drawer,
-  `mobile-menu-toggle.tsx:238`); add a quote/cart affordance.
+- [x] **Header isn't sticky; desktop CTA is weak.** DONE in G1: sticky
+  header (`position: sticky; top:0; z-index:50`) + a real filled desktop
+  "Book" button (`.st-nav-book` → /inventory, `m.common.bookNow`) added
+  beside the "Inquire" link. (A quote/cart affordance is part of the
+  larger no-cart item below, not this one.)
 - [ ] **No cart / quote indicator** anywhere in the chrome, despite a
   working checkout. Single-product checkout only — **no multi-item cart**
   (renting a bounce house + tables + tent = three separate checkouts), a
@@ -88,8 +88,9 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   Unsplash *photos* while other verticals are SVG gradient panels, so a
   mixed grid shows photos next to flat gradients (inconsistent texture).
   PDP fallback gallery repeats the same image 4×.
-- [ ] **Featured/"Popular rentals" renders an orphaned heading with no
-  empty state** when there are no featured products (`app/page.tsx:115-138`).
+- [x] **Featured/"Popular rentals" orphaned heading** — FIXED in G1: the
+  whole section is gated on `featured.length > 0`, and the "browse all"
+  link only shows at ≥3 products (so tiny catalogs don't read silly).
 - [ ] **Redundant DB round-trips on every homepage render.**
   `getContentSettings` (uncached) is called ~5× (page, trust-strip,
   reviews-cards, footer, …) and `getBrandSettings` 2×. Wrap both in

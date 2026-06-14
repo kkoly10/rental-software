@@ -112,30 +112,36 @@ export default async function HomePage() {
         {/* Featured rentals — editorial 3-up grid. Render at most three so
              the layout stays calm; tenants with more featured products see
              a "View the catalog →" link to the full inventory. */}
-        <section id="catalog" className="st-section">
-          <div className="st-container">
-            <SectionHead
-              kicker={m.storefront.popularRentals.kicker}
-              title={m.storefront.popularRentals.title}
-              sub={m.storefront.popularRentals.description}
-              link={{ label: `${m.storefront.popularRentals.browseAll} →`, href: "/inventory" }}
-            />
-            <div className="st-products-grid">
-              {featured.slice(0, 3).map((product) => (
-                <ProductCard
-                  key={product.id}
-                  name={product.name}
-                  slug={product.slug}
-                  price={product.price}
-                  category={product.category}
-                  description={product.description}
-                  status={product.status}
-                  imageUrl={product.imageUrl}
-                />
-              ))}
+        {featured.length > 0 && (
+          <section id="catalog" className="st-section">
+            <div className="st-container">
+              <SectionHead
+                kicker={m.storefront.popularRentals.kicker}
+                title={m.storefront.popularRentals.title}
+                sub={m.storefront.popularRentals.description}
+                link={
+                  featured.length >= 3
+                    ? { label: `${m.storefront.popularRentals.browseAll} →`, href: "/inventory" }
+                    : undefined
+                }
+              />
+              <div className="st-products-grid">
+                {featured.slice(0, 3).map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    name={product.name}
+                    slug={product.slug}
+                    price={product.price}
+                    category={product.category}
+                    description={product.description}
+                    status={product.status}
+                    imageUrl={product.imageUrl}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {vis.how_it_works !== false && (
           <div id="how-it-works">
