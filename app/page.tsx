@@ -27,6 +27,9 @@ import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { getTranslator } from "@/lib/i18n/server";
+import { getStorefrontPageDocument } from "@/lib/storefront/page-document";
+import { isKnownSectionType } from "@/lib/storefront/sections/registry";
+import { Fragment, type ReactNode } from "react";
 
 export async function generateMetadata(): Promise<Metadata> {
   const isTenant = await isTenantHost();
@@ -66,14 +69,22 @@ export default async function HomePage() {
 
   await requirePublicOrg();
 
-  const [featured, settings, contentSettings, isDemo, origin, { messages }] = await Promise.all([
-    getFeaturedCatalogList(),
-    getOrganizationSettings(),
-    getContentSettings(),
-    isCurrentTenantDemo(),
-    getRequestOrigin(),
-    getTranslator(),
-  ]);
+  // Shared data fetches, hoisted ONCE and passed to both render paths so the
+  // dormant document path introduces no N+1. (These are React-cache()-wrapped,
+  // so even where a child component re-requests one it's deduped per request.)
+  const [featured, settings, contentSettings, isDemo, origin, { messages }, doc] =
+    await Promise.all([
+      getFeaturedCatalogList(),
+      getOrganizationSettings(),
+      getContentSettings(),
+      isCurrentTenantDemo(),
+      getRequestOrigin(),
+      getTranslator(),
+      // DORMANT document-driven path. Null for ALL orgs today (none have a
+      // published page document with a non-empty `order`), so every storefront
+      // falls through to the unchanged legacy hardcoded sequence below.
+      getStorefrontPageDocument("published"),
+    ]);
 
   const m = messages;
   const vis = contentSettings.sectionVisibility;
@@ -82,6 +93,108 @@ export default async function HomePage() {
       ? contentSettings.customFaq
       : m.storefront.faq.defaults.map((f) => ({ question: f.question, answer: f.answer }));
 
+  // Type → render branch for the document-driven path. Each branch produces the
+  // SAME markup the legacy hardcoded sequence emits for that section type, so a
+  // synthesized default document renders byte-for-byte what the legacy path
+  // does. Unknown types are filtered out before this map is consulted.
+  const renderSection = (type: string): ReactNode => {
+    switch (type) {
+      case "hero":
+        return <PartyClassicHero />;
+      case "trust":
+        return <PartyClassicTrustStrip />;
+      case "press":
+        return <PartyClassicPressRow />;
+      case "category-grid":
+        return <PartyClassicCategoryTiles />;
+      case "browse-tiles":
+        return <PartyClassicBrowseTiles />;
+      case "featured":
+        return featured.length > 0 ? (
+          <section id="catalog" className="st-section">
+            <div className="st-container">
+              <SectionHead
+                kicker={m.storefront.popularRentals.kicker}
+                title={m.storefront.popularRentals.title}
+                sub={m.storefront.popularRentals.description}
+                link={
+                  featured.length >= 3
+                    ? { label: `${m.storefront.popularRentals.browseAll} →`, href: "/inventory" }
+                    : undefined
+                }
+              />
+              <div className="st-products-grid">
+                {featured.slice(0, 3).map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    name={product.name}
+                    slug={product.slug}
+                    price={product.price}
+                    category={product.category}
+                    description={product.description}
+                    status={product.status}
+                    imageUrl={product.imageUrl}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null;
+      case "how-it-works":
+        return (
+          <div id="how-it-works">
+            <HowItWorks />
+          </div>
+        );
+      case "testimonials":
+        return <PartyClassicReviewsCards />;
+      case "service-area":
+        return (
+          <div id="service-area">
+            <PartyClassicServiceArea />
+          </div>
+        );
+      case "about":
+        return <AboutSection text={contentSettings.aboutText} />;
+      case "faq":
+        return <FaqSection customFaqs={faqItems} />;
+      case "closing":
+        return <PartyClassicClosing />;
+      default:
+        return null;
+    }
+  };
+
+  // DOCUMENT-DRIVEN PATH (dormant today): render the published document's
+  // sections in order, skipping disabled ones and any type not in the registry.
+  // Unknown types render nothing — never crash.
+  if (doc) {
+    return (
+      <StorefrontShell>
+        <PartyClassicHeader />
+        <JsonLdScript data={organizationJsonLd({ ...settings, websiteMessage: settings.websiteMessage || undefined }, origin)} />
+        {vis.faq_section !== false && (
+          <JsonLdScript data={faqJsonLd(faqItems)} />
+        )}
+
+        <main id="main">
+          {doc.order.map((id) => {
+            const section = doc.sections[id];
+            if (!section) return null;
+            if (section.disabled) return null;
+            if (!isKnownSectionType(section.type)) return null;
+            return <Fragment key={id}>{renderSection(section.type)}</Fragment>;
+          })}
+
+          <PublicFooter />
+        </main>
+
+        {isDemo && <DemoBanner />}
+      </StorefrontShell>
+    );
+  }
+
+  // LEGACY HARDCODED PATH (taken by ALL orgs today): unchanged byte-for-byte.
   return (
     <StorefrontShell>
       <PartyClassicHeader />
