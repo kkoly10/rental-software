@@ -4,7 +4,7 @@ import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { getTranslator } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
-import { listVerticals } from "@/lib/verticals/registry";
+import { listMarketedVerticals } from "@/lib/verticals/registry";
 
 /**
  * SaaS marketing landing page for the root domain (korent.app without a
@@ -72,7 +72,7 @@ export async function SaasLanding() {
   const { messages: m } = await getTranslator();
   const s = m.saasLanding;
   const headline = splitHeadline(s.hero.headline);
-  const verticals = listVerticals();
+  const verticals = listMarketedVerticals();
 
   return (
     <div className="mk-page">

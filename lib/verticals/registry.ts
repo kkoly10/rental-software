@@ -6,6 +6,7 @@ import { tablesAndChairsVertical } from "./tables-and-chairs.ts";
 import { danceFloorsVertical } from "./dance-floors.ts";
 import { photoBoothsVertical } from "./photo-booths.ts";
 import { concessionsVertical } from "./concessions.ts";
+import { otherVertical } from "./other.ts";
 
 /**
  * Central registry of every vertical the app supports.
@@ -14,6 +15,10 @@ import { concessionsVertical } from "./concessions.ts";
  * triad — tents, tables-and-chairs, dance-floors. Phase 2d adds
  * photo-booths + concessions to complete the day-one 6, each
  * composing a subset of the 13 capabilities registered by Phase 1.
+ *
+ * `otherVertical` is a SETUP-ONLY catch-all (kept last): it is a valid
+ * signup business type but is filtered out of every marketing surface.
+ * See listMarketedVerticals() and the setupOnly checks below.
  */
 
 const all: readonly VerticalConfig[] = [
@@ -23,6 +28,9 @@ const all: readonly VerticalConfig[] = [
   danceFloorsVertical,
   photoBoothsVertical,
   concessionsVertical,
+  // Setup-only — must stay LAST so validVerticals[0] (the onboarding
+  // fallback) remains a real marketed vertical.
+  otherVertical,
 ];
 
 const bySlug = new Map<string, VerticalConfig>(
@@ -58,11 +66,25 @@ export function getVertical(slug: string): VerticalConfig | undefined {
 export function findVerticalByLandingSlug(
   landingSlug: string,
 ): VerticalConfig | undefined {
-  return all.find((v) => v.marketing.landingPageSlug === landingSlug);
+  // Setup-only verticals have no marketing page — a crafted URL for one
+  // must 404, not serve its inert marketing stub.
+  return all.find(
+    (v) => !v.setupOnly && v.marketing.landingPageSlug === landingSlug,
+  );
 }
 
 export function listVerticals(): readonly VerticalConfig[] {
   return all;
+}
+
+/**
+ * Marketed verticals only — excludes setup-only catch-alls like
+ * "other". Used by every public marketing surface (landing pages,
+ * sitemap, footer, sibling links) so the generic general-rental option
+ * never appears as a marketed page.
+ */
+export function listMarketedVerticals(): readonly VerticalConfig[] {
+  return all.filter((v) => !v.setupOnly);
 }
 
 export function listVerticalSlugs(): readonly string[] {
@@ -72,7 +94,8 @@ export function listVerticalSlugs(): readonly string[] {
 /**
  * Every marketing landing slug currently served. Used by
  * generateStaticParams() so Next.js can pre-render the routes.
+ * Excludes setup-only verticals (no landing page for "other").
  */
 export function listLandingPageSlugs(): readonly string[] {
-  return all.map((v) => v.marketing.landingPageSlug);
+  return listMarketedVerticals().map((v) => v.marketing.landingPageSlug);
 }

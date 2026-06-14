@@ -5,7 +5,7 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { getTranslator } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 import { getVerticalLandingCopy } from "@/lib/verticals/landing-copy";
-import { listVerticals } from "@/lib/verticals/registry";
+import { listMarketedVerticals } from "@/lib/verticals/registry";
 import type { VerticalConfig } from "@/lib/verticals/types";
 
 /**
@@ -296,7 +296,7 @@ export async function VerticalLanding({ vertical }: { vertical: VerticalConfig }
           <div className="mk-container" style={{ textAlign: "center" }}>
             <span className="mk-eyebrow" style={{ marginBottom: 16 }}>Korent also runs</span>
             <div className="mk-sibling-links">
-              {listVerticals()
+              {listMarketedVerticals()
                 .filter((sibling) => sibling.slug !== vertical.slug)
                 .map((sibling) => (
                   <Link key={sibling.slug} href={`/${sibling.marketing.landingPageSlug}`}>

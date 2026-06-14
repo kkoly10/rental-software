@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import {
   findVerticalByLandingSlug,
   listLandingPageSlugs,
-  listVerticals,
+  listMarketedVerticals,
 } from "../lib/verticals/registry.ts";
 
 test("findVerticalByLandingSlug resolves the inflatable marketing URL", () => {
@@ -40,14 +40,31 @@ test("findVerticalByLandingSlug is case-sensitive (URL slugs are lowercased by c
   );
 });
 
-test("listLandingPageSlugs returns one slug per registered vertical, unique", () => {
+test("listLandingPageSlugs returns one slug per marketed vertical, unique", () => {
   const slugs = listLandingPageSlugs();
-  const verticals = listVerticals();
-  assert.equal(slugs.length, verticals.length);
+  const marketed = listMarketedVerticals();
+  // Setup-only verticals (e.g. "other") are excluded from landing slugs,
+  // so the count tracks the marketed set, not the full registry.
+  assert.equal(slugs.length, marketed.length);
   assert.equal(slugs.length, new Set(slugs).size, "slugs must be unique");
 });
 
 test("listLandingPageSlugs includes the inflatable slug", () => {
   const slugs = listLandingPageSlugs();
   assert.ok(slugs.includes("inflatable-rental-software"));
+});
+
+test("setup-only verticals are excluded from marketing surfaces", () => {
+  // "other" must never get a landing page or resolve from a crafted URL.
+  const slugs = listLandingPageSlugs();
+  assert.ok(!slugs.includes("general-rental-software"), "other must not be in landing slugs");
+  assert.equal(
+    findVerticalByLandingSlug("general-rental-software"),
+    undefined,
+    "other's landing slug must not resolve to a page",
+  );
+  assert.ok(
+    listMarketedVerticals().every((v) => !v.setupOnly),
+    "listMarketedVerticals must not include setup-only verticals",
+  );
 });
