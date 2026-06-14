@@ -13,7 +13,7 @@ export async function PartyClassicClosing() {
     <section className="st-section st-section-soft" aria-labelledby="st-closing-headline">
       <div className="st-container" style={{ textAlign: "center" }}>
         <p id="st-closing-headline" className="st-display">
-          Ready when you are. <em>Check a date.</em>
+          {m.storefront.closing.headlineLead} <em>{m.storefront.closing.headlineEmphasis}</em>
         </p>
         <Link href="/inventory" className="st-ghost-btn">
           {m.storefront.hero.checkAvailability}

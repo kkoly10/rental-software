@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getStorefrontDefaults } from "@/lib/verticals/storefront-defaults";
+import { getMessages } from "@/lib/i18n/server";
 import { SectionHead } from "./section-head";
 
 /**
@@ -12,16 +13,19 @@ import { SectionHead } from "./section-head";
  * overrides will land in a follow-up content-settings field.
  */
 export async function PartyClassicBrowseTiles() {
-  const defaults = await getStorefrontDefaults();
+  const [defaults, m] = await Promise.all([
+    getStorefrontDefaults(),
+    getMessages(),
+  ]);
   const tiles = defaults.vibeTiles;
 
   return (
     <section className="st-section">
       <div className="st-container">
         <SectionHead
-          kicker="Browse by occasion"
-          title="Made for the day, planned for the year."
-          link={{ label: "All categories →", href: "/inventory" }}
+          kicker={m.storefront.browseTiles.kicker}
+          title={m.storefront.browseTiles.title}
+          link={{ label: `${m.storefront.browseTiles.allLink} →`, href: "/inventory" }}
         />
         <div className="st-vibes-grid">
           {tiles.map((t) => (

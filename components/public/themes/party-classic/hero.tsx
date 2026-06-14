@@ -118,7 +118,7 @@ export async function PartyClassicHero() {
 
         <div className="st-hero-cta-row">
           <a href="#catalog" className="st-text-link">
-            Or browse the full catalog →
+            {m.storefront.hero.browseCatalogCta} →
           </a>
           {showSecondaryCta && (
             <a href="/contact" className="st-text-link">
