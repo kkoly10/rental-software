@@ -1362,6 +1362,13 @@ export const fr: Messages = {
     basePrice: "Prix de base",
     perDay: "par jour",
     depositReservesDate: "L’acompte réserve la date",
+    depositTag: "Acompte de {percent} %",
+    depositTagNone: "Aucun acompte",
+    depositBalanceNote: "Solde dû avant votre événement",
+    depositMinimumNote: "Acompte minimum de {amount}",
+    deliveryToArea: "Livraison à {zip} : {fee}",
+    deliveryFreeToArea: "Livraison gratuite à {zip}",
+    deliveryByZip: "Les frais de livraison dépendent de votre code postal",
     whatToExpect: {
       kicker: "À quoi s’attendre",
       title: "Livré comme un vrai service, pas un simple produit",

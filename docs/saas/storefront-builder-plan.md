@@ -100,9 +100,21 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   pick them — the core booking gesture is missing on the page where
   customers decide (and where Google/JSON-LD lands them). No customer-
   facing availability calendar exists anywhere.
-- [ ] **Deposit amount + delivery info hidden until checkout.** PDP shows
-  only "Deposit reserves date" — no amount/%, no "we deliver to your area
-  for $X." Competitors lead with "Book for $X deposit."
+- [x] **Deposit amount + delivery info hidden until checkout.** FIXED: the
+  PDP price row now shows the deposit **percentage** ("30% deposit", or "No
+  deposit"), with a "balance due before your event" line + minimum-deposit
+  note when configured — all from `getBookingPolicies()`, the SAME source
+  checkout charges from, so the disclosure can't drift from the real math.
+  Delivery: when the visitor arrived with a ZIP, the PDP shows the
+  operator's real per-ZIP service-area fee (`resolveServiceAreaForAddress`,
+  "Delivery to 12345: $45" / "Free delivery to 12345"); otherwise it states
+  delivery depends on ZIP (never a fabricated number). Addresses the FTC
+  Junk Fees Rule intent (mandatory cost terms surfaced before checkout).
+  We deliberately do NOT print a fixed dollar deposit, since the live total
+  changes with mode/qty/variant — the %, which is always correct, is the
+  honest disclosure. Files: `app/inventory/[slug]/page.tsx`,
+  `storefront-theme.css` (`.st-pdp-facts`), `inventoryDetail` i18n keys
+  (en/es/fr/pt).
 - [ ] **No trust elements on catalog or PDP** (no ratings/reviews/insured/
   guarantees). Competitive rental PDPs lead with these.
 - [ ] **Pricing display is inconsistent.** Cards always say "$X/day"

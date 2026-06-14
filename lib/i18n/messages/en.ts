@@ -1363,6 +1363,13 @@ const enValues = {
     basePrice: "Base price",
     perDay: "per day",
     depositReservesDate: "Deposit reserves date",
+    depositTag: "{percent}% deposit",
+    depositTagNone: "No deposit",
+    depositBalanceNote: "Balance due before your event",
+    depositMinimumNote: "{amount} minimum deposit",
+    deliveryToArea: "Delivery to {zip}: {fee}",
+    deliveryFreeToArea: "Free delivery to {zip}",
+    deliveryByZip: "Delivery fee depends on your ZIP",
     whatToExpect: {
       kicker: "What to expect",
       title: "Delivered like a real service, not just a product",
