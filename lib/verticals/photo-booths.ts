@@ -96,12 +96,12 @@ export const photoBoothsVertical: VerticalConfig = {
     heroImagePath: "/storefront-defaults/hero/photo-booths.jpg",
     headlineLead: "Photo booths",
     headlineItalic: "with the editorial feel.",
-    lede: "Open-air and enclosed booths with custom print designs across {area}. Crew-attended every event — no kiosk left unattended.",
+    lede: "Open-air and enclosed booths with custom print designs across {area}.",
     taglineLabel: "Event rentals",
     trustBadges: [
-      { kicker: "Attended", statement: "A trained attendant runs every booth — set-up, breakdown, and live troubleshooting." },
-      { kicker: "Custom", statement: "Bespoke print template designed for your event before delivery, free of charge." },
-      { kicker: "Trusted", statement: "Hundreds of weddings, brand activations, and private events across {area}." },
+      { kicker: "Book online", statement: "Check availability and book online in minutes." },
+      { kicker: "Local", statement: "Serving {area}." },
+      { kicker: "Upfront pricing", statement: "See itemized pricing before you book — no surprises." },
     ],
     vibeTiles: [
       { kicker: "For the couple", label: "Weddings", imagePath: "/storefront-defaults/hero/photo-booths.jpg", href: "/inventory?vibe=weddings" },

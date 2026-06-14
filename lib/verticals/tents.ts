@@ -101,9 +101,9 @@ export const tentsVertical: VerticalConfig = {
     lede: "Weddings, corporate dinners, and milestone celebrations across {area}. Tents sized and styled to your guest count, with crew setup and breakdown included.",
     taglineLabel: "Event rentals",
     trustBadges: [
-      { kicker: "Insured", statement: "Commercial liability coverage on every install, plus permit assistance when required." },
-      { kicker: "On time", statement: "Crews arrive in the install window — never after dark on a wedding day." },
-      { kicker: "Sized right", statement: "Site visits available across {area} to confirm guest count, layout, and surface." },
+      { kicker: "Book online", statement: "Check availability and book online in minutes." },
+      { kicker: "Local", statement: "Serving {area}." },
+      { kicker: "Upfront pricing", statement: "See itemized pricing before you book — no surprises." },
     ],
     vibeTiles: [
       { kicker: "For the couple", label: "Garden weddings", imagePath: "/storefront-defaults/hero/tents.jpg", href: "/inventory?vibe=weddings" },

@@ -90,9 +90,9 @@ export const danceFloorsVertical: VerticalConfig = {
     lede: "Parquet, black-and-white, and LED dance floors with crew setup and breakdown across {area}. Sized to your guest count, leveled to your surface.",
     taglineLabel: "Event rentals",
     trustBadges: [
-      { kicker: "Leveled", statement: "Floors leveled and locked for safety on grass, gravel, or hardscape." },
-      { kicker: "On time", statement: "Crews arrive in the install window, set up before the first guest arrives." },
-      { kicker: "Pairs well", statement: "Bundle with tents and tabletop for one delivery, one crew, one invoice." },
+      { kicker: "Book online", statement: "Check availability and book online in minutes." },
+      { kicker: "Local", statement: "Serving {area}." },
+      { kicker: "Upfront pricing", statement: "See itemized pricing before you book — no surprises." },
     ],
     vibeTiles: [
       { kicker: "For the couple", label: "Weddings", imagePath: "/storefront-defaults/hero/dance-floors.jpg", href: "/inventory?vibe=weddings" },

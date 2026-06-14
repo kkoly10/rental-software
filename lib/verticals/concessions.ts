@@ -91,12 +91,12 @@ export const concessionsVertical: VerticalConfig = {
     heroImagePath: "/storefront-defaults/hero/concessions.jpg",
     headlineLead: "Popcorn, cotton candy, and shaved ice",
     headlineItalic: "for the crowd.",
-    lede: "Cart rentals delivered, stocked, and attended across {area}. Choose self-serve or staffed; both with proper food-handling permits in place.",
+    lede: "Cart rentals delivered and stocked across {area}. Choose self-serve or staffed.",
     taglineLabel: "Party rentals",
     trustBadges: [
-      { kicker: "Permitted", statement: "Local food-handling permits maintained for every staffed event we run." },
-      { kicker: "Stocked", statement: "Carts arrive pre-stocked for your guest count — no last-minute supply runs." },
-      { kicker: "On time", statement: "Setup completed at least 30 minutes before doors across {area}." },
+      { kicker: "Book online", statement: "Check availability and book online in minutes." },
+      { kicker: "Local", statement: "Serving {area}." },
+      { kicker: "Upfront pricing", statement: "See itemized pricing before you book — no surprises." },
     ],
     vibeTiles: [
       { kicker: "For the school", label: "Field-day events", imagePath: "/storefront-defaults/hero/concessions.jpg", href: "/inventory?vibe=school" },

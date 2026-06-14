@@ -14,6 +14,7 @@ import { getWebsiteAdminData } from "@/lib/data/website-admin";
 import { getOrgSettings } from "@/lib/data/settings";
 import { getBrandSettings } from "@/lib/data/brand";
 import { getContentSettings } from "@/lib/data/content-settings";
+import { getStorefrontDefaults, withArea } from "@/lib/verticals/storefront-defaults";
 import { getDomainSettings } from "@/lib/data/domain-settings";
 import { getGuidanceState } from "@/lib/guidance/actions";
 import { pageHelpMap } from "@/lib/help/page-help";
@@ -23,7 +24,7 @@ import { headers } from "next/headers";
 import { getMessages } from "@/lib/i18n/server";
 
 export default async function WebsitePage() {
-  const [data, editableSettings, brandSettings, contentSettings, domainSettings, headersList, m] = await Promise.all([
+  const [data, editableSettings, brandSettings, contentSettings, domainSettings, headersList, m, storefrontDefaults] = await Promise.all([
     getWebsiteAdminData(),
     getOrgSettings(),
     getBrandSettings(),
@@ -31,8 +32,22 @@ export default async function WebsitePage() {
     getDomainSettings(),
     headers(),
     getMessages(),
+    getStorefrontDefaults(),
   ]);
   const guidanceState = await getGuidanceState();
+
+  // Seed the trust-badges editor with what's ACTUALLY live: the
+  // operator's saved badges if any, otherwise the vertical defaults the
+  // storefront is currently rendering. Without this the editor showed
+  // empty while the storefront displayed default claims — so operators
+  // couldn't see or remove what was being asserted on their behalf.
+  const effectiveTrustBadges =
+    contentSettings.trustBadges.length > 0
+      ? contentSettings.trustBadges
+      : storefrontDefaults.trustBadges.map((b) => ({
+          title: b.kicker,
+          description: withArea(b.statement, data.settings.serviceAreaLabel),
+        }));
   const requestHost = headersList.get("host") ?? undefined;
   const storefrontUrl = buildStorefrontUrl(domainSettings, requestHost);
   const pageConfig = pageHelpMap["/dashboard/website"];
@@ -257,7 +272,12 @@ export default async function WebsitePage() {
             </div>
           </div>
 
-          <TrustBadgesEditor defaults={contentSettings.trustBadges} />
+          <p className="muted" style={{ fontSize: 13, margin: "0 0 12px", lineHeight: 1.5 }}>
+            These appear publicly on your storefront. Only claim credentials you
+            actually hold — e.g. add an “Insured” badge only if you carry commercial
+            liability insurance. Korent does not provide insurance or inspection.
+          </p>
+          <TrustBadgesEditor defaults={effectiveTrustBadges} />
         </section>
       </div>
 
