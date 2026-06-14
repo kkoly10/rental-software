@@ -71,12 +71,28 @@ function starString(rating: number): string {
  *
  * Per spec §5.7.
  */
-export async function PartyClassicReviewsCards() {
+/**
+ * Optional per-section content override from the storefront page document
+ * (PR-1d). When `testimonials` is provided (non-empty) it wins; when ABSENT the
+ * component falls back to EXACTLY today's getContentSettings().testimonials, so
+ * an org with no document renders byte-for-byte what it does today.
+ */
+export type PartyClassicReviewsCardsProps = {
+  testimonials?: { name: string; text: string; rating?: number }[];
+};
+
+export async function PartyClassicReviewsCards({
+  testimonials: testimonialsProp,
+}: PartyClassicReviewsCardsProps = {}) {
   const [contentSettings, { messages: m }] = await Promise.all([
     getContentSettings(),
     getTranslator(),
   ]);
-  const all = (contentSettings.testimonials as ExtendedTestimonial[]) ?? [];
+  const all = (
+    testimonialsProp && testimonialsProp.length > 0
+      ? testimonialsProp
+      : ((contentSettings.testimonials as ExtendedTestimonial[]) ?? [])
+  ) as ExtendedTestimonial[];
   const featured = pickFeatured(all);
   if (!featured) return null;
 
