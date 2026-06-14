@@ -178,11 +178,14 @@ and the order-confirmation page (keys off `order_number`).
 
 ### Staged PRs (safe order — money code, so behavior-preserving first)
 
-- **3a — Behavior-preserving extraction (no functional change).** Pull the
-  per-item pricing/resolution into `priceAndResolveOneItem()` and the per-item
-  inserts into `insertOneItemLines()`; route the EXISTING single-item path
-  through them. Verified green by the current suite + build; zero behavior
-  change. This de-risks the loop.
+- **3a — Behavior-preserving extraction (no functional change). ✅ SHIPPED.**
+  `priceAndResolveOneItem()` (`lib/checkout/pricing-helpers.ts`) and
+  `insertOneItemLines()` (`lib/checkout/insert-helpers.ts`) extracted from
+  `createCheckoutOrder`; the single-item path is routed through them with
+  outputs destructured into the same local names, identical error/rollback
+  shapes, and the same missing-price / zero-subtotal gates. Guarded by 13
+  characterization tests (`tests/checkout-item-pricing.test.ts`). Zero
+  behavior change; full gauntlet green (516 tests). This de-risks the loop.
 - **3b — Multi-item submit.** Accept the cart (POST/hidden `cart_json`), loop
   `priceAndResolveOneItem` for every item, **validate ALL items (pricing +
   availability) before inserting ANY rows** (Risk 1 mitigation — avoids
