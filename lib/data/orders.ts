@@ -61,7 +61,7 @@ type OrderRow = {
   total_amount: number | string | null;
 };
 
-function mapOrderRow(order: OrderRow, money: (n: number) => string): OrderSummary {
+function mapOrderRow(order: OrderRow, money: (n: number) => string, locale: string): OrderSummary {
   const customer = (order as Record<string, unknown>).customers as
     | { first_name?: string | null; last_name?: string | null; deleted_at?: string | null }
     | null;
@@ -85,7 +85,7 @@ function mapOrderRow(order: OrderRow, money: (n: number) => string): OrderSummar
         ? items.map((i) => i.item_name_snapshot).filter(Boolean).join(", ")
         : "Rental booking",
     date: order.event_date
-      ? new Date(order.event_date + "T12:00:00Z").toLocaleDateString("en-US", {
+      ? new Date(order.event_date + "T12:00:00Z").toLocaleDateString(locale, {
           month: "short",
           day: "numeric",
           year: "numeric",
@@ -182,7 +182,7 @@ export async function getOrdersPage(options?: {
       };
     }
 
-    const mappedPage = (data ?? []).map((o) => mapOrderRow(o, money));
+    const mappedPage = (data ?? []).map((o) => mapOrderRow(o, money, locale));
     const totalItems = count ?? mappedPage.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return {
@@ -255,7 +255,7 @@ export async function getOrdersPage(options?: {
     };
   }
 
-  const mapped: OrderSummary[] = (data ?? []).map((o) => mapOrderRow(o, money));
+  const mapped: OrderSummary[] = (data ?? []).map((o) => mapOrderRow(o, money, locale));
   const totalItems = count ?? mapped.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 

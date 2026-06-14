@@ -6,7 +6,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { geocodeZipServer } from "@/lib/maps/geocode-server";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
-import { getMessages } from "@/lib/i18n/server";
+import { getMessages, getLocale } from "@/lib/i18n/server";
 import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 import { resolveUploadsPhotoUrls } from "@/lib/storage/uploads-signing";
 import type { RouteDetail, RouteDetailEnhanced, RouteStopEnhanced } from "@/lib/types";
@@ -330,6 +330,7 @@ export async function getRouteDetailEnhanced(
     notFound();
   }
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  const locale = await getLocale();
 
   const supabase = await createSupabaseServerClient();
   const { data: route, error: routeError } = await supabase
@@ -468,7 +469,7 @@ export async function getRouteDetailEnhanced(
     id: route.id,
     name: route.name ?? "Route",
     routeDate: route.route_date
-      ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString("en-US", {
+      ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString(locale, {
           month: "short",
           day: "numeric",
           year: "numeric",

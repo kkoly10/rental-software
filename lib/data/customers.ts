@@ -2,6 +2,7 @@ import { mockOrders } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getLocale } from "@/lib/i18n/server";
 import {
   paginateItems,
   type PaginatedResult,
@@ -45,7 +46,8 @@ type CustomerRow = {
 
 function mapCustomerRow(
   customer: CustomerRow,
-  latest?: { order_number?: string | null; event_date?: string | null }
+  latest: { order_number?: string | null; event_date?: string | null } | undefined,
+  locale: string
 ): CustomerSummary {
   return {
     id: customer.id,
@@ -56,7 +58,7 @@ function mapCustomerRow(
     phone: customer.phone ?? "",
     latestBooking: latest?.order_number ?? "No bookings",
     latestDate: latest?.event_date
-      ? new Date(latest.event_date + "T00:00:00Z").toLocaleDateString("en-US", {
+      ? new Date(latest.event_date + "T00:00:00Z").toLocaleDateString(locale, {
           month: "short",
           day: "numeric",
           year: "numeric",
@@ -89,6 +91,8 @@ export async function getCustomersPage(options?: {
   if (!ctx) {
     return paginateItems([], { page: options?.page, pageSize, query });
   }
+
+  const locale = await getLocale();
 
   const supabase = await createSupabaseServerClient();
   const currentPage = normalizePage(options?.page);
@@ -132,7 +136,7 @@ export async function getCustomersPage(options?: {
         | null) ?? []),
     ].filter((o) => !o.deleted_at);
     orders.sort((a, b) => (b.event_date ?? "").localeCompare(a.event_date ?? ""));
-    return mapCustomerRow(customer as CustomerRow, orders[0]);
+    return mapCustomerRow(customer as CustomerRow, orders[0], locale);
   });
 
   const totalItems = count ?? mapped.length;
