@@ -38,13 +38,18 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   `next/image` with `fill` + `sizes="100vw"` + `priority` (optimized,
   responsive srcset). Supabase host is already in `remotePatterns`, so
   operator-uploaded hero URLs optimize too.
-- [ ] **Brand-color contrast guard is disconnected from the editorial
-  theme.** `brand-style-injector.tsx:49-67` only corrects colors with
-  luminance > 0.9 and emits overrides for legacy classes (`.kicker`,
-  `.nav-links a`) that don't exist in the `.st-*` theme. A mid-bright
-  brand color renders as small text/links on `#F7F4EE` cream with no
-  enforced 4.5:1 — the WCAG safety net was never reconnected after the
-  editorial rebuild.
+- [x] **Brand-color contrast guard is disconnected from the editorial
+  theme.** FIXED in G1: `brand-style-injector.tsx` now emits a corrected
+  `--st-primary` (the editorial token painted as text/links/borders on
+  cream) whenever the operator sets a custom primary. `aaPrimaryOnCream()`
+  progressively darkens the brand hue until it clears AA (≥4.5:1) on
+  `#F7F4EE`, falling back to editorial ink only if the hue can't clear it.
+  `--primary` stays raw (it's a fill behind cream text, e.g. buttons), and
+  the derived `--st-primary-dim`/`--st-primary-soft` recompute from the
+  corrected value. Olive default already passed, so existing operators are
+  unaffected; this only corrects custom colors. (The legacy >0.9 override
+  block for `.kicker`/`.nav-links` is kept intact for any non-editorial
+  surfaces.)
 - [x] **"Made by CrecyStudio" footer credit** — REMOVED entirely
   (`public-footer.tsx`), per founder (it referenced their SaaS-building
   studio and isn't useful). No longer renders on any storefront.

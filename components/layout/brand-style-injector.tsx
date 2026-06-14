@@ -1,7 +1,14 @@
 "use client";
 
 import { BrandSettings } from "@/lib/data/brand";
-import { relativeLuminance } from "@/lib/utils/contrast";
+import { contrastRatio, relativeLuminance } from "@/lib/utils/contrast";
+
+// The editorial theme paints --st-primary as text/links/borders on the cream
+// page background. Keep this in sync with --st-bg in app/storefront-theme.css.
+const ST_CREAM = "#F7F4EE";
+// Editorial ink (--st-ink) — guaranteed AA fallback when even heavy darkening
+// of the brand hue can't clear 4.5:1 on cream (e.g. a pure yellow brand).
+const ST_INK = "#1A1A1A";
 
 const GOOGLE_FONT_MAP: Record<string, string> = {
   "Plus Jakarta Sans": "Plus+Jakarta+Sans:wght@400;500;600;700;800",
@@ -34,6 +41,27 @@ function isSafeHex(value: string | null | undefined): boolean {
   return !!value && /^#[0-9a-fA-F]{3,8}$/.test(value);
 }
 
+/**
+ * Return a variant of `hex` that meets WCAG AA (4.5:1) as text on the cream
+ * page background, preserving the brand hue where possible by progressively
+ * darkening it. Falls back to editorial ink only if even near-black darkening
+ * of the hue can't clear the threshold.
+ *
+ * This is the contrast safety net for the editorial (.st-*) theme: --st-primary
+ * is used for small text, links, and borders on cream, so a mid-bright brand
+ * color (e.g. #4aa3ff) would otherwise render below AA. The olive default
+ * (#3F4A33) already passes, so existing operators are unaffected — this only
+ * corrects custom brand colors that fail.
+ */
+function aaPrimaryOnCream(hex: string): string {
+  if (contrastRatio(hex, ST_CREAM) >= 4.5) return hex;
+  for (let factor = 0.1; factor <= 0.85; factor += 0.1) {
+    const candidate = darkenHex(hex, factor);
+    if (contrastRatio(candidate, ST_CREAM) >= 4.5) return candidate;
+  }
+  return ST_INK;
+}
+
 export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
   const hasCustomPrimary = isSafeHex(brand.primaryColor) && brand.primaryColor !== "#e8590c";
   const hasCustomAccent = isSafeHex(brand.accentColor) && brand.accentColor !== "#7c3aed";
@@ -49,10 +77,16 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
   if (hasCustomPrimary) {
     const luminance = relativeLuminance(brand.primaryColor);
 
+    // --primary stays the raw brand color (used as a fill behind cream text,
+    // e.g. buttons, where the brand hue itself is correct). --st-primary is
+    // the editorial token painted AS text/links/borders on the cream page, so
+    // it must clear AA against cream — correct it independently.
+    cssVars.push(`--primary: ${brand.primaryColor};`);
+    cssVars.push(`--st-primary: ${aaPrimaryOnCream(brand.primaryColor)};`);
+
     if (luminance > 0.9) {
       // Extremely light — compute a darkened variant for text readability
       const safeTextColor = darkenHex(brand.primaryColor, 0.7);
-      cssVars.push(`--primary: ${brand.primaryColor};`);
       cssVars.push(`--primary-text: ${safeTextColor};`);
       const s = "body:not(:has(.sidebar-layout))";
       safetyOverrides = `
@@ -62,7 +96,6 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
         ${s} .primary-btn:hover { background: var(--primary-text); filter: brightness(0.85); }
       `;
     } else {
-      cssVars.push(`--primary: ${brand.primaryColor};`);
       cssVars.push(`--primary-text: ${brand.primaryColor};`);
     }
   }
