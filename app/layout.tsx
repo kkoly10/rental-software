@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import type { Metadata, Viewport } from "next";
 import { getSiteBaseUrl } from "@/lib/seo/metadata";
 import { getBrandSettings } from "@/lib/data/brand";
+import { getStorefrontTokens } from "@/lib/data/storefront-page";
 import { BrandStyleInjector } from "@/components/layout/brand-style-injector";
 import { RegisterSW } from "@/components/pwa/register-sw";
 import { DemoModeBanner } from "@/components/layout/demo-mode-banner";
@@ -122,6 +123,7 @@ export default async function RootLayout({
   // individual tenant brand overrides.
   const tenantHost = await isTenantHost();
   const brand = tenantHost ? await getBrandSettings() : null;
+  const tokens = tenantHost ? await getStorefrontTokens() : null;
   const locale = await getLocale();
 
   return (
@@ -138,7 +140,7 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        {brand && <BrandStyleInjector brand={brand} />}
+        {brand && <BrandStyleInjector brand={brand} tokens={tokens} />}
         <RegisterSW />
         <I18nProvider locale={locale}>
           <ProductionEnvGuard>

@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandSettings } from "@/lib/data/brand";
+import type { ThemeTokens } from "@/lib/data/storefront-page";
 import { contrastRatio, relativeLuminance } from "@/lib/utils/contrast";
 
 // The editorial theme paints --st-primary as text/links/borders on the cream
@@ -62,12 +63,88 @@ function aaPrimaryOnCream(hex: string): string {
   return ST_INK;
 }
 
-export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
+/**
+ * AA contrast safety against an arbitrary background — used for token colors
+ * where the operator chooses both the background and the foreground (the
+ * legacy path only ever painted on the fixed cream). Progressively darkens
+ * the foreground to clear 4.5:1 against the given bg, falling back to ink.
+ */
+function aaTextOn(hex: string, bg: string): string {
+  if (contrastRatio(hex, bg) >= 4.5) return hex;
+  for (let factor = 0.1; factor <= 0.85; factor += 0.1) {
+    const candidate = darkenHex(hex, factor);
+    if (contrastRatio(candidate, bg) >= 4.5) return candidate;
+  }
+  return ST_INK;
+}
+
+/**
+ * Build the `--st-*` CSS variable declarations for a validated token set.
+ *
+ * These override the legacy brand-derived vars (the document tokens are the
+ * new source of truth for the fields they cover, per the spec), so the caller
+ * appends them AFTER the legacy declarations in the SAME scoped `:root` block.
+ *
+ * Token colors get the same on-background contrast safety net the legacy path
+ * applies to --st-primary on cream, but validated against the token's OWN
+ * background so a custom cream + custom primary pair still clears AA.
+ */
+function tokenCssVars(tokens: ThemeTokens): string[] {
+  const vars: string[] = [];
+  const { colors, typography, radius } = tokens;
+  const bg = colors.background;
+
+  // background -> --st-bg (+ --st-bg-alt fallback alias), surface -> --st-card
+  vars.push(`--st-bg: ${bg};`);
+  vars.push(`--st-bg-alt: ${bg};`);
+  vars.push(`--st-card: ${colors.surface};`);
+
+  // text -> --st-ink / --st-text (alias), text-muted -> --st-muted
+  vars.push(`--st-ink: ${aaTextOn(colors.text, bg)};`);
+  vars.push(`--st-text: var(--st-ink);`);
+  vars.push(`--st-muted: ${colors.textMuted};`);
+
+  // primary / accent — AA-corrected as text/links/borders on the token bg,
+  // matching the legacy aaPrimaryOnCream treatment.
+  vars.push(`--st-primary: ${aaTextOn(colors.primary, bg)};`);
+  vars.push(`--st-accent: ${aaTextOn(colors.accent, bg)};`);
+
+  // Fonts — curated names, mapped to the same family stacks the theme uses.
+  vars.push(
+    `--st-font-display: "${typography.headingFont}", "Fraunces", Georgia, serif;`
+  );
+  vars.push(
+    `--st-font-body: "${typography.bodyFont}", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;`
+  );
+
+  // Base body size — the theme reads --st-text-16 as the body font-size.
+  vars.push(`--st-text-16: ${typography.baseSizePx}px;`);
+
+  // Radius — override the editorial radius scale tokens consistently.
+  vars.push(`--st-radius-2: ${radius}px;`);
+  vars.push(`--st-radius-sm: ${radius}px;`);
+  vars.push(`--st-radius-md: ${radius}px;`);
+  vars.push(`--st-radius-lg: ${radius}px;`);
+
+  return vars;
+}
+
+export function BrandStyleInjector({
+  brand,
+  tokens = null,
+}: {
+  brand: BrandSettings;
+  tokens?: ThemeTokens | null;
+}) {
   const hasCustomPrimary = isSafeHex(brand.primaryColor) && brand.primaryColor !== "#e8590c";
   const hasCustomAccent = isSafeHex(brand.accentColor) && brand.accentColor !== "#7c3aed";
   const hasCustomFont = brand.fontFamily && brand.fontFamily !== "System Default" && brand.fontFamily in GOOGLE_FONT_MAP;
 
-  if (!hasCustomPrimary && !hasCustomAccent && !hasCustomFont) {
+  // No legacy brand customization AND no published tokens → emit nothing.
+  // This preserves the exact byte-for-byte output (a bare `return null`) the
+  // component had before tokens existed: when tokens is null/absent the
+  // condition collapses to the original one and the early return is taken.
+  if (!hasCustomPrimary && !hasCustomAccent && !hasCustomFont && !tokens) {
     return null;
   }
 
@@ -117,6 +194,14 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
     );
   }
 
+  // Published theme tokens are the source of truth for the fields they cover.
+  // Append them AFTER the legacy vars in the same scoped block so the later
+  // declaration wins the cascade. When tokens is null this is a no-op and the
+  // output is identical to the pre-tokens component.
+  if (tokens) {
+    cssVars.push(...tokenCssVars(tokens));
+  }
+
   // Scope brand vars to pages that do NOT contain the dashboard shell
   // (.sidebar-layout is always present on every dashboard page).  This
   // prevents tenant brand colors from bleeding into the operator UI when
@@ -130,6 +215,15 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
 
   const fontParam = hasCustomFont ? GOOGLE_FONT_MAP[brand.fontFamily] : null;
 
+  // Token fonts come from the same curated GOOGLE_FONT_MAP. Load each unique
+  // family (heading + body) so the --st-font-* overrides actually have the
+  // webfont available.
+  const tokenFontFamilies = tokens
+    ? Array.from(
+        new Set([tokens.typography.headingFont, tokens.typography.bodyFont])
+      ).filter((f) => f in GOOGLE_FONT_MAP)
+    : [];
+
   return (
     <>
       {fontParam && (
@@ -138,6 +232,13 @@ export function BrandStyleInjector({ brand }: { brand: BrandSettings }) {
           href={`https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`}
         />
       )}
+      {tokenFontFamilies.map((family) => (
+        <link
+          key={family}
+          rel="stylesheet"
+          href={`https://fonts.googleapis.com/css2?family=${GOOGLE_FONT_MAP[family]}&display=swap`}
+        />
+      ))}
       <style dangerouslySetInnerHTML={{ __html: styleContent }} />
     </>
   );
