@@ -16,6 +16,8 @@ import {
   toggleSectionDisabled,
   setDocumentTheme,
 } from "@/lib/storefront/builder-document";
+import { isContentEditableSectionType } from "@/lib/storefront/sections/content-schemas";
+import { StorefrontSectionEditor } from "@/components/settings/storefront-section-editor";
 import {
   saveStorefrontDocumentDraft,
   publishStorefrontDocument,
@@ -55,8 +57,19 @@ export function StorefrontBuilder({
   const documentJson = JSON.stringify(doc);
   const status = publishState.message ? publishState : draftState;
 
+  const selectedType = doc.sections[selectedId]?.type;
+
   const labelForId = (id: string): string => {
-    const type = doc.sections[id]?.type;
+    const section = doc.sections[id];
+    const type = section?.type;
+    // Reflect an edited hero headline in the lightweight section row so the
+    // operator can see their copy without a full preview.
+    if (type === "hero") {
+      const headline = section?.settings?.headline;
+      if (typeof headline === "string" && headline.trim()) {
+        return headline.trim();
+      }
+    }
     if (type && isKnownSectionType(type)) {
       return SECTION_REGISTRY[type as SectionType].label;
     }
@@ -264,12 +277,21 @@ export function StorefrontBuilder({
 
           {tab === "sections" ? (
             <div style={{ maxWidth: 520 }}>
-              <h2 style={{ margin: "0 0 8px", fontSize: 18 }}>
+              <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>
                 {selectedId ? labelForId(selectedId) : m.tabSections}
               </h2>
-              <p className="muted" style={{ lineHeight: 1.6 }}>
-                {m.contentComingSoon}
-              </p>
+              {selectedType && isContentEditableSectionType(selectedType) ? (
+                <StorefrontSectionEditor
+                  type={selectedType}
+                  sectionId={selectedId}
+                  doc={doc}
+                  onChange={setDoc}
+                />
+              ) : (
+                <p className="muted" style={{ lineHeight: 1.6 }}>
+                  {m.contentComingSoon}
+                </p>
+              )}
             </div>
           ) : selectedTheme ? (
             <StorefrontTokenEditor tokens={selectedTheme} onChange={onThemeChange} />
