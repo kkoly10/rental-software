@@ -53,8 +53,14 @@ function splitForEmphasis(text: string): { lead: string; italic: string; tail: s
   return { lead: trimmed, italic: "", tail: "" };
 }
 
+// Only render a star row for a genuine operator-set rating (1–5). A blank,
+// zero, or invalid rating returns "" so we DON'T fabricate a perfect score —
+// testimonials are operator-authored, and inventing 5 stars reads as fake
+// social proof. Mirrors the dashboard editor, which only shows stars when
+// rating > 0.
 function starString(rating: number): string {
-  const safe = Math.max(1, Math.min(5, Math.round(rating || 5)));
+  if (!Number.isFinite(rating) || rating < 1) return "";
+  const safe = Math.min(5, Math.round(rating));
   return "★ ".repeat(safe).trim();
 }
 
@@ -75,6 +81,7 @@ export async function PartyClassicReviewsCards() {
   if (!featured) return null;
 
   const { lead, italic, tail } = splitForEmphasis(featured.text);
+  const stars = starString(featured.rating);
 
   const attrPieces: string[] = [featured.name];
   if (featured.location) attrPieces.push(featured.location);
@@ -84,9 +91,11 @@ export async function PartyClassicReviewsCards() {
   return (
     <section className="st-section st-section-rule st-quote">
       <div className="st-container st-quote-inner">
-        <div className="st-quote-stars" aria-hidden="true">
-          {starString(featured.rating)}
-        </div>
+        {stars && (
+          <div className="st-quote-stars" aria-hidden="true">
+            {stars}
+          </div>
+        )}
         <p className="st-quote-text">
           &ldquo;{lead}
           {italic && <em>{italic}</em>}
