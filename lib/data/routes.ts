@@ -1,6 +1,7 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getLocale } from "@/lib/i18n/server";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
 import type { RouteSummary } from "@/lib/types";
@@ -66,6 +67,7 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
   }
 
   const tz = await getOrgEventTimezone(ctx.organizationId);
+  const locale = await getLocale();
 
   return data.map((route) => {
     const stops = ((route as Record<string, unknown>).route_stops as
@@ -99,7 +101,7 @@ export async function getRoutes(date?: string): Promise<RouteSummary[]> {
       id: route.id,
       name: route.name ?? "Route",
       date: route.route_date
-        ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+        ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
         : "TBD",
       status: route.route_status ?? "planned",
       stops: stops.length,

@@ -128,7 +128,7 @@ export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
     customerEmail: customer?.email ?? "",
     customerPhone: customer?.phone ?? "",
     eventDate: data.event_date
-      ? new Date(data.event_date + "T12:00:00Z").toLocaleDateString("en-US", {
+      ? new Date(data.event_date + "T12:00:00Z").toLocaleDateString(locale, {
           month: "short",
           day: "numeric",
           year: "numeric",
