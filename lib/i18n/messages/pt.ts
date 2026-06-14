@@ -547,7 +547,7 @@ export const pt: Messages = {
     empty: "O seu carrinho está vazio.",
     browse: "Ver aluguéis",
     interimNote:
-      "O pagamento combinado num só passo chega em breve. Por agora, pode pagar cada item abaixo.",
+      "Pague todo o seu carrinho num só pagamento acima, ou pague um item individual abaixo.",
     modeWet: "Com água",
     modeDry: "Sem água",
     oneAddon: "1 extra",
@@ -556,6 +556,9 @@ export const pt: Messages = {
     remove: "Remover",
     clearCart: "Esvaziar carrinho",
     continueShopping: "Continuar a explorar",
+    proceedToCheckout: "Ir para o pagamento",
+    needEventInfo:
+      "Defina a data do evento e o código postal de entrega acima para pagar todo o carrinho num só pagamento.",
   },
 
   legal: {
@@ -1498,6 +1501,7 @@ export const pt: Messages = {
     review: {
       kicker: "Reveja a sua encomenda",
       item: "Artigo",
+      items: "Artigos",
       eventDate: "Data do evento",
       deliveryTo: "Entrega para",
       subtotal: "Subtotal",
@@ -1552,6 +1556,18 @@ export const pt: Messages = {
     total: "Total",
     placeOrder: "Confirmar encomenda",
     processing: "A processar…",
+    multiItem: {
+      title: "Conclua a sua reserva",
+      description:
+        "Um evento, uma entrega, um depósito. Introduza os seus dados de contacto e de entrega para reservar tudo o que está no seu carrinho.",
+      itemsHeading: "{count} artigos no seu carrinho",
+      pricingNote:
+        "O preço final — entrega, impostos e depósito — é calculado no passo seguinte.",
+      needEventInfoTitle: "Defina primeiro a data e o código postal",
+      needEventInfoBody:
+        "Um pagamento combinado precisa de uma data de evento e de um código postal de entrega partilhados. Adicione-os no seu carrinho e regresse.",
+      backToCart: "Voltar ao carrinho",
+    },
   },
 
   orderConfirmation: {

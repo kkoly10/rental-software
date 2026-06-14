@@ -548,7 +548,7 @@ const enValues = {
     empty: "Your cart is empty.",
     browse: "Browse rentals",
     interimNote:
-      "Combined one-payment checkout is coming soon. For now, you can check out each item below.",
+      "Check out your whole cart in one payment above, or check out an individual item below.",
     modeWet: "Wet",
     modeDry: "Dry",
     oneAddon: "1 add-on",
@@ -557,6 +557,9 @@ const enValues = {
     remove: "Remove",
     clearCart: "Clear cart",
     continueShopping: "Continue shopping",
+    proceedToCheckout: "Proceed to checkout",
+    needEventInfo:
+      "Set your event date and delivery ZIP above to check out the whole cart in one payment.",
   },
 
   legal: {
@@ -1499,6 +1502,7 @@ const enValues = {
     review: {
       kicker: "Review your order",
       item: "Item",
+      items: "Items",
       eventDate: "Event date",
       deliveryTo: "Delivery to",
       subtotal: "Subtotal",
@@ -1553,6 +1557,18 @@ const enValues = {
     total: "Total",
     placeOrder: "Place Order",
     processing: "Processing…",
+    multiItem: {
+      title: "Complete your booking",
+      description:
+        "One event, one delivery, one deposit. Enter your contact and delivery details to reserve everything in your cart.",
+      itemsHeading: "{count} items in your cart",
+      pricingNote:
+        "Final pricing — delivery, tax, and deposit — is calculated on the next step.",
+      needEventInfoTitle: "Set your event date and ZIP first",
+      needEventInfoBody:
+        "A combined checkout needs a shared event date and delivery ZIP. Add them on your cart, then come back.",
+      backToCart: "Back to cart",
+    },
   },
 
   orderConfirmation: {

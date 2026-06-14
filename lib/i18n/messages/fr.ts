@@ -547,7 +547,7 @@ export const fr: Messages = {
     empty: "Votre panier est vide.",
     browse: "Voir les locations",
     interimNote:
-      "Le paiement combiné en une fois arrive bientôt. Pour l’instant, vous pouvez régler chaque article ci-dessous.",
+      "Réglez tout votre panier en un seul paiement ci-dessus, ou réglez un article individuel ci-dessous.",
     modeWet: "Avec eau",
     modeDry: "Sans eau",
     oneAddon: "1 option",
@@ -556,6 +556,9 @@ export const fr: Messages = {
     remove: "Retirer",
     clearCart: "Vider le panier",
     continueShopping: "Continuer mes achats",
+    proceedToCheckout: "Passer au paiement",
+    needEventInfo:
+      "Indiquez la date de l’événement et le code postal de livraison ci-dessus pour régler tout le panier en un seul paiement.",
   },
 
   legal: {
@@ -1498,6 +1501,7 @@ export const fr: Messages = {
     review: {
       kicker: "Vérifiez votre commande",
       item: "Article",
+      items: "Articles",
       eventDate: "Date de l’événement",
       deliveryTo: "Livraison à",
       subtotal: "Sous-total",
@@ -1552,6 +1556,18 @@ export const fr: Messages = {
     total: "Total",
     placeOrder: "Valider la commande",
     processing: "Traitement…",
+    multiItem: {
+      title: "Finalisez votre réservation",
+      description:
+        "Un événement, une livraison, un acompte. Saisissez vos coordonnées et votre adresse de livraison pour réserver tout ce qui se trouve dans votre panier.",
+      itemsHeading: "{count} articles dans votre panier",
+      pricingNote:
+        "Le prix final — livraison, taxes et acompte — est calculé à l’étape suivante.",
+      needEventInfoTitle: "Indiquez d’abord la date et le code postal",
+      needEventInfoBody:
+        "Un paiement combiné nécessite une date d’événement et un code postal de livraison communs. Ajoutez-les dans votre panier, puis revenez.",
+      backToCart: "Retour au panier",
+    },
   },
 
   orderConfirmation: {

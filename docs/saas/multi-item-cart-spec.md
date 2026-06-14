@@ -186,15 +186,26 @@ and the order-confirmation page (keys off `order_number`).
   shapes, and the same missing-price / zero-subtotal gates. Guarded by 13
   characterization tests (`tests/checkout-item-pricing.test.ts`). Zero
   behavior change; full gauntlet green (516 tests). This de-risks the loop.
-- **3b — Multi-item submit.** Accept the cart (POST/hidden `cart_json`), loop
-  `priceAndResolveOneItem` for every item, **validate ALL items (pricing +
-  availability) before inserting ANY rows** (Risk 1 mitigation — avoids
-  partial-failure orphans), then one `orders` row + N parent lines (+ their
-  children), reserve each, roll back the whole order on any failure. Stripe
-  amount from the integer `totalCents` (Risk 2). Single-item path preserved.
-- **3c — Surfaces.** Multi-item checkout page/form + summary card (N lines,
-  one delivery/tax/deposit) and the confirmation email items table (filter to
-  `line_type='rental'` so add-on/waiver children don't double-list — Risk 3).
+- **3b — Multi-item submit. ✅ SHIPPED (with the 3c surfaces).**
+  `createMultiItemCheckoutOrder` (in `actions.ts`) fires only when `cart_json`
+  is present (single path byte-for-byte unchanged — zero removed lines). It
+  parses/caps the cart (`cart-json.ts`, max 25), **prices + validates EVERY
+  item before any DB write** (fails with the item's gate, no order row), sums
+  subtotals in cents (`cart-aggregate.ts`), runs the order-level
+  delivery/tax/deposit math once, inserts one `orders` row, loops
+  `insertOneItemLines`, reserves each, and a single `rollbackOrder()` undoes
+  the whole order (cascade + address + new customer) on ANY insert/reserve
+  failure. One Stripe deposit from the integer deposit cents, guarded by the
+  `stripeMinorUnits === expectedMinorUnits` assertion. Per-item minimums +
+  strictest cart lead-time enforced; idempotency replay/race preserved.
+- **3c — Surfaces. ✅ SHIPPED with 3b.** `/cart` → "Proceed to checkout" →
+  `/cart/checkout` (`multi-item-checkout.tsx`) reads the cart, serializes
+  items (no prices) into `cart_json`, and reuses `CheckoutForm` (now
+  multi-item aware: lists items, clears the cart on success). Confirmation
+  email/template list one row per **rental parent** (`triggers.ts`/
+  `templates.ts`) — children folded into the parent price, no double-listing.
+  i18n added across en/es/fr/pt. (Remaining polish, if desired: a richer
+  per-line summary card — the functional flow is complete.)
 
 ### Top risks & mitigations
 1. **Partial failure mid-loop → orphan rows.** Validate all items up front;
