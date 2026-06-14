@@ -33,7 +33,8 @@ const hexColor = z
   .regex(/^#[0-9a-fA-F]{3,8}$/, "must be a hex color like #1A1A1A");
 
 // Type-scale ratio: a small curated set (classic modular-scale steps).
-const SCALE_RATIOS = [1.125, 1.2, 1.25, 1.333, 1.414, 1.5] as const;
+// Exported so the operator editor can render exactly this option set.
+export const SCALE_RATIOS = [1.125, 1.2, 1.25, 1.333, 1.414, 1.5] as const;
 
 const fontName = z.enum(CURATED_FONTS);
 

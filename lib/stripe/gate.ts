@@ -47,6 +47,7 @@ export async function checkFeatureAccess(
     | "quickbooks_export"
     | "priority_support"
     | "sms"
+    | "storefront_builder"
 ): Promise<GateResult> {
   const sub = await getSubscriptionInfo();
 
@@ -63,6 +64,10 @@ export async function checkFeatureAccess(
     priority_support: ["growth"],
     // SMS/WhatsApp carries per-tenant Twilio + carrier cost → paid tiers.
     sms: SMS_PLAN_TIERS,
+    // Editorial storefront builder (full theme tokens) is a Pro+ capability per
+    // the spec's tiering (§5/§9): content + brand color/font = entry; full theme
+    // tokens = Pro. Enforced on the builder page AND in the persist actions.
+    storefront_builder: ["pro", "growth"],
   };
 
   const requiredPlans = featurePlanRequirements[feature];

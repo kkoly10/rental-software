@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { WebsiteSettingsForm } from "@/components/settings/website-settings-form";
 import { BrandSettingsForm } from "@/components/settings/brand-settings-form";
@@ -93,6 +94,22 @@ export default async function WebsitePage() {
             {m.dashboard.website.setupDomainFirst}
           </span>
         )}
+      </div>
+
+      <div style={{ marginBottom: 24, padding: "16px 20px", borderRadius: 12, background: "var(--surface-muted)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{m.dashboard.website.builderCtaTitle}</div>
+          <div className="muted" style={{ fontSize: 13 }}>
+            {m.dashboard.website.builderCtaBody}
+          </div>
+        </div>
+        <Link
+          href="/dashboard/website/builder"
+          className="primary-btn"
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {m.dashboard.website.builderCtaButton}
+        </Link>
       </div>
 
       <div className="dashboard-grid">
