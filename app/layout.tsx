@@ -13,6 +13,7 @@ import { isTenantHost } from "@/lib/auth/org-context";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getLocale } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
+import { CartProvider } from "@/lib/cart/cart-context";
 
 export async function generateViewport(): Promise<Viewport> {
   // Tenant storefronts use the olive editorial theme (`--st-primary` default
@@ -142,7 +143,7 @@ export default async function RootLayout({
         <I18nProvider locale={locale}>
           <ProductionEnvGuard>
             <DemoModeBanner />
-            {children}
+            <CartProvider>{children}</CartProvider>
           </ProductionEnvGuard>
         </I18nProvider>
       </body>

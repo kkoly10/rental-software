@@ -382,6 +382,12 @@ export default async function ProductDetailPage({
                 supportsModes={product.supportsModes ?? ["dry"]}
                 wetUpchargeCents={product.wetUpchargeCents ?? null}
                 backHref={backHref}
+                product={{
+                  slug: product.slug,
+                  name: product.name,
+                  imageUrl: heroImage,
+                  priceLabel: product.price,
+                }}
                 perUnit={
                   product.capabilitySlugs?.includes("pricing.per-unit") &&
                   typeof product.unitPriceCents === "number" &&

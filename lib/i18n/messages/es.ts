@@ -3,6 +3,7 @@ import type { Messages } from "./en";
 export const es: Messages = {
   common: {
     appName: "Korent",
+    cart: "Carrito",
     loading: "Cargando…",
     listLoadErrorTitle: "No se pudo cargar esta lista",
     listLoadErrorBody: "Algo salió mal al obtener los datos. Actualiza la página — si persiste, contacta con soporte.",
@@ -537,6 +538,24 @@ export const es: Messages = {
     sending: "Enviando…",
     success: "Gracias, te contactaremos pronto.",
     error: "No pudimos enviarlo. Inténtalo de nuevo.",
+  },
+
+  cart: {
+    title: "Carrito",
+    heading: "Tu carrito",
+    loading: "Cargando tu carrito…",
+    empty: "Tu carrito está vacío.",
+    browse: "Ver alquileres",
+    interimNote:
+      "El pago combinado en un solo paso llegará pronto. Por ahora, puedes pagar cada artículo abajo.",
+    modeWet: "Con agua",
+    modeDry: "Sin agua",
+    oneAddon: "1 extra",
+    addonCount: "{count} extras",
+    checkoutItem: "Pagar",
+    remove: "Quitar",
+    clearCart: "Vaciar carrito",
+    continueShopping: "Seguir explorando",
   },
 
   legal: {
@@ -1360,6 +1379,8 @@ export const es: Messages = {
     available: "Disponible para tu evento",
     unavailableForDate: "No disponible en esa fecha",
     bookNow: "Reservar",
+    addToCart: "Añadir al carrito",
+    addedToCart: "Añadido ✓",
     notAvailableTitle: "Este alquiler no está disponible",
     notAvailableBody: "Elige otra fecha o explora otros alquileres en el catálogo.",
     details: "Detalles",

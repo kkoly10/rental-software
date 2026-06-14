@@ -1,6 +1,6 @@
 # Multi-Item Cart — Design & Phased Plan
 
-**Created:** 2026-06-14 · **Owner:** founder + Claude · **Status:** design; phase 1 next
+**Created:** 2026-06-14 · **Owner:** founder + Claude · **Status:** Phase 1 shipped; Phase 2 next
 
 The storefront checkout is single-product today: renting a bounce house +
 tables + a tent = three separate checkouts (three deposits, three delivery
@@ -93,14 +93,17 @@ independently-shippable PRs.
 
 ## C. Phased PRs (each independently shippable, merge-on-green)
 
-- **Phase 1 — Cart state + UI shell (no checkout change).**
-  `CartProvider` (context + localStorage, namespaced, SSR-safe), "Add to
-  cart" on the PDP (beside "Book Now"), a cart drawer/indicator in the
-  header (item count), and a `/cart` page listing items with remove/edit and
-  the shared event date + ZIP. "Proceed to checkout" is present but, until
-  Phase 3, still routes single items through today's flow (or is disabled for
-  >1 item behind a flag). Pure client; zero backend risk. i18n for all new
-  copy (en/es/fr/pt).
+- **Phase 1 — Cart state + UI shell (no checkout change). ✅ SHIPPED.**
+  `CartProvider` (`lib/cart/cart-context.tsx`; context + localStorage,
+  namespaced, SSR-safe via a `hydrated` flag), "Add to cart" on the PDP
+  inside `BookNowWithMode` (it owns the mode/units/variant/add-on
+  selections), a header cart indicator with item-count badge
+  (`cart-indicator.tsx`, desktop + mobile), and a `/cart` page
+  (`cart-view.tsx`) listing items with remove/clear, the shared event date +
+  ZIP, and a per-item "Check out" that reuses today's single-item flow
+  (`cartItemCheckoutHref`) with a plain note that combined one-payment
+  checkout arrives in Phase 3. Pure client; zero backend risk. i18n added
+  (en/es/fr/pt). Prices in the cart are display snapshots only.
 
 - **Phase 2 — Server pricing preview for a cart.** A read-only action/route
   that takes the cart (items + date + zip), loops `getCheckoutPricing` per

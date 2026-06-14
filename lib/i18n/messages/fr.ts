@@ -3,6 +3,7 @@ import type { Messages } from "./en";
 export const fr: Messages = {
   common: {
     appName: "Korent",
+    cart: "Panier",
     loading: "Chargement…",
     listLoadErrorTitle: "Impossible de charger cette liste",
     listLoadErrorBody: "Une erreur est survenue lors de la récupération des données. Actualisez la page — si le problème persiste, contactez le support.",
@@ -537,6 +538,24 @@ export const fr: Messages = {
     sending: "Envoi…",
     success: "Merci — nous vous recontactons rapidement.",
     error: "Envoi impossible. Veuillez réessayer.",
+  },
+
+  cart: {
+    title: "Panier",
+    heading: "Votre panier",
+    loading: "Chargement de votre panier…",
+    empty: "Votre panier est vide.",
+    browse: "Voir les locations",
+    interimNote:
+      "Le paiement combiné en une fois arrive bientôt. Pour l’instant, vous pouvez régler chaque article ci-dessous.",
+    modeWet: "Avec eau",
+    modeDry: "Sans eau",
+    oneAddon: "1 option",
+    addonCount: "{count} options",
+    checkoutItem: "Payer",
+    remove: "Retirer",
+    clearCart: "Vider le panier",
+    continueShopping: "Continuer mes achats",
   },
 
   legal: {
@@ -1360,6 +1379,8 @@ export const fr: Messages = {
     available: "Disponible pour votre événement",
     unavailableForDate: "Indisponible à cette date",
     bookNow: "Réserver",
+    addToCart: "Ajouter au panier",
+    addedToCart: "Ajouté ✓",
     notAvailableTitle: "Cette location n’est pas disponible",
     notAvailableBody: "Choisissez une autre date ou parcourez d’autres locations du catalogue.",
     details: "Détails",
