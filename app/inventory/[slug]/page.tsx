@@ -9,6 +9,9 @@ import { getCatalogDetail } from "@/lib/data/catalog-detail";
 import { enrichCatalogAvailability } from "@/lib/data/catalog-availability";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getThemeSettings } from "@/lib/data/theme-settings";
+import { getBookingPolicies } from "@/lib/data/booking-policies";
+import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
+import { getPublicOrgId } from "@/lib/auth/org-context";
 import { RequestQuoteForm } from "@/components/public/request-quote-form";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { DemoBanner } from "@/components/demo/demo-banner";
@@ -57,12 +60,13 @@ export default async function ProductDetailPage({
   const { slug } = await params;
   const { date, zip } = await searchParams;
 
-  const [product, theme, origin, { messages: m, t }, isDemo] = await Promise.all([
+  const [product, theme, origin, { messages: m, t }, isDemo, policies] = await Promise.all([
     getCatalogDetail(slug),
     getThemeSettings(),
     getRequestOrigin(),
     getTranslator(),
     isCurrentTenantDemo(),
+    getBookingPolicies(),
   ]);
 
   if (!product) {
@@ -154,6 +158,28 @@ export default async function ProductDetailPage({
       : ""
   }`;
 
+  // Deposit + delivery disclosure (FTC junk-fee guidance: surface mandatory
+  // cost terms up front, not at checkout). The deposit percentage mirrors what
+  // checkout actually charges — same getBookingPolicies() source. The delivery
+  // line shows the operator's real per-ZIP service-area fee when the visitor
+  // arrived with a ZIP; otherwise it states delivery is ZIP-dependent (never a
+  // fabricated number).
+  const depositRequired =
+    policies.depositPercentage > 0 ||
+    (policies.depositMinimum != null && policies.depositMinimum > 0);
+
+  let deliveryArea: Awaited<ReturnType<typeof resolveServiceAreaForAddress>> = null;
+  if (zip) {
+    const orgId = await getPublicOrgId();
+    if (orgId) {
+      deliveryArea = await resolveServiceAreaForAddress({
+        organizationId: orgId,
+        postalCode: zip,
+      }).catch(() => null);
+    }
+  }
+  const fmtMoney = (n: number) => `$${n.toFixed(2)}`;
+
   return (
     <>
       <PublicHeader />
@@ -231,7 +257,35 @@ export default async function ProductDetailPage({
                   )}
                 </div>
                 <span className="st-pdp-deposit-note">
-                  {m.inventoryDetail.depositReservesDate}
+                  {depositRequired
+                    ? t(m.inventoryDetail.depositTag, { percent: policies.depositPercentage })
+                    : m.inventoryDetail.depositTagNone}
+                </span>
+              </div>
+
+              <div className="st-pdp-facts">
+                {depositRequired && (
+                  <span className="st-pdp-fact">
+                    {m.inventoryDetail.depositBalanceNote}
+                    {policies.depositMinimum != null && policies.depositMinimum > 0 && (
+                      <>
+                        {" · "}
+                        {t(m.inventoryDetail.depositMinimumNote, {
+                          amount: fmtMoney(policies.depositMinimum),
+                        })}
+                      </>
+                    )}
+                  </span>
+                )}
+                <span className="st-pdp-fact">
+                  {deliveryArea
+                    ? deliveryArea.deliveryFee > 0
+                      ? t(m.inventoryDetail.deliveryToArea, {
+                          zip: zip ?? "",
+                          fee: fmtMoney(deliveryArea.deliveryFee),
+                        })
+                      : t(m.inventoryDetail.deliveryFreeToArea, { zip: zip ?? "" })
+                    : m.inventoryDetail.deliveryByZip}
                 </span>
               </div>
 

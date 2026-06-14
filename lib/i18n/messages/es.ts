@@ -1362,6 +1362,13 @@ export const es: Messages = {
     basePrice: "Precio base",
     perDay: "por día",
     depositReservesDate: "El depósito reserva la fecha",
+    depositTag: "{percent}% de depósito",
+    depositTagNone: "Sin depósito",
+    depositBalanceNote: "Saldo a pagar antes de tu evento",
+    depositMinimumNote: "Depósito mínimo de {amount}",
+    deliveryToArea: "Entrega en {zip}: {fee}",
+    deliveryFreeToArea: "Entrega gratis en {zip}",
+    deliveryByZip: "El coste de entrega depende de tu código postal",
     whatToExpect: {
       kicker: "Qué esperar",
       title: "Entregado como un servicio real, no solo un producto",

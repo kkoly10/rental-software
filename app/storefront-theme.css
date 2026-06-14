@@ -1866,6 +1866,22 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   text-align: right;
 }
 
+/* Deposit + delivery disclosure lines under the price row. Quiet, plain
+   sentences — the cost terms a customer needs before clicking Book. */
+.st-pdp-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: -4px 0 6px;
+}
+
+.st-pdp-fact {
+  font-family: var(--st-font-body);
+  font-size: 13px;
+  color: var(--st-muted-2);
+  line-height: 1.5;
+}
+
 /* Highlight list — quiet vertical stack of one-liners, not chunky cards. */
 .st-pdp-highlights {
   display: flex;
