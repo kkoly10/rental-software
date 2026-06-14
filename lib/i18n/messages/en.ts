@@ -560,6 +560,9 @@ const enValues = {
     proceedToCheckout: "Proceed to checkout",
     needEventInfo:
       "Set your event date and delivery ZIP above to check out the whole cart in one payment.",
+    itemsInCart: "{count} items",
+    itemsInCartOne: "1 item",
+    pricesAtCheckout: "Delivery and tax are calculated at checkout.",
   },
 
   legal: {

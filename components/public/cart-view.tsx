@@ -5,10 +5,11 @@ import { useCart, cartItemCheckoutHref } from "@/lib/cart/cart-context";
 import { useI18n } from "@/lib/i18n/provider";
 
 /**
- * Storefront cart page body (Phase 1). Lists the cart's items, lets the
- * customer set the shared event date + delivery ZIP, remove items, and check
- * out. Until Phase 3 (combined multi-item submit) each item checks out through
- * today's single-item flow — stated plainly so the interim isn't confusing.
+ * Storefront cart page body. Lists the cart's items, lets the customer set the
+ * shared event date + delivery ZIP, remove items, and check out — either the
+ * whole cart in one payment (/cart/checkout) or an individual item via the
+ * single-item flow. Prices shown are per-item display labels; delivery + tax
+ * and the order total are finalized server-side at checkout.
  */
 export function CartView() {
   const { cart, hydrated, removeItem, clear, setEvent } = useCart();
@@ -45,6 +46,11 @@ export function CartView() {
     <section className="st-container st-section">
       <span className="st-eyebrow">{c.title}</span>
       <h1 className="st-section-title">{c.heading}</h1>
+      <p className="st-cart-count">
+        {cart.items.length === 1
+          ? c.itemsInCartOne
+          : c.itemsInCart.replace("{count}", String(cart.items.length))}
+      </p>
 
       <div className="st-cart-event">
         <label className="st-cart-field">
@@ -89,6 +95,9 @@ export function CartView() {
                   {c.needEventInfo}
                 </p>
               </>
+            )}
+            {canCheckout && (
+              <p className="st-cart-reassure">{c.pricesAtCheckout}</p>
             )}
           </div>
         );

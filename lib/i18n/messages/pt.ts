@@ -559,6 +559,9 @@ export const pt: Messages = {
     proceedToCheckout: "Ir para o pagamento",
     needEventInfo:
       "Defina a data do evento e o código postal de entrega acima para pagar todo o carrinho num só pagamento.",
+    itemsInCart: "{count} itens",
+    itemsInCartOne: "1 item",
+    pricesAtCheckout: "A entrega e os impostos são calculados no checkout.",
   },
 
   legal: {

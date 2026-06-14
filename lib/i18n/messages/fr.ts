@@ -559,6 +559,9 @@ export const fr: Messages = {
     proceedToCheckout: "Passer au paiement",
     needEventInfo:
       "Indiquez la date de l’événement et le code postal de livraison ci-dessus pour régler tout le panier en un seul paiement.",
+    itemsInCart: "{count} articles",
+    itemsInCartOne: "1 article",
+    pricesAtCheckout: "La livraison et les taxes sont calculées au paiement.",
   },
 
   legal: {
