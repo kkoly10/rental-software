@@ -180,6 +180,13 @@ export type OrderConfirmationData = {
   customerFirstName: string;
   orderNumber: string;
   productName: string;
+  /** Phase 3b — multi-item carts pass the full rental line list so the
+   *  confirmation renders every product as its own row (name × qty →
+   *  line total) instead of a single Item line. Only `line_type='rental'`
+   *  parents are passed in; add-on / waiver children are folded into
+   *  their parent's lineTotal. When omitted, the single `productName`
+   *  row is rendered exactly as before. */
+  items?: { name: string; quantity: number; lineTotal: string }[];
   eventDate: string;
   subtotal: string;
   deliveryFee: string;
@@ -196,6 +203,16 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
   const t = emailCopy(data.locale);
   const c = t.orderConfirmation;
   const accent = emailAccent(data.brandColor);
+  // Build the item rows. Multi-item carts list each rental parent as
+  // "Name (×qty)" → line total; single-item orders keep the original
+  // single Item row keyed on productName.
+  const itemRows: [string, string][] =
+    data.items && data.items.length > 0
+      ? data.items.map((it) => [
+          it.quantity > 1 ? `${it.name} (×${it.quantity})` : it.name,
+          it.lineTotal,
+        ])
+      : [[t.labels.item, data.productName]];
   return layout(
     data.businessName,
     `
@@ -204,7 +221,7 @@ export function orderConfirmationEmail(data: OrderConfirmationData): string {
 
     ${detailTable([
       [t.labels.order, `#${data.orderNumber}`],
-      [t.labels.item, data.productName],
+      ...itemRows,
       [t.labels.eventDate, data.eventDate],
       [t.labels.subtotal, data.subtotal],
       [t.labels.deliveryFee, data.deliveryFee],

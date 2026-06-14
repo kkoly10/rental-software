@@ -72,6 +72,28 @@ export function CartView() {
         </label>
       </div>
 
+      {(() => {
+        const canCheckout = !!(cart.eventDate && cart.zip);
+        return (
+          <div className="st-cart-checkout-all" style={{ margin: "16px 0" }}>
+            {canCheckout ? (
+              <Link href="/cart/checkout" className="primary-btn st-cart-checkout-primary">
+                {c.proceedToCheckout}
+              </Link>
+            ) : (
+              <>
+                <button type="button" className="primary-btn st-cart-checkout-primary" disabled>
+                  {c.proceedToCheckout}
+                </button>
+                <p className="st-note" role="note" style={{ marginTop: 8 }}>
+                  {c.needEventInfo}
+                </p>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       <p className="st-note" role="note">
         {c.interimNote}
       </p>

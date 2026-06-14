@@ -215,7 +215,16 @@ export async function triggerOrderConfirmationEmail(params: {
   customerFirstName: string;
   customerEmail: string;
   orderNumber: string;
+  /** Single-line summary of the order's products. For multi-item carts
+   *  this is a comma-joined list; used for the operator alert + the
+   *  in-app notification headline. */
   productName: string;
+  /** Phase 3b — multi-item carts pass the full rental line list so the
+   *  confirmation email renders all N products as a list. Only
+   *  `line_type='rental'` parents are passed (add-on / waiver children
+   *  are folded into their parent's price). When omitted, the single
+   *  `productName` row is rendered as before. */
+  items?: { name: string; quantity: number; lineTotal: string }[];
   eventDate: string;
   subtotal: number;
   deliveryFee: number;
@@ -262,6 +271,7 @@ export async function triggerOrderConfirmationEmail(params: {
       customerFirstName: params.customerFirstName,
       orderNumber: params.orderNumber,
       productName: params.productName,
+      items: params.items,
       eventDate: cfmt.date(params.eventDate),
       subtotal: cfmt.money(params.subtotal),
       deliveryFee: cfmt.money(params.deliveryFee),

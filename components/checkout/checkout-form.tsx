@@ -7,6 +7,7 @@ import { createCheckoutOrder, type CheckoutActionState, type CheckoutFieldErrors
 import { WeatherBadge } from "@/components/weather/weather-badge";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatMessage } from "@/lib/i18n/format";
+import { useCart } from "@/lib/cart/cart-context";
 
 const initialState: CheckoutActionState = {
   ok: false,
@@ -34,6 +35,8 @@ export function CheckoutForm({
   selectedVariantId,
   initialAddons,
   damageWaiver,
+  cartJson,
+  cartItemNames,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -41,6 +44,14 @@ export function CheckoutForm({
   minDate?: string;
   maxDate?: string;
   cancellationPolicy?: string;
+  /** Phase 3b — multi-item checkout. When present, the form POSTs the
+   *  whole cart as a single `cart_json` field (instead of a single
+   *  `product_slug`) so createCheckoutOrder routes to the combined
+   *  multi-item flow: one order, one deposit, one delivery fee, one
+   *  confirmation. The cart is cleared on a successful submit. */
+  cartJson?: string;
+  /** Display names of the cart's items, shown in the review list. */
+  cartItemNames?: string[];
   // Sprint 6.0 — wet/dry choice the customer made on the product
   // detail page. Carried as a hidden form field through to the
   // server action so it lands on order_items.selected_mode + drives
@@ -72,10 +83,22 @@ export function CheckoutForm({
   } | null;
 }) {
   const { messages: m } = useI18n();
+  const { clear: clearCart } = useCart();
+  const isMultiItem = !!cartJson;
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
     initialState
   );
+
+  // Phase 3b — clear the cart once a multi-item checkout succeeds (the
+  // order is committed; whether it then routes to Stripe or shows the
+  // submitted screen, the cart should not survive). Mirrors how a normal
+  // checkout ends. Runs once per successful state.
+  useEffect(() => {
+    if (isMultiItem && state.ok && state.orderNumber) {
+      clearCart();
+    }
+  }, [isMultiItem, state.ok, state.orderNumber, clearCart]);
   // Sticky values for the form. Inputs are controlled (value + onChange)
   // because React 19's <form action={...}> reset semantics for
   // useActionState aren't reliable across browsers + Next.js's server-
@@ -187,10 +210,25 @@ export function CheckoutForm({
         <div className="order-card" style={{ borderLeft: "4px solid var(--accent)", padding: 20 }}>
           <div className="kicker" style={{ marginBottom: 8 }}>{m.checkout.review.kicker}</div>
           <div style={{ display: "grid", gap: 8 }}>
-            <div className="order-row">
-              <span className="muted">{m.checkout.review.item}</span>
-              <strong>{s.productName}</strong>
-            </div>
+            {s.items && s.items.length > 0 ? (
+              <div style={{ display: "grid", gap: 6 }}>
+                <span className="muted">{m.checkout.review.items}</span>
+                {s.items.map((it, i) => (
+                  <div className="order-row" key={`${it.name}-${i}`}>
+                    <span>
+                      {it.name}
+                      {it.quantity > 1 ? ` × ${it.quantity}` : ""}
+                    </span>
+                    <span>{it.lineTotal}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="order-row">
+                <span className="muted">{m.checkout.review.item}</span>
+                <strong>{s.productName}</strong>
+              </div>
+            )}
             {s.eventDate && (
               <div className="order-row">
                 <span className="muted">{m.checkout.review.eventDate}</span>
@@ -315,20 +353,46 @@ export function CheckoutForm({
   return (
     <form action={formAction} className="list" style={{ marginTop: 16 }}>
       <input type="hidden" name="idempotency_key" value={idempotencyKey} />
-      {productSlug ? (
+      {isMultiItem ? (
+        // Phase 3b — the whole cart is POSTed as one field; its presence
+        // routes the action to the combined multi-item flow. The
+        // single-item hidden fields below are intentionally NOT emitted.
+        <input type="hidden" name="cart_json" value={cartJson} />
+      ) : null}
+      {!isMultiItem && productSlug ? (
         <input type="hidden" name="product_slug" value={productSlug} />
       ) : null}
-      {selectedMode ? (
+      {!isMultiItem && selectedMode ? (
         <input type="hidden" name="selected_mode" value={selectedMode} />
       ) : null}
-      {initialUnits && /^\d+$/.test(initialUnits) ? (
+      {!isMultiItem && initialUnits && /^\d+$/.test(initialUnits) ? (
         <input type="hidden" name="units" value={initialUnits} />
       ) : null}
-      {selectedVariantId && /^[0-9a-f-]{36}$/i.test(selectedVariantId) ? (
+      {!isMultiItem && selectedVariantId && /^[0-9a-f-]{36}$/i.test(selectedVariantId) ? (
         <input type="hidden" name="selected_variant_id" value={selectedVariantId} />
       ) : null}
-      {initialAddons && /^[0-9a-f-]{36}:\d+(,[0-9a-f-]{36}:\d+)*$/i.test(initialAddons) ? (
+      {!isMultiItem && initialAddons && /^[0-9a-f-]{36}:\d+(,[0-9a-f-]{36}:\d+)*$/i.test(initialAddons) ? (
         <input type="hidden" name="addons" value={initialAddons} />
+      ) : null}
+
+      {isMultiItem && cartItemNames && cartItemNames.length > 0 ? (
+        <div className="order-card" style={{ padding: 16 }}>
+          <div className="kicker" style={{ marginBottom: 8 }}>
+            {formatMessage(m.checkout.multiItem.itemsHeading, {
+              count: cartItemNames.length,
+            })}
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 4 }}>
+            {cartItemNames.map((name, i) => (
+              <li key={`${name}-${i}`} style={{ fontSize: 14 }}>
+                {name}
+              </li>
+            ))}
+          </ul>
+          <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            {m.checkout.multiItem.pricingNote}
+          </div>
+        </div>
       ) : null}
 
       <div className="grid grid-3">
