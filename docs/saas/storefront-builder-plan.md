@@ -21,8 +21,12 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 
 ### P0 — correctness / credibility / legal / core perf
 
-- [ ] **"How it works" is on an island (CSS bug, not design).** A
-  duplicate `.st-section-head` block at `app/storefront-theme.css:882-911`
+- [x] **"How it works" is on an island (CSS bug, not design).** FIXED in
+  G1: deleted the duplicate block (kept the unique `.st-section-link`),
+  which restored the centered heading + the symmetric 96px section rhythm
+  + the display-serif heading sizes + removed the 760/980 breakpoint
+  conflict, site-wide. A duplicate `.st-section-head` block at
+  `app/storefront-theme.css:882-911`
   overrides the centered variant's `align-items: center` with
   `align-items: end`, shoving the heading to the right edge while the
   steps stay left. Deleting that legacy block ALSO restores the intended
@@ -54,11 +58,11 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 
 ### P1 — competitiveness / conversion
 
-- [ ] **Header isn't sticky; desktop CTA is weak.** `.st-header` has no
-  `position: sticky` (`storefront-theme.css:339-342`) — nav + CTA scroll
-  away on a long page. The desktop CTA is an underlined "Inquire" text
-  link; the real "Book Now" button exists **only in the mobile drawer**
-  (`mobile-menu-toggle.tsx:238`). No persistent book/quote affordance.
+- [~] **Header isn't sticky; desktop CTA is weak.** Sticky header DONE in
+  G1 (`.st-header` now `position: sticky; top:0; z-index:50`). STILL TODO:
+  promote the desktop CTA from an underlined "Inquire" text link to a real
+  "Book" button (the button exists only in the mobile drawer,
+  `mobile-menu-toggle.tsx:238`); add a quote/cart affordance.
 - [ ] **No cart / quote indicator** anywhere in the chrome, despite a
   working checkout. Single-product checkout only — **no multi-item cart**
   (renting a bounce house + tables + tent = three separate checkouts), a
@@ -104,9 +108,8 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 - [ ] **`viewport.themeColor` is stale orange (`#e8590c`)** vs the olive
   editorial `--st-primary` (`#3F4A33`) — mobile browser chrome tints
   orange on an olive site. `layout.tsx:21`
-- [ ] **Map pin fallback is old blue** (`var(--primary, #2563eb)`,
-  `service-area-map.tsx:130`) — blue pins on a warm palette when no brand
-  override is set.
+- [x] **Map pin fallback is old blue** — FIXED in G1: now
+  `var(--st-primary, #3f4a33)` (editorial olive) instead of the stale blue.
 - [ ] **Undefined `--st-radius-pill`** → square chips/pills
   (`storefront-theme.css:929, 1110`).
 - [ ] **Legacy ZIP geocoding loop is sequential** on the client for rows

@@ -127,7 +127,7 @@ export function ServiceAreaMap({
             width: 28px;
             height: 28px;
             border-radius: 50%;
-            background: var(--primary, #2563eb);
+            background: var(--st-primary, #3f4a33);
             border: 3px solid #fff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.25);
           "></div>`,
