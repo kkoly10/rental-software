@@ -14,12 +14,19 @@ import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getLocale } from "@/lib/i18n/server";
 import { I18nProvider } from "@/lib/i18n/provider";
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#e8590c",
-};
+export async function generateViewport(): Promise<Viewport> {
+  // Tenant storefronts use the olive editorial theme (`--st-primary` default
+  // #3F4A33). The previous static orange (#e8590c, the legacy default brand)
+  // tinted the mobile browser chrome orange on an olive site. Root/SaaS keeps
+  // its existing tint; this only corrects the storefront surface.
+  const tenant = await isTenantHost();
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: tenant ? "#3F4A33" : "#e8590c",
+  };
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await isTenantHost();

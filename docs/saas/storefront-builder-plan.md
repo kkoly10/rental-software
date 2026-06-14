@@ -154,9 +154,12 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   / faq), arbitrary top-rule dividers (how-it-works has one, the featured
   section above it doesn't — fencing it off), inconsistent container
   nesting, and mixed mobile breakpoints (760/980/1024/640).
-- [ ] **`viewport.themeColor` is stale orange (`#e8590c`)** vs the olive
-  editorial `--st-primary` (`#3F4A33`) — mobile browser chrome tints
-  orange on an olive site. `layout.tsx:21`
+- [x] **`viewport.themeColor` is stale orange (`#e8590c`)** — FIXED:
+  `layout.tsx` now uses `generateViewport()` returning the olive
+  `--st-primary` default (`#3F4A33`) on tenant storefronts (root/SaaS keeps
+  its existing tint). Mobile browser chrome no longer tints orange on an
+  olive site. (Per-tenant *custom* brand color in the chrome is a possible
+  later enhancement; the default-olive fix resolves the reported issue.)
 - [x] **Map pin fallback is old blue** — FIXED in G1: now
   `var(--st-primary, #3f4a33)` (editorial olive) instead of the stale blue.
 - [ ] **Undefined `--st-radius-pill`** → square chips/pills
