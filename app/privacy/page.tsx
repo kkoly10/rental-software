@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/public/public-footer";
+import { StorefrontPrivacyBody } from "@/components/public/legal/storefront-legal";
 import { buildPageMetadata } from "@/lib/seo/metadata";
-import { isTenantHost } from "@/lib/auth/org-context";
+import { isTenantHost, getPublicOrgId } from "@/lib/auth/org-context";
+import { getOrganizationSettings } from "@/lib/data/organization-settings";
+import { isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
 import { getMessages } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (await isTenantHost()) {
+    const settings = await getOrganizationSettings();
+    const name = settings.businessName || "this rental business";
+    return await buildPageMetadata({
+      title: `Privacy Policy — ${name}`,
+      description: `How ${name} collects, uses, and protects your personal information.`,
+      path: "/privacy",
+    });
+  }
   return await buildPageMetadata({
     title: "Privacy Policy — Korent",
     description:
@@ -16,8 +28,37 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PrivacyPage() {
-  if (await isTenantHost()) notFound();
   const m = await getMessages();
+
+  // On an operator storefront, show the operator's policy — either their own
+  // externally-hosted page (redirect) or Korent's storefront baseline copy.
+  // Korent's SaaS privacy policy (below) governs the operator↔Korent
+  // relationship and is only correct on the root domain.
+  if (await isTenantHost()) {
+    const settings = await getOrganizationSettings();
+    if (isAbsoluteHttpUrl(settings.legalPrivacyUrl)) {
+      redirect(settings.legalPrivacyUrl);
+    }
+    if (!(await getPublicOrgId())) notFound();
+    return (
+      <>
+        <PublicHeader />
+        <main className="page">
+          <div className="container" style={{ maxWidth: 760 }}>
+            <section className="panel" style={{ padding: "40px 36px" }}>
+              <div className="kicker">{m.footer.columns.legal}</div>
+              <h1 style={{ margin: "8px 0 24px" }}>{m.legal.privacy.title}</h1>
+              <StorefrontPrivacyBody
+                businessName={settings.businessName}
+                supportEmail={settings.supportEmail}
+              />
+            </section>
+          </div>
+        </main>
+        <PublicFooter />
+      </>
+    );
+  }
 
   return (
     <>

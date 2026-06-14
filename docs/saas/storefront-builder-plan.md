@@ -53,9 +53,27 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 - [x] **"Made by CrecyStudio" footer credit** — REMOVED entirely
   (`public-footer.tsx`), per founder (it referenced their SaaS-building
   studio and isn't useful). No longer renders on any storefront.
-- [ ] **Tenant storefronts have no Privacy/Terms footer links.** They
-  render only on the SaaS root domain (`public-footer.tsx:142-147`), so a
-  live site taking bookings + payments shows no legal links.
+- [x] **Tenant storefronts have no Privacy/Terms footer links.** FIXED
+  (Hybrid, founder-confirmed after legal research). Storefront footers now
+  always render Privacy + Terms (and an optional Rental Terms/waiver link).
+  By default they point to **Korent storefront-baseline pages** written
+  from the operator's POV (operator = the business / data controller;
+  Korent = software provider / processor) — distinct from Korent's SaaS
+  `/privacy`+`/terms`, which only render on the root domain. `/privacy` and
+  `/terms` are now tenant-aware: on a storefront they render the baseline
+  (or redirect to the operator's own page when set). Operators can override
+  all three with their own externally-hosted URLs in **Website settings →
+  Legal pages** (`legal_*_url` in `organizations.settings`). Rationale &
+  citations: legal-research thread in this session (CalOPPA/CCPA mandate a
+  privacy policy once PII is collected; the operator is the controller so
+  the pages are theirs to own; FTC junk-fee enforcement + bounce-house
+  injury/waiver exposure drive the ToS + waiver fields). **The baseline
+  copy in `components/public/legal/storefront-legal.tsx` is a reasonable
+  DRAFT — the limitation-of-liability and assumption-of-risk language
+  should be reviewed by counsel.** Files: `public-footer.tsx`,
+  `app/{privacy,terms}/page.tsx`, `storefront-legal.tsx`,
+  `legal-links-form.tsx`, `content-actions.ts` (`updateLegalLinks`),
+  `organization-settings.ts` + `settings.ts`.
 - [x] **Testimonial stars default to 5.** FIXED in G1: `starString()` in
   `reviews-cards.tsx` now returns "" for a blank/0/invalid rating, and the
   `.st-quote-stars` row only renders for a genuine operator-set rating
@@ -166,9 +184,11 @@ control — on top of fixing the teardown items above.
 - **G3 — Section builder.** DB-model the page as an ordered list of
   sections (type + config + visibility); drag-to-reorder, add/remove,
   custom content blocks + image blocks. Gated to the top tier.
-- **G4 — White-label + power.** Remove the "Made by CrecyStudio" credit
-  on top tier (and add Privacy/Terms to tenant footers for everyone),
-  optional custom CSS, image galleries/lightbox, multiple theme presets.
+- **G4 — White-label + power.** ("Made by CrecyStudio" credit already
+  removed for everyone; tenant Privacy/Terms footer links already shipped
+  as the Hybrid baseline + operator-override — see P0 above.) Remaining:
+  optional custom CSS, image galleries/lightbox, multiple theme presets,
+  and gating fully-custom legal pages to the top tier if desired.
 - **Cross-cutting (anytime):** hero→`next/image`, fonts→`next/font`,
   cache `getContentSettings`/`getBrandSettings`, replace Unsplash defaults
   with branded assets, PDP date picker + deposit/delivery surfacing,

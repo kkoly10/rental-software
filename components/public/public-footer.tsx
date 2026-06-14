@@ -139,10 +139,31 @@ export async function PublicFooter() {
               &copy; {year} {settings.businessName}. {m.footer.rights}
             </div>
             <div className="footer-bottom-links">
-              {!isTenant && (
+              {!isTenant ? (
                 <>
                   <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>{m.footer.links.privacy}</Link>
                   <Link href="/terms" className="muted" style={{ fontSize: 12 }}>{m.footer.links.terms}</Link>
+                </>
+              ) : (
+                // Tenant storefronts: legal links always render (a live site
+                // taking payments must surface them). Each points to the
+                // operator's own externally-hosted page when set, otherwise to
+                // Korent's storefront baseline page. The rental-terms/waiver
+                // link only shows when the operator supplies one.
+                <>
+                  {settings.legalPrivacyUrl ? (
+                    <a href={sanitizeHref(settings.legalPrivacyUrl)} target="_blank" rel="noopener noreferrer" className="muted" style={{ fontSize: 12 }}>{m.footer.links.privacy}</a>
+                  ) : (
+                    <Link href="/privacy" className="muted" style={{ fontSize: 12 }}>{m.footer.links.privacy}</Link>
+                  )}
+                  {settings.legalTermsUrl ? (
+                    <a href={sanitizeHref(settings.legalTermsUrl)} target="_blank" rel="noopener noreferrer" className="muted" style={{ fontSize: 12 }}>{m.footer.links.terms}</a>
+                  ) : (
+                    <Link href="/terms" className="muted" style={{ fontSize: 12 }}>{m.footer.links.terms}</Link>
+                  )}
+                  {settings.legalWaiverUrl && (
+                    <a href={sanitizeHref(settings.legalWaiverUrl)} target="_blank" rel="noopener noreferrer" className="muted" style={{ fontSize: 12 }}>{m.footer.links.rentalTerms}</a>
+                  )}
                 </>
               )}
             </div>

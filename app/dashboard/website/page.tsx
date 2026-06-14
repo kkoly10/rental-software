@@ -3,6 +3,7 @@ import { WebsiteSettingsForm } from "@/components/settings/website-settings-form
 import { BrandSettingsForm } from "@/components/settings/brand-settings-form";
 import { HeroImageUpload } from "@/components/settings/hero-image-upload";
 import { SocialLinksForm } from "@/components/settings/social-links-form";
+import { LegalLinksForm } from "@/components/settings/legal-links-form";
 import { FaqManager } from "@/components/settings/faq-manager";
 import { AboutEditor } from "@/components/settings/about-editor";
 import { TestimonialsManager } from "@/components/settings/testimonials-manager";
@@ -223,6 +224,25 @@ export default async function WebsitePage() {
               instagram: editableSettings.socialInstagram || "",
               tiktok: editableSettings.socialTiktok || "",
               googleBusiness: editableSettings.socialGoogleBusiness || "",
+            }}
+          />
+        </section>
+      </div>
+
+      <div className="dashboard-grid" style={{ marginTop: 24 }}>
+        <section className="panel">
+          <div className="section-header">
+            <div>
+              <div className="kicker">{m.dashboard.website.kickerStorefront}</div>
+              <h2 style={{ margin: "6px 0 0" }}>Legal pages</h2>
+            </div>
+          </div>
+
+          <LegalLinksForm
+            defaults={{
+              privacyUrl: editableSettings.legalPrivacyUrl || "",
+              termsUrl: editableSettings.legalTermsUrl || "",
+              waiverUrl: editableSettings.legalWaiverUrl || "",
             }}
           />
         </section>
