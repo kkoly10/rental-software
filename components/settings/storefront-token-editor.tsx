@@ -1,19 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   CURATED_FONTS,
   type ThemeTokens,
 } from "@/lib/data/storefront-tokens-schema";
 import { contrastRatio } from "@/lib/utils/contrast";
-import {
-  saveStorefrontDraft,
-  publishStorefront,
-  type StorefrontPageActionState,
-} from "@/lib/settings/storefront-page-actions";
-
-const initialState: StorefrontPageActionState = { ok: false, message: "" };
 
 type ColorKey = keyof ThemeTokens["colors"];
 
@@ -36,34 +28,37 @@ const FONT_STACKS: Record<string, string> = {
   Roboto: '"Roboto", sans-serif',
 };
 
-export function StorefrontTokenEditor({ initialTokens }: { initialTokens: ThemeTokens }) {
+/**
+ * The storefront THEME controls (colors / fonts / size / radius) + a live token
+ * preview. CONTROLLED: it feeds the shared builder document state via
+ * `onChange` instead of owning its own state or save/publish forms — the builder
+ * shell owns the single document and the Save draft / Publish actions (PR-1b).
+ */
+export function StorefrontTokenEditor({
+  tokens,
+  onChange,
+}: {
+  tokens: ThemeTokens;
+  onChange: (next: ThemeTokens) => void;
+}) {
   const { messages } = useI18n();
   const m = messages.dashboard.website.builder;
 
-  const [tokens, setTokens] = useState<ThemeTokens>(initialTokens);
-
-  const [draftState, draftAction, draftPending] = useActionState(
-    saveStorefrontDraft,
-    initialState
-  );
-  const [publishState, publishAction, publishPending] = useActionState(
-    publishStorefront,
-    initialState
-  );
-
   const setColor = (key: ColorKey, value: string) =>
-    setTokens((t) => ({ ...t, colors: { ...t.colors, [key]: value } }));
+    onChange({ ...tokens, colors: { ...tokens.colors, [key]: value } });
   const setTypography = <K extends keyof ThemeTokens["typography"]>(
     key: K,
     value: ThemeTokens["typography"][K]
-  ) => setTokens((t) => ({ ...t, typography: { ...t.typography, [key]: value } }));
+  ) =>
+    onChange({
+      ...tokens,
+      typography: { ...tokens.typography, [key]: value },
+    });
 
   // Inline contrast checks (the same pairs the server enforces on publish).
   const textOnBg = contrastRatio(tokens.colors.text, tokens.colors.background);
   const primaryOnBg = contrastRatio(tokens.colors.primary, tokens.colors.background);
   const lowContrast = textOnBg < 4.5 || primaryOnBg < 4.5;
-
-  const tokensJson = JSON.stringify(tokens);
 
   const labelStyle: React.CSSProperties = {
     display: "block",
@@ -179,7 +174,7 @@ export function StorefrontTokenEditor({ initialTokens }: { initialTokens: ThemeT
             max={24}
             step={1}
             value={tokens.radius}
-            onChange={(e) => setTokens((t) => ({ ...t, radius: Number(e.target.value) }))}
+            onChange={(e) => onChange({ ...tokens, radius: Number(e.target.value) })}
             style={{ width: "100%" }}
           />
         </div>
@@ -234,33 +229,6 @@ export function StorefrontTokenEditor({ initialTokens }: { initialTokens: ThemeT
         {lowContrast && (
           <div className="badge warning" style={{ padding: "10px 14px", marginTop: 12 }}>
             {m.contrastWarning}
-          </div>
-        )}
-
-        {/* Two server-action forms sharing the live token JSON. */}
-        <div style={{ display: "flex", gap: 12, marginTop: 20, flexWrap: "wrap" }}>
-          <form action={draftAction}>
-            <input type="hidden" name="tokens_json" value={tokensJson} />
-            <button type="submit" className="secondary-btn" disabled={draftPending}>
-              {draftPending ? m.savingDraft : m.saveDraft}
-            </button>
-          </form>
-          <form action={publishAction}>
-            <input type="hidden" name="tokens_json" value={tokensJson} />
-            <button type="submit" className="primary-btn" disabled={publishPending}>
-              {publishPending ? m.publishing : m.publish}
-            </button>
-          </form>
-        </div>
-
-        {draftState.message && (
-          <div className={draftState.ok ? "badge success" : "badge warning"} style={{ padding: "10px 14px", marginTop: 12 }}>
-            {draftState.message}
-          </div>
-        )}
-        {publishState.message && (
-          <div className={publishState.ok ? "badge success" : "badge warning"} style={{ padding: "10px 14px", marginTop: 12 }}>
-            {publishState.message}
           </div>
         )}
       </div>
