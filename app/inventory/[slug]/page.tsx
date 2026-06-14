@@ -12,6 +12,8 @@ import { getThemeSettings } from "@/lib/data/theme-settings";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { resolveServiceAreaForAddress } from "@/lib/service-areas/lookup";
 import { getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import { RequestQuoteForm } from "@/components/public/request-quote-form";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { DemoBanner } from "@/components/demo/demo-banner";
@@ -60,13 +62,14 @@ export default async function ProductDetailPage({
   const { slug } = await params;
   const { date, zip } = await searchParams;
 
-  const [product, theme, origin, { messages: m, t }, isDemo, policies] = await Promise.all([
+  const [product, theme, origin, { messages: m, t }, isDemo, policies, { currency, locale }] = await Promise.all([
     getCatalogDetail(slug),
     getThemeSettings(),
     getRequestOrigin(),
     getTranslator(),
     isCurrentTenantDemo(),
     getBookingPolicies(),
+    getPublicOrgFormatting(),
   ]);
 
   if (!product) {
@@ -178,7 +181,7 @@ export default async function ProductDetailPage({
       }).catch(() => null);
     }
   }
-  const fmtMoney = (n: number) => `$${n.toFixed(2)}`;
+  const fmtMoney = (n: number) => formatMoney(n, currency, locale);
 
   return (
     <>
@@ -241,10 +244,7 @@ export default async function ProductDetailPage({
                   {product.capabilitySlugs?.includes("pricing.per-hour") &&
                   product.hourlyRateCents != null ? (
                     <>
-                      ${(product.hourlyRateCents / 100).toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatMoney(product.hourlyRateCents / 100, currency, locale)}
                       <small>/ hour</small>
                       {product.minimumHours && product.minimumHours > 0 && (
                         <span className="st-pdp-price-min">
