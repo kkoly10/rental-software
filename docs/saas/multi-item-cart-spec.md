@@ -147,3 +147,64 @@ independently-shippable PRs.
 - Fee/deposit math must match the disclosed copy (deposit %, delivery fee).
 - Funds only via Stripe Connect to the operator — never a Korent account.
 - No overstated insurance/inspection claims anywhere in cart/checkout copy.
+
+---
+
+## F. Phase 3 implementation map (from the deep recon)
+
+The submit action `createCheckoutOrder` (`lib/checkout/actions.ts`, ~lines
+102–1868) is a single-product server action invoked by `CheckoutForm` via
+`useActionState`. The recon classified every section as **per-item** (must
+move into a loop) or **order-level** (computed once, unchanged):
+
+- **Per-item** (loop these): product lookup + pricing dispatch
+  (per-unit/per-hour/per-day/flat) + variant delta + wet upcharge + add-on
+  resolution + damage-waiver (~lines 470–833); parent `order_items` insert +
+  add-on child rows + waiver child row (~lines 1366–1491); availability check
+  + `reserveProductAvailabilityBlock` (~lines 1498–1587).
+- **Order-level** (compute once, keep as-is): rate limiting, idempotency
+  replay (`(org_id, idempotency_key)` unique index), service-area lookup,
+  booking-policy constraints, customer + address upsert, **delivery fee + tax
+  + deposit/balance math** (~lines 1190–1249), the single `orders` insert, the
+  **one Stripe deposit line item**, emails, return summary.
+
+**Already multi-item-ready downstream (no change):** portal order view
+(`lib/portal/lookup.ts` maps all `order_items`), invoice route, logistics
+pull-sheet, the Stripe webhook (payment is per-order via `metadata.order_id`),
+and the order-confirmation page (keys off `order_number`).
+**Breaks on multiple parents (must update):** the order-confirmation **email**
+(`lib/email/triggers.ts` takes a single `productName`) and the checkout
+**review screen / summary card** (show one product).
+
+### Staged PRs (safe order — money code, so behavior-preserving first)
+
+- **3a — Behavior-preserving extraction (no functional change).** Pull the
+  per-item pricing/resolution into `priceAndResolveOneItem()` and the per-item
+  inserts into `insertOneItemLines()`; route the EXISTING single-item path
+  through them. Verified green by the current suite + build; zero behavior
+  change. This de-risks the loop.
+- **3b — Multi-item submit.** Accept the cart (POST/hidden `cart_json`), loop
+  `priceAndResolveOneItem` for every item, **validate ALL items (pricing +
+  availability) before inserting ANY rows** (Risk 1 mitigation — avoids
+  partial-failure orphans), then one `orders` row + N parent lines (+ their
+  children), reserve each, roll back the whole order on any failure. Stripe
+  amount from the integer `totalCents` (Risk 2). Single-item path preserved.
+- **3c — Surfaces.** Multi-item checkout page/form + summary card (N lines,
+  one delivery/tax/deposit) and the confirmation email items table (filter to
+  `line_type='rental'` so add-on/waiver children don't double-list — Risk 3).
+
+### Top risks & mitigations
+1. **Partial failure mid-loop → orphan rows.** Validate all items up front;
+   only then insert. Roll back the entire order on any later failure (cascade
+   delete covers `order_items`/address; delete brand-new customer).
+2. **Stripe amount ≠ order total.** Derive the charge from `totalCents`
+   (integer), assert `stripeAmountCents === round((Σsubtotals + delivery + tax)
+   ×100)`; test 3×$99.99 + $30 delivery + tax.
+3. **Email/portal double-listing children.** List only `line_type='rental'`
+   parents; render add-ons/waiver nested under their parent.
+
+### New tests to add with 3b/3c
+Unit: `priceAndResolveOneItem` across per-unit/per-hour/per-day/flat + variant
++ add-ons + waiver. Integration: 2-product order (each with add-ons);
+partial-failure rollback (item 2 unavailable → order fully removed); rounding
+(total lands on a cent boundary → Stripe cents exact).
