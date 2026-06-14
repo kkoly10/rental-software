@@ -5,6 +5,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { getContentSettings } from "@/lib/data/content-settings";
 import { MobileMenuToggle } from "@/components/layout/mobile-menu-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { CartIndicator } from "@/components/public/cart-indicator";
 import { getStorefrontDefaults } from "@/lib/verticals/storefront-defaults";
 import { getTranslator } from "@/lib/i18n/server";
 import { sanitizeHref } from "@/lib/utils/safe-href";
@@ -83,12 +84,14 @@ export async function PartyClassicHeader() {
             <Link href="/contact" className="st-nav-cta">
               {m.nav.contact ?? "Inquire"}
             </Link>
+            <CartIndicator label={m.common.cart} />
             <Link href="/inventory" className="st-nav-book">
               {m.common.bookNow}
             </Link>
           </nav>
 
           <div className="st-nav-mobile">
+            <CartIndicator label={m.common.cart} />
             {showPhone && (
               <a
                 href={`tel:${settings.phone.replace(/\D/g, "")}`}

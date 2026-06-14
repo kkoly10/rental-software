@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/provider";
+import { useCart } from "@/lib/cart/cart-context";
 
 /**
  * Sprint 6.0 — mode-aware "Book Now" CTA on the storefront product
@@ -37,6 +38,7 @@ export function BookNowWithMode({
   supportsModes,
   wetUpchargeCents,
   backHref,
+  product,
   perUnit,
   variants,
   addOns,
@@ -46,6 +48,14 @@ export function BookNowWithMode({
   supportsModes: string[];
   wetUpchargeCents: number | null;
   backHref: string;
+  // Snapshot used to add this product to the multi-item cart. Prices here are
+  // display-only; the server re-derives money at checkout.
+  product: {
+    slug: string;
+    name: string;
+    imageUrl?: string;
+    priceLabel: string;
+  };
   // Phase 2e.13b — per-unit pricing. Present only when the product
   // carries pricing.per-unit AND has a unit_price_cents configured;
   // null/undefined renders the existing single-button CTA so a
@@ -85,6 +95,8 @@ export function BookNowWithMode({
   );
 
   const { messages: m } = useI18n();
+  const { addItem } = useCart();
+  const [justAdded, setJustAdded] = useState(false);
   const labels = m.forms.editProduct.inflatableSetup;
   const cta = m.inventoryDetail.bookNow;
   const back = m.common.back;
@@ -167,6 +179,26 @@ export function BookNowWithMode({
 
   const belowMinimum =
     perUnit && perUnit.minimumQuantity > 0 && units < perUnit.minimumQuantity;
+
+  function handleAddToCart() {
+    addItem({
+      slug: product.slug,
+      name: product.name,
+      imageUrl: product.imageUrl,
+      priceLabel: product.priceLabel,
+      mode: isDualMode ? selectedMode : undefined,
+      units: perUnit ? Math.max(1, Math.trunc(units)) : undefined,
+      variantId: selectedVariantId ?? undefined,
+      variantLabel: selectedVariant?.label,
+      addons: hasAddons
+        ? Object.entries(addonQty)
+            .filter(([, q]) => q > 0)
+            .map(([id, q]) => ({ id, qty: Math.trunc(q) }))
+        : undefined,
+    });
+    setJustAdded(true);
+    window.setTimeout(() => setJustAdded(false), 2000);
+  }
 
   return (
     <div className="st-pdp-booking">
@@ -350,6 +382,15 @@ export function BookNowWithMode({
             {cta}
           </Link>
         )}
+        <button
+          type="button"
+          className="st-pdp-secondary"
+          onClick={handleAddToCart}
+          disabled={!!belowMinimum}
+          aria-disabled={!!belowMinimum}
+        >
+          {justAdded ? m.inventoryDetail.addedToCart : m.inventoryDetail.addToCart}
+        </button>
         <Link href={backHref} className="st-text-link" style={{ alignSelf: "flex-start" }}>
           ← {back}
         </Link>

@@ -4,6 +4,7 @@
 const enValues = {
   common: {
     appName: "Korent",
+    cart: "Cart",
     loading: "Loading…",
     listLoadErrorTitle: "Couldn't load this list",
     listLoadErrorBody: "Something went wrong fetching the data. Refresh the page — if it keeps happening, contact support.",
@@ -538,6 +539,24 @@ const enValues = {
     sending: "Sending…",
     success: "Thanks — we’ll be in touch shortly.",
     error: "We couldn’t send that. Please try again.",
+  },
+
+  cart: {
+    title: "Cart",
+    heading: "Your cart",
+    loading: "Loading your cart…",
+    empty: "Your cart is empty.",
+    browse: "Browse rentals",
+    interimNote:
+      "Combined one-payment checkout is coming soon. For now, you can check out each item below.",
+    modeWet: "Wet",
+    modeDry: "Dry",
+    oneAddon: "1 add-on",
+    addonCount: "{count} add-ons",
+    checkoutItem: "Check out",
+    remove: "Remove",
+    clearCart: "Clear cart",
+    continueShopping: "Continue shopping",
   },
 
   legal: {
@@ -1361,6 +1380,8 @@ const enValues = {
     available: "Available for your event",
     unavailableForDate: "Unavailable for this date",
     bookNow: "Book Now",
+    addToCart: "Add to cart",
+    addedToCart: "Added ✓",
     notAvailableTitle: "This rental isn’t available",
     notAvailableBody: "Choose a different date or browse other rentals in the catalog.",
     details: "Details",
