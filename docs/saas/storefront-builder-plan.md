@@ -56,10 +56,15 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 - [ ] **Tenant storefronts have no Privacy/Terms footer links.** They
   render only on the SaaS root domain (`public-footer.tsx:142-147`), so a
   live site taking bookings + payments shows no legal links.
-- [ ] **Testimonial stars default to 5.** `reviews-cards.tsx:56-59`:
-  a blank/0 rating renders a full 5-star row, and stars sit above the
-  quote reading as an aggregate rating — self-reported social proof.
-  (The fabricated hero "5.0 · N reviews" chip was already removed.)
+- [x] **Testimonial stars default to 5.** FIXED in G1: `starString()` in
+  `reviews-cards.tsx` now returns "" for a blank/0/invalid rating, and the
+  `.st-quote-stars` row only renders for a genuine operator-set rating
+  (1–5) — no more fabricated perfect score on the editorial pull-quote.
+  This mirrors the dashboard editor (which only shows stars when
+  `rating > 0`). The marketplace store page's "Verified-rental reviews"
+  (`market/store/[slug]/page.tsx`) was left as-is — those are real ratings
+  from completed rentals, not operator-authored. (The fabricated hero
+  "5.0 · N reviews" chip was already removed.)
 
 ### P1 — competitiveness / conversion
 
