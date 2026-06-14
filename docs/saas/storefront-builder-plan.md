@@ -41,11 +41,9 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   brand color renders as small text/links on `#F7F4EE` cream with no
   enforced 4.5:1 — the WCAG safety net was never reconnected after the
   editorial rebuild.
-- [ ] **"Made by CrecyStudio" footer credit shows on every paying
-  operator's storefront and can't be removed.** Rendered unconditionally
-  (`public-footer.tsx:148`), outside the `!isTenant` guard. A paying
-  operator can't hide a third-party backlink on their own domain —
-  white-label defect.
+- [x] **"Made by CrecyStudio" footer credit** — REMOVED entirely
+  (`public-footer.tsx`), per founder (it referenced their SaaS-building
+  studio and isn't useful). No longer renders on any storefront.
 - [ ] **Tenant storefronts have no Privacy/Terms footer links.** They
   render only on the SaaS root domain (`public-footer.tsx:142-147`), so a
   live site taking bookings + payments shows no legal links.
