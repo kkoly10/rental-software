@@ -1,6 +1,8 @@
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
+import { getOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import { normalizePostalCode } from "@/lib/service-areas/normalize";
 import type { ServiceAreaSummary } from "@/lib/types";
 
@@ -79,6 +81,9 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
     return [];
   }
 
+  const { currency, locale } = await getOrgFormatting();
+  const money = (n: number) => formatMoney(n, currency, locale);
+
   return data.map((area) => {
     const coverage = formatCoverage(area);
 
@@ -89,12 +94,13 @@ export async function getServiceAreas(): Promise<ServiceAreaSummary[]> {
         "Service Area",
       fee:
         typeof area.delivery_fee === "number"
-          ? `$${area.delivery_fee}`
-          : "$0",
-      minimum:
+          ? money(area.delivery_fee)
+          : money(0),
+      minimum: `${
         typeof area.minimum_order_amount === "number"
-          ? `$${area.minimum_order_amount} minimum`
-          : "$0 minimum",
+          ? money(area.minimum_order_amount)
+          : money(0)
+      } minimum`,
     };
   });
 }
