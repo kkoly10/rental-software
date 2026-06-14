@@ -29,7 +29,7 @@ export default async function OrdersPage({
       ? params.status
       : "all";
 
-  const [ordersPage, statusCounts, guidanceState, { messages: m, t }, primaryVertical] = await Promise.all([
+  const [ordersPage, statusCounts, guidanceState, { messages: m, t, locale }, primaryVertical] = await Promise.all([
     getOrdersPage({ query: params.q, page: params.page, status: activeStatus === "all" ? null : activeStatus }),
     getOrderStatusCounts(),
     getGuidanceState(),
@@ -149,7 +149,7 @@ export default async function OrdersPage({
                 key={order.id}
                 href={`/dashboard/orders/${order.id}`}
                 accent={toneColor[order.tone]}
-                leading={<DateChip iso={order.eventDateRaw} />}
+                leading={<DateChip iso={order.eventDateRaw} locale={locale} />}
                 title={order.customer}
                 meta={
                   <>

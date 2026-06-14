@@ -62,7 +62,7 @@ export const toneColor: Record<string, string> = {
 };
 
 /** Stacked month/day chip from an ISO date (YYYY-MM-DD). */
-export function DateChip({ iso }: { iso?: string }) {
+export function DateChip({ iso, locale = "en-US" }: { iso?: string; locale?: string }) {
   if (!iso) {
     return (
       <span className="icon-chip" style={{ background: "var(--bg-alt)", color: "var(--text-muted)", fontWeight: 700 }}>
@@ -71,8 +71,8 @@ export function DateChip({ iso }: { iso?: string }) {
     );
   }
   const d = new Date(iso + "T12:00:00Z");
-  const m = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }).toUpperCase();
-  const day = d.toLocaleDateString("en-US", { day: "numeric", timeZone: "UTC" });
+  const m = d.toLocaleDateString(locale, { month: "short", timeZone: "UTC" }).toUpperCase();
+  const day = d.toLocaleDateString(locale, { day: "numeric", timeZone: "UTC" });
   return (
     <div className="date-chip">
       <div className="date-chip__m">{m}</div>

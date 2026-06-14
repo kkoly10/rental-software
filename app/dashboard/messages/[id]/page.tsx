@@ -2,12 +2,12 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getThreadMessages } from "@/lib/data/messages";
 import { ReplyForm } from "@/components/messages/reply-form";
-import { getMessages } from "@/lib/i18n/server";
+import { getMessages, getLocale } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 
-function formatTime(dateStr: string): string {
+function formatTime(dateStr: string, locale: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -22,9 +22,10 @@ export default async function MessageThreadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [threadData, msgs] = await Promise.all([
+  const [threadData, msgs, locale] = await Promise.all([
     getThreadMessages(decodeURIComponent(id)),
     getMessages(),
+    getLocale(),
   ]);
   const { messages, customerName, customerEmail, orderNumber } = threadData;
 
@@ -109,7 +110,7 @@ export default async function MessageThreadPage({
                       </span>
                     </div>
                     <span className="muted" style={{ fontSize: 12 }}>
-                      {formatTime(msg.created_at)}
+                      {formatTime(msg.created_at, locale)}
                     </span>
                   </div>
                   {msg.subject && (
