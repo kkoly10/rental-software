@@ -331,6 +331,47 @@ export default async function ProductDetailPage({
                   </div>
                 )}
 
+              {/* Date + ZIP picker — the core booking gesture, previously
+                  only settable via the URL. Native GET form reloads this PDP
+                  with ?date&zip, which updates the availability status, the
+                  delivery-fee line, and threads the values into checkout.
+                  No client JS needed; reuses the hero's field labels. */}
+              <form
+                method="get"
+                action={`/inventory/${slug}`}
+                className="st-pdp-availability"
+                role="search"
+              >
+                <div className="st-pdp-availability-fields">
+                  <label className="st-pdp-availability-field">
+                    <span className="st-eyebrow">{m.storefront.hero.eventDate}</span>
+                    <input
+                      name="date"
+                      type="date"
+                      defaultValue={date ?? ""}
+                      className="st-pdp-input"
+                    />
+                  </label>
+                  <label className="st-pdp-availability-field">
+                    <span className="st-eyebrow">{m.storefront.hero.deliveryZip}</span>
+                    <input
+                      name="zip"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      maxLength={10}
+                      pattern="[0-9-]*"
+                      placeholder={m.storefront.hero.zipPlaceholder}
+                      defaultValue={zip ?? ""}
+                      className="st-pdp-input"
+                    />
+                  </label>
+                </div>
+                <button type="submit" className="st-pdp-availability-go">
+                  {m.storefront.hero.checkAvailability}
+                </button>
+              </form>
+
               {/* Phase 2e.12 — variant picker moved into BookNowWithMode
                   so the customer's pick can be threaded through to
                   the checkout query and the order_items insert. */}
