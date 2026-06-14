@@ -145,7 +145,6 @@ export async function PublicFooter() {
                   <Link href="/terms" className="muted" style={{ fontSize: 12 }}>{m.footer.links.terms}</Link>
                 </>
               )}
-              <a href="https://CrecyStudio.com" target="_blank" rel="noopener noreferrer" className="muted" style={{ fontSize: 12 }}>Made by CrecyStudio</a>
             </div>
           </div>
         </div>
