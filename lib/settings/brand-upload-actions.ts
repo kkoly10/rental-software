@@ -236,6 +236,36 @@ export async function removeHeroImage(
   return saveSetting("hero_image_url", null);
 }
 
+/**
+ * Upload an image for a storefront SECTION (PR-1c, e.g. the hero section's
+ * image swap in the full-screen builder). Mirrors uploadHeroImage's sniff +
+ * EXIF-strip + bucket pipeline, but does NOT write organizations.settings:
+ * the resulting URL is returned and stored into the page document's
+ * sections[id].settings.imageUrl by the builder, then persisted by the
+ * existing whole-document save/publish action. This keeps the builder's source
+ * of truth (storefront_pages) separate from the quick-edit org settings.
+ */
+export async function uploadSectionImage(
+  _prevState: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  const file = formData.get("section_image_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Choose an image before uploading." };
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: image would be uploaded." };
+  }
+
+  const result = await uploadBrandAsset(file, "hero", HERO_MAX_SIZE, HERO_TYPES);
+  if (!result.ok) return { ok: false, message: result.message };
+
+  // No saveSetting() — the URL rides into the page document via the builder.
+  return { ok: true, message: "Image uploaded.", url: result.url };
+}
+
 export async function updateSocialLinks(
   _prevState: SettingsActionState,
   formData: FormData

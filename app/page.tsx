@@ -29,6 +29,10 @@ import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { getTranslator } from "@/lib/i18n/server";
 import { getStorefrontPageDocument } from "@/lib/storefront/page-document";
 import { isKnownSectionType } from "@/lib/storefront/sections/registry";
+import {
+  parseHeroSettings,
+  parseAboutSettings,
+} from "@/lib/storefront/sections/content-schemas";
 import { Fragment, type ReactNode } from "react";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -97,10 +101,25 @@ export default async function HomePage() {
   // SAME markup the legacy hardcoded sequence emits for that section type, so a
   // synthesized default document renders byte-for-byte what the legacy path
   // does. Unknown types are filtered out before this map is consulted.
-  const renderSection = (type: string): ReactNode => {
+  const renderSection = (
+    type: string,
+    settings?: Record<string, unknown>
+  ): ReactNode => {
     switch (type) {
-      case "hero":
-        return <PartyClassicHero />;
+      case "hero": {
+        // Hero/about are the only PR-1c content-editable types: pass the
+        // document section's validated settings (absent fields fall back inside
+        // the component to today's behavior). Every other type renders with NO
+        // props, exactly as before.
+        const hero = parseHeroSettings(settings);
+        return (
+          <PartyClassicHero
+            headline={hero.headline}
+            message={hero.message}
+            imageUrl={hero.imageUrl}
+          />
+        );
+      }
       case "trust":
         return <PartyClassicTrustStrip />;
       case "press":
@@ -154,8 +173,15 @@ export default async function HomePage() {
             <PartyClassicServiceArea />
           </div>
         );
-      case "about":
-        return <AboutSection text={contentSettings.aboutText} />;
+      case "about": {
+        const about = parseAboutSettings(settings);
+        return (
+          <AboutSection
+            text={about.body || contentSettings.aboutText}
+            heading={about.heading}
+          />
+        );
+      }
       case "faq":
         return <FaqSection customFaqs={faqItems} />;
       case "closing":
@@ -183,7 +209,11 @@ export default async function HomePage() {
             if (!section) return null;
             if (section.disabled) return null;
             if (!isKnownSectionType(section.type)) return null;
-            return <Fragment key={id}>{renderSection(section.type)}</Fragment>;
+            return (
+              <Fragment key={id}>
+                {renderSection(section.type, section.settings)}
+              </Fragment>
+            );
           })}
 
           <PublicFooter />

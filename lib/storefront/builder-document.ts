@@ -13,6 +13,10 @@ import {
   type SectionType,
 } from "./sections/registry.ts";
 import {
+  SECTION_CONTENT_SCHEMAS,
+  isContentEditableSectionType,
+} from "./sections/content-schemas.ts";
+import {
   themeTokensSchema,
   type ThemeTokens,
 } from "../data/storefront-tokens-schema.ts";
@@ -138,6 +142,38 @@ export function setDocumentTheme(
   return { ...doc, theme };
 }
 
+/**
+ * Patch one field of a section's `settings` (Sections tab content editor,
+ * PR-1c). Immutably updates `sections[id].settings[key]`. A `value` of
+ * undefined or "" REMOVES the key so the field falls back to the component's
+ * default (byte-for-byte safety — an empty editor field = "use the default",
+ * not "store an empty string"). No-op (same reference) when the id is unknown.
+ */
+export function setSectionSetting(
+  doc: StorefrontPageDocument,
+  id: string,
+  key: string,
+  value: string | undefined
+): StorefrontPageDocument {
+  const record = doc.sections[id];
+  if (!record) return doc;
+
+  const nextSettings: Record<string, unknown> = { ...(record.settings ?? {}) };
+  if (value === undefined || value === "") {
+    delete nextSettings[key];
+  } else {
+    nextSettings[key] = value;
+  }
+
+  return {
+    ...doc,
+    sections: {
+      ...doc.sections,
+      [id]: { ...record, settings: nextSettings },
+    },
+  };
+}
+
 export type ParsedBuilderDocument = {
   document: StorefrontPageDocument;
   theme: ThemeTokens;
@@ -173,6 +209,10 @@ export function parseBuilderDocument(
   }
 
   // order ↔ sections must be consistent, and every type must be renderable.
+  // For content-editable types (hero/about), validate + NORMALIZE the per-section
+  // `settings` against its content schema so bounded lengths are enforced on the
+  // publish path (spec §2) and only the known fields are persisted.
+  const normalizedSections: Record<string, SectionRecord> = {};
   for (const id of doc.order) {
     const record = doc.sections[id];
     if (!record) {
@@ -180,6 +220,22 @@ export function parseBuilderDocument(
     }
     if (!isKnownSectionType(record.type)) {
       return { ok: false, message: `Unknown section type: ${record.type}.` };
+    }
+
+    if (record.settings !== undefined && isContentEditableSectionType(record.type)) {
+      const schema = SECTION_CONTENT_SCHEMAS[record.type];
+      const parsedSettings = schema.safeParse(record.settings);
+      if (!parsedSettings.success) {
+        return {
+          ok: false,
+          message:
+            parsedSettings.error.issues[0]?.message ??
+            `Content for the ${record.type} section is invalid.`,
+        };
+      }
+      normalizedSections[id] = { ...record, settings: parsedSettings.data };
+    } else {
+      normalizedSections[id] = record;
     }
   }
 
@@ -196,7 +252,7 @@ export function parseBuilderDocument(
   return {
     ok: true,
     value: {
-      document: { ...doc, theme: parsedTheme.data },
+      document: { ...doc, sections: normalizedSections, theme: parsedTheme.data },
       theme: parsedTheme.data,
     },
   };

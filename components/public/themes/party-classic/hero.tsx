@@ -22,7 +22,24 @@ import { getTranslator } from "@/lib/i18n/server";
  * a saturated brand gradient banner. Same exemption that lets
  * .st-vibe-caption use text-shadow on the browse tiles.
  */
-export async function PartyClassicHero() {
+/**
+ * Optional per-section content overrides supplied by the storefront page
+ * document (PR-1c). When a prop is provided it wins; when ABSENT the hero falls
+ * back to EXACTLY today's getOrganizationSettings()/vertical-default logic, so
+ * an org with no document — or a document with no hero settings — renders
+ * byte-for-byte what it does today.
+ */
+export type PartyClassicHeroProps = {
+  headline?: string;
+  message?: string;
+  imageUrl?: string;
+};
+
+export async function PartyClassicHero({
+  headline,
+  message,
+  imageUrl,
+}: PartyClassicHeroProps = {}) {
   const [settings, theme, readyCount, defaults, { messages: m, t }] = await Promise.all([
     getOrganizationSettings(),
     getThemeSettings(),
@@ -31,15 +48,21 @@ export async function PartyClassicHero() {
     getTranslator(),
   ]);
 
-  const operatorHeadline = settings.heroHeadline?.trim() ?? "";
+  // Document override (when present) takes priority over the legacy org setting;
+  // absent → identical to today.
+  const docHeadline = headline?.trim();
+  const operatorHeadline = docHeadline || (settings.heroHeadline?.trim() ?? "");
   const headlineLead = operatorHeadline || defaults.headlineLead;
   const headlineItalic = operatorHeadline ? "" : defaults.headlineItalic;
 
+  const docMessage = message?.trim();
   const lede =
+    docMessage ||
     settings.websiteMessage?.trim() ||
     withArea(defaults.lede, settings.serviceAreaLabel);
 
-  const heroImage = settings.heroImageUrl?.trim() || defaults.heroImagePath;
+  const heroImage =
+    imageUrl?.trim() || settings.heroImageUrl?.trim() || defaults.heroImagePath;
 
   // Live availability chip — operator-controlled toggle. Rendered when
   // the operator's enabled it AND there's actually inventory available.
