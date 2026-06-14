@@ -1,6 +1,6 @@
 # Storefront Editorial Builder — Implementation Spec
 
-**Created:** 2026-06-14 · **Owner:** founder + Claude · **Status:** design — not yet built
+**Created:** 2026-06-14 · **Owner:** founder + Claude · **Status:** scope + entry-point RATIFIED (§9–§10); G2 build next
 
 The concrete, build-ready design for turning the tenant storefront into an
 operator-editable **editorial builder** (the G2/G3/G4 vision in
@@ -225,8 +225,47 @@ to read from the page document (incremental cutover, section by section).
 
 ---
 
-## 9. Open decisions (founder)
-- Exact tier split (the table in §5 is a recommendation).
-- How many day-one custom section types beyond `custom-rich`/`custom-gallery`.
-- Whether to ever allow custom CSS (Growth) or stay tokens-only (simpler, safer).
-- Page scope: home only first, or design for multi-page (`page_key`) from day one (schema already allows it).
+## 9. Decisions — RATIFIED 2026-06-14 (was: open)
+Grounded in a competitor pass (Booqable = the direct rental-builder benchmark;
+Shopify/Squarespace/Wix = the general bar). Decisions:
+
+- **Typography:** curated, self-hosted fonts + a **bounded** size/type-scale
+  control (base-size range + scale-ratio), heading weight from a set. Operators
+  *can* change size (Booqable does), but within rails — no free pixel input.
+- **Layout/sections:** edit + show/hide + **reorder** existing sections (all
+  tiers); **add/remove** curated section types incl. `custom-rich` + a
+  `custom-gallery` (Pro). Matches Booqable's block-rearrange builder.
+- **Images:** swap images in existing sections (all tiers); add image/gallery
+  sections (Pro). Reuse the sniffed upload bucket.
+- **Color/shape:** full paired color scheme (incl. the "cream" background) +
+  radius tokens, **contrast-validated on save**; presets for all, custom on Pro.
+- **Custom CSS:** **NONE in v1** (tokens-only). If ever added, it's **bounded +
+  Growth-gated + sanitized/scoped** — never unlimited (Shopify caps at
+  500/1500 chars; SQSP/Wix paywall it; unrestricted CSS = support/breakage
+  burden). Default stance: stay tokens-only unless real demand appears.
+- **Page scope:** **home page first.** Schema keeps `page_key`, so About /
+  landing pages are a fast follow, not a rebuild.
+- **Tier split (ratified):** content + brand color/font + reorder = entry;
+  full theme tokens + add/remove sections + extra fonts = **Pro**;
+  white-label + any future custom CSS = **Growth**.
+
+Net: this puts Korent at parity with Booqable (the best rental builder) and
+ahead of the party-rental-specific tools (InflatableOffice/Goodshuffle).
+
+## 10. Entry point & editor UX (ratified 2026-06-14)
+- **Progressive disclosure.** The existing `/dashboard/website` quick-edit
+  settings stay for the satisfied majority. A prominent **"Design your
+  storefront"** CTA at the TOP opens the full builder. (Operator-facing label,
+  not "editorial".)
+- **Dedicated full-screen builder route** `/dashboard/website/builder` — NOT
+  edit-in-place on the live public storefront. Left = the real storefront in a
+  **live-preview iframe** (Next.js Draft Mode → `draft` doc); right = section
+  list (reorder/add/remove) + selected-section settings. Feels like "editing my
+  storefront page," but no editor JS ever runs on the public anon site.
+- **Gate on click, not on visibility.** Everyone sees the CTA; entry tiers get
+  the upsell ("Storefront design is on Pro").
+- **Single source of truth per field.** Quick form writes
+  `organizations.settings`; the builder writes `storefront_pages` draft/
+  published. On first builder entry the page doc is synthesized from current
+  settings (§7); thereafter a section that lives in the builder is removed from
+  / read-only in the quick form so the two never diverge.
