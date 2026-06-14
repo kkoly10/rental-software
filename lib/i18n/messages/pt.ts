@@ -2957,6 +2957,7 @@ export const pt: Messages = {
       orderStatus: "Estado da encomenda",
       terms: "Termos",
       privacy: "Privacidade",
+      rentalTerms: "Termos de aluguel",
     },
     rights: "Todos os direitos reservados.",
   },

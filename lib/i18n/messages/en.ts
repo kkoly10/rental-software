@@ -2958,6 +2958,7 @@ const enValues = {
       orderStatus: "Order Status",
       terms: "Terms",
       privacy: "Privacy",
+      rentalTerms: "Rental Terms",
     },
     rights: "All rights reserved.",
   },

@@ -21,6 +21,11 @@ const fallbackSettings = {
   socialInstagram: "",
   socialTiktok: "",
   socialGoogleBusiness: "",
+  // Operator-provided legal-page overrides (absolute http(s) URLs). When set,
+  // the storefront footer links to these instead of Korent's baseline pages.
+  legalPrivacyUrl: "",
+  legalTermsUrl: "",
+  legalWaiverUrl: "",
 };
 
 export const getOrganizationSettings = cache(async function getOrganizationSettings() {
@@ -105,5 +110,8 @@ export const getOrganizationSettings = cache(async function getOrganizationSetti
     socialInstagram: (orgSettings.social_instagram as string) || "",
     socialTiktok: (orgSettings.social_tiktok as string) || "",
     socialGoogleBusiness: (orgSettings.social_google_business as string) || "",
+    legalPrivacyUrl: (orgSettings.legal_privacy_url as string) || "",
+    legalTermsUrl: (orgSettings.legal_terms_url as string) || "",
+    legalWaiverUrl: (orgSettings.legal_waiver_url as string) || "",
   };
 });

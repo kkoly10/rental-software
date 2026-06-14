@@ -2957,6 +2957,7 @@ export const fr: Messages = {
       orderStatus: "Statut de commande",
       terms: "Conditions",
       privacy: "Confidentialité",
+      rentalTerms: "Conditions de location",
     },
     rights: "Tous droits réservés.",
   },

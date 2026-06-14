@@ -6,7 +6,7 @@ import { getOrgContext } from "@/lib/auth/org-context";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SettingsActionState } from "./actions";
-import { isSafeHref } from "@/lib/utils/safe-href";
+import { isSafeHref, isAbsoluteHttpUrl } from "@/lib/utils/safe-href";
 import { mergeOrgSettings } from "./merge-settings";
 
 const MAX_JSON_BYTES = 50_000;
@@ -192,6 +192,59 @@ export async function updateSectionVisibility(
   }
 
   return readMergeWrite("section_visibility", result.data);
+}
+
+export async function updateLegalLinks(
+  _prevState: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  const privacyUrl = String(formData.get("legal_privacy_url") ?? "").trim();
+  const termsUrl = String(formData.get("legal_terms_url") ?? "").trim();
+  const waiverUrl = String(formData.get("legal_waiver_url") ?? "").trim();
+
+  // Each is optional, but when present must be an absolute http(s) URL — these
+  // point at the operator's own externally-hosted legal pages. A blank field
+  // falls back to Korent's storefront baseline page (privacy/terms) or hides
+  // the link (rental terms/waiver).
+  for (const [label, url] of [
+    ["Privacy policy", privacyUrl],
+    ["Terms", termsUrl],
+    ["Rental terms / waiver", waiverUrl],
+  ] as const) {
+    if (url && !isAbsoluteHttpUrl(url)) {
+      return { ok: false, message: `${label} link must be a valid http(s) URL.` };
+    }
+  }
+
+  if (!hasSupabaseEnv()) {
+    return { ok: true, message: "Demo mode: Legal links would be updated." };
+  }
+
+  const ctx = await getOrgContext();
+  if (!ctx) return { ok: false, message: "Not authenticated." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: membership } = await supabase
+    .from("organization_memberships")
+    .select("role")
+    .eq("organization_id", ctx.organizationId)
+    .eq("profile_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!["owner", "admin"].includes(membership?.role ?? "")) {
+    return { ok: false, message: "Only owners and admins can update website content." };
+  }
+
+  const merged = await mergeOrgSettings(supabase, ctx.organizationId, {
+    legal_privacy_url: privacyUrl || null,
+    legal_terms_url: termsUrl || null,
+    legal_waiver_url: waiverUrl || null,
+  });
+  if (!merged.ok) return { ok: false, message: merged.message };
+
+  revalidatePath("/dashboard/website");
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Legal links updated." };
 }
 
 export async function updateNavLinks(

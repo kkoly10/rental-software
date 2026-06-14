@@ -16,6 +16,11 @@ export type OrgSettings = {
   socialInstagram: string;
   socialTiktok: string;
   socialGoogleBusiness: string;
+  // Operator-provided legal-page override URLs (absolute http(s)). Blank = use
+  // Korent's storefront baseline pages.
+  legalPrivacyUrl: string;
+  legalTermsUrl: string;
+  legalWaiverUrl: string;
   // Business details shown on rental documents (agreement/waiver/invoice).
   businessAddressLine1: string;
   businessAddressLine2: string;
@@ -39,6 +44,9 @@ const fallbackSettings: OrgSettings = {
   socialInstagram: "",
   socialTiktok: "",
   socialGoogleBusiness: "",
+  legalPrivacyUrl: "",
+  legalTermsUrl: "",
+  legalWaiverUrl: "",
   businessAddressLine1: "",
   businessAddressLine2: "",
   businessCity: "",
@@ -83,6 +91,9 @@ export async function getOrgSettings(): Promise<OrgSettings> {
     socialInstagram: (settings.social_instagram as string) ?? "",
     socialTiktok: (settings.social_tiktok as string) ?? "",
     socialGoogleBusiness: (settings.social_google_business as string) ?? "",
+    legalPrivacyUrl: (settings.legal_privacy_url as string) ?? "",
+    legalTermsUrl: (settings.legal_terms_url as string) ?? "",
+    legalWaiverUrl: (settings.legal_waiver_url as string) ?? "",
     businessAddressLine1: (settings.business_address_line1 as string) ?? "",
     businessAddressLine2: (settings.business_address_line2 as string) ?? "",
     businessCity: (settings.business_city as string) ?? "",
