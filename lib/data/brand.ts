@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -16,7 +17,9 @@ const defaultBrand: BrandSettings = {
   fontFamily: "System Default",
 };
 
-export async function getBrandSettings(): Promise<BrandSettings> {
+// Wrapped in React cache() — called in both the root layout (style
+// injector) and the header on every storefront render; dedupe to one query.
+export const getBrandSettings = cache(async (): Promise<BrandSettings> => {
   if (!hasSupabaseEnv()) return defaultBrand;
 
   const organizationId = await getPublicOrgId();
@@ -40,4 +43,4 @@ export async function getBrandSettings(): Promise<BrandSettings> {
     accentColor: (settings.brand_accent_color as string) ?? "#20b486",
     fontFamily: (settings.brand_font_family as string) ?? "System Default",
   };
-}
+});

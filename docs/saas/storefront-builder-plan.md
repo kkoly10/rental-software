@@ -34,10 +34,10 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
   display-serif heading sizes (32/700 → 40/400), and removes a 760px vs
   980px breakpoint conflict. **One deletion fixes the island + much of
   the global rhythm.** `app/storefront-theme.css:882-911`
-- [ ] **Hero image ships full-res to phones.** Hero is a raw `<img>`
-  (`hero.tsx:57-63`), 2400×1500, `fetchPriority="high"` but **no `sizes`/
-  srcset** and not `next/image` — a 360px phone downloads the 2400px
-  asset (worst on car-screen/cellular, the founder's demo context).
+- [x] **Hero image ships full-res to phones.** FIXED in G1: hero is now
+  `next/image` with `fill` + `sizes="100vw"` + `priority` (optimized,
+  responsive srcset). Supabase host is already in `remotePatterns`, so
+  operator-uploaded hero URLs optimize too.
 - [ ] **Brand-color contrast guard is disconnected from the editorial
   theme.** `brand-style-injector.tsx:49-67` only corrects colors with
   luminance > 0.9 and emits overrides for legacy classes (`.kicker`,
@@ -91,10 +91,9 @@ tier-gating recommendation. **Convention:** `[ ]` todo · `[x]` done · `~` defe
 - [x] **Featured/"Popular rentals" orphaned heading** — FIXED in G1: the
   whole section is gated on `featured.length > 0`, and the "browse all"
   link only shows at ≥3 products (so tiny catalogs don't read silly).
-- [ ] **Redundant DB round-trips on every homepage render.**
-  `getContentSettings` (uncached) is called ~5× (page, trust-strip,
-  reviews-cards, footer, …) and `getBrandSettings` 2×. Wrap both in
-  React `cache()` like their siblings. `content-settings.ts:52`, `brand.ts:19`
+- [x] **Redundant DB round-trips on every homepage render.** FIXED in G1:
+  wrapped `getContentSettings` and `getBrandSettings` in React `cache()`,
+  collapsing ~6 duplicate per-render queries to 2.
 - [ ] **Fonts via Google `<link>` + `display=swap` → FOUT.** Fraunces +
   Inter Tight load from fonts.googleapis.com (`layout.tsx:122-130`); the
   serif headings flash/reflow on slow connections. Migrate to `next/font`.

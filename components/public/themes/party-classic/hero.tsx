@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getThemeSettings } from "@/lib/data/theme-settings";
 import { getReadyAssetCount } from "@/lib/data/storefront-counts";
@@ -54,12 +55,13 @@ export async function PartyClassicHero() {
     <>
       <section className="st-hero" aria-label={`${settings.businessName || "Korent"} storefront hero`}>
         <div className="st-hero-photo">
-          <img
+          <Image
             src={heroImage}
             alt={`${settings.businessName || "Korent"} event setup`}
-            width={2400}
-            height={1500}
-            fetchPriority="high"
+            fill
+            priority
+            sizes="100vw"
+            style={{ objectFit: "cover" }}
           />
           <div className="st-hero-scrim" aria-hidden="true" />
         </div>

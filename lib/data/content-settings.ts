@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicOrgId } from "@/lib/auth/org-context";
@@ -49,7 +50,9 @@ const fallbackContent: ContentSettings = {
   navLinks: defaultNavLinks,
 };
 
-export async function getContentSettings(): Promise<ContentSettings> {
+// Wrapped in React cache() so the ~5 callers in a single storefront render
+// (page, trust-strip, reviews-cards, footer, …) share one DB round-trip.
+export const getContentSettings = cache(async (): Promise<ContentSettings> => {
   if (!hasSupabaseEnv()) return fallbackContent;
 
   const organizationId = await getPublicOrgId();
@@ -96,4 +99,4 @@ export async function getContentSettings(): Promise<ContentSettings> {
     },
     navLinks,
   };
-}
+});
