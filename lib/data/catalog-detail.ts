@@ -10,6 +10,8 @@ import {
   getStorefrontFallbackImage,
 } from "@/lib/media/storefront-fallback-images";
 import { getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import type { CatalogDetail } from "@/lib/types";
 import { notFound } from "next/navigation";
 
@@ -172,6 +174,9 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
   const resolvedCategory =
     category && !category.deleted_at ? category.name : "Rental";
 
+  const { currency, locale } = await getPublicOrgFormatting();
+  const money = (n: number) => formatMoney(n, currency, locale);
+
   const fallbackImage = getStorefrontFallbackImage(
     data.slug ?? slug,
     resolvedCategory
@@ -188,8 +193,8 @@ export const getCatalogDetail = cache(async function getCatalogDetail(slug: stri
     category: resolvedCategory,
     price:
       typeof data.base_price === "number"
-        ? `$${data.base_price}/day`
-        : "$0/day",
+        ? `${money(data.base_price)}/day`
+        : `${money(0)}/day`,
     description:
       data.description ??
       data.short_description ??

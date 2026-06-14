@@ -2,6 +2,8 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStorefrontFallbackImage } from "@/lib/media/storefront-fallback-images";
 import { getPublicOrgId } from "@/lib/auth/org-context";
+import { getPublicOrgFormatting } from "@/lib/i18n/org-formatting";
+import { formatMoney } from "@/lib/i18n/format-helpers";
 import type { CatalogProduct } from "@/lib/types";
 
 /**
@@ -12,26 +14,27 @@ import type { CatalogProduct } from "@/lib/types";
  * instead of re-parsing the formatted string. `base_price` is in dollars; the
  * hourly/unit rates are in cents.
  */
-function formatPricing(p: {
-  base_price: number | null;
-  capability_slugs: string[] | null;
-  hourly_rate_cents: number | null;
-  unit_price_cents: number | null;
-  unit_label: string | null;
-}): { price: string; priceCents: number } {
+function formatPricing(
+  p: {
+    base_price: number | null;
+    capability_slugs: string[] | null;
+    hourly_rate_cents: number | null;
+    unit_price_cents: number | null;
+    unit_label: string | null;
+  },
+  currency: string,
+  locale: string
+): { price: string; priceCents: number } {
   const slugs = Array.isArray(p.capability_slugs) ? p.capability_slugs : [];
-  const money = (cents: number) =>
-    `$${(cents / 100).toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+  // hourly/unit rates are stored in cents; base_price in dollars.
+  const moneyFromCents = (cents: number) => formatMoney(cents / 100, currency, locale);
 
   if (
     slugs.includes("pricing.per-hour") &&
     typeof p.hourly_rate_cents === "number" &&
     p.hourly_rate_cents > 0
   ) {
-    return { price: `${money(p.hourly_rate_cents)}/hr`, priceCents: p.hourly_rate_cents };
+    return { price: `${moneyFromCents(p.hourly_rate_cents)}/hr`, priceCents: p.hourly_rate_cents };
   }
 
   if (
@@ -40,14 +43,14 @@ function formatPricing(p: {
     p.unit_price_cents > 0
   ) {
     const label = p.unit_label?.trim() || "unit";
-    return { price: `${money(p.unit_price_cents)}/${label}`, priceCents: p.unit_price_cents };
+    return { price: `${moneyFromCents(p.unit_price_cents)}/${label}`, priceCents: p.unit_price_cents };
   }
 
   if (typeof p.base_price === "number") {
-    return { price: `$${p.base_price}/day`, priceCents: Math.round(p.base_price * 100) };
+    return { price: `${formatMoney(p.base_price, currency, locale)}/day`, priceCents: Math.round(p.base_price * 100) };
   }
 
-  return { price: "$0/day", priceCents: 0 };
+  return { price: `${formatMoney(0, currency, locale)}/day`, priceCents: 0 };
 }
 
 const fallbackCatalog: CatalogProduct[] = [
@@ -101,6 +104,8 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
   if (!organizationId) {
     return [];
   }
+
+  const { currency, locale } = await getPublicOrgFormatting();
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -159,7 +164,7 @@ export async function getCatalogList(): Promise<CatalogProduct[]> {
       hourly_rate_cents: typeof p.hourly_rate_cents === "number" ? (p.hourly_rate_cents as number) : null,
       unit_price_cents: typeof p.unit_price_cents === "number" ? (p.unit_price_cents as number) : null,
       unit_label: typeof p.unit_label === "string" ? (p.unit_label as string) : null,
-    });
+    }, currency, locale);
 
     return {
       id: product.id,
