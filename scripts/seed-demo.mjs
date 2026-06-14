@@ -364,8 +364,8 @@ async function seedProductImages(productIds) {
 
 async function seedServiceAreas(orgId) {
   const areas = [
-    { label: "Downtown & Central", zip_code: "22401", city: "Fredericksburg", state: "VA", delivery_fee: 0, minimum_order_amount: 150 },
-    { label: "Stafford & North", zip_code: "22554", city: "Stafford", state: "VA", delivery_fee: 35, minimum_order_amount: 175 },
+    { label: "Downtown & Central", zip_code: "22401", city: "Fredericksburg", state: "VA", delivery_fee: 0, minimum_order_amount: 150, latitude: 38.3015, longitude: -77.471 },
+    { label: "Stafford & North", zip_code: "22554", city: "Stafford", state: "VA", delivery_fee: 35, minimum_order_amount: 175, latitude: 38.4221, longitude: -77.4083 },
   ];
 
   for (const area of areas) {

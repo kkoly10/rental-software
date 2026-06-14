@@ -11,6 +11,10 @@ export type ServiceAreaGeo = {
   state?: string;
   deliveryFee: number;
   minimumOrder: number;
+  /** Geocoded once at save time. When present the map renders the pin
+   *  directly; when absent it falls back to client-side ZIP geocoding. */
+  lat?: number;
+  lng?: number;
 };
 
 const fallbackGeoAreas: ServiceAreaGeo[] = [
@@ -55,7 +59,7 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
   const { data, error } = await supabase
     .from("service_areas")
     .select(
-      "id, label, zip_code, postal_codes, city, state, delivery_fee, minimum_order_amount, is_active"
+      "id, label, zip_code, postal_codes, city, state, delivery_fee, minimum_order_amount, is_active, latitude, longitude"
     )
     .eq("organization_id", organizationId)
     .eq("is_active", true)
@@ -89,6 +93,8 @@ export async function getServiceAreasGeo(): Promise<ServiceAreaGeo[]> {
       state: area.state ?? undefined,
       deliveryFee: Number(area.delivery_fee ?? 0),
       minimumOrder: Number(area.minimum_order_amount ?? 0),
+      lat: typeof area.latitude === "number" ? area.latitude : undefined,
+      lng: typeof area.longitude === "number" ? area.longitude : undefined,
     };
   });
 }

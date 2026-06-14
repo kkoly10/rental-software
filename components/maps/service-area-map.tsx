@@ -14,6 +14,10 @@ type ServiceArea = {
   state?: string;
   deliveryFee: number;
   minimumOrder: number;
+  /** Pre-geocoded at save time. Used directly when present; otherwise we
+   *  fall back to client-side ZIP geocoding (legacy rows). */
+  lat?: number;
+  lng?: number;
 };
 
 type Props = {
@@ -21,10 +25,6 @@ type Props = {
   interactive?: boolean;
   height?: string;
 };
-
-/* ── US center fallback ── */
-const US_CENTER: [number, number] = [39.8283, -98.5795];
-const DEFAULT_ZOOM = 6;
 
 export function ServiceAreaMap({
   areas,
@@ -37,11 +37,34 @@ export function ServiceAreaMap({
   const mapRef = useRef<any>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [noCoverage, setNoCoverage] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
+      // Resolve coordinates first: prefer the coords stored at save time,
+      // fall back to client geocoding for legacy rows. We only initialize
+      // the map once we have at least one real pin — so a failed lookup
+      // shows an empty state instead of a misleading US-center (Kansas)
+      // default that doesn't match the operator's ZIPs.
+      const resolved: { area: ServiceArea; lat: number; lng: number }[] = [];
+      for (const area of areas) {
+        if (cancelled) return;
+        let coords: { lat: number; lng: number } | null = null;
+        if (typeof area.lat === "number" && typeof area.lng === "number") {
+          coords = { lat: area.lat, lng: area.lng };
+        } else if (area.zipCode) {
+          coords = await geocodeZipClient(area.zipCode);
+        }
+        if (coords) resolved.push({ area, lat: coords.lat, lng: coords.lng });
+      }
+      if (cancelled) return;
+      if (resolved.length === 0) {
+        setNoCoverage(true);
+        return;
+      }
+
       let L: typeof import("leaflet");
       try {
         L = (await import("leaflet")).default as unknown as typeof import("leaflet");
@@ -61,7 +84,7 @@ export function ServiceAreaMap({
         scrollWheelZoom: interactive,
         dragging: true,
         zoomControl: true,
-      }).setView(US_CENTER, DEFAULT_ZOOM);
+      }).setView([resolved[0].lat, resolved[0].lng], 11);
 
       mapRef.current = map;
 
@@ -71,14 +94,10 @@ export function ServiceAreaMap({
         maxZoom: 18,
       }).addTo(map);
 
-      /* Geocode all areas and add markers */
       const bounds: [number, number][] = [];
 
-      for (const area of areas) {
-        if (!area.zipCode) continue;
-        const geo = await geocodeZipClient(area.zipCode);
-        if (!geo || cancelled) continue;
-
+      for (const { area, lat, lng } of resolved) {
+        if (cancelled) return;
         const safeLabel = escapeHtml(area.label);
         const safeZip = escapeHtml(area.zipCode);
         const locationParts = [area.city, area.state].filter(Boolean);
@@ -117,16 +136,12 @@ export function ServiceAreaMap({
           popupAnchor: [0, -18],
         });
 
-        L.marker([geo.lat, geo.lng], { icon }).addTo(map).bindPopup(popupHtml);
-        bounds.push([geo.lat, geo.lng]);
+        L.marker([lat, lng], { icon }).addTo(map).bindPopup(popupHtml);
+        bounds.push([lat, lng]);
       }
 
-      if (bounds.length > 0 && !cancelled) {
-        if (bounds.length === 1) {
-          map.setView(bounds[0], 11);
-        } else {
-          map.fitBounds(bounds, { padding: [40, 40] });
-        }
+      if (bounds.length > 1 && !cancelled) {
+        map.fitBounds(bounds, { padding: [40, 40] });
       }
 
       /* Interactive click handler */
@@ -155,10 +170,12 @@ export function ServiceAreaMap({
     };
   }, [areas, interactive]);
 
-  if (mapError) {
+  if (mapError || noCoverage) {
     return (
       <div className="svc-map-container" style={{ height, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-soft, #f8f9fa)", borderRadius: 8 }}>
-        <p className="muted" style={{ textAlign: "center" }}>{mapError}</p>
+        <p className="muted" style={{ textAlign: "center" }}>
+          {mapError ?? m.serviceAreaMap.noCoverage}
+        </p>
       </div>
     );
   }

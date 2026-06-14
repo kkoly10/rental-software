@@ -2702,6 +2702,7 @@ export const pt: Messages = {
     description: "Mapa interactivo das suas zonas de entrega configuradas. Clique em qualquer ponto do mapa para ver as coordenadas.",
     coordinates: "Coordenadas: {lat}, {lng}",
     mapFailed: "Falha ao carregar o mapa. Por favor, actualize a página.",
+    noCoverage: "O mapa de cobertura aparecerá quando definir os códigos postais da sua área de serviço.",
   },
 
   pricingRulesManager: {
