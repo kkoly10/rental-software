@@ -1,15 +1,11 @@
 import Link from "next/link";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { StorefrontTokenEditor } from "@/components/settings/storefront-token-editor";
+import { headers } from "next/headers";
+import { StorefrontBuilder } from "@/components/settings/storefront-builder";
 import { getMessages } from "@/lib/i18n/server";
 import { checkFeatureAccess } from "@/lib/stripe/gate";
-import { getOrgContext } from "@/lib/auth/org-context";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { hasSupabaseEnv } from "@/lib/env";
-import {
-  resolveEditorTokens,
-  DEFAULT_THEME_TOKENS,
-} from "@/lib/data/storefront-token-defaults";
+import { loadBuilderDocument } from "@/lib/storefront/builder-load";
+import { getDomainSettings } from "@/lib/data/domain-settings";
+import { buildStorefrontUrl } from "@/lib/storefront/url";
 
 export default async function StorefrontBuilderPage() {
   const m = await getMessages();
@@ -21,8 +17,11 @@ export default async function StorefrontBuilderPage() {
 
   if (!gate.allowed) {
     return (
-      <DashboardShell title={mb.title} description={mb.description}>
-        <section className="panel" style={{ maxWidth: 560 }}>
+      <div style={{ maxWidth: 640, margin: "64px auto", padding: 24 }}>
+        <Link href="/dashboard/website" className="secondary-btn">
+          ← {mb.backToDashboard}
+        </Link>
+        <section className="panel" style={{ marginTop: 16 }}>
           <div className="kicker">{mb.upsellTitle}</div>
           <h2 style={{ margin: "8px 0 12px" }}>{mb.upsellTitle}</h2>
           <p className="muted" style={{ marginBottom: 16, lineHeight: 1.5 }}>
@@ -32,34 +31,23 @@ export default async function StorefrontBuilderPage() {
             {mb.upsellButton}
           </Link>
         </section>
-      </DashboardShell>
+      </div>
     );
   }
 
-  // Allowed: seed the editor with draft → published → defaults.
-  let initialTokens = DEFAULT_THEME_TOKENS;
-  if (hasSupabaseEnv()) {
-    const ctx = await getOrgContext();
-    if (ctx) {
-      const supabase = await createSupabaseServerClient();
-      const { data } = await supabase
-        .from("storefront_pages")
-        .select("draft, published")
-        .eq("organization_id", ctx.organizationId)
-        .eq("page_key", "home")
-        .maybeSingle();
-
-      const draft = data?.draft as Record<string, unknown> | null;
-      const published = data?.published as Record<string, unknown> | null;
-      initialTokens = resolveEditorTokens(draft?.theme, published?.theme);
-    }
-  }
+  // Allowed: load the builder document (existing draft/published or synthesized
+  // from the operator's current settings) — org resolved via getOrgContext
+  // (auth), NOT hostname. And resolve the public storefront URL for the
+  // "Preview" link (opens in a new tab; no embedded iframe in this PR).
+  const [{ document }, domainSettings, headersList] = await Promise.all([
+    loadBuilderDocument(),
+    getDomainSettings(),
+    headers(),
+  ]);
+  const requestHost = headersList.get("host") ?? undefined;
+  const storefrontUrl = buildStorefrontUrl(domainSettings, requestHost);
 
   return (
-    <DashboardShell title={mb.title} description={mb.description}>
-      <section className="panel">
-        <StorefrontTokenEditor initialTokens={initialTokens} />
-      </section>
-    </DashboardShell>
+    <StorefrontBuilder initialDocument={document} storefrontUrl={storefrontUrl} />
   );
 }
