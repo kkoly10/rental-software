@@ -165,7 +165,7 @@ export function generatePullSheetPdf(data: PullSheetData): Uint8Array {
   doc.setFontSize(8);
   doc.setTextColor(120, 144, 178);
   doc.text(
-    `Generated ${new Date().toLocaleDateString("en-US")} · ${data.organizationName}`,
+    `Generated ${new Date().toLocaleDateString(data.locale)} · ${data.organizationName}`,
     pageWidth / 2,
     footerY,
     { align: "center" }

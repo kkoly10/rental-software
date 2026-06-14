@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/auth/org-context";
 import { formatTimeInTimeZone } from "@/lib/datetime/event-time";
 import { getOrgEventTimezone } from "@/lib/datetime/org-timezone";
-import { getMessages } from "@/lib/i18n/server";
+import { getMessages, getLocale } from "@/lib/i18n/server";
 import { formatInflatableItemLine } from "@/lib/inflatable/format-item-line";
 
 export type PullSheetStop = {
@@ -33,6 +33,8 @@ export type PullSheetData = {
   driverName: string;
   vehicleName: string;
   organizationName: string;
+  /** Operator locale for date rendering (routeDate + PDF "Generated" footer). */
+  locale: string;
   stops: PullSheetStop[];
   aggregated: PullSheetAggregateItem[];
 };
@@ -41,6 +43,7 @@ const fallback: PullSheetData = {
   routeId: "route_1",
   routeName: "Crew A Morning Route",
   routeDate: "Mar 31, 2026",
+  locale: "en-US",
   driverName: "Sample Driver",
   vehicleName: "Truck 1",
   organizationName: "Demo Rental Co.",
@@ -92,6 +95,7 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
   const tz = await getOrgEventTimezone(ctx.organizationId);
   // Sprint 6.0 — locale-aware item line formatting for crew loading.
   const i18nMessages = await getMessages();
+  const locale = await getLocale();
   const inflatableLabels = i18nMessages.forms.editProduct.inflatableSetup;
 
   const supabase = await createSupabaseServerClient();
@@ -265,7 +269,7 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
     .sort((a, b) => b.totalQuantity - a.totalQuantity);
 
   const formattedDate = route.route_date
-    ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString("en-US", {
+    ? new Date(route.route_date + "T12:00:00Z").toLocaleDateString(locale, {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -278,6 +282,7 @@ export async function getPullSheetData(routeId: string): Promise<PullSheetData |
     routeId: route.id,
     routeName: route.name ?? "Route",
     routeDate: formattedDate,
+    locale,
     driverName: driver?.full_name ?? "Unassigned",
     vehicleName: route.assigned_vehicle ?? "No vehicle assigned",
     organizationName: org?.name ?? "",
