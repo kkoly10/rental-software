@@ -1,7 +1,9 @@
-// Relative `.ts` imports are NOT used here (this file imports `zod`, a package,
-// which resolves fine under `node --test --experimental-strip-types`). Kept
-// dependency-light (zod only, no server deps) so the schemas stay unit-testable
-// and importable from both the RSC render path and the builder UI.
+// Relative `.ts` imports (not the @/ alias) so this module stays unit-testable
+// under `node --test --experimental-strip-types`, which doesn't resolve the
+// tsconfig path alias (project convention — see page-document-schema.ts /
+// builder-document.ts). Kept dependency-light (zod + the curated-fonts schema,
+// no server deps) so the schemas stay unit-testable and importable from both the
+// RSC render path and the builder UI.
 //
 // PR-1c: per-section CONTENT settings schemas for the two editable sections —
 // hero + about. These validate `document.sections[id].settings` and bound the
@@ -9,6 +11,7 @@
 // OPTIONAL so an absent setting falls back to today's behavior in the component
 // (byte-for-byte safety — see hero.tsx / about-section.tsx fallbacks).
 import { z } from "zod";
+import { CURATED_FONTS } from "../../data/storefront-tokens-schema.ts";
 
 // Length caps mirror the bounded-input requirement: keep stored JSON small and
 // the rendered layout from breaking. Trim is applied so whitespace-only values
@@ -50,6 +53,134 @@ export const FEATURED_KICKER_MAX = 60;
 export const FEATURED_TITLE_MAX = 120;
 export const FEATURED_DESCRIPTION_MAX = 200;
 
+// ── Per-element (Wix-like) text styling (PR-A) ──────────────────────────────
+// A small, FRIENDLY-preset style override an operator can attach to an individual
+// inline-text field on the canvas (size / color / bold / italic / font). Every
+// key is OPTIONAL — an absent key = no override = the field renders with the
+// theme's default styling (byte-for-byte safety). Validated/clamped here so a
+// hand-edited document can never inject raw CSS through these values.
+
+/** Min/max for a per-field font size override (px). */
+export const FIELD_STYLE_SIZE_MIN = 10;
+export const FIELD_STYLE_SIZE_MAX = 96;
+
+// Hex color — #RGB / #RRGGBB / #RRGGBBAA, the SAME shape themeTokens' hexColor
+// accepts (so a stored color can only ever be a safe hex literal — never a CSS
+// expression that could escape the generated style rule).
+const fieldStyleHex = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{3,8}$/, "must be a hex color like #1A1A1A");
+
+const fieldStyleFont = z.enum(CURATED_FONTS);
+
+/**
+ * One field's style override. All keys optional; an empty object means "no
+ * override". `.strip()` (Zod default) drops any unknown keys so a hand-edited doc
+ * can't smuggle extra properties into the stored JSON.
+ */
+export const fieldStyleSchema = z.object({
+  sizePx: z
+    .number()
+    .int()
+    .min(FIELD_STYLE_SIZE_MIN)
+    .max(FIELD_STYLE_SIZE_MAX)
+    .optional(),
+  color: fieldStyleHex.optional(),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+  font: fieldStyleFont.optional(),
+});
+
+export type FieldStyle = z.infer<typeof fieldStyleSchema>;
+
+/**
+ * The shared `fieldStyles?: Record<field, FieldStyle>` sub-schema merged into
+ * every inline-text-capable section's settings. Maps a field name → its style
+ * override. Optional, so an absent map = no per-element styling = byte-for-byte.
+ */
+export const fieldStylesSchema = z.record(fieldStyleSchema).optional();
+
+/** The settings shape contributed by the shared fieldStyles sub-schema. */
+const withFieldStyles = { fieldStyles: fieldStylesSchema } as const;
+
+/**
+ * Curated font → CSS font-family stack. Mirrors the FONT_STACKS in the token
+ * editor (keys are the CURATED_FONTS allowlist). Lives here — the ONE
+ * dependency-light source — so both the editor UI and the shared renderer emit
+ * the identical stack for a given font without drifting.
+ */
+export const FONT_STACKS: Record<(typeof CURATED_FONTS)[number], string> = {
+  "Plus Jakarta Sans": '"Plus Jakarta Sans", sans-serif',
+  Sora: '"Sora", sans-serif',
+  Inter: '"Inter", sans-serif',
+  Poppins: '"Poppins", sans-serif',
+  Montserrat: '"Montserrat", sans-serif',
+  "Playfair Display": '"Playfair Display", Georgia, serif',
+  Roboto: '"Roboto", sans-serif',
+};
+
+/**
+ * SHARED section-type → (field → CSS selector) map (PR-A). ONE source of truth
+ * for both the runtime (which binds these DOM nodes for inline editing + the
+ * styling toolbar) and the renderer (which scopes per-element style at these
+ * selectors). The selectors mirror the shared section components' static class
+ * names — those components are NOT touched (HARD CONSTRAINT) so the public render
+ * stays byte-for-byte identical. Only inline-text-capable fields appear here.
+ */
+export const SECTION_FIELD_SELECTORS = {
+  hero: { headline: ".st-h1", message: ".st-lede" },
+  about: { heading: ".st-section-title", body: ".st-about-body" },
+  "custom-rich": { heading: ".st-section-title", body: ".st-section-sub" },
+  closing: { heading: ".st-display" },
+  "service-area": { heading: ".st-section-title" },
+  featured: { title: ".st-section-title" },
+  "how-it-works": { heading: ".st-section-title" },
+} as const;
+
+export type FieldStyleSectionType = keyof typeof SECTION_FIELD_SELECTORS;
+
+/** Whether a section type exposes inline-text fields (and thus per-field styles). */
+export function hasFieldSelectors(
+  type: string
+): type is FieldStyleSectionType {
+  return Object.prototype.hasOwnProperty.call(SECTION_FIELD_SELECTORS, type);
+}
+
+/**
+ * Defensively extract the per-field style overrides from a section's stored
+ * `settings`. Returns `{}` when absent/malformed and DROPS any field whose
+ * override doesn't validate (size out of range, bad hex, unknown font) so a
+ * hand-edited document can never inject raw CSS through this path. Each surviving
+ * entry is the normalized `FieldStyle` (unknown keys stripped). Used by the
+ * shared renderer to emit scoped per-element style.
+ */
+export function parseFieldStyles(
+  settings: unknown
+): Record<string, FieldStyle> {
+  if (settings == null || typeof settings !== "object") return {};
+  const raw = (settings as { fieldStyles?: unknown }).fieldStyles;
+  if (raw == null || typeof raw !== "object") return {};
+
+  const out: Record<string, FieldStyle> = {};
+  for (const [field, value] of Object.entries(raw as Record<string, unknown>)) {
+    const parsed = fieldStyleSchema.safeParse(value);
+    if (!parsed.success) continue;
+    const style = parsed.data;
+    // Drop empty overrides (an object with no surviving keys = no override).
+    if (
+      style.sizePx === undefined &&
+      style.color === undefined &&
+      style.bold === undefined &&
+      style.italic === undefined &&
+      style.font === undefined
+    ) {
+      continue;
+    }
+    out[field] = style;
+  }
+  return out;
+}
+
 /** Bounded image URL — an absolute http(s) URL. Required form. */
 const requiredImageUrlSchema = z
   .string()
@@ -72,6 +203,7 @@ export const heroSettingsSchema = z.object({
   headline: z.string().trim().max(HERO_HEADLINE_MAX).optional(),
   message: z.string().trim().max(HERO_MESSAGE_MAX).optional(),
   imageUrl: imageUrlSchema,
+  ...withFieldStyles,
 });
 
 /**
@@ -82,6 +214,7 @@ export const heroSettingsSchema = z.object({
 export const aboutSettingsSchema = z.object({
   heading: z.string().trim().max(ABOUT_HEADING_MAX).optional(),
   body: z.string().trim().max(ABOUT_BODY_MAX).optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -99,6 +232,7 @@ export const trustSettingsSchema = z.object({
     )
     .max(TRUST_BADGES_MAX)
     .optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -117,6 +251,7 @@ export const testimonialsSettingsSchema = z.object({
     )
     .max(TESTIMONIALS_MAX)
     .optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -143,6 +278,7 @@ export const faqSettingsSchema = z.object({
 export const customRichSettingsSchema = z.object({
   heading: z.string().trim().max(CUSTOM_RICH_HEADING_MAX).optional(),
   body: z.string().trim().max(CUSTOM_RICH_BODY_MAX).optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -183,6 +319,7 @@ export const closingSettingsSchema = z.object({
   heading: z.string().trim().max(CLOSING_HEADING_MAX).optional(),
   body: z.string().trim().max(CLOSING_BODY_MAX).optional(),
   buttonLabel: z.string().trim().max(CLOSING_BUTTON_LABEL_MAX).optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -201,6 +338,7 @@ export const howItWorksSettingsSchema = z.object({
     )
     .max(HOW_IT_WORKS_STEPS_MAX)
     .optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -210,6 +348,7 @@ export const howItWorksSettingsSchema = z.object({
 export const serviceAreaSettingsSchema = z.object({
   heading: z.string().trim().max(SERVICE_AREA_HEADING_MAX).optional(),
   intro: z.string().trim().max(SERVICE_AREA_INTRO_MAX).optional(),
+  ...withFieldStyles,
 });
 
 /**
@@ -220,6 +359,7 @@ export const featuredSettingsSchema = z.object({
   kicker: z.string().trim().max(FEATURED_KICKER_MAX).optional(),
   title: z.string().trim().max(FEATURED_TITLE_MAX).optional(),
   description: z.string().trim().max(FEATURED_DESCRIPTION_MAX).optional(),
+  ...withFieldStyles,
 });
 
 export type HeroSettings = z.infer<typeof heroSettingsSchema>;

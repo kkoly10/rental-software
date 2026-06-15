@@ -33,6 +33,11 @@ import {
   parseHowItWorksSettings,
   parseServiceAreaSettings,
   parseFeaturedSettings,
+  parseFieldStyles,
+  hasFieldSelectors,
+  SECTION_FIELD_SELECTORS,
+  FONT_STACKS,
+  type FieldStyle,
 } from "@/lib/storefront/sections/content-schemas";
 
 type FeaturedProduct = Awaited<
@@ -238,6 +243,68 @@ type RenderDocumentSectionsOptions = {
 };
 
 /**
+ * The per-element style wrapper is `display:contents` so it adds the scoped
+ * class WITHOUT introducing a layout box — the section's own markup keeps its
+ * exact place in the flow (the wrapper is only ever emitted when there ARE
+ * overrides, so the public default render is untouched).
+ */
+const CONTENTS_STYLE = { display: "contents" } as const;
+
+/**
+ * Build the CSS DECLARATIONS for one field's style override (PR-A). Every value
+ * here is computed from already-validated data — an integer px size, a
+ * regex-validated hex color, fixed weight/style literals, and a font-family
+ * looked up from the FONT_STACKS allowlist (never the raw enum value). No user
+ * free-text is ever interpolated, so the generated rule can't break out of its
+ * declaration block.
+ */
+function fieldStyleDeclarations(style: FieldStyle): string {
+  const decls: string[] = [];
+  if (typeof style.sizePx === "number") {
+    decls.push(`font-size:${style.sizePx}px`);
+  }
+  if (typeof style.color === "string") {
+    decls.push(`color:${style.color}`);
+  }
+  if (style.bold === true) {
+    decls.push("font-weight:700");
+  }
+  if (style.italic === true) {
+    decls.push("font-style:italic");
+  }
+  if (style.font) {
+    const stack = FONT_STACKS[style.font];
+    if (stack) decls.push(`font-family:${stack}`);
+  }
+  return decls.join(";");
+}
+
+/**
+ * Build the SCOPED stylesheet text for a section's per-element style overrides
+ * (PR-A). Each styled field maps (via the SHARED SECTION_FIELD_SELECTORS map) to
+ * a CSS selector, scoped under the section's unique wrapper class so the rules
+ * only ever affect THAT section's nodes. Returns "" when nothing styles — the
+ * caller uses that to decide whether to wrap/emit at all (byte-for-byte safety).
+ */
+function buildScopedStyleCss(
+  type: string,
+  fieldStyles: Record<string, FieldStyle>,
+  uniqueClass: string
+): string {
+  if (!hasFieldSelectors(type)) return "";
+  const selectors = SECTION_FIELD_SELECTORS[type];
+  const rules: string[] = [];
+  for (const [field, style] of Object.entries(fieldStyles)) {
+    const selector = (selectors as Record<string, string | undefined>)[field];
+    if (!selector) continue; // field has no rendered target → nothing to style
+    const decls = fieldStyleDeclarations(style);
+    if (!decls) continue;
+    rules.push(`.${uniqueClass} ${selector}{${decls}}`);
+  }
+  return rules.join("");
+}
+
+/**
  * Render the document's sections in order, skipping disabled ones and any type
  * not in the registry (unknown types render nothing — never crash). Returns the
  * ordered list of section nodes — the SAME output app/page.tsx's document branch
@@ -264,19 +331,51 @@ export function renderDocumentSections(
 
     const node = renderDocumentSection(ctx, section.type, section.settings);
 
+    // Per-element (Wix-like) style overrides (PR-A). Defensively parse the
+    // section's fieldStyles, build a SCOPED stylesheet keyed by a unique class,
+    // and — ONLY when there's something to style — wrap the section node in a
+    // layout-neutral div carrying that class plus an adjacent <style>. When
+    // fieldStyles is absent/empty the CSS is "" and we emit NOTHING extra, so the
+    // public render stays byte-for-byte identical to before this feature.
+    const fieldStyles = parseFieldStyles(section.settings);
+    const uniqueClass = `st-fs-${id}`;
+    const scopedCss =
+      Object.keys(fieldStyles).length > 0
+        ? buildScopedStyleCss(section.type, fieldStyles, uniqueClass)
+        : "";
+
     if (!editable) {
-      return <Fragment key={id}>{node}</Fragment>;
+      if (!scopedCss) {
+        return <Fragment key={id}>{node}</Fragment>;
+      }
+      // Layout-neutral wrapper (display:contents) so the scoped class can match
+      // descendants without introducing a box that could change the layout.
+      return (
+        <div key={id} className={uniqueClass} style={CONTENTS_STYLE}>
+          <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
+          {node}
+        </div>
+      );
     }
 
     // Editor mode: wrap in a layout-neutral marker the client overlay reads.
+    // When the section has per-element styles, also add the scoped class + style
+    // so the canvas previews them live (the same markup the public site emits).
     return (
       <div
         key={id}
         data-st-section-id={id}
         data-st-section-type={section.type}
         data-st-disabled={section.disabled ? "true" : undefined}
-        className="st-editable-section"
+        className={
+          scopedCss
+            ? `st-editable-section ${uniqueClass}`
+            : "st-editable-section"
+        }
       >
+        {scopedCss ? (
+          <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
+        ) : null}
         {node}
       </div>
     );

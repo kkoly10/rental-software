@@ -27,6 +27,7 @@ import {
   addSection,
   removeSection,
   setSectionSetting,
+  setSectionSettingValue,
   setNavLabel,
   NAV_LABEL_KEYS,
   NAV_LABEL_MAX,
@@ -36,8 +37,14 @@ import {
 import { uploadSectionImage } from "@/lib/settings/brand-upload-actions";
 import {
   isContentEditableSectionType,
+  SECTION_FIELD_SELECTORS,
+  FONT_STACKS,
+  FIELD_STYLE_SIZE_MIN,
+  FIELD_STYLE_SIZE_MAX,
   type ContentEditableSectionType,
+  type FieldStyle,
 } from "@/lib/storefront/sections/content-schemas";
+import { CURATED_FONTS } from "@/lib/data/storefront-tokens-schema";
 import { StorefrontSectionEditor } from "@/components/settings/storefront-section-editor";
 import { StorefrontTokenEditor } from "@/components/settings/storefront-token-editor";
 import { EditorTooltip } from "@/components/settings/editor-tooltip";
@@ -109,39 +116,72 @@ function readInlineEditStyle(el: HTMLElement): InlineEditStyle {
  * components' static class names — those components are NOT touched (HARD
  * CONSTRAINT) so the public render stays byte-for-byte identical.
  */
-const INLINE_TEXT_FIELDS: Record<
-  string,
-  { field: string; selector: string; multiline: boolean; max: number }[]
-> = {
-  hero: [
-    { field: "headline", selector: ".st-h1", multiline: false, max: 120 },
-    { field: "message", selector: ".st-lede", multiline: true, max: 300 },
-  ],
-  about: [
-    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
-    { field: "body", selector: ".st-about-body", multiline: true, max: 4000 },
-  ],
-  "custom-rich": [
-    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
-    { field: "body", selector: ".st-section-sub", multiline: true, max: 4000 },
-  ],
-  // PR-1f: simple single-text fields editable on the canvas. Structured lists
-  // (how-it-works steps) remain drawer-only. Selectors mirror the shared
-  // components' static class names (SectionHead → .st-section-title; the closing
-  // CTA → .st-display), scoped to the section wrapper.
-  closing: [
-    { field: "heading", selector: ".st-display", multiline: false, max: 120 },
-  ],
-  "service-area": [
-    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
-  ],
-  featured: [
-    { field: "title", selector: ".st-section-title", multiline: false, max: 120 },
-  ],
-  "how-it-works": [
-    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
-  ],
+type InlineTextField = {
+  field: string;
+  selector: string;
+  multiline: boolean;
+  max: number;
 };
+
+/**
+ * Per-(type,field) editing metadata (multiline + max length) for the inline text
+ * fields. The CSS SELECTOR is NOT stored here — it's derived from the SHARED
+ * SECTION_FIELD_SELECTORS map below so the runtime (which binds these DOM nodes)
+ * and the renderer (which scopes per-element style at the same selectors) use ONE
+ * source of truth. Structured lists (how-it-works steps) remain drawer-only.
+ */
+const INLINE_TEXT_FIELD_META: Record<
+  string,
+  Record<string, { multiline: boolean; max: number }>
+> = {
+  hero: {
+    headline: { multiline: false, max: 120 },
+    message: { multiline: true, max: 300 },
+  },
+  about: {
+    heading: { multiline: false, max: 120 },
+    body: { multiline: true, max: 4000 },
+  },
+  "custom-rich": {
+    heading: { multiline: false, max: 120 },
+    body: { multiline: true, max: 4000 },
+  },
+  closing: {
+    heading: { multiline: false, max: 120 },
+  },
+  "service-area": {
+    heading: { multiline: false, max: 120 },
+  },
+  featured: {
+    title: { multiline: false, max: 120 },
+  },
+  "how-it-works": {
+    heading: { multiline: false, max: 120 },
+  },
+};
+
+/**
+ * Section-type → inline-editable text field list (PR-2b), DERIVED from the shared
+ * SECTION_FIELD_SELECTORS map (the ONE source of truth) joined with the
+ * per-field multiline/max metadata above. The selectors mirror the shared
+ * section components' static class names — those components are NOT touched (HARD
+ * CONSTRAINT) so the public render stays byte-for-byte identical.
+ */
+const INLINE_TEXT_FIELDS: Record<string, InlineTextField[]> = Object.fromEntries(
+  Object.entries(INLINE_TEXT_FIELD_META).map(([type, fieldsMeta]) => {
+    const selectors = (
+      SECTION_FIELD_SELECTORS as Record<string, Record<string, string>>
+    )[type];
+    const fields: InlineTextField[] = Object.entries(fieldsMeta)
+      .map(([field, meta]) => {
+        const selector = selectors?.[field];
+        if (!selector) return null;
+        return { field, selector, multiline: meta.multiline, max: meta.max };
+      })
+      .filter((f): f is InlineTextField => f !== null);
+    return [type, fields];
+  })
+);
 
 /**
  * Section-type → on-canvas image-replace target (PR-2b). For a SELECTED section
@@ -174,6 +214,20 @@ const NAV_SUGGESTIONS: Record<NavLabelKey, string[]> = {
 };
 
 const NAV_LABEL_KEY_SET: ReadonlySet<string> = new Set(NAV_LABEL_KEYS);
+
+/**
+ * Curated, NOOB-friendly extra swatches for the per-element color picker (PR-A),
+ * shown alongside the document's own theme colors. Fixed, safe hex literals
+ * (validated again by the schema on publish) — never raw user text.
+ */
+const CURATED_COLOR_SWATCHES = [
+  "#1A1A1A",
+  "#FFFFFF",
+  "#E0A82E",
+  "#C0392B",
+  "#2E86C1",
+  "#27AE60",
+] as const;
 
 /**
  * On-canvas editor runtime (PR-2a). The storefront itself is server-rendered as
@@ -230,7 +284,16 @@ export function StorefrontEditorRuntime({
     style: InlineEditStyle; // copied computed styles for visual parity
   };
   type InlineEdit =
-    | (InlineEditBase & { kind: "section"; sectionId: string; field: string })
+    | (InlineEditBase & {
+        kind: "section";
+        sectionId: string;
+        field: string;
+        sectionType: string;
+        // The field's DEFAULT computed font-size in px (measured with any
+        // per-element size override neutralized). The S/M/L/XL presets multiply
+        // THIS so the steps are relative to the theme's natural size.
+        baseSizePx: number;
+      })
     | (InlineEditBase & { kind: "nav"; navKey: NavLabelKey });
   const [inlineEdit, setInlineEdit] = useState<InlineEdit | null>(null);
   // The currently-edited canvas element, kept so we can restore its visibility
@@ -536,6 +599,22 @@ export function StorefrontEditorRuntime({
 
       inlineTargetRef.current = el;
       inlineClosingRef.current = false;
+
+      // Measure the field's DEFAULT font-size (px) for the S/M/L/XL presets,
+      // BEFORE hiding the element. If a per-element size override is currently in
+      // effect (it's applied via the scoped `.st-fs-<id>` stylesheet rule), we
+      // temporarily strip that class off the wrapper ancestor so getComputedStyle
+      // reports the theme's natural size, then restore it immediately. classList
+      // toggling is non-structural so React stays happy.
+      const scopeEl = el.closest<HTMLElement>(`.st-fs-${sectionId}`);
+      let baseSizePx = parseFloat(window.getComputedStyle(el).fontSize) || 16;
+      if (scopeEl) {
+        const cls = `st-fs-${sectionId}`;
+        scopeEl.classList.remove(cls);
+        baseSizePx = parseFloat(window.getComputedStyle(el).fontSize) || baseSizePx;
+        scopeEl.classList.add(cls);
+      }
+
       // Hide the underlying canvas text (style toggle only — reversible, safe).
       el.style.visibility = "hidden";
 
@@ -545,6 +624,8 @@ export function StorefrontEditorRuntime({
         kind: "section",
         sectionId,
         field,
+        sectionType: type,
+        baseSizePx,
         multiline: fieldDef.multiline,
         max: fieldDef.max,
         value: el.innerText,
@@ -594,16 +675,29 @@ export function StorefrontEditorRuntime({
     });
   }, []);
 
+  // Whether a per-element style change happened during the open edit (set by the
+  // styling toolbar). Declared here so closeInlineEdit can consult + reset it.
+  const fieldStyleDirtyRef = useRef(false);
+
   // Restore the edited canvas element's visibility and tear down overlay state.
+  // If a per-element style was changed during the edit, refresh the canvas so the
+  // SERVER re-emits the scoped style (the only authoritative render path) — the
+  // canvas was never hand-mutated, so the reconcile stays clean.
   const closeInlineEdit = useCallback(() => {
     const el = inlineTargetRef.current;
     if (el) el.style.visibility = "";
     inlineTargetRef.current = null;
     setInlineEdit(null);
     setInlineEditing(false);
-  }, []);
+    if (fieldStyleDirtyRef.current) {
+      fieldStyleDirtyRef.current = false;
+      router.refresh();
+      requestAnimationFrame(() => requestAnimationFrame(measure));
+    }
+  }, [router, measure]);
 
-  // Cancel: discard edits, restore the original text, no save.
+  // Cancel: discard edits, restore the original text. Style changes were already
+  // written to the draft (no undo on those), so still refresh when style-dirty.
   const cancelInlineEdit = useCallback(() => {
     if (inlineClosingRef.current) return;
     inlineClosingRef.current = true;
@@ -649,6 +743,10 @@ export function StorefrontEditorRuntime({
     }
     setDoc(next);
 
+    // This path refreshes the canvas itself, so clear the style-dirty flag to
+    // avoid closeInlineEdit() triggering a second redundant refresh.
+    fieldStyleDirtyRef.current = false;
+
     void (async () => {
       try {
         const fd = new FormData();
@@ -676,6 +774,130 @@ export function StorefrontEditorRuntime({
   const commitInlineEdit = useCallback(() => {
     commitInlineEditWith();
   }, [commitInlineEditWith]);
+
+  // ── Per-element text styling toolbar (PR-A) ──────────────────────────────────
+  // Apply a style override live to the open overlay div so the operator sees the
+  // change instantly (the authoritative re-render happens on overlay close via
+  // router.refresh — same React-safe path text edits use). Mirrors the eventual
+  // scoped-CSS declarations.
+  const applyStyleToOverlay = useCallback((style: FieldStyle, baseSizePx: number) => {
+    const el = overlayRef.current;
+    if (!el) return;
+    el.style.fontSize = style.sizePx ? `${style.sizePx}px` : `${baseSizePx}px`;
+    el.style.color = style.color ?? "";
+    el.style.fontWeight = style.bold ? "700" : "";
+    el.style.fontStyle = style.italic ? "italic" : "";
+    el.style.fontFamily = style.font ? FONT_STACKS[style.font] : "";
+  }, []);
+
+  // Write the next FieldStyle for the field currently being edited: update the
+  // document (draft-only), debounce-save, and live-apply to the overlay. The
+  // canvas re-renders the scoped style on overlay close. No-op for nav edits.
+  const updateEditingFieldStyle = useCallback(
+    (mutate: (current: FieldStyle) => FieldStyle) => {
+      const edit = inlineEdit;
+      if (!edit || edit.kind !== "section") return;
+
+      const record = doc.sections[edit.sectionId];
+      const existing =
+        (record?.settings as { fieldStyles?: Record<string, FieldStyle> })
+          ?.fieldStyles ?? {};
+      const current = existing[edit.field] ?? {};
+      const nextStyle = mutate(current);
+
+      // Drop empty keys so a cleared override leaves no trace (byte-for-byte).
+      const cleaned: FieldStyle = {};
+      if (typeof nextStyle.sizePx === "number") cleaned.sizePx = nextStyle.sizePx;
+      if (typeof nextStyle.color === "string") cleaned.color = nextStyle.color;
+      if (nextStyle.bold === true) cleaned.bold = true;
+      if (nextStyle.italic === true) cleaned.italic = true;
+      if (nextStyle.font) cleaned.font = nextStyle.font;
+
+      const nextFieldStyles: Record<string, FieldStyle> = { ...existing };
+      if (Object.keys(cleaned).length === 0) delete nextFieldStyles[edit.field];
+      else nextFieldStyles[edit.field] = cleaned;
+
+      const next = setSectionSettingValue(
+        doc,
+        edit.sectionId,
+        "fieldStyles",
+        Object.keys(nextFieldStyles).length > 0 ? nextFieldStyles : undefined
+      );
+      setDoc(next);
+      fieldStyleDirtyRef.current = true;
+      applyStyleToOverlay(cleaned, edit.baseSizePx);
+      scheduleSave();
+    },
+    [inlineEdit, doc, applyStyleToOverlay, scheduleSave]
+  );
+
+  // The S/M/L/XL multipliers (relative to the field's default computed size).
+  // M = ×1 clears the override (falls back to the theme default). The result is
+  // clamped to the schema's [min,max] and stored as a rounded integer.
+  const onSizePreset = useCallback(
+    (key: "S" | "M" | "L" | "XL") => {
+      const edit = inlineEdit;
+      if (!edit || edit.kind !== "section") return;
+      const mult = key === "S" ? 0.8 : key === "L" ? 1.35 : key === "XL" ? 1.7 : 1;
+      updateEditingFieldStyle((current) => {
+        if (key === "M") {
+          const { sizePx: _drop, ...rest } = current;
+          void _drop;
+          return rest;
+        }
+        const px = Math.round(
+          Math.min(
+            FIELD_STYLE_SIZE_MAX,
+            Math.max(FIELD_STYLE_SIZE_MIN, edit.baseSizePx * mult)
+          )
+        );
+        return { ...current, sizePx: px };
+      });
+    },
+    [inlineEdit, updateEditingFieldStyle]
+  );
+
+  const onColorSwatch = useCallback(
+    (color: string | undefined) => {
+      updateEditingFieldStyle((current) => {
+        if (!color) {
+          const { color: _drop, ...rest } = current;
+          void _drop;
+          return rest;
+        }
+        return { ...current, color };
+      });
+    },
+    [updateEditingFieldStyle]
+  );
+
+  const onToggleBold = useCallback(() => {
+    updateEditingFieldStyle((current) =>
+      current.bold ? (({ bold: _b, ...rest }) => rest)(current) : { ...current, bold: true }
+    );
+  }, [updateEditingFieldStyle]);
+
+  const onToggleItalic = useCallback(() => {
+    updateEditingFieldStyle((current) =>
+      current.italic
+        ? (({ italic: _i, ...rest }) => rest)(current)
+        : { ...current, italic: true }
+    );
+  }, [updateEditingFieldStyle]);
+
+  const onPickFont = useCallback(
+    (font: string) => {
+      updateEditingFieldStyle((current) => {
+        if (!font) {
+          const { font: _drop, ...rest } = current;
+          void _drop;
+          return rest;
+        }
+        return { ...current, font: font as FieldStyle["font"] };
+      });
+    },
+    [updateEditingFieldStyle]
+  );
 
   // Keep a stable ref to openInlineEdit so the (empty-dep) global click handler
   // can call the latest version without re-binding on every doc change.
@@ -1012,6 +1234,38 @@ export function StorefrontEditorRuntime({
       out.push(label);
     }
     return out;
+  })();
+
+  // ── Per-element styling toolbar derived values (PR-A) ────────────────────────
+  // The open SECTION text edit's current style (for active-state highlighting),
+  // plus the swatch palette = the document's theme colors + curated extras.
+  const stylingEdit =
+    inlineEdit && inlineEdit.kind === "section" ? inlineEdit : null;
+  const currentFieldStyle: FieldStyle = (() => {
+    if (!stylingEdit) return {};
+    const record = doc.sections[stylingEdit.sectionId];
+    const fs = (record?.settings as { fieldStyles?: Record<string, FieldStyle> })
+      ?.fieldStyles;
+    return fs?.[stylingEdit.field] ?? {};
+  })();
+  const themeSwatches: { key: string; value: string }[] = theme
+    ? [
+        { key: "background", value: theme.colors.background },
+        { key: "surface", value: theme.colors.surface },
+        { key: "text", value: theme.colors.text },
+        { key: "textMuted", value: theme.colors.textMuted },
+        { key: "primary", value: theme.colors.primary },
+        { key: "accent", value: theme.colors.accent },
+      ]
+    : [];
+  // Which size preset is active (M = no override). Compare against the stored px.
+  const activeSizePreset: "S" | "M" | "L" | "XL" = (() => {
+    if (!stylingEdit || typeof currentFieldStyle.sizePx !== "number") return "M";
+    const ratio = currentFieldStyle.sizePx / stylingEdit.baseSizePx;
+    if (ratio <= 0.9) return "S";
+    if (ratio >= 1.5) return "XL";
+    if (ratio >= 1.18) return "L";
+    return "M";
   })();
 
   // ── Guided tour steps (PR-2d) ───────────────────────────────────────────────
@@ -1432,10 +1686,167 @@ export function StorefrontEditorRuntime({
               commitInlineEdit();
             }
           }}
-          onBlur={() => {
+          onBlur={(e) => {
+            // Don't commit (and tear the overlay down) when focus is moving into
+            // the editor chrome — e.g. the per-element styling toolbar's font
+            // <select>. Those controls write to the draft and keep the overlay
+            // open; the overlay still commits on a true blur (clicking the
+            // canvas), Enter, or Escape.
+            const next = e.relatedTarget as HTMLElement | null;
+            if (next?.closest("[data-st-editor-chrome]")) return;
             commitInlineEdit();
           }}
         />
+      )}
+
+      {/* ── Per-element text styling toolbar (PR-A) ───────────────────────────
+          Anchored just above the inline-edit overlay while a SECTION text field
+          is being edited. FRIENDLY presets only (no hex/px shown by default).
+          Buttons use onMouseDown + preventDefault so clicking them doesn't first
+          blur the overlay; the font <select> relies on the overlay's
+          chrome-aware onBlur (above) to stay open. Each control writes the
+          field's fieldStyles to the draft, live-applies to the overlay, and the
+          canvas re-emits the scoped style on overlay close. */}
+      {stylingEdit && (
+        <div
+          className="st-editor-style-toolbar"
+          data-st-editor-chrome
+          role="toolbar"
+          aria-label={m.styleToolbarLabel}
+          style={{
+            top: Math.max(8, stylingEdit.frame.top - 52),
+            left: Math.max(8, stylingEdit.frame.left),
+          }}
+        >
+          {/* Size presets */}
+          <div className="st-style-tb-group" aria-label={m.styleSize} role="group">
+            {(["S", "M", "L", "XL"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`st-style-tb-btn${activeSizePreset === key ? " is-active" : ""}`}
+                aria-pressed={activeSizePreset === key}
+                aria-label={
+                  key === "S"
+                    ? m.styleSizeSmall
+                    : key === "M"
+                      ? m.styleSizeMedium
+                      : key === "L"
+                        ? m.styleSizeLarge
+                        : m.styleSizeXL
+                }
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onSizePreset(key);
+                }}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+
+          <span className="st-style-tb-sep" />
+
+          {/* Bold / Italic */}
+          <div className="st-style-tb-group" role="group">
+            <button
+              type="button"
+              className={`st-style-tb-btn${currentFieldStyle.bold ? " is-active" : ""}`}
+              aria-pressed={currentFieldStyle.bold === true}
+              aria-label={m.styleBold}
+              style={{ fontWeight: 700 }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onToggleBold();
+              }}
+            >
+              B
+            </button>
+            <button
+              type="button"
+              className={`st-style-tb-btn${currentFieldStyle.italic ? " is-active" : ""}`}
+              aria-pressed={currentFieldStyle.italic === true}
+              aria-label={m.styleItalic}
+              style={{ fontStyle: "italic" }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onToggleItalic();
+              }}
+            >
+              I
+            </button>
+          </div>
+
+          <span className="st-style-tb-sep" />
+
+          {/* Color swatches */}
+          <div
+            className="st-style-tb-swatches"
+            role="group"
+            aria-label={m.styleColor}
+          >
+            <button
+              type="button"
+              className={`st-style-tb-swatch is-default${currentFieldStyle.color === undefined ? " is-active" : ""}`}
+              aria-pressed={currentFieldStyle.color === undefined}
+              aria-label={m.styleColorDefault}
+              title={m.styleColorDefault}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onColorSwatch(undefined);
+              }}
+            />
+            {themeSwatches.map((s) => (
+              <button
+                key={`theme-${s.key}`}
+                type="button"
+                className={`st-style-tb-swatch${currentFieldStyle.color?.toLowerCase() === s.value.toLowerCase() ? " is-active" : ""}`}
+                aria-pressed={
+                  currentFieldStyle.color?.toLowerCase() === s.value.toLowerCase()
+                }
+                aria-label={m[s.key as "background"]}
+                title={m[s.key as "background"]}
+                style={{ background: s.value }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onColorSwatch(s.value);
+                }}
+              />
+            ))}
+            {CURATED_COLOR_SWATCHES.map((c) => (
+              <button
+                key={`curated-${c}`}
+                type="button"
+                className={`st-style-tb-swatch${currentFieldStyle.color?.toLowerCase() === c.toLowerCase() ? " is-active" : ""}`}
+                aria-pressed={currentFieldStyle.color?.toLowerCase() === c.toLowerCase()}
+                aria-label={c}
+                title={c}
+                style={{ background: c }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onColorSwatch(c);
+                }}
+              />
+            ))}
+          </div>
+
+          <span className="st-style-tb-sep" />
+
+          {/* Font */}
+          <select
+            className="st-style-tb-select"
+            aria-label={m.styleFont}
+            value={currentFieldStyle.font ?? ""}
+            onChange={(e) => onPickFont(e.target.value)}
+          >
+            <option value="">{m.styleFontDefault}</option>
+            {CURATED_FONTS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       {/* ── Suggestions popover (PR-2e) ──────────────────────────────────────
