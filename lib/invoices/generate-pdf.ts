@@ -18,6 +18,9 @@ export type InvoiceData = {
   orderNumber: string;
   invoiceDate: string;
   eventDate: string;
+  /** Label for the event/rental date row. Defaults to "Event date";
+   *  general ("other") operators pass "Rental date". */
+  dateLabel?: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -103,7 +106,7 @@ export function generateInvoicePdf(data: InvoiceData): Uint8Array {
   // ─── Event details — hairline band, no fill ───────────────────────
   drawHairline(doc, margin, margin + contentWidth, y);
   y += 16;
-  drawEyebrow(doc, "Event date", margin, y);
+  drawEyebrow(doc, data.dateLabel ?? "Event date", margin, y);
   drawEyebrow(doc, "Order number", margin + 190, y);
   drawEyebrow(doc, "Status", margin + 380, y);
 

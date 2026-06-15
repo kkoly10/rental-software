@@ -132,6 +132,7 @@ const enValues = {
       kicker: "Explore by rentals",
       title: "Popular Rentals",
       description: "Browse our most popular rentals and check availability for your event date.",
+      descriptionGeneral: "Browse our most popular rentals and check availability for your dates.",
       browseAll: "Browse all",
     },
     howItWorks: {
@@ -141,6 +142,11 @@ const enValues = {
         { title: "Choose Your Rentals", description: "Browse available rentals and add-ons that fit your event." },
         { title: "Select Date, Time & Delivery Area", description: "Enter your event date/time and ZIP code so we can confirm availability and delivery." },
         { title: "Reserve Online & Get Ready", description: "Reserve in minutes, then our team delivers, sets up safely, and handles pickup after the event." },
+      ],
+      stepsGeneral: [
+        { title: "Choose Your Rentals", description: "Browse available rentals and add-ons for what you need." },
+        { title: "Select Dates & Delivery Area", description: "Enter your rental dates and ZIP code so we can confirm availability and delivery." },
+        { title: "Reserve Online & Get Ready", description: "Reserve in minutes — pick up or have it delivered, and we'll handle the return." },
       ],
     },
     categoryGrid: {
@@ -735,6 +741,8 @@ const enValues = {
       newOrder: "New order",
       missingEventDateBadge: "No event date",
       missingEventDateBanner: "This order has no event date — it won't appear on the calendar or route board until you add one.",
+      missingEventDateBadgeGeneral: "No rental date",
+      missingEventDateBannerGeneral: "This order has no rental date — it won't appear on the calendar or route board until you add one.",
       newOrderTitle: "Create Order",
       newOrderDescription: "Create a new manual booking, quote, or internal reservation.",
       newOrderKicker: "Booking creation",
@@ -753,6 +761,7 @@ const enValues = {
         labels: {
           customer: "Customer",
           eventDate: "Event date",
+          eventDateGeneral: "Rental date",
           rentalItems: "Rental items",
           deliveryAddress: "Delivery address",
           documents: "Documents",
@@ -1838,6 +1847,7 @@ const enValues = {
     cards: {
       whatHappensNext: "What happens next",
       whatHappensNextBody: "Our team will review your booking, confirm the event date, and send you setup and safety details.",
+      whatHappensNextBodyGeneral: "Our team will review your booking, confirm the details, and follow up with anything you need.",
       trackYourOrder: "Track your order",
       trackYourOrderBody: "Open your secure portal link to check status, view documents, and message the operator.",
     },
@@ -2051,6 +2061,7 @@ const enValues = {
       emailLabel: "Email",
       emailPlaceholder: "customer@example.com",
       eventDateLabel: "Event date",
+      eventDateLabelGeneral: "Rental date",
       startTimeLabel: "Start time",
       endTimeLabel: "End time",
       sameDayTimeClashWarning: "Start time and end time are the same. For a same-day rental, the delivery and pickup stops would carry identical scheduled times — give them distinct values before saving.",
@@ -2793,6 +2804,7 @@ const enValues = {
     deliveryEnRoute: "{businessName}: Crew is on the way for order #{orderNumber}! ETA: {eta}. Reply STOP to opt out.",
     deliveryEnRouteWithTracking: "{businessName}: Crew is on the way for order #{orderNumber}! ETA: {eta}. Track: {trackingUrl} Reply STOP to opt out.",
     deliveryCompleted: "{businessName}: Order #{orderNumber} delivered and set up. Enjoy your event! Reply STOP to opt out.",
+    deliveryCompletedGeneral: "{businessName}: Order #{orderNumber} delivered. Enjoy your rental! Reply STOP to opt out.",
     weatherAlert: "{businessName}: Weather alert for {date} may affect order #{orderNumber}. We'll contact you if changes are needed. Reply STOP to opt out.",
     paymentReceived: "{businessName}: Payment of {amount} received for order #{orderNumber}. Thank you! Reply STOP to opt out.",
     orderCancelled: "{businessName}: Order #{orderNumber} has been cancelled. Contact us with any questions. Reply STOP to opt out.",

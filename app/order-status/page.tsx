@@ -7,6 +7,8 @@ import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { lookupOrderByPortalToken } from "@/lib/portal/lookup";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { getMessages } from "@/lib/i18n/server";
+import { getPublicPrimaryVerticalSlug } from "@/lib/verticals/storefront-defaults";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -27,10 +29,14 @@ export default async function OrderStatusPage({
   await requirePublicOrg();
 
   const { token } = await searchParams;
-  const [initialState, m] = await Promise.all([
+  const [initialState, m, verticalSlug] = await Promise.all([
     token ? lookupOrderByPortalToken(token) : Promise.resolve(undefined),
     getMessages(),
+    getPublicPrimaryVerticalSlug(),
   ]);
+  // General ("other") rentals (tools, AV, furniture) aren't weather-bound —
+  // suppress the "check weather for your event day" note for them.
+  const general = isGeneralVertical(verticalSlug);
 
   return (
     <>
@@ -48,7 +54,7 @@ export default async function OrderStatusPage({
             </p>
           </div>
 
-          <OrderLookupForm initialState={initialState} />
+          <OrderLookupForm initialState={initialState} isGeneral={general} />
         </div>
       </main>
 

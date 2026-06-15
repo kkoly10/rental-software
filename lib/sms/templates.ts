@@ -21,8 +21,14 @@ export type SmsTemplateKey =
 
 export type SmsTemplateValues = Record<string, string | undefined>;
 
+// Vertical-aware render keys: the general ("other") vertical swaps a few
+// event-framed bodies for neutral copy. These render-only keys aren't part
+// of SmsTemplateKey (which gates settings/WhatsApp eligibility by the
+// original event key) — they're only ever passed to renderSmsTemplate.
+export type SmsRenderKey = SmsTemplateKey | "deliveryCompletedGeneral";
+
 export function renderSmsTemplate(
-  key: SmsTemplateKey,
+  key: SmsRenderKey,
   values: SmsTemplateValues,
   locale: Locale | string = "en"
 ): string {

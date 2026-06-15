@@ -131,6 +131,7 @@ export const es: Messages = {
       kicker: "Explorar por alquileres",
       title: "Alquileres populares",
       description: "Explora nuestros alquileres más populares y consulta la disponibilidad para la fecha de tu evento.",
+      descriptionGeneral: "Explora nuestros alquileres más populares y consulta la disponibilidad para tus fechas.",
       browseAll: "Ver todos",
     },
     howItWorks: {
@@ -140,6 +141,11 @@ export const es: Messages = {
         { title: "Elige tus alquileres", description: "Explora los alquileres y complementos disponibles para tu evento." },
         { title: "Fecha, hora y zona de entrega", description: "Introduce la fecha, hora y código postal para confirmar disponibilidad y entrega." },
         { title: "Reserva en línea y prepárate", description: "Reserva en minutos: nuestro equipo entrega, monta de forma segura y recoge tras el evento." },
+      ],
+      stepsGeneral: [
+        { title: "Elige tus alquileres", description: "Explora los alquileres y complementos disponibles para lo que necesitas." },
+        { title: "Fechas y zona de entrega", description: "Introduce tus fechas de alquiler y código postal para confirmar disponibilidad y entrega." },
+        { title: "Reserva en línea y prepárate", description: "Reserva en minutos: recoge o recibe la entrega, y nosotros nos encargamos de la devolución." },
       ],
     },
     categoryGrid: {
@@ -734,6 +740,8 @@ export const es: Messages = {
       newOrder: "Nuevo pedido",
       missingEventDateBadge: "Sin fecha de evento",
       missingEventDateBanner: "Este pedido no tiene fecha de evento — no aparecerá en el calendario ni en el tablero de rutas hasta que añadas una.",
+      missingEventDateBadgeGeneral: "Sin fecha de alquiler",
+      missingEventDateBannerGeneral: "Este pedido no tiene fecha de alquiler — no aparecerá en el calendario ni en el tablero de rutas hasta que añadas una.",
       newOrderTitle: "Crear pedido",
       newOrderDescription: "Crea una nueva reserva manual, presupuesto o reserva interna.",
       newOrderKicker: "Creación de reserva",
@@ -752,6 +760,7 @@ export const es: Messages = {
         labels: {
           customer: "Cliente",
           eventDate: "Fecha del evento",
+          eventDateGeneral: "Fecha de alquiler",
           rentalItems: "Artículos alquilados",
           deliveryAddress: "Dirección de entrega",
           documents: "Documentos",
@@ -1832,6 +1841,7 @@ export const es: Messages = {
     cards: {
       whatHappensNext: "Qué sigue",
       whatHappensNextBody: "Nuestro equipo revisará tu reserva, confirmará la fecha y te enviará detalles de montaje y seguridad.",
+      whatHappensNextBodyGeneral: "Nuestro equipo revisará tu reserva, confirmará los detalles y te contactará con lo que necesites.",
       trackYourOrder: "Sigue tu pedido",
       trackYourOrderBody: "Abre tu enlace de portal seguro para ver estado, documentos y enviar mensajes al operador.",
     },
@@ -2043,6 +2053,7 @@ export const es: Messages = {
       emailLabel: "Correo electrónico",
       emailPlaceholder: "cliente@ejemplo.com",
       eventDateLabel: "Fecha del evento",
+      eventDateLabelGeneral: "Fecha de alquiler",
       startTimeLabel: "Hora de inicio",
       endTimeLabel: "Hora de fin",
       sameDayTimeClashWarning: "La hora de inicio y la de fin son iguales. En un alquiler del mismo día, las paradas de entrega y recogida llevarían el mismo horario — usa valores distintos antes de guardar.",
@@ -2785,6 +2796,7 @@ export const es: Messages = {
     deliveryEnRoute: "{businessName}: ¡El equipo está en camino para el pedido #{orderNumber}! ETA: {eta}. Responde STOP para darte de baja.",
     deliveryEnRouteWithTracking: "{businessName}: ¡El equipo está en camino para el pedido #{orderNumber}! ETA: {eta}. Sigue: {trackingUrl} Responde STOP para darte de baja.",
     deliveryCompleted: "{businessName}: Pedido #{orderNumber} entregado e instalado. ¡Disfruta tu evento! Responde STOP para darte de baja.",
+    deliveryCompletedGeneral: "{businessName}: Pedido #{orderNumber} entregado. ¡Disfruta tu alquiler! Responde STOP para darte de baja.",
     weatherAlert: "{businessName}: Alerta meteorológica el {date} que podría afectar el pedido #{orderNumber}. Te contactaremos si hay cambios. Responde STOP para darte de baja.",
     paymentReceived: "{businessName}: Pago de {amount} recibido para el pedido #{orderNumber}. ¡Gracias! Responde STOP para darte de baja.",
     orderCancelled: "{businessName}: El pedido #{orderNumber} ha sido cancelado. Contáctanos si tienes preguntas. Responde STOP para darte de baja.",

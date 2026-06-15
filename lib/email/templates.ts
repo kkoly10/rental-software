@@ -370,6 +370,8 @@ export type PaymentReceivedData = {
   newBalance: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  /** General ("other") vertical → neutral rental wording. */
+  general?: boolean;
   // Whether the booking is now fully paid. Optional so callers that don't
   // pass it fall back to the legacy "$0.00" string check — but localized
   // money strings (e.g. "0,00 €") wouldn't match that, so the trigger now
@@ -380,7 +382,7 @@ export type PaymentReceivedData = {
 
 export function paymentReceivedEmail(data: PaymentReceivedData): string {
   const isFullyPaid = data.fullyPaid ?? data.newBalance === "$0.00";
-  const t = emailCopy(data.locale);
+  const t = emailCopy(data.locale, data.general);
   const c = t.paymentReceived;
 
   return layout(
@@ -464,11 +466,13 @@ export type OrderStatusUpdateData = {
   crewName?: string;
   portalUrl?: string;
   locale: EmailLocale;
+  /** General ("other") vertical → neutral rental wording. */
+  general?: boolean;
   brandColor?: string | null;
 };
 
 export function orderStatusUpdateEmail(data: OrderStatusUpdateData): string {
-  const t = emailCopy(data.locale);
+  const t = emailCopy(data.locale, data.general);
   const c = t.orderStatus;
   const known = (c.statuses as Record<string, { heading: string; body: string }>)[data.newStatus];
   const msg = known ?? { heading: c.fallbackHeading, body: c.fallbackBody };
@@ -566,11 +570,13 @@ export type EventReminderData = {
   setupInstructions?: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  /** General ("other") vertical → neutral rental wording. */
+  general?: boolean;
   brandColor?: string | null;
 };
 
 export function eventReminderEmail(data: EventReminderData): string {
-  const t = emailCopy(data.locale);
+  const t = emailCopy(data.locale, data.general);
   const c = t.eventReminder;
   const rows: [string, string][] = [
     [t.labels.order, `#${data.orderNumber}`],
@@ -682,11 +688,13 @@ export type PostEventFollowUpData = {
   storefrontUrl: string;
   supportEmail: string | null;
   locale: EmailLocale;
+  /** General ("other") vertical → neutral rental wording. */
+  general?: boolean;
   brandColor?: string | null;
 };
 
 export function postEventFollowUpEmail(data: PostEventFollowUpData): string {
-  const t = emailCopy(data.locale);
+  const t = emailCopy(data.locale, data.general);
   const c = t.postEventFollowUp;
   const accent = emailAccent(data.brandColor);
   return layout(

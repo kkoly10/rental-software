@@ -131,6 +131,7 @@ export const fr: Messages = {
       kicker: "Explorer nos locations",
       title: "Locations populaires",
       description: "Parcourez nos locations les plus populaires et vérifiez la disponibilité pour votre date.",
+      descriptionGeneral: "Parcourez nos locations les plus populaires et vérifiez la disponibilité pour vos dates.",
       browseAll: "Tout parcourir",
     },
     howItWorks: {
@@ -140,6 +141,11 @@ export const fr: Messages = {
         { title: "Choisissez vos locations", description: "Parcourez les locations et options disponibles pour votre événement." },
         { title: "Date, heure et zone de livraison", description: "Indiquez la date, l’heure et le code postal pour confirmer la disponibilité et la livraison." },
         { title: "Réservez en ligne et préparez-vous", description: "Réservez en quelques minutes : notre équipe livre, installe en sécurité et récupère après l’événement." },
+      ],
+      stepsGeneral: [
+        { title: "Choisissez vos locations", description: "Parcourez les locations et options disponibles selon vos besoins." },
+        { title: "Dates et zone de livraison", description: "Indiquez vos dates de location et code postal pour confirmer la disponibilité et la livraison." },
+        { title: "Réservez en ligne et préparez-vous", description: "Réservez en quelques minutes : retrait ou livraison, et nous gérons le retour." },
       ],
     },
     categoryGrid: {
@@ -734,6 +740,8 @@ export const fr: Messages = {
       newOrder: "Nouvelle commande",
       missingEventDateBadge: "Pas de date d’événement",
       missingEventDateBanner: "Cette commande n’a pas de date d’événement — elle n’apparaîtra pas dans le calendrier ni sur le tableau des tournées tant que vous n’en ajoutez pas une.",
+      missingEventDateBadgeGeneral: "Pas de date de location",
+      missingEventDateBannerGeneral: "Cette commande n’a pas de date de location — elle n’apparaîtra pas dans le calendrier ni sur le tableau des tournées tant que vous n’en ajoutez pas une.",
       newOrderTitle: "Créer une commande",
       newOrderDescription: "Créez une nouvelle réservation manuelle, un devis ou une réservation interne.",
       newOrderKicker: "Création de réservation",
@@ -752,6 +760,7 @@ export const fr: Messages = {
         labels: {
           customer: "Client",
           eventDate: "Date de l’événement",
+          eventDateGeneral: "Date de location",
           rentalItems: "Articles loués",
           deliveryAddress: "Adresse de livraison",
           documents: "Documents",
@@ -1832,6 +1841,7 @@ export const fr: Messages = {
     cards: {
       whatHappensNext: "Et ensuite ?",
       whatHappensNextBody: "Notre équipe examinera votre réservation, confirmera la date et vous enverra les détails d’installation et de sécurité.",
+      whatHappensNextBodyGeneral: "Notre équipe examinera votre réservation, confirmera les détails et vous recontactera pour tout besoin.",
       trackYourOrder: "Suivez votre commande",
       trackYourOrderBody: "Ouvrez votre lien de portail sécurisé pour vérifier le statut, consulter les documents et écrire à l’opérateur.",
     },
@@ -2043,6 +2053,7 @@ export const fr: Messages = {
       emailLabel: "E-mail",
       emailPlaceholder: "client@exemple.com",
       eventDateLabel: "Date de l’événement",
+      eventDateLabelGeneral: "Date de location",
       startTimeLabel: "Heure de début",
       endTimeLabel: "Heure de fin",
       sameDayTimeClashWarning: "Heure de début et heure de fin identiques. Pour une location le même jour, les arrêts de livraison et de récupération porteraient le même horaire — utilisez des valeurs distinctes avant d enregistrer.",
@@ -2785,6 +2796,7 @@ export const fr: Messages = {
     deliveryEnRoute: "{businessName} : L'équipe arrive pour la commande #{orderNumber} ! ETA : {eta}. STOP pour vous désabonner.",
     deliveryEnRouteWithTracking: "{businessName} : L'équipe arrive pour la commande #{orderNumber} ! ETA : {eta}. Suivi : {trackingUrl} STOP pour vous désabonner.",
     deliveryCompleted: "{businessName} : Commande #{orderNumber} livrée et installée. Bon événement ! STOP pour vous désabonner.",
+    deliveryCompletedGeneral: "{businessName} : Commande #{orderNumber} livrée. Bonne location ! STOP pour vous désabonner.",
     weatherAlert: "{businessName} : Alerte météo le {date} pouvant affecter la commande #{orderNumber}. Nous vous contacterons si besoin. STOP pour vous désabonner.",
     paymentReceived: "{businessName} : Paiement de {amount} reçu pour la commande #{orderNumber}. Merci ! STOP pour vous désabonner.",
     orderCancelled: "{businessName} : La commande #{orderNumber} a été annulée. Contactez-nous pour toute question. STOP pour vous désabonner.",

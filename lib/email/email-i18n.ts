@@ -723,6 +723,128 @@ const pt: EmailCopyBundle = {
 
 const BUNDLES: Record<EmailLocale, EmailCopyBundle> = { en, fr, es, pt };
 
-export function emailCopy(locale: EmailLocale): EmailCopyBundle {
-  return BUNDLES[locale] ?? en;
+// General ("other") vertical overrides — the event-framed strings that read
+// wrong for a tool / AV / furniture operator. Only these keys differ; the
+// rest of the bundle (and all six event verticals) are unchanged.
+type GeneralEmailOverride = {
+  paymentFullyPaidBody: string;
+  paymentBalanceDue: (balance: string) => string;
+  statusConfirmedBody: string;
+  statusScheduledBody: string;
+  statusDeliveredBody: string;
+  statusCompletedBody: string;
+  reminderSetupNotesTitle: string;
+  reminderAccessNote: string;
+  followUpHeading: string;
+  followUpIntro: (firstName: string, date: string, businessName: string) => string;
+  followUpBookAgainPrompt: string;
+  followUpSubject: (businessName: string) => string;
+};
+
+const GENERAL_OVERRIDES: Record<EmailLocale, GeneralEmailOverride> = {
+  en: {
+    paymentFullyPaidBody: "We'll be in touch with the details before your rental begins.",
+    paymentBalanceDue: (balance) => `Your remaining balance of ${balance} is due before your rental begins.`,
+    statusConfirmedBody: "Your booking is locked in. We'll share the details as your rental date approaches.",
+    statusScheduledBody: "Your delivery has been scheduled. We'll have everything ready for your rental.",
+    statusDeliveredBody: "Your rental is ready to go. Enjoy your rental!",
+    statusCompletedBody: "Your rental is complete. Thank you — we'd love to have you back.",
+    reminderSetupNotesTitle: "Notes",
+    reminderAccessNote: "Please make sure the location is accessible. Reach out if you have any questions before your rental.",
+    followUpHeading: "How did it go?",
+    followUpIntro: (firstName, date, businessName) =>
+      `Hi ${firstName}, we hope your rental on ${date} went well! Thank you for renting with ${businessName}.`,
+    followUpBookAgainPrompt: "Need it again?",
+    followUpSubject: (businessName) => `How did your rental go? — ${businessName}`,
+  },
+  fr: {
+    paymentFullyPaidBody: "Nous vous contacterons avec les détails avant le début de votre location.",
+    paymentBalanceDue: (balance) => `Votre solde restant de ${balance} est dû avant le début de votre location.`,
+    statusConfirmedBody: "Votre réservation est confirmée. Nous vous enverrons les détails à l’approche de la date.",
+    statusScheduledBody: "Votre livraison est planifiée. Nous préparerons tout pour votre location.",
+    statusDeliveredBody: "Votre location est prête. Bonne location !",
+    statusCompletedBody: "Votre location est terminée. Merci — au plaisir de vous revoir.",
+    reminderSetupNotesTitle: "Remarques",
+    reminderAccessNote: "Merci de vous assurer que le lieu est accessible. Contactez-nous pour toute question avant votre location.",
+    followUpHeading: "Comment ça s’est passé ?",
+    followUpIntro: (firstName, date, businessName) =>
+      `Bonjour ${firstName}, nous espérons que votre location du ${date} s’est bien passée ! Merci d’avoir loué chez ${businessName}.`,
+    followUpBookAgainPrompt: "Besoin à nouveau ?",
+    followUpSubject: (businessName) => `Comment s’est passée votre location ? — ${businessName}`,
+  },
+  es: {
+    paymentFullyPaidBody: "Nos pondremos en contacto contigo con los detalles antes de que comience tu alquiler.",
+    paymentBalanceDue: (balance) => `El saldo restante de ${balance} se debe pagar antes de que comience tu alquiler.`,
+    statusConfirmedBody: "Tu reserva está confirmada. Te enviaremos los detalles a medida que se acerque la fecha.",
+    statusScheduledBody: "Tu entrega está programada. Tendremos todo listo para tu alquiler.",
+    statusDeliveredBody: "Tu alquiler está listo. ¡Disfruta tu alquiler!",
+    statusCompletedBody: "Tu alquiler ha finalizado. Gracias — nos encantaría tenerte de vuelta.",
+    reminderSetupNotesTitle: "Notas",
+    reminderAccessNote: "Asegúrate de que el lugar sea accesible. Contáctanos si tienes preguntas antes de tu alquiler.",
+    followUpHeading: "¿Qué tal fue?",
+    followUpIntro: (firstName, date, businessName) =>
+      `Hola ${firstName}, ¡esperamos que tu alquiler del ${date} haya ido bien! Gracias por alquilar con ${businessName}.`,
+    followUpBookAgainPrompt: "¿Lo necesitas de nuevo?",
+    followUpSubject: (businessName) => `¿Qué tal fue tu alquiler? — ${businessName}`,
+  },
+  pt: {
+    paymentFullyPaidBody: "Entraremos em contacto com os detalhes antes do início do seu aluguer.",
+    paymentBalanceDue: (balance) => `O saldo restante de ${balance} deve ser pago antes do início do seu aluguer.`,
+    statusConfirmedBody: "A sua reserva está confirmada. Enviaremos os detalhes à medida que a data se aproxima.",
+    statusScheduledBody: "A sua entrega está agendada. Teremos tudo pronto para o seu aluguer.",
+    statusDeliveredBody: "O seu aluguer está pronto. Aproveite o seu aluguer!",
+    statusCompletedBody: "O seu aluguer está concluído. Obrigado — adoraríamos tê-lo de volta.",
+    reminderSetupNotesTitle: "Notas",
+    reminderAccessNote: "Certifique-se de que o local está acessível. Contacte-nos se tiver questões antes do seu aluguer.",
+    followUpHeading: "Como correu?",
+    followUpIntro: (firstName, date, businessName) =>
+      `Olá ${firstName}, esperamos que o seu aluguer em ${date} tenha corrido bem! Obrigado por alugar com a ${businessName}.`,
+    followUpBookAgainPrompt: "Precisa novamente?",
+    followUpSubject: (businessName) => `Como correu o seu aluguer? — ${businessName}`,
+  },
+};
+
+/**
+ * Returns the email copy bundle for a locale. When `general` is true (the
+ * org's primary vertical is the setup-only "other" catch-all), the
+ * event-framed strings are swapped for neutral rental wording; every other
+ * string — and all six event verticals — are unchanged.
+ */
+export function emailCopy(locale: EmailLocale, general = false): EmailCopyBundle {
+  const base = BUNDLES[locale] ?? en;
+  if (!general) return base;
+  const g = GENERAL_OVERRIDES[locale] ?? GENERAL_OVERRIDES.en;
+  return {
+    ...base,
+    paymentReceived: {
+      ...base.paymentReceived,
+      fullyPaidBody: g.paymentFullyPaidBody,
+      balanceDue: g.paymentBalanceDue,
+    },
+    orderStatus: {
+      ...base.orderStatus,
+      statuses: {
+        ...base.orderStatus.statuses,
+        confirmed: { ...base.orderStatus.statuses.confirmed, body: g.statusConfirmedBody },
+        scheduled: { ...base.orderStatus.statuses.scheduled, body: g.statusScheduledBody },
+        delivered: { ...base.orderStatus.statuses.delivered, body: g.statusDeliveredBody },
+        completed: { ...base.orderStatus.statuses.completed, body: g.statusCompletedBody },
+      },
+    },
+    eventReminder: {
+      ...base.eventReminder,
+      setupNotesTitle: g.reminderSetupNotesTitle,
+      accessNote: g.reminderAccessNote,
+    },
+    postEventFollowUp: {
+      ...base.postEventFollowUp,
+      heading: g.followUpHeading,
+      intro: g.followUpIntro,
+      bookAgainPrompt: g.followUpBookAgainPrompt,
+    },
+    subjects: {
+      ...base.subjects,
+      postEventFollowUp: g.followUpSubject,
+    },
+  };
 }

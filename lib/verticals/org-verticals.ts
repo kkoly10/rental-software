@@ -42,6 +42,38 @@ export async function getPrimaryVerticalSlug(): Promise<string | null> {
   return data?.vertical_slug ?? ctx.businessType ?? null;
 }
 
+/**
+ * Primary vertical slug for an EXPLICIT org id, using a caller-supplied
+ * Supabase client. Unlike getPrimaryVerticalSlug() this needs no signed-in
+ * org context or storefront host, so it's safe in send-path code (SMS /
+ * email triggers, crons). Falls back to organizations.business_type when
+ * the join table has no row. Returns null on any failure.
+ */
+export async function getOrgPrimaryVerticalSlug(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: { from: (t: string) => any },
+  organizationId: string,
+): Promise<string | null> {
+  try {
+    const { data: vrow } = await supabase
+      .from("organization_verticals")
+      .select("vertical_slug")
+      .eq("organization_id", organizationId)
+      .eq("is_primary", true)
+      .maybeSingle();
+    if (vrow?.vertical_slug) return vrow.vertical_slug as string;
+
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("business_type")
+      .eq("id", organizationId)
+      .maybeSingle();
+    return (org as { business_type?: string | null } | null)?.business_type ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** All vertical slugs declared for the active org. Empty list when no
  *  org context. Useful for surfaces that should reflect every line of
  *  business — e.g. a "both bouncers and tents" empty-state hint. */

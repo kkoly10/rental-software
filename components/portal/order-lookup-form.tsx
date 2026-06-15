@@ -30,9 +30,12 @@ const DELIVERY_STATUSES = ["Scheduled", "Out for Delivery", "Delivered"];
 
 type Props = {
   initialState?: PortalLookupState;
+  /** True for the general ("other") vertical — hides event-only UI like
+   *  the weather note. Event verticals leave it unset. */
+  isGeneral?: boolean;
 };
 
-export function OrderLookupForm({ initialState }: Props) {
+export function OrderLookupForm({ initialState, isGeneral }: Props) {
   const { messages: m } = useI18n();
   const [state, formAction, pending] = useActionState<PortalLookupState, FormData>(
     lookupOrder,
@@ -123,16 +126,18 @@ export function OrderLookupForm({ initialState }: Props) {
               </div>
             )}
 
-            <div style={{
-              marginTop: 12,
-              padding: "10px 14px",
-              background: "var(--surface-muted)",
-              borderRadius: 12,
-              fontSize: 13,
-              color: "var(--text-soft)",
-            }}>
-              {m.portal.order.checkWeather}
-            </div>
+            {!isGeneral && (
+              <div style={{
+                marginTop: 12,
+                padding: "10px 14px",
+                background: "var(--surface-muted)",
+                borderRadius: 12,
+                fontSize: 13,
+                color: "var(--text-soft)",
+              }}>
+                {m.portal.order.checkWeather}
+              </div>
+            )}
 
             <div className="list" style={{ marginTop: 12 }}>
               <div className="order-card">

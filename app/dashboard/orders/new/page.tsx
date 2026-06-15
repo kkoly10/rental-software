@@ -2,17 +2,21 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { NewOrderForm } from "@/components/orders/new-order-form";
 import { getOrderFormOptions } from "@/lib/data/order-form-options";
 import { getMessages } from "@/lib/i18n/server";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 export default async function NewOrderPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ products, serviceAreas }, m, params] = await Promise.all([
+  const [{ products, serviceAreas }, m, params, verticalSlug] = await Promise.all([
     getOrderFormOptions(),
     getMessages(),
     searchParams,
+    getPrimaryVerticalSlug(),
   ]);
+  const general = isGeneralVertical(verticalSlug);
 
   // Deep-link prefill: /dashboard/orders/new?event_date=YYYY-MM-DD
   // Used by the diagnostic empty state on the route detail page so the
@@ -39,6 +43,7 @@ export default async function NewOrderPage({
           products={products}
           serviceAreas={serviceAreas}
           initialEventDate={initialEventDate}
+          isGeneral={general}
         />
       </section>
     </DashboardShell>

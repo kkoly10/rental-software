@@ -11,6 +11,8 @@ import {
   type DailyScheduleEvent,
 } from "@/lib/email/templates";
 import { resolveEmailLocale, emailCopy } from "@/lib/email/email-i18n";
+import { getOrgPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 import { formatEventDate as formatEventDateIntl } from "@/lib/i18n/format-helpers";
 import {
   todayUtc,
@@ -264,6 +266,12 @@ async function sendDayBeforeReminders(
 
       if (!claimed || claimed.length === 0) continue;
 
+      const general = isGeneralVertical(
+        await getOrgPrimaryVerticalSlug(
+          supabase as unknown as { from: (t: string) => unknown },
+          order.organization_id,
+        ),
+      );
       const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
@@ -279,6 +287,7 @@ async function sendDayBeforeReminders(
           deliveryAddress: addressMap.get(order.id),
           supportEmail: branding.supportEmail,
           locale: customerLocale,
+          general,
         }),
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
@@ -504,10 +513,16 @@ async function sendPostEventFollowUps(
 
       if (!claimed || claimed.length === 0) continue;
 
+      const general = isGeneralVertical(
+        await getOrgPrimaryVerticalSlug(
+          supabase as unknown as { from: (t: string) => unknown },
+          order.organization_id,
+        ),
+      );
       const emailed = await sendEmail({
         to: customer.email,
         from: branding.fromAddress,
-        subject: emailCopy(customerLocale).subjects.postEventFollowUp(branding.businessName),
+        subject: emailCopy(customerLocale, general).subjects.postEventFollowUp(branding.businessName),
         html: postEventFollowUpEmail({
           businessName: branding.businessName,
           brandColor: branding.brandColor,
@@ -519,6 +534,7 @@ async function sendPostEventFollowUps(
           storefrontUrl,
           supportEmail: branding.supportEmail,
           locale: customerLocale,
+          general,
         }),
         replyTo: branding.supportEmail ?? undefined,
         organizationId: order.organization_id,
