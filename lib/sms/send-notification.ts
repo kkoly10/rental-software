@@ -112,10 +112,28 @@ export async function sendSmsNotification(
     }
   }
 
+  // General ("other") operators rent tools / AV / furniture — swap the
+  // event-framed "Enjoy your event!" completion body for a neutral one.
+  // Resolve the org's primary vertical by id (no session at SMS send time).
+  let renderType: import("@/lib/sms/templates").SmsRenderKey = type;
+  if (organizationId && type === "deliveryCompleted") {
+    try {
+      const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+      const { getOrgPrimaryVerticalSlug } = await import("@/lib/verticals/org-verticals");
+      const { isGeneralVertical } = await import("@/lib/verticals/customer-language");
+      const supabase = await createSupabaseServerClient();
+      if (isGeneralVertical(await getOrgPrimaryVerticalSlug(supabase, organizationId))) {
+        renderType = "deliveryCompletedGeneral";
+      }
+    } catch {
+      // Keep the event default on any lookup failure.
+    }
+  }
+
   // Render in the customer's preferred locale; the legacy
   // `smsTemplates[type](params)` adapter would always render in English.
   let body = renderSmsTemplate(
-    type,
+    renderType,
     params as Record<string, string | undefined>,
     customerLocale
   );

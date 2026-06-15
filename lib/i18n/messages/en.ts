@@ -2787,6 +2787,7 @@ const enValues = {
     deliveryEnRoute: "{businessName}: Crew is on the way for order #{orderNumber}! ETA: {eta}. Reply STOP to opt out.",
     deliveryEnRouteWithTracking: "{businessName}: Crew is on the way for order #{orderNumber}! ETA: {eta}. Track: {trackingUrl} Reply STOP to opt out.",
     deliveryCompleted: "{businessName}: Order #{orderNumber} delivered and set up. Enjoy your event! Reply STOP to opt out.",
+    deliveryCompletedGeneral: "{businessName}: Order #{orderNumber} delivered. Enjoy your rental! Reply STOP to opt out.",
     weatherAlert: "{businessName}: Weather alert for {date} may affect order #{orderNumber}. We'll contact you if changes are needed. Reply STOP to opt out.",
     paymentReceived: "{businessName}: Payment of {amount} received for order #{orderNumber}. Thank you! Reply STOP to opt out.",
     orderCancelled: "{businessName}: Order #{orderNumber} has been cancelled. Contact us with any questions. Reply STOP to opt out.",

@@ -12,6 +12,8 @@ import {
   type OperatorActivityEvent,
 } from "./templates";
 import { resolveEmailLocale, emailCopy, type EmailLocale } from "./email-i18n";
+import { getOrgPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 import { createNotification } from "@/lib/data/notifications";
 import { issuePortalAccessToken } from "@/lib/portal/access-token";
 import { sanitizeHeaderValue, strictParseEmail } from "@/lib/security/header-safe";
@@ -396,6 +398,9 @@ export async function triggerPaymentReceivedEmail(params: {
     params.customerEmail
   );
   const cfmt = makeFormatters(branding.currency, customerLocale);
+  const general = isGeneralVertical(
+    await getOrgPrimaryVerticalSlug(supabase as unknown as { from: (t: string) => unknown }, params.organizationId)
+  );
 
   if (params.paymentType === "refund") {
     await sendEmail({
@@ -431,6 +436,7 @@ export async function triggerPaymentReceivedEmail(params: {
         newBalance: cfmt.money(params.newBalance),
         supportEmail: branding.supportEmail,
         locale: customerLocale,
+        general,
         fullyPaid: params.newBalance <= 0,
       }),
       replyTo: branding.supportEmail ?? undefined,
@@ -500,6 +506,9 @@ export async function triggerOrderStatusEmail(params: {
     (customer as { preferred_locale?: string | null }).preferred_locale ?? null
   );
   const fmt = makeFormatters(branding.currency, customerLocale);
+  const general = isGeneralVertical(
+    await getOrgPrimaryVerticalSlug(supabase as unknown as { from: (t: string) => unknown }, params.organizationId)
+  );
 
   // Fetch delivery details for scheduled / out_for_delivery statuses
   let deliveryTimeWindow: string | undefined;
@@ -576,6 +585,7 @@ export async function triggerOrderStatusEmail(params: {
       crewName,
       portalUrl,
       locale: customerLocale,
+      general,
     }),
     replyTo: branding.supportEmail ?? undefined,
       headers: customerHeaders(branding.supportEmail),

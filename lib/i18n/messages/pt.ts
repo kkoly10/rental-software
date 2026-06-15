@@ -2779,6 +2779,7 @@ export const pt: Messages = {
     deliveryEnRoute: "{businessName}: A equipa está a caminho do pedido #{orderNumber}! ETA: {eta}. STOP para cancelar.",
     deliveryEnRouteWithTracking: "{businessName}: A equipa está a caminho do pedido #{orderNumber}! ETA: {eta}. Acompanhar: {trackingUrl} STOP para cancelar.",
     deliveryCompleted: "{businessName}: Pedido #{orderNumber} entregue e montado. Aproveite o seu evento! STOP para cancelar.",
+    deliveryCompletedGeneral: "{businessName}: Pedido #{orderNumber} entregue. Aproveite o seu aluguer! STOP para cancelar.",
     weatherAlert: "{businessName}: Alerta meteorológico para {date} pode afetar o pedido #{orderNumber}. Entraremos em contacto se houver alterações. STOP para cancelar.",
     paymentReceived: "{businessName}: Pagamento de {amount} recebido para o pedido #{orderNumber}. Obrigado! STOP para cancelar.",
     orderCancelled: "{businessName}: O pedido #{orderNumber} foi cancelado. Contacte-nos com qualquer dúvida. STOP para cancelar.",
