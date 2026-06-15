@@ -12,6 +12,8 @@ import { getCheckoutPricing } from "@/lib/data/checkout-pricing";
 import { getBookingPolicies } from "@/lib/data/booking-policies";
 import { hasStripeEnv } from "@/lib/stripe/config";
 import { getTranslator } from "@/lib/i18n/server";
+import { getPublicPrimaryVerticalSlug } from "@/lib/verticals/storefront-defaults";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 function formatProductName(value?: string) {
   if (!value) return undefined;
@@ -66,7 +68,7 @@ export default async function CheckoutPage({
     const n = parseInt(units, 10);
     return n > 0 ? n : undefined;
   })();
-  const [pricing, policies, settings, { messages: m, t }] = await Promise.all([
+  const [pricing, policies, settings, { messages: m, t }, verticalSlug] = await Promise.all([
     getCheckoutPricing(product, zip, date, selectedMode, rentalEnd, {
       units: unitsNumeric,
       variantId: variant,
@@ -75,7 +77,11 @@ export default async function CheckoutPage({
     getBookingPolicies(),
     getOrganizationSettings(),
     getTranslator(),
+    getPublicPrimaryVerticalSlug(),
   ]);
+  // General ("other") operators reserve a rental, not an "event".
+  const general = isGeneralVertical(verticalSlug);
+  const checkoutDescription = general ? m.checkout.descriptionGeneral : m.checkout.description;
   const stripeEnabled = hasStripeEnv();
 
   // Compute date constraints from booking policies
@@ -104,7 +110,7 @@ export default async function CheckoutPage({
               <div className="kicker">{m.checkout.kicker}</div>
               <h1 style={{ margin: "8px 0 10px" }}>{m.checkout.title}</h1>
               <div className="muted">
-                {m.checkout.description}
+                {checkoutDescription}
               </div>
 
               {settings.bookingMessage && (
@@ -117,6 +123,7 @@ export default async function CheckoutPage({
               )}
 
               <CheckoutForm
+                isGeneral={general}
                 productSlug={product}
                 initialDate={date}
                 initialZip={zip}

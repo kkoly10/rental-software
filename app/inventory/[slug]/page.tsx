@@ -23,6 +23,8 @@ import { productJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { prettifyCategoryName } from "@/lib/utils/prettify-category";
 import { getTranslator } from "@/lib/i18n/server";
+import { getPublicPrimaryVerticalSlug } from "@/lib/verticals/storefront-defaults";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 export async function generateMetadata({
   params,
@@ -62,7 +64,7 @@ export default async function ProductDetailPage({
   const { slug } = await params;
   const { date, zip } = await searchParams;
 
-  const [product, theme, origin, { messages: m, t }, isDemo, policies, { currency, locale }] = await Promise.all([
+  const [product, theme, origin, { messages: m, t }, isDemo, policies, { currency, locale }, verticalSlug] = await Promise.all([
     getCatalogDetail(slug),
     getThemeSettings(),
     getRequestOrigin(),
@@ -70,7 +72,20 @@ export default async function ProductDetailPage({
     isCurrentTenantDemo(),
     getBookingPolicies(),
     getPublicOrgFormatting(),
+    getPublicPrimaryVerticalSlug(),
   ]);
+
+  // General ("other") operators rent tools / AV / furniture, not "events" —
+  // pick neutral PDP copy for the deposit note + the editorial twin columns.
+  // Event verticals keep their existing copy verbatim.
+  const generalCopy = isGeneralVertical(verticalSlug);
+  const depositBalanceNote = generalCopy
+    ? m.inventoryDetail.depositBalanceNoteGeneral
+    : m.inventoryDetail.depositBalanceNote;
+  const whatToExpect = generalCopy
+    ? m.inventoryDetail.whatToExpectGeneral
+    : m.inventoryDetail.whatToExpect;
+  const bestFit = generalCopy ? m.inventoryDetail.bestFitGeneral : m.inventoryDetail.bestFit;
 
   if (!product) {
     return (
@@ -266,7 +281,7 @@ export default async function ProductDetailPage({
               <div className="st-pdp-facts">
                 {depositRequired && (
                   <span className="st-pdp-fact">
-                    {m.inventoryDetail.depositBalanceNote}
+                    {depositBalanceNote}
                     {policies.depositMinimum != null && policies.depositMinimum > 0 && (
                       <>
                         {" · "}
@@ -452,10 +467,10 @@ export default async function ProductDetailPage({
           {/* What to expect / Best fit — editorial twin column below the shell. */}
           <div className="st-pdp-extras">
             <div className="st-pdp-extras-col">
-              <span className="st-eyebrow">{m.inventoryDetail.whatToExpect.kicker}</span>
-              <h2>{m.inventoryDetail.whatToExpect.title}</h2>
+              <span className="st-eyebrow">{whatToExpect.kicker}</span>
+              <h2>{whatToExpect.title}</h2>
               <div className="st-pdp-extras-list">
-                {m.inventoryDetail.whatToExpect.items.map((item) => (
+                {whatToExpect.items.map((item) => (
                   <div key={item.title} className="st-pdp-extras-item">
                     <strong>{item.title}</strong>
                     <div className="body">{item.body}</div>
@@ -465,10 +480,10 @@ export default async function ProductDetailPage({
             </div>
 
             <div className="st-pdp-extras-col">
-              <span className="st-eyebrow">{m.inventoryDetail.bestFit.kicker}</span>
-              <h2>{m.inventoryDetail.bestFit.title}</h2>
+              <span className="st-eyebrow">{bestFit.kicker}</span>
+              <h2>{bestFit.title}</h2>
               <div className="st-pdp-extras-list">
-                {m.inventoryDetail.bestFit.items.map((item) => (
+                {bestFit.items.map((item) => (
                   <div key={item} className="st-pdp-extras-item-simple">
                     {item}
                   </div>

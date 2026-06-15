@@ -13,6 +13,8 @@ import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { getCategoryGridItems } from "@/lib/data/category-grid";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getTranslator } from "@/lib/i18n/server";
+import { getPublicPrimaryVerticalSlug } from "@/lib/verticals/storefront-defaults";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 function normalizeCategory(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, "-");
@@ -50,12 +52,25 @@ export default async function InventoryPage({
   const isDemo = await isCurrentTenantDemo();
 
   const params = await searchParams;
-  const [products, categoryItems, settings, { messages: m, t }] = await Promise.all([
+  const [products, categoryItems, settings, { messages: m, t }, verticalSlug] = await Promise.all([
     getCatalogList(),
     getCategoryGridItems().catch(() => []),
     getOrganizationSettings(),
     getTranslator(),
+    getPublicPrimaryVerticalSlug(),
   ]);
+
+  // General ("other") operators rent tools / AV / furniture, not "events" —
+  // swap the event-framed browse copy for neutral variants. Event verticals
+  // keep their existing copy unchanged.
+  const general = isGeneralVertical(verticalSlug);
+  const inv = m.inventory;
+  const browseTitle = general ? inv.browseByEventTypeGeneral : inv.browseByEventType;
+  const browseIntro = general ? inv.filterIntroGeneral : inv.filterIntro;
+  const dateHint = general ? inv.pickDateHintGeneral : inv.pickDateHint;
+  const optionSingleCopy = general ? inv.optionSingleGeneral : inv.optionSingle;
+  const optionsCountMsg = general ? inv.optionsCountGeneral : inv.optionsCount;
+  const availabilityCountMsg = general ? inv.availabilityCountGeneral : inv.availabilityCount;
 
   const categoryOptions = categoryItems.map((cat) => ({
     value: cat.slug,
@@ -97,8 +112,8 @@ export default async function InventoryPage({
         {/* Page head + filter bar */}
         <section className="st-container st-catalog-head">
           <span className="st-eyebrow">{m.inventory.title}</span>
-          <h1 className="st-section-title">{m.inventory.browseByEventType}</h1>
-          <p className="st-section-sub">{m.inventory.filterIntro}</p>
+          <h1 className="st-section-title">{browseTitle}</h1>
+          <p className="st-section-sub">{browseIntro}</p>
 
           <CatalogFilterForm
             initialDate={params.date}
@@ -133,7 +148,7 @@ export default async function InventoryPage({
 
           {!params.date && sortedProducts.length > 0 && (
             <p className="st-note" role="note">
-              {m.inventory.pickDateHint}
+              {dateHint}
             </p>
           )}
 
@@ -150,10 +165,10 @@ export default async function InventoryPage({
             kicker={params.date ? m.inventory.availabilityResults : m.inventory.availableRentals}
             title={
               params.date
-                ? t(m.inventory.availabilityCount, { available: availableCount, total: sortedProducts.length })
+                ? t(availabilityCountMsg, { available: availableCount, total: sortedProducts.length })
                 : sortedProducts.length === 1
-                  ? m.inventory.optionSingle
-                  : t(m.inventory.optionsCount, { count: sortedProducts.length })
+                  ? optionSingleCopy
+                  : t(optionsCountMsg, { count: sortedProducts.length })
             }
           />
 
