@@ -704,15 +704,9 @@ export function StorefrontEditorRuntime({
       // the inline-edit overlay itself — so clicks in the overlay don't reselect).
       if (target?.closest("[data-st-editor-chrome]")) return;
 
-      // A click on a header nav element opens the inline-edit overlay for that
-      // nav LABEL. preventDefault() stops the <Link>/<a> from navigating away
-      // from the canvas. Same React-controlled overlay as section text.
-      const navEl = target?.closest<HTMLElement>("[data-st-nav-key]");
-      if (navEl) {
-        e.preventDefault();
-        openNavEditRef.current(navEl);
-        return;
-      }
+      // (Header nav <Link> clicks are handled by the capture-phase listener
+      // below — they must beat Next.js navigation, which a bubble-phase listener
+      // runs too late to stop.)
 
       // A click on a tagged editable text element opens the React-controlled
       // inline-edit overlay for that field (and selects its section). This never
@@ -743,9 +737,26 @@ export function StorefrontEditorRuntime({
       const id = section?.dataset.stSectionId;
       if (id) openEditor(id);
     };
+    // Capture phase: intercept header nav (<Link>) clicks BEFORE React's client
+    // navigation handler runs, so renaming a nav label never navigates away.
+    // A bubble-phase listener on document fires AFTER React's root handler, too
+    // late to stop the Link — capture (top-down) fires first. stopPropagation
+    // keeps the click from ever reaching the Link's onClick.
+    const onNavCapture = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-st-editor-chrome]")) return;
+      const navEl = target?.closest<HTMLElement>("[data-st-nav-key]");
+      if (navEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        openNavEditRef.current(navEl);
+      }
+    };
+    document.addEventListener("click", onNavCapture, true);
     document.addEventListener("click", onClick);
     document.addEventListener("dblclick", onDouble);
     return () => {
+      document.removeEventListener("click", onNavCapture, true);
       document.removeEventListener("click", onClick);
       document.removeEventListener("dblclick", onDouble);
     };
