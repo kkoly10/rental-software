@@ -3,10 +3,15 @@
  * for the dynamic /<vertical> landing page. A regression that strips
  * a required field would manifest as a runtime undefined-render or a
  * blank metadata tag, so we pin the contract here.
+ *
+ * Scoped to listMarketedVerticals(): only marketed verticals render a
+ * landing page, so only they are held to the marketing-content contract.
+ * Setup-only catch-alls ("other") carry an inert marketing stub that is
+ * never rendered.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { listVerticals } from "../lib/verticals/registry.ts";
+import { listMarketedVerticals as listVerticals } from "../lib/verticals/registry.ts";
 
 test("every vertical has non-empty seoTitle and seoDescription", () => {
   for (const v of listVerticals()) {

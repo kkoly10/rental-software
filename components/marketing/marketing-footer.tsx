@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslator } from "@/lib/i18n/server";
-import { listVerticals } from "@/lib/verticals/registry";
+import { listMarketedVerticals } from "@/lib/verticals/registry";
 
 /**
  * Shared marketing-page footer. `verticalLinks` keeps the six
@@ -28,7 +28,7 @@ export async function MarketingFooter({
         </div>
         {verticalLinks && (
           <div className="mk-footer-verticals">
-            {listVerticals().map((vertical) => (
+            {listMarketedVerticals().map((vertical) => (
               <Link key={vertical.slug} href={`/${vertical.marketing.landingPageSlug}`}>
                 {vertical.label.en} rental software
               </Link>

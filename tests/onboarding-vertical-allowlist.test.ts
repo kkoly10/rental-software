@@ -21,9 +21,12 @@ const EXPECTED = [
   "dance-floors",
   "photo-booths",
   "concessions",
+  // Setup-only catch-all — a valid signup business type, so it belongs
+  // in the onboarding allowlist even though it has no marketing page.
+  "other",
 ].sort();
 
-test("registry exposes exactly the day-one 6 verticals", () => {
+test("registry exposes the day-one 6 plus the 'other' catch-all", () => {
   assert.deepEqual([...listVerticalSlugs()].sort(), EXPECTED);
 });
 

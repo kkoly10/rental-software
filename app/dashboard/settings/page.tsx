@@ -24,7 +24,7 @@ import { getWhatsAppSettings } from "@/lib/data/whatsapp-settings";
 import { getMessages } from "@/lib/i18n/server";
 import { formatMessage } from "@/lib/i18n/format";
 import { listOrgVerticalSlugs } from "@/lib/verticals/org-verticals";
-import { listVerticalSlugs } from "@/lib/verticals/registry";
+import { listMarketedVerticals } from "@/lib/verticals/registry";
 import { AddVerticalForm } from "@/components/settings/add-vertical-form";
 import { RemoveVerticalButton } from "@/components/settings/remove-vertical-button";
 import { SetPrimaryButton } from "@/components/settings/set-primary-button";
@@ -183,13 +183,15 @@ export default async function SettingsPage({
                     );
                   })}
                 </div>
-                {/* Phase 4e — add-vertical picker. The registry's
-                    remaining slugs are passed down so the operator
-                    can only add what they don't already declare. */}
+                {/* Phase 4e — add-vertical picker. Only marketed
+                    verticals are offered as a secondary vertical;
+                    the setup-only "other" catch-all is excluded (you
+                    don't "add" general rentals on top of a real one).
+                    Slugs the org already declares are filtered out. */}
                 <AddVerticalForm
-                  remainingSlugs={listVerticalSlugs().filter(
-                    (s) => !verticalSlugs.includes(s),
-                  )}
+                  remainingSlugs={listMarketedVerticals()
+                    .map((v) => v.slug)
+                    .filter((s) => !verticalSlugs.includes(s))}
                 />
               </article>
             )}

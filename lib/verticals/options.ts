@@ -37,10 +37,16 @@ export function buildVerticalOptions(): VerticalOption[] {
       forfeitPct === 0
         ? "Always fully refundable"
         : `${forfeitPct}% deposit forfeit within ${refundWindowDays} days`;
+    // The setup-only catch-all reads as "my business isn't listed" rather
+    // than previewing its generic starter buckets — clearer intent for the
+    // operator choosing it.
+    const description = v.setupOnly
+      ? "Not listed above? Start with a flexible general catalog you can rename anytime."
+      : v.defaultCategorySeeds.slice(0, 4).join(" · ");
     return {
       value: v.slug,
       label: v.label.en,
-      description: v.defaultCategorySeeds.slice(0, 4).join(" · "),
+      description,
       policySummary: `${refund} · ${lead}`,
       defaults: { ...v.operatorDefaults },
     };

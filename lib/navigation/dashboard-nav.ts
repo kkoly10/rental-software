@@ -28,14 +28,14 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/calendar",         label: "Calendar",      tourId: undefined,            key: "calendar",     group: "ops" },
   { href: "/dashboard/messages",         label: "Messages",      tourId: undefined,            key: "messages",     group: "ops" },
   { href: "/dashboard/customers",        label: "Customers",     tourId: undefined,            key: "customers",    group: "ops" },
-  { href: "/dashboard/deliveries",       label: "Deliveries",    tourId: "nav-deliveries",     key: "deliveries",   group: "ops",     verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment"] },
+  { href: "/dashboard/deliveries",       label: "Deliveries",    tourId: "nav-deliveries",     key: "deliveries",   group: "ops",     verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment", "other"] },
 
   // CATALOG — "what I rent, where, how much, is it ready".
   { href: "/dashboard/products",         label: "Products",      tourId: "nav-products",       key: "products",     group: "catalog" },
   // Seller Hub v1 (spec §32) — the operator's marketplace presence.
   { href: "/dashboard/marketplace",      label: "Marketplace",   tourId: undefined,            key: "marketplace",  group: "catalog" },
   { href: "/dashboard/pricing",          label: "Pricing",       tourId: "nav-pricing",        key: "pricing",      group: "catalog" },
-  { href: "/dashboard/service-areas",    label: "Service Areas", tourId: undefined,            key: "serviceAreas", group: "catalog", verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment"] },
+  { href: "/dashboard/service-areas",    label: "Service Areas", tourId: undefined,            key: "serviceAreas", group: "catalog", verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment", "other"] },
   { href: "/dashboard/maintenance",      label: "Maintenance",   tourId: undefined,            key: "maintenance",  group: "catalog" },
 
   // FINANCE — end-of-day / end-of-week checks.  Documents lives here, not
@@ -57,7 +57,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   // First-class item rendered between the last group and the footer.
   // It's a separate app surface (the crew route view) — keeping it
   // visible on the sidebar matches how operators flip into it.
-  { href: "/crew/today",                 label: "Crew Mobile",   tourId: undefined,            key: "crewMobile",   verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment"] },
+  { href: "/crew/today",                 label: "Crew Mobile",   tourId: undefined,            key: "crewMobile",   verticals: ["inflatable", "tents", "tables-and-chairs", "dance-floors", "photo-booths", "concessions", "equipment", "other"] },
 
   // Footer item — pinned at the bottom of the sidebar regardless of
   // group state.

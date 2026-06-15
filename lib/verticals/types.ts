@@ -111,6 +111,15 @@ export type VerticalStorefrontDefaults = {
 export type VerticalConfig = {
   /** Stable slug used in DB rows + registry lookup. e.g. "inflatable" */
   slug: string;
+  /**
+   * Setup-only verticals (e.g. "other" / general rentals) appear in the
+   * signup + onboarding pickers and are valid org business types, but
+   * are excluded from every marketing surface — no /[vertical] landing
+   * page, no sitemap entry, no footer / sibling links. Their `marketing`
+   * + `imageSlugs` blocks satisfy the type but are never rendered.
+   * Defaults to false/undefined (a normal marketed vertical).
+   */
+  setupOnly?: boolean;
   /** Display label per locale; en is required (the source-of-truth locale). */
   label: Partial<Record<Locale, string>> & { en: string };
   /**
