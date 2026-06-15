@@ -174,6 +174,40 @@ export function setSectionSetting(
   };
 }
 
+/**
+ * Patch a section's `settings` with a NON-string value (Sections tab content
+ * editor, PR-1d). Used for the array-valued content sections (trust badges,
+ * testimonials, faq items). Immutably updates `sections[id].settings[key]`. An
+ * `undefined` value (or an empty array) REMOVES the key so the field falls back
+ * to the component's default (byte-for-byte safety — an empty editor list =
+ * "use the default", not "store an empty array"). No-op (same reference) when
+ * the id is unknown.
+ */
+export function setSectionSettingValue(
+  doc: StorefrontPageDocument,
+  id: string,
+  key: string,
+  value: unknown
+): StorefrontPageDocument {
+  const record = doc.sections[id];
+  if (!record) return doc;
+
+  const nextSettings: Record<string, unknown> = { ...(record.settings ?? {}) };
+  if (value === undefined || (Array.isArray(value) && value.length === 0)) {
+    delete nextSettings[key];
+  } else {
+    nextSettings[key] = value;
+  }
+
+  return {
+    ...doc,
+    sections: {
+      ...doc.sections,
+      [id]: { ...record, settings: nextSettings },
+    },
+  };
+}
+
 export type ParsedBuilderDocument = {
   document: StorefrontPageDocument;
   theme: ThemeTokens;

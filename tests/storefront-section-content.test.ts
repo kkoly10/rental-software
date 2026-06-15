@@ -13,16 +13,29 @@ import assert from "node:assert/strict";
 import {
   heroSettingsSchema,
   aboutSettingsSchema,
+  trustSettingsSchema,
+  testimonialsSettingsSchema,
+  faqSettingsSchema,
   parseHeroSettings,
   parseAboutSettings,
+  parseTrustSettings,
+  parseTestimonialsSettings,
+  parseFaqSettings,
   isContentEditableSectionType,
   HERO_HEADLINE_MAX,
   HERO_MESSAGE_MAX,
   ABOUT_BODY_MAX,
+  TRUST_TITLE_MAX,
+  TRUST_BADGES_MAX,
+  TESTIMONIAL_TEXT_MAX,
+  TESTIMONIALS_MAX,
+  FAQ_QUESTION_MAX,
+  FAQ_ITEMS_MAX,
 } from "../lib/storefront/sections/content-schemas.ts";
 import {
   buildDocumentFromSynthesized,
   setSectionSetting,
+  setSectionSettingValue,
   parseBuilderDocument,
 } from "../lib/storefront/builder-document.ts";
 import { synthesizeDefaultOrder } from "../lib/storefront/page-document-schema.ts";
@@ -91,11 +104,135 @@ test("aboutSettingsSchema bounds the body length", () => {
   );
 });
 
-test("isContentEditableSectionType is true only for hero + about", () => {
+test("isContentEditableSectionType covers the PR-1c/1d editable types", () => {
   assert.equal(isContentEditableSectionType("hero"), true);
   assert.equal(isContentEditableSectionType("about"), true);
-  assert.equal(isContentEditableSectionType("trust"), false);
-  assert.equal(isContentEditableSectionType("faq"), false);
+  assert.equal(isContentEditableSectionType("trust"), true);
+  assert.equal(isContentEditableSectionType("testimonials"), true);
+  assert.equal(isContentEditableSectionType("faq"), true);
+  // Types with no content form remain non-editable.
+  assert.equal(isContentEditableSectionType("press"), false);
+  assert.equal(isContentEditableSectionType("closing"), false);
+});
+
+// ---------------------------------------------------------------------------
+// PR-1d schemas: trust / testimonials / faq
+// ---------------------------------------------------------------------------
+
+test("trustSettingsSchema accepts empty / valid; caps title length + count", () => {
+  assert.equal(trustSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    trustSettingsSchema.safeParse({
+      badges: [{ title: "Free delivery", description: "On every order." }],
+    }).success,
+    true
+  );
+  // Over the per-badge title cap.
+  assert.equal(
+    trustSettingsSchema.safeParse({
+      badges: [{ title: "x".repeat(TRUST_TITLE_MAX + 1), description: "ok" }],
+    }).success,
+    false
+  );
+  // Over the badge count cap.
+  assert.equal(
+    trustSettingsSchema.safeParse({
+      badges: Array.from({ length: TRUST_BADGES_MAX + 1 }, () => ({
+        title: "t",
+        description: "d",
+      })),
+    }).success,
+    false
+  );
+});
+
+test("testimonialsSettingsSchema bounds text, count, and rating range", () => {
+  assert.equal(testimonialsSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    testimonialsSettingsSchema.safeParse({
+      items: [{ name: "Ana", text: "Great service.", rating: 5 }],
+    }).success,
+    true
+  );
+  // Rating out of 1–5 range.
+  assert.equal(
+    testimonialsSettingsSchema.safeParse({
+      items: [{ name: "Ana", text: "ok", rating: 6 }],
+    }).success,
+    false
+  );
+  // Over the text cap.
+  assert.equal(
+    testimonialsSettingsSchema.safeParse({
+      items: [{ name: "Ana", text: "x".repeat(TESTIMONIAL_TEXT_MAX + 1) }],
+    }).success,
+    false
+  );
+  // Over the count cap.
+  assert.equal(
+    testimonialsSettingsSchema.safeParse({
+      items: Array.from({ length: TESTIMONIALS_MAX + 1 }, () => ({
+        name: "n",
+        text: "t",
+      })),
+    }).success,
+    false
+  );
+});
+
+test("faqSettingsSchema bounds question length and item count", () => {
+  assert.equal(faqSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    faqSettingsSchema.safeParse({
+      items: [{ question: "Do you deliver?", answer: "Yes." }],
+    }).success,
+    true
+  );
+  assert.equal(
+    faqSettingsSchema.safeParse({
+      items: [{ question: "x".repeat(FAQ_QUESTION_MAX + 1), answer: "a" }],
+    }).success,
+    false
+  );
+  assert.equal(
+    faqSettingsSchema.safeParse({
+      items: Array.from({ length: FAQ_ITEMS_MAX + 1 }, () => ({
+        question: "q",
+        answer: "a",
+      })),
+    }).success,
+    false
+  );
+});
+
+test("parseTrustSettings returns {} for absent/malformed (fall back to today)", () => {
+  assert.deepEqual(parseTrustSettings(undefined), {});
+  assert.deepEqual(parseTrustSettings(null), {});
+  // Malformed (over-cap title) → {} so the trust strip uses its default badges.
+  assert.deepEqual(
+    parseTrustSettings({ badges: [{ title: "x".repeat(999), description: "d" }] }),
+    {}
+  );
+  assert.deepEqual(
+    parseTrustSettings({ badges: [{ title: "Free delivery", description: "On every order." }] }),
+    { badges: [{ title: "Free delivery", description: "On every order." }] }
+  );
+});
+
+test("parseTestimonialsSettings returns {} for absent/malformed (fall back to today)", () => {
+  assert.deepEqual(parseTestimonialsSettings(undefined), {});
+  assert.deepEqual(parseTestimonialsSettings({ items: [{ name: "A", text: "t", rating: 9 }] }), {});
+  assert.deepEqual(parseTestimonialsSettings({ items: [{ name: "Ana", text: "Great." }] }), {
+    items: [{ name: "Ana", text: "Great." }],
+  });
+});
+
+test("parseFaqSettings returns {} for absent/malformed (fall back to today)", () => {
+  assert.deepEqual(parseFaqSettings(undefined), {});
+  assert.deepEqual(parseFaqSettings({ items: [{ question: "x".repeat(999), answer: "a" }] }), {});
+  assert.deepEqual(parseFaqSettings({ items: [{ question: "Do you deliver?", answer: "Yes." }] }), {
+    items: [{ question: "Do you deliver?", answer: "Yes." }],
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -145,6 +282,28 @@ test("setSectionSetting is a no-op (same ref) for an unknown id", () => {
   assert.equal(setSectionSetting(doc, "sec_ghost", "headline", "X"), doc);
 });
 
+test("setSectionSettingValue writes an array immutably", () => {
+  const doc = seedDoc();
+  const badges = [{ title: "Free delivery", description: "On every order." }];
+  const next = setSectionSettingValue(doc, "sec_trust", "badges", badges);
+  assert.notEqual(next, doc);
+  assert.deepEqual(next.sections.sec_trust.settings?.badges, badges);
+  assert.equal(doc.sections.sec_trust.settings?.badges, undefined);
+});
+
+test("setSectionSettingValue deletes the key on an empty array (fallback to default)", () => {
+  let doc = setSectionSettingValue(seedDoc(), "sec_trust", "badges", [
+    { title: "t", description: "d" },
+  ]);
+  doc = setSectionSettingValue(doc, "sec_trust", "badges", []);
+  assert.equal("badges" in (doc.sections.sec_trust.settings ?? {}), false);
+});
+
+test("setSectionSettingValue is a no-op (same ref) for an unknown id", () => {
+  const doc = seedDoc();
+  assert.equal(setSectionSettingValue(doc, "sec_ghost", "badges", [{ title: "t", description: "d" }]), doc);
+});
+
 // ---------------------------------------------------------------------------
 // parseBuilderDocument round-trips + normalizes per-section settings
 // ---------------------------------------------------------------------------
@@ -167,6 +326,42 @@ test("parseBuilderDocument accepts + preserves valid hero/about settings", () =>
 test("parseBuilderDocument rejects an over-cap hero headline on publish", () => {
   let doc = seedDoc();
   doc = setSectionSetting(doc, "sec_hero", "headline", "x".repeat(HERO_HEADLINE_MAX + 1));
+  const result = parseBuilderDocument(JSON.parse(JSON.stringify(doc)));
+  assert.equal(result.ok, false);
+});
+
+test("parseBuilderDocument accepts + preserves valid trust/testimonials/faq settings", () => {
+  let doc = seedDoc();
+  doc = setSectionSettingValue(doc, "sec_trust", "badges", [
+    { title: "Free delivery", description: "On every order." },
+  ]);
+  doc = setSectionSettingValue(doc, "sec_testimonials", "items", [
+    { name: "Ana", text: "Great service.", rating: 5 },
+  ]);
+  doc = setSectionSettingValue(doc, "sec_faq", "items", [
+    { question: "Do you deliver?", answer: "Yes, area-wide." },
+  ]);
+  const result = parseBuilderDocument(JSON.parse(JSON.stringify(doc)));
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    const s = result.value.document.sections;
+    assert.deepEqual(s.sec_trust.settings?.badges, [
+      { title: "Free delivery", description: "On every order." },
+    ]);
+    assert.deepEqual(s.sec_testimonials.settings?.items, [
+      { name: "Ana", text: "Great service.", rating: 5 },
+    ]);
+    assert.deepEqual(s.sec_faq.settings?.items, [
+      { question: "Do you deliver?", answer: "Yes, area-wide." },
+    ]);
+  }
+});
+
+test("parseBuilderDocument rejects an out-of-range testimonial rating on publish", () => {
+  let doc = seedDoc();
+  doc = setSectionSettingValue(doc, "sec_testimonials", "items", [
+    { name: "Ana", text: "ok", rating: 9 },
+  ]);
   const result = parseBuilderDocument(JSON.parse(JSON.stringify(doc)));
   assert.equal(result.ok, false);
 });

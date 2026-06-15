@@ -32,6 +32,9 @@ import { isKnownSectionType } from "@/lib/storefront/sections/registry";
 import {
   parseHeroSettings,
   parseAboutSettings,
+  parseTrustSettings,
+  parseTestimonialsSettings,
+  parseFaqSettings,
 } from "@/lib/storefront/sections/content-schemas";
 import { Fragment, type ReactNode } from "react";
 
@@ -120,8 +123,12 @@ export default async function HomePage() {
           />
         );
       }
-      case "trust":
-        return <PartyClassicTrustStrip />;
+      case "trust": {
+        // PR-1d content-editable: pass the document's curated badges (absent →
+        // the component falls back to today's content settings / defaults).
+        const trust = parseTrustSettings(settings);
+        return <PartyClassicTrustStrip badges={trust.badges} />;
+      }
       case "press":
         return <PartyClassicPressRow />;
       case "category-grid":
@@ -165,8 +172,12 @@ export default async function HomePage() {
             <HowItWorks />
           </div>
         );
-      case "testimonials":
-        return <PartyClassicReviewsCards />;
+      case "testimonials": {
+        // PR-1d content-editable: pass the document's testimonials (absent →
+        // the component falls back to today's content settings).
+        const reviews = parseTestimonialsSettings(settings);
+        return <PartyClassicReviewsCards testimonials={reviews.items} />;
+      }
       case "service-area":
         return (
           <div id="service-area">
@@ -182,8 +193,16 @@ export default async function HomePage() {
           />
         );
       }
-      case "faq":
-        return <FaqSection customFaqs={faqItems} />;
+      case "faq": {
+        // PR-1d content-editable: when the document carries FAQ items use them;
+        // absent → fall back to today's faqItems (custom_faq / i18n defaults).
+        const faq = parseFaqSettings(settings);
+        return (
+          <FaqSection
+            customFaqs={faq.items && faq.items.length > 0 ? faq.items : faqItems}
+          />
+        );
+      }
       case "closing":
         return <PartyClassicClosing />;
       default:
