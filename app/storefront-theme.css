@@ -2402,3 +2402,237 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   border-color: var(--st-primary);
   box-shadow: 0 1px 0 var(--st-line-strong);
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * Storefront on-canvas editor (PR-2a)
+ *
+ * Chrome for the full-page, on-canvas storefront editor. The storefront itself
+ * is server-rendered as the page; these classes power the client overlay
+ * (storefront-editor-runtime.tsx): a fixed top bar, hover/selection frames, a
+ * floating per-section toolbar, and right-anchored content/styles drawers.
+ *
+ * Frames are pointer-events:none so the canvas underneath stays clickable;
+ * only the toolbar buttons re-enable pointer events.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* Section markers emitted by renderDocumentSections({ editable: true }). Must be
+ * layout-neutral so wrapping a section changes nothing visually. */
+.st-editable-section {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+/* Disabled (hidden-on-live) sections rendered greyed so the operator can still
+ * see + re-enable them. .is-hidden is the optimistic class the runtime toggles. */
+.st-editable-section[data-st-disabled="true"],
+.st-editable-section.is-hidden {
+  opacity: 0.4;
+  filter: grayscale(0.4);
+}
+
+/* Top bar — fixed above the canvas. The canvas wrapper gets matching top
+ * padding (see .st-editor-canvas) so no section hides under it. */
+.st-editor-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  height: 56px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border, #e6e1d8);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.st-editor-topbar .st-editor-title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.st-editor-topbar .st-editor-spacer { flex: 1; }
+.st-editor-canvas {
+  /* Offset the server-rendered storefront below the fixed top bar. */
+  padding-top: 56px;
+}
+
+.st-editor-badge {
+  font-size: 12.5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--surface-muted, #f4f2ef);
+  color: var(--text-muted, #5c5651);
+}
+.st-editor-badge.is-success { background: #e7f3e7; color: #2f6f33; }
+.st-editor-badge.is-error { background: #fbeaea; color: #a23b3b; }
+
+/* Hover + selection frames — absolutely positioned over a section (the runtime
+ * sets top/left/width/height in document coords). Never capture pointer events. */
+.st-editor-hoverframe,
+.st-editor-selframe {
+  position: absolute;
+  pointer-events: none;
+  z-index: 900;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+.st-editor-hoverframe {
+  outline: 1px dashed var(--primary, #3f4a33);
+  outline-offset: -1px;
+}
+.st-editor-selframe {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: -2px;
+}
+.st-editor-frame-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateY(-100%);
+  background: var(--primary, #3f4a33);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px 4px 0 0;
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+/* Floating per-section toolbar, anchored to the selected section's top-right.
+ * This DOES take pointer events (its buttons are interactive). */
+.st-editor-toolbar {
+  position: absolute;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  pointer-events: auto;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+.st-editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text, #1a1a1a);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.st-editor-toolbar button:hover:not(:disabled) {
+  background: var(--surface-muted, #f4f2ef);
+}
+.st-editor-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.st-editor-toolbar .st-editor-toolbar-edit {
+  font-weight: 600;
+  font-size: 13px;
+  gap: 4px;
+}
+.st-editor-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--border, #e6e1d8);
+}
+
+/* Right-anchored drawer hosting the existing section content / styles editors. */
+.st-editor-drawer {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 92vw;
+  z-index: 1001;
+  background: #ffffff;
+  border-left: 1px solid var(--border, #e6e1d8);
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.10);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+.st-editor-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6e1d8);
+}
+.st-editor-drawer-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+.st-editor-drawer-close {
+  border: 1px solid var(--border, #e6e1d8);
+  background: #fff;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+.st-editor-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.st-editor-drawer-note {
+  font-size: 12.5px;
+  color: var(--text-muted, #5c5651);
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+/* Add-section dropdown menu in the top bar. */
+.st-editor-addmenu-wrap { position: relative; }
+.st-editor-addmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1002;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+}
+.st-editor-addmenu button {
+  text-align: left;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.st-editor-addmenu button:hover { background: var(--surface-muted, #f4f2ef); }
