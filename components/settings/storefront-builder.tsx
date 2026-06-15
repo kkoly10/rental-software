@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/provider";
 import type { ThemeTokens } from "@/lib/data/storefront-tokens-schema";
@@ -58,6 +58,50 @@ export function StorefrontBuilder({
   );
 
   const documentJson = JSON.stringify(doc);
+
+  // ── Embedded live preview (PR-1f) ──
+  // The preview is a same-origin iframe rendering the operator's storefront from
+  // the DRAFT document (org resolved via AUTH inside the route, never a query
+  // param). On every document change we debounce ~1.8s, save the draft, and on
+  // success reload the iframe with a cache-busting query so it re-renders the
+  // freshly-persisted draft. Full reload is the v1 (no postMessage patching).
+  const PREVIEW_BASE = "/dashboard/website/builder/preview";
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  // Skip the very first render's auto-save: the initial document is already what
+  // the iframe loaded, so there's nothing to persist or reload yet.
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      setAutoSaving(true);
+      try {
+        const formData = new FormData();
+        formData.set("document_json", documentJson);
+        const result = await saveStorefrontDocumentDraft(initialState, formData);
+        // Only reload the canvas when the draft actually persisted, otherwise
+        // we'd refresh to stale/identical content (or churn on an error).
+        if (!cancelled && result.ok && iframeRef.current) {
+          iframeRef.current.src = `${PREVIEW_BASE}?t=${Date.now()}`;
+        }
+      } catch {
+        // Best-effort live preview; the manual Save draft / Publish buttons
+        // remain the reliable path.
+      } finally {
+        if (!cancelled) setAutoSaving(false);
+      }
+    }, 1800);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [documentJson]);
+
   const status = publishState.message ? publishState : draftState;
 
   const selectedType = doc.sections[selectedId]?.type;
@@ -148,6 +192,12 @@ export function StorefrontBuilder({
           {m.title}
         </strong>
 
+        {autoSaving && (
+          <span className="badge" style={{ padding: "6px 12px" }}>
+            {m.savingDraft}
+          </span>
+        )}
+
         {status.message && (
           <span
             className={status.ok ? "badge success" : "badge warning"}
@@ -183,11 +233,12 @@ export function StorefrontBuilder({
         </form>
       </header>
 
-      {/* ── Two-pane body ── */}
+      {/* ── Three-pane body: section list · editor · live preview canvas ── */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(280px, 360px) minmax(0, 1fr)",
+          gridTemplateColumns:
+            "minmax(260px, 320px) minmax(320px, 420px) minmax(0, 1fr)",
           flex: 1,
           minHeight: 0,
         }}
@@ -392,6 +443,31 @@ export function StorefrontBuilder({
             <StorefrontTokenEditor tokens={selectedTheme} onChange={onThemeChange} />
           ) : null}
         </section>
+
+        {/* Live preview canvas — a same-origin iframe rendering the operator's
+            storefront from the DRAFT document. Debounced edits save the draft
+            and reload this iframe (see the auto-save effect above). */}
+        <div
+          style={{
+            background: "var(--surface-muted, #f4f2ef)",
+            overflow: "hidden",
+            display: "flex",
+            minHeight: 0,
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            src={PREVIEW_BASE}
+            title="Storefront preview"
+            style={{
+              flex: 1,
+              width: "100%",
+              height: "100%",
+              border: "none",
+              background: "var(--bg, #fff)",
+            }}
+          />
+        </div>
       </div>
     </div>
   );

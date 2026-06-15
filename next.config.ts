@@ -3,12 +3,17 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const isProd = process.env.NODE_ENV === "production";
 
-function buildCsp() {
+// Builds the CSP directive list. `frameAncestors` defaults to 'none' (the global
+// policy — the app refuses to be framed anywhere). The builder preview route
+// (PR-1f) is the ONLY exception: it overrides ONLY this one directive to 'self'
+// so the same-origin builder iframe can embed it. Every other directive — and
+// every other route — is unchanged.
+function buildCsp(frameAncestors: "'none'" | "'self'" = "'none'") {
   const directives = [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "frame-ancestors 'none'",
+    `frame-ancestors ${frameAncestors}`,
     "script-src 'self' 'unsafe-inline' https://js.stripe.com https://unpkg.com",
     "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
     "font-src 'self' data: https:",
@@ -24,6 +29,11 @@ function buildCsp() {
 
   return directives.join("; ");
 }
+
+// The builder preview route — the SINGLE path allowed to be framed (same-origin
+// only). Kept as a constant so the scoped headers() entry below and the global
+// negative-lookahead that excludes it from the DENY/'none' policy can't drift.
+const PREVIEW_ROUTE = "/dashboard/website/builder/preview";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -63,9 +73,56 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
+    // Shared security headers (non-frame-related) applied to EVERY route,
+    // including the preview route — only the frame policy differs there.
+    const commonSecurityHeaders = [
+      {
+        key: "X-Content-Type-Options",
+        value: "nosniff",
+      },
+      {
+        key: "Referrer-Policy",
+        value: "strict-origin-when-cross-origin",
+      },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=()",
+      },
+      {
+        key: "X-DNS-Prefetch-Control",
+        value: "on",
+      },
+    ];
+
     return [
       {
-        source: "/(.*)",
+        // SCOPED override (PR-1f): the builder preview route is the ONLY path
+        // allowed to be framed, and only by the same origin (the builder iframe).
+        // Same CSP as everywhere else, with ONLY frame-ancestors flipped to
+        // 'self', plus X-Frame-Options: SAMEORIGIN. Listed first; the global
+        // rule below excludes this exact path via negative lookahead so the two
+        // can't both set a (conflicting) frame policy on it.
+        source: PREVIEW_ROUTE,
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: buildCsp("'self'"),
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          ...commonSecurityHeaders,
+        ],
+      },
+      {
+        // Global policy — UNCHANGED for every route EXCEPT the preview path,
+        // which is excluded via negative lookahead so it keeps its own
+        // SAMEORIGIN/'self' frame policy above. Every other route still gets
+        // X-Frame-Options: DENY and frame-ancestors 'none', byte-for-byte as
+        // before.
+        source:
+          "/((?!dashboard/website/builder/preview$).*)",
         headers: [
           {
             key: "Content-Security-Policy",
@@ -75,22 +132,7 @@ const nextConfig: NextConfig = {
             key: "X-Frame-Options",
             value: "DENY",
           },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
-          },
-          {
-            key: "X-DNS-Prefetch-Control",
-            value: "on",
-          },
+          ...commonSecurityHeaders,
         ],
       },
       {
