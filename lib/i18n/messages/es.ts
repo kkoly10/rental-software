@@ -1165,6 +1165,10 @@ export const es: Messages = {
         noEditableContent: "Esta sección aún no tiene contenido editable.",
         autosaveRefreshNote: "Los cambios se guardan automáticamente. Cierra este panel para actualizar el lienzo.",
         selectSectionHint: "Haz clic en una sección para editarla.",
+        replaceImage: "Reemplazar imagen",
+        uploadingImage: "Subiendo imagen…",
+        imageUploadFailed: "No se pudo subir la imagen. Inténtalo de nuevo.",
+        inlineEditHint: "Haz clic en cualquier texto para editarlo directamente en la página.",
         sectionEditor: {
           heroHeadlineLabel: "Titular",
           heroHeadlinePlaceholder: "Déjalo en blanco para usar el titular predeterminado",

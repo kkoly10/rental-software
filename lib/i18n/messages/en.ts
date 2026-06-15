@@ -1166,6 +1166,10 @@ const enValues = {
         noEditableContent: "No editable content for this section yet.",
         autosaveRefreshNote: "Changes save automatically. Close this panel to refresh the canvas.",
         selectSectionHint: "Click a section to edit it.",
+        replaceImage: "Replace image",
+        uploadingImage: "Uploading image…",
+        imageUploadFailed: "Couldn't upload the image. Please try again.",
+        inlineEditHint: "Click any text to edit it directly on the page.",
         sectionEditor: {
           heroHeadlineLabel: "Headline",
           heroHeadlinePlaceholder: "Leave blank to use the default headline",
