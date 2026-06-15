@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,6 +59,42 @@ const initialState: StorefrontPageActionState = { ok: false, message: "" };
 
 /** Document-space rectangle of a section, used to position overlay frames. */
 type Frame = { top: number; left: number; width: number; height: number };
+
+/**
+ * Subset of computed styles copied from a target text node onto the inline-edit
+ * overlay so the editable surface looks byte-identical to the rendered text
+ * (font metrics, color, alignment, padding). For the hero's white-on-photo text
+ * the copied `color` keeps it legible without any special-casing.
+ */
+type InlineEditStyle = {
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: string;
+  fontStyle: string;
+  lineHeight: string;
+  letterSpacing: string;
+  color: string;
+  textAlign: string;
+  textTransform: string;
+  padding: string;
+};
+
+/** Read the visual-parity styles off a target element. Guarded for SSR/no-DOM. */
+function readInlineEditStyle(el: HTMLElement): InlineEditStyle {
+  const cs = window.getComputedStyle(el);
+  return {
+    fontFamily: cs.fontFamily,
+    fontSize: cs.fontSize,
+    fontWeight: cs.fontWeight,
+    fontStyle: cs.fontStyle,
+    lineHeight: cs.lineHeight,
+    letterSpacing: cs.letterSpacing,
+    color: cs.color,
+    textAlign: cs.textAlign,
+    textTransform: cs.textTransform,
+    padding: cs.padding,
+  };
+}
 
 /**
  * Section-type → inline-editable text field map (PR-2b). Drives type-on-the-page
@@ -134,9 +171,35 @@ export function StorefrontEditorRuntime({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
 
-  // True while an inline contentEditable field has focus — suppresses the hover
-  // frame so the dashed/solid outlines don't fight the caret.
+  // True while the inline-edit overlay is open — suppresses the hover frame and
+  // the section click-to-select handler so the caret/overlay isn't fought over.
   const [inlineEditing, setInlineEditing] = useState(false);
+
+  // ── React-safe inline (type-on-the-page) text editing ───────────────────────
+  // The overlay is rendered by THIS runtime (so it lives in the runtime's own
+  // React tree — never the server-rendered canvas tree). It is an absolutely-
+  // positioned, contentEditable surface placed exactly over the target text
+  // element. We NEVER make the canvas node contentEditable or mutate its
+  // children — the only canvas DOM touch is toggling `visibility` on the element
+  // being edited. All content changes go through setDoc → save → router.refresh().
+  type InlineEdit = {
+    sectionId: string;
+    field: string;
+    multiline: boolean;
+    max: number;
+    value: string; // initial value, written into the overlay once on open
+    frame: Frame; // document-space rect of the target
+    style: InlineEditStyle; // copied computed styles for visual parity
+  };
+  const [inlineEdit, setInlineEdit] = useState<InlineEdit | null>(null);
+  // The currently-edited canvas element, kept so we can restore its visibility
+  // on close. This is the ONLY canvas node the overlay ever touches.
+  const inlineTargetRef = useRef<HTMLElement | null>(null);
+  // The overlay's contentEditable div. Uncontrolled: we seed textContent on open
+  // and read innerText on commit. React must never reconcile its children mid-edit.
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  // Guards against a blur-commit racing an Escape-cancel (both can fire).
+  const inlineClosingRef = useRef(false);
 
   // ── Editor guidance (PR-2d) ─────────────────────────────────────────────────
   const [helpOpen, setHelpOpen] = useState(false);
@@ -325,48 +388,20 @@ export function StorefrontEditorRuntime({
       const fields = INLINE_TEXT_FIELDS[type];
       if (!fields) return;
 
-      for (const { field, selector, multiline, max } of fields) {
+      for (const { field, selector } of fields) {
         const el = wrapper.querySelector<HTMLElement>(selector);
         if (!el) continue;
-        if (el.dataset.stInlineField) continue; // already bound
+        if (el.dataset.stInlineField) continue; // already tagged
 
+        // TAG ONLY. We never set contentEditable on the canvas node and never
+        // attach editing listeners here: editing happens in a React-controlled
+        // overlay (openInlineEdit) so the browser never rewrites React-hydrated
+        // canvas DOM (the previous approach desynced React and crashed with
+        // "removeChild"). The only canvas DOM the overlay ever touches is
+        // toggling this element's visibility while editing.
         el.dataset.stInlineField = field;
         el.dataset.stInlineSection = sectionId;
         el.classList.add("st-inline-editable");
-        // INTERIM (crash hotfix): on-canvas contentEditable is intentionally
-        // NOT set. Letting the browser rewrite React-hydrated nodes (e.g.
-        // select-all + retype collapsing the hero's text + <em>) desynced
-        // React's virtual DOM and crashed the editor ("removeChild"). Until the
-        // React-safe type-on-page rewrite lands, text is edited via the Edit
-        // drawer (double-click a section, or the toolbar's Edit). The
-        // focus/keydown/blur listeners below stay wired but never fire (the
-        // element isn't editable/focusable without contentEditable).
-
-        el.addEventListener("focus", () => {
-          setSelectedId(sectionId);
-          setInlineEditing(true);
-          // Inline editing was discovered → retire the canvas hint bar.
-          setHasInlineEdited(true);
-        });
-
-        el.addEventListener("keydown", (e: KeyboardEvent) => {
-          if (!multiline && e.key === "Enter") {
-            // Single-line field: Enter commits (blur), never inserts a newline.
-            e.preventDefault();
-            el.blur();
-          }
-        });
-
-        el.addEventListener("blur", () => {
-          setInlineEditing(false);
-          // Normalize: collapse NBSPs, trim, clamp to the schema max. Stored as
-          // PLAIN text (innerText) so no markup can ride into the document.
-          let value = el.innerText.replace(/ /g, " ").trim();
-          if (value.length > max) value = value.slice(0, max);
-          // setSectionSetting REMOVES the key when value is "" → falls back to
-          // the component default. The debounced save fires from the doc effect.
-          setDoc((prev) => setSectionSetting(prev, sectionId, field, value));
-        });
       }
     });
   }, []);
@@ -399,6 +434,126 @@ export function StorefrontEditorRuntime({
       if (raf) cancelAnimationFrame(raf);
     };
   }, [bindInlineFields, measure]);
+
+  // ── React-safe inline (type-on-the-page) text editing ───────────────────────
+  // Open the overlay over a tagged canvas text element. We READ the element
+  // (rect + computed styles + current text) but NEVER make it contentEditable
+  // and never touch its children — the only canvas mutation is hiding it via
+  // `visibility` so the overlay reads as true in-place editing.
+  const openInlineEdit = useCallback(
+    (el: HTMLElement) => {
+      if (typeof window === "undefined") return;
+      const field = el.dataset.stInlineField;
+      const sectionId = el.dataset.stInlineSection;
+      if (!field || !sectionId) return;
+
+      const type = doc.sections[sectionId]?.type;
+      const fieldDef = type
+        ? INLINE_TEXT_FIELDS[type]?.find((f) => f.field === field)
+        : undefined;
+      if (!fieldDef) return;
+
+      // Commit any overlay already open before re-opening on a new target.
+      if (inlineTargetRef.current && inlineTargetRef.current !== el) {
+        inlineTargetRef.current.style.visibility = "";
+      }
+
+      const rect = el.getBoundingClientRect();
+      const frame: Frame = {
+        top: rect.top + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+        height: rect.height,
+      };
+
+      inlineTargetRef.current = el;
+      inlineClosingRef.current = false;
+      // Hide the underlying canvas text (style toggle only — reversible, safe).
+      el.style.visibility = "hidden";
+
+      setSelectedId(sectionId);
+      setInlineEditing(true);
+      setInlineEdit({
+        sectionId,
+        field,
+        multiline: fieldDef.multiline,
+        max: fieldDef.max,
+        value: el.innerText,
+        frame,
+        style: readInlineEditStyle(el),
+      });
+    },
+    [doc]
+  );
+
+  // Restore the edited canvas element's visibility and tear down overlay state.
+  const closeInlineEdit = useCallback(() => {
+    const el = inlineTargetRef.current;
+    if (el) el.style.visibility = "";
+    inlineTargetRef.current = null;
+    setInlineEdit(null);
+    setInlineEditing(false);
+  }, []);
+
+  // Cancel: discard edits, restore the original text, no save.
+  const cancelInlineEdit = useCallback(() => {
+    if (inlineClosingRef.current) return;
+    inlineClosingRef.current = true;
+    closeInlineEdit();
+  }, [closeInlineEdit]);
+
+  // Commit: read the overlay's text, normalize, write to the document, persist,
+  // and refresh so the SERVER re-renders the canvas with the new text. The canvas
+  // was never hand-mutated, so the refresh reconcile is clean (no removeChild).
+  const commitInlineEdit = useCallback(() => {
+    if (inlineClosingRef.current) return;
+    inlineClosingRef.current = true;
+
+    const edit = inlineEdit;
+    const overlay = overlayRef.current;
+    if (!edit) {
+      closeInlineEdit();
+      return;
+    }
+
+    const raw = overlay ? overlay.innerText : edit.value;
+    const value = raw
+      .replace(/ /g, " ")
+      .trim()
+      .slice(0, edit.max);
+
+    setHasInlineEdited(true);
+
+    // No change → just restore, no save/refresh (avoids a needless flash).
+    if (value === edit.value.trim()) {
+      closeInlineEdit();
+      return;
+    }
+
+    const next = setSectionSetting(doc, edit.sectionId, edit.field, value);
+    setDoc(next);
+
+    void (async () => {
+      try {
+        const fd = new FormData();
+        fd.set("document_json", JSON.stringify(next));
+        await saveStorefrontDocumentDraft(initialState, fd);
+      } catch {
+        // Best-effort; manual Save draft / Publish remain reliable.
+      } finally {
+        router.refresh();
+        // Restore visibility + tear down AFTER scheduling the refresh, then
+        // re-measure once the new canvas paints (double rAF).
+        closeInlineEdit();
+        requestAnimationFrame(() => requestAnimationFrame(measure));
+      }
+    })();
+  }, [inlineEdit, doc, router, measure, closeInlineEdit]);
+
+  // Keep a stable ref to openInlineEdit so the (empty-dep) global click handler
+  // can call the latest version without re-binding on every doc change.
+  const openInlineEditRef = useRef(openInlineEdit);
+  openInlineEditRef.current = openInlineEdit;
 
   // ── On-canvas image replace (PR-2b) ─────────────────────────────────────────
   // Trigger a hidden file input scoped to the selected section's image field.
@@ -466,8 +621,22 @@ export function StorefrontEditorRuntime({
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
-      // Ignore clicks inside the editor chrome (top bar, frames, drawers).
+      // Ignore clicks inside the editor chrome (top bar, frames, drawers, and
+      // the inline-edit overlay itself — so clicks in the overlay don't reselect).
       if (target?.closest("[data-st-editor-chrome]")) return;
+
+      // A click on a tagged editable text element opens the React-controlled
+      // inline-edit overlay for that field (and selects its section). This never
+      // touches the canvas node beyond toggling its visibility.
+      const fieldEl = target?.closest<HTMLElement>("[data-st-inline-field]");
+      if (fieldEl) {
+        e.preventDefault();
+        const sectionId = fieldEl.dataset.stInlineSection ?? null;
+        if (sectionId) setSelectedId(sectionId);
+        openInlineEditRef.current(fieldEl);
+        return;
+      }
+
       const section = target?.closest<HTMLElement>("[data-st-section-id]");
       if (!section) return;
       // Don't hijack navigation/interactions inside a section unless it's a
@@ -479,6 +648,8 @@ export function StorefrontEditorRuntime({
     const onDouble = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-st-editor-chrome]")) return;
+      // Inline text fields use single-click → overlay; don't also open the drawer.
+      if (target?.closest("[data-st-inline-field]")) return;
       const section = target?.closest<HTMLElement>("[data-st-section-id]");
       const id = section?.dataset.stSectionId;
       if (id) openEditor(id);
@@ -1019,6 +1190,78 @@ export function StorefrontEditorRuntime({
           void onImageFilePicked(e);
         }}
       />
+
+      {/* ── React-safe inline (type-on-the-page) text overlay ──────────────────
+          Rendered by THIS runtime, so it lives in the runtime's own React tree —
+          never the server-rendered canvas tree (the previous approach made the
+          canvas node contentEditable, letting the browser rewrite React-hydrated
+          DOM and crash on the next reconcile with "removeChild"). The editable
+          div is UNCONTROLLED: keyed by section:field so React mounts it ONCE per
+          open, seeded via the ref callback below, and never re-rendered from
+          state while the user types — so React never reconciles its children
+          mid-edit. Commit reads innerText, writes the document, then refreshes;
+          the canvas re-renders from the server cleanly. */}
+      {inlineEdit && (
+        <div
+          key={`${inlineEdit.sectionId}:${inlineEdit.field}`}
+          ref={(el) => {
+            overlayRef.current = el;
+            // Seed the editable text exactly once, when the overlay mounts.
+            if (el && el.textContent === "") {
+              el.textContent = inlineEdit.value;
+              // Place the caret at the end and focus for immediate typing.
+              const sel = window.getSelection();
+              if (sel) {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+              el.focus();
+            }
+          }}
+          className="st-inline-edit-overlay"
+          data-st-editor-chrome
+          contentEditable
+          suppressContentEditableWarning
+          spellCheck
+          role="textbox"
+          aria-label={m.inlineEditAriaLabel}
+          aria-multiline={inlineEdit.multiline}
+          style={{
+            top: inlineEdit.frame.top,
+            left: inlineEdit.frame.left,
+            width: inlineEdit.frame.width,
+            fontFamily: inlineEdit.style.fontFamily,
+            fontSize: inlineEdit.style.fontSize,
+            fontWeight: inlineEdit.style.fontWeight,
+            fontStyle: inlineEdit.style.fontStyle,
+            lineHeight: inlineEdit.style.lineHeight,
+            letterSpacing: inlineEdit.style.letterSpacing,
+            color: inlineEdit.style.color,
+            textAlign: inlineEdit.style.textAlign as CSSProperties["textAlign"],
+            textTransform: inlineEdit.style
+              .textTransform as CSSProperties["textTransform"],
+            padding: inlineEdit.style.padding,
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancelInlineEdit();
+              return;
+            }
+            // Single-line fields commit on Enter; multi-line inserts a newline.
+            if (e.key === "Enter" && !inlineEdit.multiline) {
+              e.preventDefault();
+              commitInlineEdit();
+            }
+          }}
+          onBlur={() => {
+            commitInlineEdit();
+          }}
+        />
+      )}
 
       {/* ── Content editor drawer ── */}
       {editingId && (

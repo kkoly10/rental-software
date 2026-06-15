@@ -3132,3 +3132,28 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   cursor: pointer;
 }
 .st-tour-next:hover { filter: brightness(1.06); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Inline edit overlay (type-on-the-page). A React-controlled, absolutely-
+ * positioned contentEditable surface placed exactly over the target canvas text
+ * node (which is hidden via `visibility` while editing). All visual-parity
+ * styles (font, color, alignment, padding) are copied inline from the target's
+ * computed style by the runtime, so this rule only carries positioning/chrome
+ * that must NOT be overridden by the copied styles.
+ * ────────────────────────────────────────────────────────────────────────── */
+.st-inline-edit-overlay {
+  position: absolute;
+  z-index: 1002;
+  margin: 0;
+  /* Preserve the user's newlines while wrapping like the source text. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  background: transparent;
+  border: none;
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+  border-radius: 2px;
+  caret-color: var(--primary, #3f4a33);
+  cursor: text;
+}

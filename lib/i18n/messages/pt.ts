@@ -1169,6 +1169,7 @@ export const pt: Messages = {
         uploadingImage: "A carregar imagem…",
         imageUploadFailed: "Não foi possível carregar a imagem. Tente novamente.",
         inlineEditHint: "Clique em qualquer texto para o editar diretamente na página.",
+        inlineEditAriaLabel: "Editar texto",
         styleHelp: {
           intro: "Ajuste as suas cores, tipos de letra e forma. As alterações são pré-visualizadas ao vivo e guardadas no seu rascunho.",
           background: "A cor principal da página por trás de tudo.",
