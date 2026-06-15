@@ -34,6 +34,21 @@ export const CUSTOM_IMAGE_ALT_MAX = 200;
 export const CUSTOM_IMAGE_CAPTION_MAX = 300;
 export const CUSTOM_GALLERY_ALT_MAX = 200;
 export const CUSTOM_GALLERY_IMAGES_MAX = 12;
+// PR-1f: previously non-editable TEXT sections (closing / how-it-works /
+// service-area / featured). Bounds keep stored JSON small and the layout intact.
+export const CLOSING_HEADING_MAX = 120;
+export const CLOSING_BODY_MAX = 300;
+export const CLOSING_BUTTON_LABEL_MAX = 40;
+export const HOW_IT_WORKS_HEADING_MAX = 120;
+export const HOW_IT_WORKS_INTRO_MAX = 300;
+export const HOW_IT_WORKS_STEP_TITLE_MAX = 80;
+export const HOW_IT_WORKS_STEP_DESCRIPTION_MAX = 300;
+export const HOW_IT_WORKS_STEPS_MAX = 6;
+export const SERVICE_AREA_HEADING_MAX = 120;
+export const SERVICE_AREA_INTRO_MAX = 300;
+export const FEATURED_KICKER_MAX = 60;
+export const FEATURED_TITLE_MAX = 120;
+export const FEATURED_DESCRIPTION_MAX = 200;
 
 /** Bounded image URL — an absolute http(s) URL. Required form. */
 const requiredImageUrlSchema = z
@@ -158,6 +173,55 @@ export const customGallerySettingsSchema = z.object({
     .optional(),
 });
 
+/**
+ * closing settings: an editorial CTA. `heading` overrides the two-part display
+ * statement (rendered as a single plain line when present); `body` adds an
+ * optional supporting paragraph (absent → no paragraph, today's markup);
+ * `buttonLabel` overrides the ghost-button text. All optional → byte-for-byte.
+ */
+export const closingSettingsSchema = z.object({
+  heading: z.string().trim().max(CLOSING_HEADING_MAX).optional(),
+  body: z.string().trim().max(CLOSING_BODY_MAX).optional(),
+  buttonLabel: z.string().trim().max(CLOSING_BUTTON_LABEL_MAX).optional(),
+});
+
+/**
+ * how-it-works settings: `heading` + `intro` overrides for the section head, plus
+ * an optional bounded `steps` list. Absent fields fall back to today's i18n copy.
+ */
+export const howItWorksSettingsSchema = z.object({
+  heading: z.string().trim().max(HOW_IT_WORKS_HEADING_MAX).optional(),
+  intro: z.string().trim().max(HOW_IT_WORKS_INTRO_MAX).optional(),
+  steps: z
+    .array(
+      z.object({
+        title: z.string().trim().max(HOW_IT_WORKS_STEP_TITLE_MAX),
+        description: z.string().trim().max(HOW_IT_WORKS_STEP_DESCRIPTION_MAX),
+      })
+    )
+    .max(HOW_IT_WORKS_STEPS_MAX)
+    .optional(),
+});
+
+/**
+ * service-area settings: `heading` + optional `intro` overrides for the coverage
+ * section head. Absent → today's i18n copy.
+ */
+export const serviceAreaSettingsSchema = z.object({
+  heading: z.string().trim().max(SERVICE_AREA_HEADING_MAX).optional(),
+  intro: z.string().trim().max(SERVICE_AREA_INTRO_MAX).optional(),
+});
+
+/**
+ * featured settings: kicker / title / description overrides for the popular-
+ * rentals section head. Absent → today's i18n copy (m.storefront.popularRentals).
+ */
+export const featuredSettingsSchema = z.object({
+  kicker: z.string().trim().max(FEATURED_KICKER_MAX).optional(),
+  title: z.string().trim().max(FEATURED_TITLE_MAX).optional(),
+  description: z.string().trim().max(FEATURED_DESCRIPTION_MAX).optional(),
+});
+
 export type HeroSettings = z.infer<typeof heroSettingsSchema>;
 export type AboutSettings = z.infer<typeof aboutSettingsSchema>;
 export type TrustSettings = z.infer<typeof trustSettingsSchema>;
@@ -166,6 +230,10 @@ export type FaqSettings = z.infer<typeof faqSettingsSchema>;
 export type CustomRichSettings = z.infer<typeof customRichSettingsSchema>;
 export type CustomImageSettings = z.infer<typeof customImageSettingsSchema>;
 export type CustomGallerySettings = z.infer<typeof customGallerySettingsSchema>;
+export type ClosingSettings = z.infer<typeof closingSettingsSchema>;
+export type HowItWorksSettings = z.infer<typeof howItWorksSettingsSchema>;
+export type ServiceAreaSettings = z.infer<typeof serviceAreaSettingsSchema>;
+export type FeaturedSettings = z.infer<typeof featuredSettingsSchema>;
 
 /**
  * Map of section type → the Zod schema validating that type's `settings`. Only
@@ -181,6 +249,10 @@ export const SECTION_CONTENT_SCHEMAS = {
   "custom-rich": customRichSettingsSchema,
   "custom-image": customImageSettingsSchema,
   "custom-gallery": customGallerySettingsSchema,
+  closing: closingSettingsSchema,
+  "how-it-works": howItWorksSettingsSchema,
+  "service-area": serviceAreaSettingsSchema,
+  featured: featuredSettingsSchema,
 } as const;
 
 export type ContentEditableSectionType = keyof typeof SECTION_CONTENT_SCHEMAS;
@@ -247,5 +319,31 @@ export function parseCustomGallerySettings(
   settings: unknown
 ): CustomGallerySettings {
   const parsed = customGallerySettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the closing schema ({} on absent/malformed). */
+export function parseClosingSettings(settings: unknown): ClosingSettings {
+  const parsed = closingSettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the how-it-works schema ({} on absent/malformed). */
+export function parseHowItWorksSettings(settings: unknown): HowItWorksSettings {
+  const parsed = howItWorksSettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the service-area schema ({} on absent/malformed). */
+export function parseServiceAreaSettings(
+  settings: unknown
+): ServiceAreaSettings {
+  const parsed = serviceAreaSettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the featured schema ({} on absent/malformed). */
+export function parseFeaturedSettings(settings: unknown): FeaturedSettings {
+  const parsed = featuredSettingsSchema.safeParse(settings ?? {});
   return parsed.success ? parsed.data : {};
 }

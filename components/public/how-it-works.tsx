@@ -7,9 +7,22 @@ import { SectionHead } from "@/components/public/themes/party-classic/section-he
  *
  * Per spec docs/design/storefront-editorial.md §5.6.
  */
-export async function HowItWorks() {
+export async function HowItWorks({
+  heading,
+  intro,
+  steps: stepsOverride,
+}: {
+  heading?: string;
+  intro?: string;
+  steps?: { title: string; description: string }[];
+} = {}) {
   const m = await getMessages();
-  const steps = m.storefront.howItWorks.steps;
+  // Override the whole step list only when a non-empty override is supplied;
+  // otherwise fall back to today's i18n steps (byte-for-byte).
+  const steps =
+    stepsOverride && stepsOverride.length > 0
+      ? stepsOverride
+      : m.storefront.howItWorks.steps;
 
   return (
     <section className="st-section st-section-rule st-how">
@@ -17,7 +30,8 @@ export async function HowItWorks() {
         <SectionHead
           center
           kicker={m.storefront.howItWorks.kicker}
-          title={m.storefront.howItWorks.title}
+          title={heading || m.storefront.howItWorks.title}
+          sub={intro || undefined}
         />
         <div className="st-how-grid">
           {steps.map((step, index) => (

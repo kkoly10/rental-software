@@ -29,6 +29,19 @@ import {
   CUSTOM_IMAGE_CAPTION_MAX,
   CUSTOM_GALLERY_ALT_MAX,
   CUSTOM_GALLERY_IMAGES_MAX,
+  CLOSING_HEADING_MAX,
+  CLOSING_BODY_MAX,
+  CLOSING_BUTTON_LABEL_MAX,
+  HOW_IT_WORKS_HEADING_MAX,
+  HOW_IT_WORKS_INTRO_MAX,
+  HOW_IT_WORKS_STEP_TITLE_MAX,
+  HOW_IT_WORKS_STEP_DESCRIPTION_MAX,
+  HOW_IT_WORKS_STEPS_MAX,
+  SERVICE_AREA_HEADING_MAX,
+  SERVICE_AREA_INTRO_MAX,
+  FEATURED_KICKER_MAX,
+  FEATURED_TITLE_MAX,
+  FEATURED_DESCRIPTION_MAX,
   type ContentEditableSectionType,
 } from "@/lib/storefront/sections/content-schemas";
 
@@ -222,6 +235,130 @@ export function StorefrontSectionEditor({
           onChange={(next) => setList("images", next)}
         />
       )}
+
+      {type === "closing" && (
+        <>
+          <Field label={m.closingHeadingLabel}>
+            <input
+              type="text"
+              value={get("heading")}
+              maxLength={CLOSING_HEADING_MAX}
+              placeholder={m.closingHeadingPlaceholder}
+              onChange={(e) => set("heading", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.closingBodyLabel}>
+            <textarea
+              value={get("body")}
+              maxLength={CLOSING_BODY_MAX}
+              rows={3}
+              placeholder={m.closingBodyPlaceholder}
+              onChange={(e) => set("body", e.target.value)}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </Field>
+          <Field label={m.closingButtonLabel}>
+            <input
+              type="text"
+              value={get("buttonLabel")}
+              maxLength={CLOSING_BUTTON_LABEL_MAX}
+              placeholder={m.closingButtonPlaceholder}
+              onChange={(e) => set("buttonLabel", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+        </>
+      )}
+
+      {type === "how-it-works" && (
+        <>
+          <Field label={m.howItWorksHeadingLabel}>
+            <input
+              type="text"
+              value={get("heading")}
+              maxLength={HOW_IT_WORKS_HEADING_MAX}
+              placeholder={m.howItWorksHeadingPlaceholder}
+              onChange={(e) => set("heading", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.howItWorksIntroLabel}>
+            <textarea
+              value={get("intro")}
+              maxLength={HOW_IT_WORKS_INTRO_MAX}
+              rows={3}
+              placeholder={m.howItWorksIntroPlaceholder}
+              onChange={(e) => set("intro", e.target.value)}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </Field>
+          <HowItWorksStepsForm
+            steps={getList<HowItWorksStepValue>("steps")}
+            onChange={(next) => setList("steps", next)}
+          />
+        </>
+      )}
+
+      {type === "service-area" && (
+        <>
+          <Field label={m.serviceAreaHeadingLabel}>
+            <input
+              type="text"
+              value={get("heading")}
+              maxLength={SERVICE_AREA_HEADING_MAX}
+              placeholder={m.serviceAreaHeadingPlaceholder}
+              onChange={(e) => set("heading", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.serviceAreaIntroLabel}>
+            <textarea
+              value={get("intro")}
+              maxLength={SERVICE_AREA_INTRO_MAX}
+              rows={3}
+              placeholder={m.serviceAreaIntroPlaceholder}
+              onChange={(e) => set("intro", e.target.value)}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </Field>
+        </>
+      )}
+
+      {type === "featured" && (
+        <>
+          <Field label={m.featuredKickerLabel}>
+            <input
+              type="text"
+              value={get("kicker")}
+              maxLength={FEATURED_KICKER_MAX}
+              placeholder={m.featuredKickerPlaceholder}
+              onChange={(e) => set("kicker", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.featuredTitleLabel}>
+            <input
+              type="text"
+              value={get("title")}
+              maxLength={FEATURED_TITLE_MAX}
+              placeholder={m.featuredTitlePlaceholder}
+              onChange={(e) => set("title", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.featuredDescriptionLabel}>
+            <textarea
+              value={get("description")}
+              maxLength={FEATURED_DESCRIPTION_MAX}
+              rows={2}
+              placeholder={m.featuredDescriptionPlaceholder}
+              onChange={(e) => set("description", e.target.value)}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </Field>
+        </>
+      )}
     </div>
   );
 }
@@ -239,6 +376,67 @@ type TrustBadgeValue = { title: string; description: string };
 type TestimonialValue = { name: string; text: string; rating?: number };
 type FaqValue = { question: string; answer: string };
 type GalleryImageValue = { imageUrl: string; alt?: string };
+type HowItWorksStepValue = { title: string; description: string };
+
+/**
+ * how-it-works steps editor: an optional bounded list (max 6) of
+ * {title, description}. An empty list removes the key → the section falls back
+ * to today's i18n step copy (byte-for-byte). Steps with both fields blank are
+ * still stored as-is here; the publish schema bounds them, and the operator can
+ * remove unwanted rows. Heading/intro are edited above (and inline on canvas);
+ * the structured step list is drawer-only.
+ */
+function HowItWorksStepsForm({
+  steps,
+  onChange,
+}: {
+  steps: HowItWorksStepValue[];
+  onChange: (next: HowItWorksStepValue[]) => void;
+}) {
+  const { messages } = useI18n();
+  const m = messages.dashboard.website.builder.sectionEditor;
+
+  const update = (i: number, field: keyof HowItWorksStepValue, value: string) =>
+    onChange(steps.map((s, idx) => (idx === i ? { ...s, [field]: value } : s)));
+  const remove = (i: number) => onChange(steps.filter((_, idx) => idx !== i));
+  const add = () => {
+    if (steps.length >= HOW_IT_WORKS_STEPS_MAX) return;
+    onChange([...steps, { title: "", description: "" }]);
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      {steps.map((s, i) => (
+        <div key={i} style={rowStyle}>
+          <RowHeader title={`${i + 1}`} onRemove={() => remove(i)} removeLabel={m.removeRow} />
+          <Field label={m.howItWorksStepTitleLabel}>
+            <input
+              type="text"
+              value={s.title}
+              maxLength={HOW_IT_WORKS_STEP_TITLE_MAX}
+              placeholder={m.howItWorksStepTitlePlaceholder}
+              onChange={(e) => update(i, "title", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.howItWorksStepDescriptionLabel}>
+            <textarea
+              value={s.description}
+              maxLength={HOW_IT_WORKS_STEP_DESCRIPTION_MAX}
+              rows={2}
+              placeholder={m.howItWorksStepDescriptionPlaceholder}
+              onChange={(e) => update(i, "description", e.target.value)}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </Field>
+        </div>
+      ))}
+      {steps.length < HOW_IT_WORKS_STEPS_MAX && (
+        <AddButton label={m.howItWorksStepAdd} onClick={add} />
+      )}
+    </div>
+  );
+}
 
 function TrustBadgesForm({
   badges,

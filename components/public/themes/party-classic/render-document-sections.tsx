@@ -29,6 +29,10 @@ import {
   parseCustomRichSettings,
   parseCustomImageSettings,
   parseCustomGallerySettings,
+  parseClosingSettings,
+  parseHowItWorksSettings,
+  parseServiceAreaSettings,
+  parseFeaturedSettings,
 } from "@/lib/storefront/sections/content-schemas";
 
 type FeaturedProduct = Awaited<
@@ -90,14 +94,17 @@ function renderDocumentSection(
       return <PartyClassicCategoryTiles />;
     case "browse-tiles":
       return <PartyClassicBrowseTiles />;
-    case "featured":
+    case "featured": {
+      // PR-1f content-editable: override the section head's kicker/title/sub
+      // when present (absent → today's i18n popularRentals copy → byte-for-byte).
+      const featuredSettings = parseFeaturedSettings(settings);
       return featured.length > 0 ? (
         <section id="catalog" className="st-section">
           <div className="st-container">
             <SectionHead
-              kicker={m.storefront.popularRentals.kicker}
-              title={m.storefront.popularRentals.title}
-              sub={m.storefront.popularRentals.description}
+              kicker={featuredSettings.kicker || m.storefront.popularRentals.kicker}
+              title={featuredSettings.title || m.storefront.popularRentals.title}
+              sub={featuredSettings.description || m.storefront.popularRentals.description}
               link={
                 featured.length >= 3
                   ? { label: `${m.storefront.popularRentals.browseAll} →`, href: "/inventory" }
@@ -121,24 +128,40 @@ function renderDocumentSection(
           </div>
         </section>
       ) : null;
-    case "how-it-works":
+    }
+    case "how-it-works": {
+      // PR-1f content-editable: heading/intro (+ optional steps) overrides;
+      // absent → today's i18n copy inside the component (byte-for-byte).
+      const howItWorks = parseHowItWorksSettings(settings);
       return (
         <div id="how-it-works">
-          <HowItWorks />
+          <HowItWorks
+            heading={howItWorks.heading}
+            intro={howItWorks.intro}
+            steps={howItWorks.steps}
+          />
         </div>
       );
+    }
     case "testimonials": {
       // PR-1d content-editable: pass the document's testimonials (absent →
       // the component falls back to today's content settings).
       const reviews = parseTestimonialsSettings(settings);
       return <PartyClassicReviewsCards testimonials={reviews.items} />;
     }
-    case "service-area":
+    case "service-area": {
+      // PR-1f content-editable: heading/intro overrides; absent → today's i18n
+      // copy inside the component (byte-for-byte).
+      const serviceArea = parseServiceAreaSettings(settings);
       return (
         <div id="service-area">
-          <PartyClassicServiceArea />
+          <PartyClassicServiceArea
+            heading={serviceArea.heading}
+            intro={serviceArea.intro}
+          />
         </div>
       );
+    }
     case "about": {
       const about = parseAboutSettings(settings);
       return (
@@ -158,8 +181,18 @@ function renderDocumentSection(
         />
       );
     }
-    case "closing":
-      return <PartyClassicClosing />;
+    case "closing": {
+      // PR-1f content-editable: heading/body/buttonLabel overrides; absent →
+      // today's i18n copy inside the component (byte-for-byte).
+      const closing = parseClosingSettings(settings);
+      return (
+        <PartyClassicClosing
+          heading={closing.heading}
+          body={closing.body}
+          buttonLabel={closing.buttonLabel}
+        />
+      );
+    }
     case "custom-rich": {
       // PR-1e operator-added section. Parse defensively → the component
       // returns null when neither heading nor body is present (empty section).
