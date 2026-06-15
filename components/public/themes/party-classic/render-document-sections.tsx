@@ -186,24 +186,66 @@ function renderDocumentSection(
 }
 
 /**
+ * Optional behaviour switches for the document renderer.
+ *
+ * `editable` turns on the ON-CANVAS EDITOR mode (PR-2a): every section is
+ * rendered (including `disabled` ones, so the operator can re-enable them) and
+ * each node is wrapped in a layout-neutral marker (`.st-editable-section`) the
+ * client editor overlay reads via `[data-st-section-id]` to position its hover
+ * frame / selection toolbar. Unknown types are still skipped.
+ *
+ * When `editable` is falsy (the DEFAULT — the live public page and the public
+ * preview), behaviour is BYTE-FOR-BYTE identical to before this option existed:
+ * disabled/unknown sections are skipped and the section node is returned with no
+ * wrapper element. This is a hard safety requirement — the public render must
+ * not change.
+ */
+type RenderDocumentSectionsOptions = {
+  editable?: boolean;
+};
+
+/**
  * Render the document's sections in order, skipping disabled ones and any type
  * not in the registry (unknown types render nothing — never crash). Returns the
  * ordered list of section nodes — the SAME output app/page.tsx's document branch
  * produced inline. Used by both the live public page and the builder preview.
+ *
+ * In `editable` mode (the on-canvas editor) the output instead includes ALL
+ * sections (disabled ones too, marked so CSS can grey them) wrapped in a
+ * layout-neutral `.st-editable-section` div carrying `data-st-section-*` attrs.
  */
 export function renderDocumentSections(
   doc: StorefrontPageDocument,
-  ctx: DocumentSectionContext
+  ctx: DocumentSectionContext,
+  options?: RenderDocumentSectionsOptions
 ): ReactNode {
+  const editable = options?.editable === true;
+
   return doc.order.map((id) => {
     const section = doc.sections[id];
     if (!section) return null;
-    if (section.disabled) return null;
+    // Editor shows disabled sections (so they can be re-enabled); the live
+    // render skips them — UNCHANGED default behaviour.
+    if (!editable && section.disabled) return null;
     if (!isKnownSectionType(section.type)) return null;
+
+    const node = renderDocumentSection(ctx, section.type, section.settings);
+
+    if (!editable) {
+      return <Fragment key={id}>{node}</Fragment>;
+    }
+
+    // Editor mode: wrap in a layout-neutral marker the client overlay reads.
     return (
-      <Fragment key={id}>
-        {renderDocumentSection(ctx, section.type, section.settings)}
-      </Fragment>
+      <div
+        key={id}
+        data-st-section-id={id}
+        data-st-section-type={section.type}
+        data-st-disabled={section.disabled ? "true" : undefined}
+        className="st-editable-section"
+      >
+        {node}
+      </div>
     );
   });
 }
