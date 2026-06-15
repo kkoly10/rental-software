@@ -98,6 +98,10 @@ export function normalizeExistingDocument(
     order: [...doc.order],
     sections: { ...doc.sections },
     theme,
+    // Preserve nav label overrides so the builder loads with the operator's
+    // saved nav renames (otherwise reopening the editor would lose them and the
+    // canvas couldn't preview them).
+    ...(doc.nav ? { nav: { ...doc.nav } } : {}),
   };
 }
 

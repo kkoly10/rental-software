@@ -261,6 +261,10 @@ export function StorefrontEditorRuntime({
   // the current document without being re-bound on every keystroke.
   const docJsonRef = useRef(documentJson);
   docJsonRef.current = documentJson;
+  // Latest doc object, so DOM passes (applyNavOverrides) read current overrides
+  // without re-binding listeners on every keystroke.
+  const docRef = useRef(doc);
+  docRef.current = doc;
 
   // ── Background draft save (debounced) ───────────────────────────────────────
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -431,8 +435,30 @@ export function StorefrontEditorRuntime({
     });
   }, []);
 
+  // Apply the runtime's draft nav-label overrides to the canvas header DOM. The
+  // server header on the editor host can't resolve the DRAFT overrides (its nav
+  // read runs outside the preview-org scope), so the runtime — which holds the
+  // authoritative document — writes them onto the [data-st-nav-key] elements
+  // directly. Mutates the existing text node's value (no structural change) to
+  // stay React-safe. Runs on mount, after every canvas refresh, and post-commit.
+  const applyNavOverrides = useCallback(() => {
+    const nav = docRef.current.nav;
+    document
+      .querySelectorAll<HTMLElement>("[data-st-nav-key]")
+      .forEach((el) => {
+        const key = el.dataset.stNavKey;
+        if (!key) return;
+        const override = nav?.[key];
+        if (typeof override !== "string" || override.trim() === "") return;
+        const tn = el.firstChild;
+        if (tn && tn.nodeType === Node.TEXT_NODE) tn.nodeValue = override;
+        else el.textContent = override;
+      });
+  }, []);
+
   useEffect(() => {
     bindInlineFields();
+    applyNavOverrides();
 
     // Re-bind + re-measure whenever the canvas DOM is replaced (router.refresh
     // from add-section / image replace / content-drawer close swaps the
@@ -449,6 +475,7 @@ export function StorefrontEditorRuntime({
       raf = requestAnimationFrame(() => {
         raf = 0;
         bindInlineFields();
+        applyNavOverrides();
         measure();
       });
     });
@@ -458,7 +485,7 @@ export function StorefrontEditorRuntime({
       observer.disconnect();
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [bindInlineFields, measure]);
+  }, [bindInlineFields, applyNavOverrides, measure]);
 
   // ── React-safe inline (type-on-the-page) text editing ───────────────────────
   // Open the overlay over a tagged canvas text element. We READ the element
@@ -618,10 +645,17 @@ export function StorefrontEditorRuntime({
         // Restore visibility + tear down AFTER scheduling the refresh, then
         // re-measure once the new canvas paints (double rAF).
         closeInlineEdit();
-        requestAnimationFrame(() => requestAnimationFrame(measure));
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            // Re-apply nav overrides after the canvas re-renders so a renamed
+            // nav label shows immediately (the server header can't preview it).
+            applyNavOverrides();
+            measure();
+          })
+        );
       }
     })();
-  }, [inlineEdit, doc, router, measure, closeInlineEdit]);
+  }, [inlineEdit, doc, router, measure, closeInlineEdit, applyNavOverrides]);
 
   const commitInlineEdit = useCallback(() => {
     commitInlineEditWith();
