@@ -73,6 +73,10 @@ const fieldStyleHex = z
 
 const fieldStyleFont = z.enum(CURATED_FONTS);
 
+// Text alignment override — a fixed enum (never raw CSS) so a stored value can
+// only ever be one of these safe literals.
+const fieldStyleAlign = z.enum(["left", "center", "right"]);
+
 /**
  * One field's style override. All keys optional; an empty object means "no
  * override". `.strip()` (Zod default) drops any unknown keys so a hand-edited doc
@@ -89,6 +93,7 @@ export const fieldStyleSchema = z.object({
   bold: z.boolean().optional(),
   italic: z.boolean().optional(),
   font: fieldStyleFont.optional(),
+  align: fieldStyleAlign.optional(),
 });
 
 export type FieldStyle = z.infer<typeof fieldStyleSchema>;
@@ -172,7 +177,8 @@ export function parseFieldStyles(
       style.color === undefined &&
       style.bold === undefined &&
       style.italic === undefined &&
-      style.font === undefined
+      style.font === undefined &&
+      style.align === undefined
     ) {
       continue;
     }

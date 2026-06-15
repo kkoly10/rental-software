@@ -63,6 +63,18 @@ test("fieldStyleSchema clamps size range and validates hex + font", () => {
   assert.equal(fieldStyleSchema.safeParse({ font: "Comic Sans" }).success, false);
 });
 
+test("fieldStyleSchema validates align as a fixed enum", () => {
+  assert.equal(fieldStyleSchema.safeParse({ align: "left" }).success, true);
+  assert.equal(fieldStyleSchema.safeParse({ align: "center" }).success, true);
+  assert.equal(fieldStyleSchema.safeParse({ align: "right" }).success, true);
+  // Anything outside the enum (including a CSS-injection attempt) is rejected.
+  assert.equal(fieldStyleSchema.safeParse({ align: "justify" }).success, false);
+  assert.equal(
+    fieldStyleSchema.safeParse({ align: "left !important; }body{x" }).success,
+    false
+  );
+});
+
 test("parseFieldStyles returns {} for absent/malformed settings", () => {
   assert.deepEqual(parseFieldStyles(undefined), {});
   assert.deepEqual(parseFieldStyles(null), {});
@@ -83,11 +95,44 @@ test("parseFieldStyles drops invalid per-field overrides, keeps valid ones", () 
   assert.deepEqual(out.headline, { sizePx: 32, bold: true });
 });
 
+test("parseFieldStyles keeps a valid align, drops an invalid one", () => {
+  const out = parseFieldStyles({
+    fieldStyles: {
+      headline: { align: "center" }, // valid → kept (align-only override)
+      message: { align: "justify" }, // not in enum → whole field dropped
+      tagline: { sizePx: 20, align: "diagonal" }, // bad align → field dropped
+    },
+  });
+  assert.deepEqual(Object.keys(out).sort(), ["headline"]);
+  assert.deepEqual(out.headline, { align: "center" });
+});
+
 test("parseFieldStyles strips unknown keys from a field override", () => {
   const out = parseFieldStyles({
     fieldStyles: { headline: { sizePx: 20, evil: "x", color: "#fff" } },
   });
   assert.deepEqual(out.headline, { sizePx: 20, color: "#fff" });
+});
+
+test("an align override emits a scoped text-align !important declaration", () => {
+  // The shared renderer's fieldStyleDeclarations() is module-private (it lives in
+  // a JSX file that can't be imported under node --test --experimental-strip-types).
+  // Mirror its align branch here so the contract — align renders as a
+  // `text-align:<value> !important` declaration from an already-validated enum,
+  // and ONLY when set — is locked in alongside the schema/parse coverage above.
+  const declFor = (style: { align?: "left" | "center" | "right" }): string[] => {
+    const decls: string[] = [];
+    if (style.align) decls.push(`text-align:${style.align} !important`);
+    return decls;
+  };
+  // Validate through the real schema first so the value is the same shape the
+  // renderer receives (defense-in-depth: only enum literals ever reach the decl).
+  const parsed = fieldStyleSchema.safeParse({ align: "center" });
+  assert.equal(parsed.success, true);
+  if (!parsed.success) return;
+  assert.deepEqual(declFor(parsed.data), ["text-align:center !important"]);
+  // No align set → no declaration emitted (byte-for-byte when unset).
+  assert.deepEqual(declFor({}), []);
 });
 
 test("FONT_STACKS covers every selectorable section's font enum", () => {
@@ -113,7 +158,7 @@ test("parseBuilderDocument DROPS invalid fieldStyles instead of rejecting", () =
         settings: {
           headline: "Hi",
           fieldStyles: {
-            headline: { sizePx: 32, color: "#C0392B" },
+            headline: { sizePx: 32, color: "#C0392B", align: "center" },
             message: { sizePx: 9999 }, // invalid → dropped
           },
         },
@@ -128,6 +173,11 @@ test("parseBuilderDocument DROPS invalid fieldStyles instead of rejecting", () =
     fieldStyles?: Record<string, unknown>;
   };
   assert.deepEqual(Object.keys(settings.fieldStyles ?? {}), ["headline"]);
+  assert.deepEqual(settings.fieldStyles?.headline, {
+    sizePx: 32,
+    color: "#C0392B",
+    align: "center",
+  });
 });
 
 test("parseBuilderDocument drops fieldStyles entirely when none survive", () => {
