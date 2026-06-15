@@ -2055,6 +2055,7 @@ const enValues = {
       emailLabel: "Email",
       emailPlaceholder: "customer@example.com",
       eventDateLabel: "Event date",
+      eventDateLabelGeneral: "Rental date",
       startTimeLabel: "Start time",
       endTimeLabel: "End time",
       sameDayTimeClashWarning: "Start time and end time are the same. For a same-day rental, the delivery and pickup stops would carry identical scheduled times — give them distinct values before saving.",

@@ -2047,6 +2047,7 @@ export const pt: Messages = {
       emailLabel: "E-mail",
       emailPlaceholder: "cliente@exemplo.com",
       eventDateLabel: "Data do evento",
+      eventDateLabelGeneral: "Data de aluguer",
       startTimeLabel: "Hora de início",
       endTimeLabel: "Hora de fim",
       sameDayTimeClashWarning: "Hora de início e fim iguais. Para um aluguer no mesmo dia, as paragens de entrega e recolha teriam o mesmo horário — use valores distintos antes de guardar.",

@@ -37,16 +37,20 @@ export function NewOrderForm({
   products,
   serviceAreas,
   initialEventDate,
+  isGeneral,
 }: {
   products: OrderFormProductOption[];
   serviceAreas: OrderFormServiceAreaOption[];
   /** Pre-fill the event_date input — used by deep links from the route
       detail page's empty Add-Stop state ("Create order for this date"). */
   initialEventDate?: string;
+  /** General ("other") vertical → "Rental date" label. Event verticals unset. */
+  isGeneral?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createOrder, initialState);
   const { messages } = useI18n();
   const m = messages.forms.newOrder;
+  const dateLabel = isGeneral ? m.eventDateLabelGeneral : m.eventDateLabel;
   // Convenient handle for inline field error rendering — populated by
   // createOrder on validation failure so each input can show its own
   // message instead of relying solely on the top-of-form toast.
@@ -231,7 +235,7 @@ export function NewOrderForm({
 
       <div className="grid grid-3">
         <label className="order-card">
-          <strong>{m.eventDateLabel}</strong>
+          <strong>{dateLabel}</strong>
           <input
             name="event_date"
             type="date"
