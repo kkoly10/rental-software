@@ -131,6 +131,7 @@ export const pt: Messages = {
       kicker: "Explorar por alugueres",
       title: "Alugueres populares",
       description: "Veja os nossos alugueres mais populares e consulte a disponibilidade para a data do seu evento.",
+      descriptionGeneral: "Veja os nossos alugueres mais populares e consulte a disponibilidade para as suas datas.",
       browseAll: "Ver todos",
     },
     howItWorks: {
@@ -140,6 +141,11 @@ export const pt: Messages = {
         { title: "Escolha os seus alugueres", description: "Explore os alugueres e extras disponíveis para o seu evento." },
         { title: "Data, hora e zona de entrega", description: "Introduza a data, hora e código postal para confirmar disponibilidade e entrega." },
         { title: "Reserve online e prepare-se", description: "Reserve em minutos — a nossa equipa entrega, monta em segurança e recolhe após o evento." },
+      ],
+      stepsGeneral: [
+        { title: "Escolha os seus alugueres", description: "Explore os alugueres e extras disponíveis para o que precisa." },
+        { title: "Datas e zona de entrega", description: "Introduza as suas datas de aluguer e código postal para confirmar disponibilidade e entrega." },
+        { title: "Reserve online e prepare-se", description: "Reserve em minutos — levantamento ou entrega, e tratamos da devolução." },
       ],
     },
     categoryGrid: {
@@ -1826,6 +1832,7 @@ export const pt: Messages = {
     cards: {
       whatHappensNext: "O que vem a seguir",
       whatHappensNextBody: "A nossa equipa irá rever a sua reserva, confirmar a data do evento e enviar os detalhes de montagem e segurança.",
+      whatHappensNextBodyGeneral: "A nossa equipa irá rever a sua reserva, confirmar os detalhes e entrar em contacto com o que precisar.",
       trackYourOrder: "Acompanhe a sua encomenda",
       trackYourOrderBody: "Abra o seu link de portal seguro para ver o estado, documentos e mensagens ao operador.",
     },

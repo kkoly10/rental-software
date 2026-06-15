@@ -12,6 +12,8 @@ import { issuePortalAccessToken } from "@/lib/portal/access-token";
 import { getOrganizationSettings } from "@/lib/data/organization-settings";
 import { requirePublicOrg } from "@/lib/auth/require-public-org";
 import { getTranslator } from "@/lib/i18n/server";
+import { getPublicPrimaryVerticalSlug } from "@/lib/verticals/storefront-defaults";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getOrganizationSettings();
@@ -153,11 +155,15 @@ export default async function OrderConfirmationPage({
   const { order, session_id } = await searchParams;
 
   // Server-verified payment status — URL params are NOT trusted
-  const [{ status }, portalUrl, { messages: m, t }] = await Promise.all([
+  const [{ status }, portalUrl, { messages: m, t }, verticalSlug] = await Promise.all([
     resolvePaymentStatus(order, session_id),
     getPortalAccessUrl(order),
     getTranslator(),
+    getPublicPrimaryVerticalSlug(),
   ]);
+  const whatHappensNextBody = isGeneralVertical(verticalSlug)
+    ? m.orderConfirmation.cards.whatHappensNextBodyGeneral
+    : m.orderConfirmation.cards.whatHappensNextBody;
 
   const isPaid = status === "paid";
   const isProcessing = status === "processing";
@@ -224,7 +230,7 @@ export default async function OrderConfirmationPage({
               <div className="order-card">
                 <strong>{m.orderConfirmation.cards.whatHappensNext}</strong>
                 <div className="muted" style={{ marginTop: 6 }}>
-                  {m.orderConfirmation.cards.whatHappensNextBody}
+                  {whatHappensNextBody}
                 </div>
               </div>
               <div className="order-card">

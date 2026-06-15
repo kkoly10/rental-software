@@ -27,6 +27,8 @@ import { buildPageMetadata, getRequestOrigin } from "@/lib/seo/metadata";
 import { organizationJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { getTranslator } from "@/lib/i18n/server";
+import { getPublicPrimaryVerticalSlug } from "@/lib/verticals/storefront-defaults";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 import { getStorefrontPageDocument } from "@/lib/storefront/page-document";
 import { renderDocumentSections } from "@/components/public/themes/party-classic/render-document-sections";
 
@@ -71,7 +73,7 @@ export default async function HomePage() {
   // Shared data fetches, hoisted ONCE and passed to both render paths so the
   // dormant document path introduces no N+1. (These are React-cache()-wrapped,
   // so even where a child component re-requests one it's deduped per request.)
-  const [featured, settings, contentSettings, isDemo, origin, { messages }, doc] =
+  const [featured, settings, contentSettings, isDemo, origin, { messages }, doc, verticalSlug] =
     await Promise.all([
       getFeaturedCatalogList(),
       getOrganizationSettings(),
@@ -83,9 +85,16 @@ export default async function HomePage() {
       // published page document with a non-empty `order`), so every storefront
       // falls through to the unchanged legacy hardcoded sequence below.
       getStorefrontPageDocument("published"),
+      getPublicPrimaryVerticalSlug(),
     ]);
 
   const m = messages;
+  // General ("other") operators rent tools / AV / furniture, not "events".
+  const general = isGeneralVertical(verticalSlug);
+  const popularRentalsSub = general
+    ? m.storefront.popularRentals.descriptionGeneral
+    : m.storefront.popularRentals.description;
+  const howItWorksSteps = general ? m.storefront.howItWorks.stepsGeneral : undefined;
   const vis = contentSettings.sectionVisibility;
   const faqItems =
     contentSettings.customFaq && contentSettings.customFaq.length > 0
@@ -159,7 +168,7 @@ export default async function HomePage() {
               <SectionHead
                 kicker={m.storefront.popularRentals.kicker}
                 title={m.storefront.popularRentals.title}
-                sub={m.storefront.popularRentals.description}
+                sub={popularRentalsSub}
                 link={
                   featured.length >= 3
                     ? { label: `${m.storefront.popularRentals.browseAll} →`, href: "/inventory" }
@@ -186,7 +195,7 @@ export default async function HomePage() {
 
         {vis.how_it_works !== false && (
           <div id="how-it-works">
-            <HowItWorks />
+            <HowItWorks steps={howItWorksSteps} />
           </div>
         )}
 

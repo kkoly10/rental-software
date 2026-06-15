@@ -132,6 +132,7 @@ const enValues = {
       kicker: "Explore by rentals",
       title: "Popular Rentals",
       description: "Browse our most popular rentals and check availability for your event date.",
+      descriptionGeneral: "Browse our most popular rentals and check availability for your dates.",
       browseAll: "Browse all",
     },
     howItWorks: {
@@ -141,6 +142,11 @@ const enValues = {
         { title: "Choose Your Rentals", description: "Browse available rentals and add-ons that fit your event." },
         { title: "Select Date, Time & Delivery Area", description: "Enter your event date/time and ZIP code so we can confirm availability and delivery." },
         { title: "Reserve Online & Get Ready", description: "Reserve in minutes, then our team delivers, sets up safely, and handles pickup after the event." },
+      ],
+      stepsGeneral: [
+        { title: "Choose Your Rentals", description: "Browse available rentals and add-ons for what you need." },
+        { title: "Select Dates & Delivery Area", description: "Enter your rental dates and ZIP code so we can confirm availability and delivery." },
+        { title: "Reserve Online & Get Ready", description: "Reserve in minutes — pick up or have it delivered, and we'll handle the return." },
       ],
     },
     categoryGrid: {
@@ -1832,6 +1838,7 @@ const enValues = {
     cards: {
       whatHappensNext: "What happens next",
       whatHappensNextBody: "Our team will review your booking, confirm the event date, and send you setup and safety details.",
+      whatHappensNextBodyGeneral: "Our team will review your booking, confirm the details, and follow up with anything you need.",
       trackYourOrder: "Track your order",
       trackYourOrderBody: "Open your secure portal link to check status, view documents, and message the operator.",
     },

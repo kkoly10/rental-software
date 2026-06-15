@@ -10,6 +10,8 @@ import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { hashPortalAccessToken, isPortalTokenExpired } from "@/lib/portal/access-token";
 import { getOrderFinancialsAdmin } from "@/lib/payments/financials";
 import { generateInvoicePdf, type InvoiceData } from "@/lib/invoices/generate-pdf";
+import { getOrgPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 import { fetchLogoDataUrl } from "@/lib/pdf/logo";
 import { safeFilenameToken } from "@/lib/security/header-safe";
 import { formatDateInTimeZone } from "@/lib/datetime/event-time";
@@ -125,6 +127,7 @@ export async function GET(request: NextRequest) {
   const depositPaid = financials?.totalPaid ?? 0;
   const balanceDue = financials?.remainingBalance ?? totalAmount;
   const timezone = org?.event_timezone ?? "UTC";
+  const general = isGeneralVertical(await getOrgPrimaryVerticalSlug(supabase, orgId));
   const logoDataUrl = await fetchLogoDataUrl(
     ((org?.settings as Record<string, unknown> | null)?.brand_logo_url as string | undefined) ?? null,
   );
@@ -134,6 +137,7 @@ export async function GET(request: NextRequest) {
     supportEmail: org?.support_email ?? "",
     phone: org?.phone ?? "",
     orderNumber: order.order_number,
+    dateLabel: general ? "Rental date" : "Event date",
     invoiceDate: formatDateInTimeZone(new Date(), timezone, {
       month: "long",
       day: "numeric",

@@ -131,6 +131,7 @@ export const es: Messages = {
       kicker: "Explorar por alquileres",
       title: "Alquileres populares",
       description: "Explora nuestros alquileres más populares y consulta la disponibilidad para la fecha de tu evento.",
+      descriptionGeneral: "Explora nuestros alquileres más populares y consulta la disponibilidad para tus fechas.",
       browseAll: "Ver todos",
     },
     howItWorks: {
@@ -140,6 +141,11 @@ export const es: Messages = {
         { title: "Elige tus alquileres", description: "Explora los alquileres y complementos disponibles para tu evento." },
         { title: "Fecha, hora y zona de entrega", description: "Introduce la fecha, hora y código postal para confirmar disponibilidad y entrega." },
         { title: "Reserva en línea y prepárate", description: "Reserva en minutos: nuestro equipo entrega, monta de forma segura y recoge tras el evento." },
+      ],
+      stepsGeneral: [
+        { title: "Elige tus alquileres", description: "Explora los alquileres y complementos disponibles para lo que necesitas." },
+        { title: "Fechas y zona de entrega", description: "Introduce tus fechas de alquiler y código postal para confirmar disponibilidad y entrega." },
+        { title: "Reserva en línea y prepárate", description: "Reserva en minutos: recoge o recibe la entrega, y nosotros nos encargamos de la devolución." },
       ],
     },
     categoryGrid: {
@@ -1826,6 +1832,7 @@ export const es: Messages = {
     cards: {
       whatHappensNext: "Qué sigue",
       whatHappensNextBody: "Nuestro equipo revisará tu reserva, confirmará la fecha y te enviará detalles de montaje y seguridad.",
+      whatHappensNextBodyGeneral: "Nuestro equipo revisará tu reserva, confirmará los detalles y te contactará con lo que necesites.",
       trackYourOrder: "Sigue tu pedido",
       trackYourOrderBody: "Abre tu enlace de portal seguro para ver estado, documentos y enviar mensajes al operador.",
     },

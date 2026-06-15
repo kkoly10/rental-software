@@ -131,6 +131,7 @@ export const fr: Messages = {
       kicker: "Explorer nos locations",
       title: "Locations populaires",
       description: "Parcourez nos locations les plus populaires et vérifiez la disponibilité pour votre date.",
+      descriptionGeneral: "Parcourez nos locations les plus populaires et vérifiez la disponibilité pour vos dates.",
       browseAll: "Tout parcourir",
     },
     howItWorks: {
@@ -140,6 +141,11 @@ export const fr: Messages = {
         { title: "Choisissez vos locations", description: "Parcourez les locations et options disponibles pour votre événement." },
         { title: "Date, heure et zone de livraison", description: "Indiquez la date, l’heure et le code postal pour confirmer la disponibilité et la livraison." },
         { title: "Réservez en ligne et préparez-vous", description: "Réservez en quelques minutes : notre équipe livre, installe en sécurité et récupère après l’événement." },
+      ],
+      stepsGeneral: [
+        { title: "Choisissez vos locations", description: "Parcourez les locations et options disponibles selon vos besoins." },
+        { title: "Dates et zone de livraison", description: "Indiquez vos dates de location et code postal pour confirmer la disponibilité et la livraison." },
+        { title: "Réservez en ligne et préparez-vous", description: "Réservez en quelques minutes : retrait ou livraison, et nous gérons le retour." },
       ],
     },
     categoryGrid: {
@@ -1826,6 +1832,7 @@ export const fr: Messages = {
     cards: {
       whatHappensNext: "Et ensuite ?",
       whatHappensNextBody: "Notre équipe examinera votre réservation, confirmera la date et vous enverra les détails d’installation et de sécurité.",
+      whatHappensNextBodyGeneral: "Notre équipe examinera votre réservation, confirmera les détails et vous recontactera pour tout besoin.",
       trackYourOrder: "Suivez votre commande",
       trackYourOrderBody: "Ouvrez votre lien de portail sécurisé pour vérifier le statut, consulter les documents et écrire à l’opérateur.",
     },
