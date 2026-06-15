@@ -1169,6 +1169,7 @@ export const fr: Messages = {
         uploadingImage: "Téléversement de l'image…",
         imageUploadFailed: "Impossible de téléverser l'image. Veuillez réessayer.",
         inlineEditHint: "Cliquez sur n'importe quel texte pour le modifier directement sur la page.",
+        inlineEditAriaLabel: "Modifier le texte",
         styleHelp: {
           intro: "Ajustez vos couleurs, polices et formes. Les modifications s'affichent en direct et sont enregistrées dans votre brouillon.",
           background: "La couleur principale de la page, derrière tout le reste.",

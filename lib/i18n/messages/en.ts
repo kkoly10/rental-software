@@ -1170,6 +1170,7 @@ const enValues = {
         uploadingImage: "Uploading image…",
         imageUploadFailed: "Couldn't upload the image. Please try again.",
         inlineEditHint: "Click any text to edit it directly on the page.",
+        inlineEditAriaLabel: "Edit text",
         styleHelp: {
           intro: "Adjust your colors, fonts, and shape. Changes preview live and save to your draft.",
           background: "The main page color behind everything.",

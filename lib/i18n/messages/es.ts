@@ -1169,6 +1169,7 @@ export const es: Messages = {
         uploadingImage: "Subiendo imagen…",
         imageUploadFailed: "No se pudo subir la imagen. Inténtalo de nuevo.",
         inlineEditHint: "Haz clic en cualquier texto para editarlo directamente en la página.",
+        inlineEditAriaLabel: "Editar texto",
         styleHelp: {
           intro: "Ajusta tus colores, fuentes y forma. Los cambios se previsualizan al instante y se guardan en tu borrador.",
           background: "El color principal de la página detrás de todo.",
