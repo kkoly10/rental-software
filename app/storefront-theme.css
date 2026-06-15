@@ -3159,3 +3159,48 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   caret-color: var(--primary, #3f4a33);
   cursor: text;
 }
+
+/* Suggestions popover under the inline-edit overlay (nav label rename). */
+.st-editor-nav-suggestions {
+  position: absolute;
+  z-index: 1003;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+.st-editor-nav-suggestions-label {
+  width: 100%;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+.st-editor-nav-suggestion {
+  appearance: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 1.2;
+  color: #1f2937;
+  background: #f3f4f6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
+.st-editor-nav-suggestion:hover {
+  background: var(--primary, #3f4a33);
+  color: #fff;
+  border-color: var(--primary, #3f4a33);
+}
+.st-editor-nav-suggestion:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}

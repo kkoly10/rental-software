@@ -27,7 +27,11 @@ import {
   addSection,
   removeSection,
   setSectionSetting,
+  setNavLabel,
+  NAV_LABEL_KEYS,
+  NAV_LABEL_MAX,
   SECTION_COUNT_MAX,
+  type NavLabelKey,
 } from "@/lib/storefront/builder-document";
 import { uploadSectionImage } from "@/lib/settings/brand-upload-actions";
 import {
@@ -139,6 +143,23 @@ const INLINE_IMAGE_FIELDS: Record<
 };
 
 /**
+ * Curated nav-label suggestions per nav key (PR-2e). Surfaced in a small popover
+ * under the inline-edit overlay while renaming a nav item; clicking one fills the
+ * overlay and commits. Deduped against the current value at render time. A nav
+ * key not in this map simply shows no suggestions (still freely editable).
+ */
+const NAV_SUGGESTIONS: Record<NavLabelKey, string[]> = {
+  catalog: ["Catalog", "Inventory", "Rentals", "Shop", "Browse", "Our Gear"],
+  how_it_works: ["How It Works", "The Process", "Getting Started"],
+  service_area: ["Service Area", "Where We Serve", "Coverage Area", "Delivery Area"],
+  order_status: ["Order Status", "Track Your Order", "My Order"],
+  contact: ["Contact", "Get in Touch", "Inquire", "Contact Us"],
+  book_now: ["Book Now", "Reserve Now", "Get a Quote", "Book Online"],
+};
+
+const NAV_LABEL_KEY_SET: ReadonlySet<string> = new Set(NAV_LABEL_KEYS);
+
+/**
  * On-canvas editor runtime (PR-2a). The storefront itself is server-rendered as
  * the page (with `renderDocumentSections({ editable: true })` wrapping each
  * section in a `[data-st-section-id]` marker). This client overlay does NOT
@@ -182,15 +203,19 @@ export function StorefrontEditorRuntime({
   // element. We NEVER make the canvas node contentEditable or mutate its
   // children — the only canvas DOM touch is toggling `visibility` on the element
   // being edited. All content changes go through setDoc → save → router.refresh().
-  type InlineEdit = {
-    sectionId: string;
-    field: string;
+  // The overlay edits either a section text field or a top-nav label. Common
+  // fields (value/frame/style/multiline/max) drive the shared overlay; the
+  // `kind`-tagged fields tell the commit path where to write.
+  type InlineEditBase = {
     multiline: boolean;
     max: number;
     value: string; // initial value, written into the overlay once on open
     frame: Frame; // document-space rect of the target
     style: InlineEditStyle; // copied computed styles for visual parity
   };
+  type InlineEdit =
+    | (InlineEditBase & { kind: "section"; sectionId: string; field: string })
+    | (InlineEditBase & { kind: "nav"; navKey: NavLabelKey });
   const [inlineEdit, setInlineEdit] = useState<InlineEdit | null>(null);
   // The currently-edited canvas element, kept so we can restore its visibility
   // on close. This is the ONLY canvas node the overlay ever touches.
@@ -474,6 +499,7 @@ export function StorefrontEditorRuntime({
       setSelectedId(sectionId);
       setInlineEditing(true);
       setInlineEdit({
+        kind: "section",
         sectionId,
         field,
         multiline: fieldDef.multiline,
@@ -485,6 +511,45 @@ export function StorefrontEditorRuntime({
     },
     [doc]
   );
+
+  // Open the overlay over a header nav element (tagged data-st-nav-key). Same
+  // read-only-then-overlay pattern as section text: read rect + styles + current
+  // label, hide the canvas node via `visibility`, never touch its children. Nav
+  // labels are always single-line.
+  const openNavEdit = useCallback((el: HTMLElement) => {
+    if (typeof window === "undefined") return;
+    const navKey = el.dataset.stNavKey;
+    if (!navKey || !NAV_LABEL_KEY_SET.has(navKey)) return;
+
+    // Commit any overlay already open before re-opening on a new target.
+    if (inlineTargetRef.current && inlineTargetRef.current !== el) {
+      inlineTargetRef.current.style.visibility = "";
+    }
+
+    const rect = el.getBoundingClientRect();
+    const frame: Frame = {
+      top: rect.top + window.scrollY,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+      height: rect.height,
+    };
+
+    inlineTargetRef.current = el;
+    inlineClosingRef.current = false;
+    el.style.visibility = "hidden";
+
+    setSelectedId(null);
+    setInlineEditing(true);
+    setInlineEdit({
+      kind: "nav",
+      navKey: navKey as NavLabelKey,
+      multiline: false,
+      max: NAV_LABEL_MAX,
+      value: el.innerText,
+      frame,
+      style: readInlineEditStyle(el),
+    });
+  }, []);
 
   // Restore the edited canvas element's visibility and tear down overlay state.
   const closeInlineEdit = useCallback(() => {
@@ -502,10 +567,11 @@ export function StorefrontEditorRuntime({
     closeInlineEdit();
   }, [closeInlineEdit]);
 
-  // Commit: read the overlay's text, normalize, write to the document, persist,
-  // and refresh so the SERVER re-renders the canvas with the new text. The canvas
-  // was never hand-mutated, so the refresh reconcile is clean (no removeChild).
-  const commitInlineEdit = useCallback(() => {
+  // Commit: write `rawValue` (defaults to the overlay's current innerText) to the
+  // document, persist, and refresh so the SERVER re-renders the canvas with the
+  // new text. The canvas was never hand-mutated, so the refresh reconcile is
+  // clean (no removeChild). Suggestion clicks pass an explicit value.
+  const commitInlineEditWith = useCallback((rawValue?: string) => {
     if (inlineClosingRef.current) return;
     inlineClosingRef.current = true;
 
@@ -516,7 +582,7 @@ export function StorefrontEditorRuntime({
       return;
     }
 
-    const raw = overlay ? overlay.innerText : edit.value;
+    const raw = rawValue ?? (overlay ? overlay.innerText : edit.value);
     const value = raw
       .replace(/ /g, " ")
       .trim()
@@ -530,7 +596,14 @@ export function StorefrontEditorRuntime({
       return;
     }
 
-    const next = setSectionSetting(doc, edit.sectionId, edit.field, value);
+    const next =
+      edit.kind === "nav"
+        ? setNavLabel(doc, edit.navKey, value)
+        : setSectionSetting(doc, edit.sectionId, edit.field, value);
+    if (next === doc) {
+      closeInlineEdit();
+      return;
+    }
     setDoc(next);
 
     void (async () => {
@@ -550,10 +623,16 @@ export function StorefrontEditorRuntime({
     })();
   }, [inlineEdit, doc, router, measure, closeInlineEdit]);
 
+  const commitInlineEdit = useCallback(() => {
+    commitInlineEditWith();
+  }, [commitInlineEditWith]);
+
   // Keep a stable ref to openInlineEdit so the (empty-dep) global click handler
   // can call the latest version without re-binding on every doc change.
   const openInlineEditRef = useRef(openInlineEdit);
   openInlineEditRef.current = openInlineEdit;
+  const openNavEditRef = useRef(openNavEdit);
+  openNavEditRef.current = openNavEdit;
 
   // ── On-canvas image replace (PR-2b) ─────────────────────────────────────────
   // Trigger a hidden file input scoped to the selected section's image field.
@@ -624,6 +703,16 @@ export function StorefrontEditorRuntime({
       // Ignore clicks inside the editor chrome (top bar, frames, drawers, and
       // the inline-edit overlay itself — so clicks in the overlay don't reselect).
       if (target?.closest("[data-st-editor-chrome]")) return;
+
+      // A click on a header nav element opens the inline-edit overlay for that
+      // nav LABEL. preventDefault() stops the <Link>/<a> from navigating away
+      // from the canvas. Same React-controlled overlay as section text.
+      const navEl = target?.closest<HTMLElement>("[data-st-nav-key]");
+      if (navEl) {
+        e.preventDefault();
+        openNavEditRef.current(navEl);
+        return;
+      }
 
       // A click on a tagged editable text element opens the React-controlled
       // inline-edit overlay for that field (and selects its section). This never
@@ -846,6 +935,23 @@ export function StorefrontEditorRuntime({
   })();
 
   const theme = doc.theme as ThemeTokens | undefined;
+
+  // Suggestions popover (PR-2e): for an open NAV edit, the curated label options
+  // for that key, deduped against the current value (case-insensitive) so we
+  // don't offer what's already shown. Empty when not editing nav.
+  const navSuggestions: string[] = (() => {
+    if (!inlineEdit || inlineEdit.kind !== "nav") return [];
+    const current = inlineEdit.value.trim().toLowerCase();
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const label of NAV_SUGGESTIONS[inlineEdit.navKey] ?? []) {
+      const key = label.toLowerCase();
+      if (key === current || seen.has(key)) continue;
+      seen.add(key);
+      out.push(label);
+    }
+    return out;
+  })();
 
   // ── Guided tour steps (PR-2d) ───────────────────────────────────────────────
   // Targets are resolved against the live DOM at runtime; missing targets fall
@@ -1203,7 +1309,11 @@ export function StorefrontEditorRuntime({
           the canvas re-renders from the server cleanly. */}
       {inlineEdit && (
         <div
-          key={`${inlineEdit.sectionId}:${inlineEdit.field}`}
+          key={
+            inlineEdit.kind === "nav"
+              ? `nav:${inlineEdit.navKey}`
+              : `${inlineEdit.sectionId}:${inlineEdit.field}`
+          }
           ref={(el) => {
             overlayRef.current = el;
             // Seed the editable text exactly once, when the overlay mounts.
@@ -1227,7 +1337,11 @@ export function StorefrontEditorRuntime({
           suppressContentEditableWarning
           spellCheck
           role="textbox"
-          aria-label={m.inlineEditAriaLabel}
+          aria-label={
+            inlineEdit.kind === "nav"
+              ? m.navEditAriaLabel
+              : m.inlineEditAriaLabel
+          }
           aria-multiline={inlineEdit.multiline}
           style={{
             top: inlineEdit.frame.top,
@@ -1261,6 +1375,56 @@ export function StorefrontEditorRuntime({
             commitInlineEdit();
           }}
         />
+      )}
+
+      {/* ── Suggestions popover (PR-2e) ──────────────────────────────────────
+          Anchored just below the inline-edit overlay while a NAV label is being
+          edited. Clicking a suggestion FILLS + COMMITS the label. Buttons use
+          onMouseDown + preventDefault so the click doesn't first blur the
+          overlay (which would commit the typed value and tear the overlay down
+          before the click lands). Escape on the overlay closes the whole edit,
+          which unmounts this. Left/width clamped to stay on-screen. */}
+      {inlineEdit && inlineEdit.kind === "nav" && navSuggestions.length > 0 && (
+        <div
+          className="st-editor-nav-suggestions"
+          data-st-editor-chrome
+          role="listbox"
+          aria-label={m.suggestionsLabel}
+          style={{
+            top: inlineEdit.frame.top + inlineEdit.frame.height + 6,
+            left: Math.max(
+              8,
+              Math.min(
+                inlineEdit.frame.left,
+                (typeof window !== "undefined" ? window.scrollX : 0) +
+                  (typeof window !== "undefined"
+                    ? window.innerWidth
+                    : 320) -
+                  228
+              )
+            ),
+          }}
+        >
+          <span className="st-editor-nav-suggestions-label">
+            {m.suggestionsLabel}
+          </span>
+          {navSuggestions.map((label) => (
+            <button
+              key={label}
+              type="button"
+              role="option"
+              aria-selected={false}
+              className="st-editor-nav-suggestion"
+              onMouseDown={(e) => {
+                // Keep focus on the overlay so its blur doesn't pre-commit.
+                e.preventDefault();
+                commitInlineEditWith(label);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* ── Content editor drawer ── */}

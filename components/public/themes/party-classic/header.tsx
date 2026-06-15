@@ -10,6 +10,7 @@ import { getStorefrontDefaults } from "@/lib/verticals/storefront-defaults";
 import { getTranslator } from "@/lib/i18n/server";
 import { sanitizeHref } from "@/lib/utils/safe-href";
 import { getThemeSettings } from "@/lib/data/theme-settings";
+import { getStorefrontPageDocument } from "@/lib/storefront/page-document";
 
 function formatPhoneCompact(raw: string | null | undefined): string {
   if (!raw) return "";
@@ -18,8 +19,17 @@ function formatPhoneCompact(raw: string | null | undefined): string {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
-export async function PartyClassicHeader() {
-  const [brand, settings, orgCtx, contentSettings, theme, defaults, { locale, messages }] = await Promise.all([
+export async function PartyClassicHeader({
+  navOverrides,
+}: {
+  /**
+   * DRAFT nav label overrides passed by the builder routes (key → label). When
+   * present these win over the PUBLISHED overrides read below, so the editing
+   * canvas previews unpublished label edits. Absent on the public storefront.
+   */
+  navOverrides?: Record<string, string>;
+} = {}) {
+  const [brand, settings, orgCtx, contentSettings, theme, defaults, { locale, messages }, publishedDoc] = await Promise.all([
     getBrandSettings(),
     getOrganizationSettings(),
     getOrgContext(),
@@ -27,7 +37,17 @@ export async function PartyClassicHeader() {
     getThemeSettings(),
     getStorefrontDefaults(),
     getTranslator(),
+    // PUBLISHED nav overrides drive the live storefront automatically. The
+    // builder routes additionally pass DRAFT overrides via the prop (which win).
+    getStorefrontPageDocument("published"),
   ]);
+  const publishedNav = publishedDoc?.nav;
+  // Resolve a nav label: draft prop override → published override → default.
+  // When no overrides exist the result is exactly `defaultLabel`, so the public
+  // header renders byte-for-byte as before (only the inert data-st-nav-key
+  // attributes are added).
+  const navLabel = (key: string, defaultLabel: string): string =>
+    navOverrides?.[key] ?? publishedNav?.[key] ?? defaultLabel;
   // The Contact CTA at the rail covers /contact — rendering the plain
   // "Contact" nav link alongside it reads as a redundancy bug. Keep the
   // operator's other visible links untouched.
@@ -39,6 +59,15 @@ export async function PartyClassicHeader() {
   const m = messages;
   const showPhone = theme.headerPhoneVisible && settings.phone && settings.phone !== "(555) 000-0000";
   const phoneDisplay = showPhone ? formatPhoneCompact(settings.phone) : "";
+
+  // Mobile menu links carry the same (possibly overridden) labels as the desktop
+  // nav so the two stay consistent. The Contact link isn't shown in the desktop
+  // rail (covered by the CTA) but the mobile menu lists it — apply its override
+  // there too.
+  const mobileNavLinks = contentSettings.navLinks
+    .filter((l) => l.visible)
+    .map((l) => ({ ...l, label: navLabel(l.key, l.label) }));
+  const bookNowLabel = navLabel("book_now", m.common.bookNow);
 
   return (
     <>
@@ -71,8 +100,12 @@ export async function PartyClassicHeader() {
 
           <nav className="st-nav-links">
             {visibleNavLinks.map((link) => (
-              <Link key={link.key} href={sanitizeHref(link.href)}>
-                {link.label}
+              <Link
+                key={link.key}
+                href={sanitizeHref(link.href)}
+                data-st-nav-key={link.key}
+              >
+                {navLabel(link.key, link.label)}
               </Link>
             ))}
             <LanguageSwitcher currentLocale={locale} ariaLabel={m.language.label} compact bare />
@@ -81,12 +114,12 @@ export async function PartyClassicHeader() {
                 {phoneDisplay}
               </a>
             )}
-            <Link href="/contact" className="st-nav-cta">
-              {m.nav.contact ?? "Inquire"}
+            <Link href="/contact" className="st-nav-cta" data-st-nav-key="contact">
+              {navLabel("contact", m.nav.contact ?? "Inquire")}
             </Link>
             <CartIndicator label={m.common.cart} />
-            <Link href="/inventory" className="st-nav-book">
-              {m.common.bookNow}
+            <Link href="/inventory" className="st-nav-book" data-st-nav-key="book_now">
+              {bookNowLabel}
             </Link>
           </nav>
 
@@ -107,10 +140,10 @@ export async function PartyClassicHeader() {
             <MobileMenuToggle
               isOperator={isOperator}
               siteUrl={siteUrl}
-              navLinks={visibleNavLinks}
+              navLinks={mobileNavLinks}
               authLabel={m.nav.rentalsLogin}
               dashboardLabel={m.nav.dashboard}
-              cta={{ label: m.common.bookNow, href: "/inventory" }}
+              cta={{ label: bookNowLabel, href: "/inventory" }}
               menuLabel={m.common.menu}
               openMenuLabel={m.common.openMenu}
               closeMenuLabel={m.common.closeMenu}

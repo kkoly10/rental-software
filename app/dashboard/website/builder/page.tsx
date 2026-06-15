@@ -121,7 +121,9 @@ export default async function StorefrontBuilderPage() {
             fixed editor top bar via .st-editor-canvas. */}
         <div className="st-editor-canvas">
           <StorefrontShell>
-            <PartyClassicHeader />
+            {/* Pass the DRAFT nav label overrides so the canvas previews
+                unpublished nav renames (they win over published overrides). */}
+            <PartyClassicHeader navOverrides={doc.nav} />
             <JsonLdScript
               data={organizationJsonLd(
                 {
