@@ -2684,3 +2684,154 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   opacity: 0.6;
   cursor: default;
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * Storefront Styles editor (PR-2c) — clean single-column theme panel that lives
+ * in the on-canvas Styles drawer. Grouped sections, color swatches, live font
+ * previews, and plain-language help text under every control.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.st-style-editor {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  color: var(--text, #1a1a1a);
+}
+.st-style-intro {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted, #5c5651);
+}
+.st-style-preview {
+  padding: 14px;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+.st-style-preview-kicker {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.st-style-contrast {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  border-radius: 8px;
+  background: #fbeaea;
+  color: #a23b3b;
+  border: 1px solid #f0c9c9;
+}
+.st-style-group {
+  padding: 16px 0;
+  border-top: 1px solid var(--border, #e6e1d8);
+}
+.st-style-group:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.st-style-group-title {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #5c5651);
+}
+.st-style-field {
+  margin-bottom: 18px;
+}
+.st-style-field:last-child {
+  margin-bottom: 0;
+}
+.st-style-label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.st-style-help {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted, #5c5651);
+}
+/* Colors */
+.st-style-color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.st-style-swatch {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+.st-style-color-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.st-style-hex {
+  width: 100%;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px;
+  text-transform: uppercase;
+}
+/* Typography + shape */
+.st-style-select {
+  width: 100%;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface, #fff);
+  color: var(--text, #1a1a1a);
+}
+.st-style-font-preview {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border, #e6e1d8);
+  border-radius: 8px;
+  color: var(--text, #1a1a1a);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-style-range-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.st-style-range-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #5c5651);
+  font-variant-numeric: tabular-nums;
+}
+.st-style-range {
+  width: 100%;
+}
+.st-style-radius-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.st-style-radius-chip {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: var(--primary, #3f4a33);
+  display: inline-block;
+}
