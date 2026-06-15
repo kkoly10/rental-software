@@ -788,6 +788,7 @@ export function StorefrontEditorRuntime({
     el.style.fontWeight = style.bold ? "700" : "";
     el.style.fontStyle = style.italic ? "italic" : "";
     el.style.fontFamily = style.font ? FONT_STACKS[style.font] : "";
+    el.style.textAlign = style.align ?? "";
   }, []);
 
   // Write the next FieldStyle for the field currently being edited: update the
@@ -812,6 +813,7 @@ export function StorefrontEditorRuntime({
       if (nextStyle.bold === true) cleaned.bold = true;
       if (nextStyle.italic === true) cleaned.italic = true;
       if (nextStyle.font) cleaned.font = nextStyle.font;
+      if (nextStyle.align) cleaned.align = nextStyle.align;
 
       const nextFieldStyles: Record<string, FieldStyle> = { ...existing };
       if (Object.keys(cleaned).length === 0) delete nextFieldStyles[edit.field];
@@ -894,6 +896,22 @@ export function StorefrontEditorRuntime({
           return rest;
         }
         return { ...current, font: font as FieldStyle["font"] };
+      });
+    },
+    [updateEditingFieldStyle]
+  );
+
+  // Set the text alignment. Clicking the already-active alignment CLEARS the
+  // override (back to the theme default) — mirrors the Bold/Italic toggle.
+  const onAlign = useCallback(
+    (align: NonNullable<FieldStyle["align"]>) => {
+      updateEditingFieldStyle((current) => {
+        if (current.align === align) {
+          const { align: _drop, ...rest } = current;
+          void _drop;
+          return rest;
+        }
+        return { ...current, align };
       });
     },
     [updateEditingFieldStyle]
@@ -1775,6 +1793,63 @@ export function StorefrontEditorRuntime({
             >
               I
             </button>
+          </div>
+
+          <span className="st-style-tb-sep" />
+
+          {/* Text alignment. Clicking the active alignment clears the override
+              (back to the theme default) — mirrors the Bold/Italic toggle. */}
+          <div className="st-style-tb-group" role="group" aria-label={m.styleAlign}>
+            {(["left", "center", "right"] as const).map((align) => (
+              <button
+                key={align}
+                type="button"
+                className={`st-style-tb-btn${currentFieldStyle.align === align ? " is-active" : ""}`}
+                aria-pressed={currentFieldStyle.align === align}
+                aria-label={
+                  align === "left"
+                    ? m.styleAlignLeft
+                    : align === "center"
+                      ? m.styleAlignCenter
+                      : m.styleAlignRight
+                }
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onAlign(align);
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  aria-hidden="true"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                >
+                  {align === "left" ? (
+                    <>
+                      <line x1="1.5" y1="3" x2="12.5" y2="3" />
+                      <line x1="1.5" y1="7" x2="8.5" y2="7" />
+                      <line x1="1.5" y1="11" x2="11" y2="11" />
+                    </>
+                  ) : align === "center" ? (
+                    <>
+                      <line x1="1.5" y1="3" x2="12.5" y2="3" />
+                      <line x1="3.5" y1="7" x2="10.5" y2="7" />
+                      <line x1="2.5" y1="11" x2="11.5" y2="11" />
+                    </>
+                  ) : (
+                    <>
+                      <line x1="1.5" y1="3" x2="12.5" y2="3" />
+                      <line x1="5.5" y1="7" x2="12.5" y2="7" />
+                      <line x1="3" y1="11" x2="12.5" y2="11" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            ))}
           </div>
 
           <span className="st-style-tb-sep" />

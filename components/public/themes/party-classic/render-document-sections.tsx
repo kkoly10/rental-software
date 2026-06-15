@@ -281,6 +281,9 @@ function fieldStyleDeclarations(style: FieldStyle): string {
     const stack = FONT_STACKS[style.font];
     if (stack) decls.push(`font-family:${stack} !important`);
   }
+  if (style.align) {
+    decls.push(`text-align:${style.align} !important`);
+  }
   return decls.join(";");
 }
 

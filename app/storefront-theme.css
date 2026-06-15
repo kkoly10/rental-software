@@ -3337,6 +3337,11 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   outline: 2px solid var(--primary, #3f4a33);
   outline-offset: 2px;
 }
+/* Icon-only style buttons (e.g. text alignment) center their inline SVG glyph. */
+.st-style-tb-btn > svg {
+  display: block;
+  margin: 0 auto;
+}
 .st-style-tb-swatches {
   display: inline-flex;
   align-items: center;
