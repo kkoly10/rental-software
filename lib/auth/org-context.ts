@@ -6,6 +6,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveOrgFromHostname, getAppDomain } from "@/lib/auth/resolve-org";
 import { ACTIVE_ORG_COOKIE } from "@/lib/auth/org-cookie";
+import { getPreviewOrgIdOverride } from "@/lib/auth/preview-org-context";
 
 export type OrgContext = {
   userId: string;
@@ -97,6 +98,17 @@ export async function getOrgContext(): Promise<OrgContext | null> {
  */
 // Per-request cache: storefront pages call this from multiple data loaders.
 const resolvePublicOrgId = cache(async (): Promise<string | null> => {
+  // PR-1f preview override (ADDITIVE). When the builder preview route is
+  // rendering, it has wrapped its async render in runWithPreviewOrgId() with the
+  // operator's AUTH-resolved org id; honour it so the SAME storefront loaders
+  // resolve to that org on the dashboard host. The store is ONLY ever set inside
+  // that route, so for EVERY normal request getPreviewOrgIdOverride() returns
+  // null and we fall through to the unchanged hostname logic below — behaviour is
+  // byte-for-byte identical to today. Read inside the cache()'d fn so a single
+  // preview render dedupes it like any other resolution.
+  const previewOverride = getPreviewOrgIdOverride();
+  if (previewOverride) return previewOverride;
+
   if (!hasSupabaseEnv()) return null;
 
   const headersList = await headers();
