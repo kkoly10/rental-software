@@ -16,6 +16,7 @@ import {
   SECTION_CONTENT_SCHEMAS,
   isContentEditableSectionType,
   parseFieldStyles,
+  parseSectionBackground,
 } from "./sections/content-schemas.ts";
 import {
   themeTokensSchema,
@@ -405,6 +406,16 @@ export function parseBuilderDocument(
         const cleaned = parseFieldStyles(record.settings);
         if (Object.keys(cleaned).length > 0) preCleaned.fieldStyles = cleaned;
         else delete preCleaned.fieldStyles;
+      }
+      // Section-level background (PR-B) is validated DEFENSIVELY too: keep it only
+      // when it's a safe hex literal, otherwise DROP the key (rather than reject
+      // the whole publish) so a hand-edited document can't inject a CSS value and
+      // can't get "stuck" un-publishable. parseSectionBackground returns the hex
+      // only when valid.
+      if ("background" in preCleaned) {
+        const bg = parseSectionBackground(record.settings);
+        if (bg) preCleaned.background = bg;
+        else delete preCleaned.background;
       }
 
       const schema = SECTION_CONTENT_SCHEMAS[record.type];

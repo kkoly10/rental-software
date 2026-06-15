@@ -2559,6 +2559,74 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   background: var(--border, #e6e1d8);
 }
 
+/* Per-section background swatch control (PR-B) — a button in the selection
+   toolbar that opens a small palette popover. */
+.st-editor-bg-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.st-editor-bg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.st-editor-bg-btn:hover {
+  background: var(--surface-muted, #f4f2ef);
+}
+/* The little color chip inside the button reflects the current background. */
+.st-editor-bg-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: #ffffff;
+}
+.st-editor-bg-chip.is-none {
+  background: linear-gradient(
+    135deg,
+    #fff 0 43%,
+    #c0392b 43% 57%,
+    #fff 57% 100%
+  );
+}
+/* The palette popover anchored under the swatch button. */
+.st-editor-bg-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 951;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  width: 188px;
+  background: #ffffff;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+.st-editor-bg-popover-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #5c5651);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.st-editor-bg-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Right-anchored drawer hosting the existing section content / styles editors. */
 .st-editor-drawer {
   position: fixed;

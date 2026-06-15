@@ -34,6 +34,7 @@ import {
   parseServiceAreaSettings,
   parseFeaturedSettings,
   parseFieldStyles,
+  parseSectionBackground,
   hasFieldSelectors,
   SECTION_FIELD_SELECTORS,
   FONT_STACKS,
@@ -352,12 +353,38 @@ export function renderDocumentSections(
         ? buildScopedStyleCss(section.type, fieldStyles, uniqueClass)
         : "";
 
+    // Per-section background color (PR-B). A validated hex (or undefined). When
+    // set, the section needs a REAL box to paint the color, so the wrapper is a
+    // full-width, layout-neutral BLOCK carrying an inline backgroundColor — not a
+    // `display:contents` wrapper (which has no box to paint). The hex is already
+    // validated (parseSectionBackground), so it's safe as an inline style value.
+    const background = parseSectionBackground(section.settings);
+
     if (!editable) {
-      if (!scopedCss) {
+      // Neither override → emit nothing extra (byte-for-byte identical).
+      if (!scopedCss && !background) {
         return <Fragment key={id}>{node}</Fragment>;
       }
-      // Layout-neutral wrapper (display:contents) so the scoped class can match
-      // descendants without introducing a box that could change the layout.
+      if (background) {
+        // Background set → a real block wrapper paints the color (full-width,
+        // block-level, no margin/padding so it's layout-neutral). Also carry the
+        // scoped class + <style> when there are per-element styles (don't
+        // double-wrap).
+        return (
+          <div
+            key={id}
+            className={scopedCss ? uniqueClass : undefined}
+            style={{ backgroundColor: background }}
+          >
+            {scopedCss ? (
+              <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
+            ) : null}
+            {node}
+          </div>
+        );
+      }
+      // Only fieldStyles → layout-neutral wrapper (display:contents) so the
+      // scoped class can match descendants without introducing a box.
       return (
         <div key={id} className={uniqueClass} style={CONTENTS_STYLE}>
           <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
@@ -366,9 +393,11 @@ export function renderDocumentSections(
       );
     }
 
-    // Editor mode: wrap in a layout-neutral marker the client overlay reads.
-    // When the section has per-element styles, also add the scoped class + style
-    // so the canvas previews them live (the same markup the public site emits).
+    // Editor mode: ALWAYS wrap in the marker the client overlay reads — it must
+    // carry data-st-section-* whether or not there are overrides so selection /
+    // overlay positioning keep working. Add the scoped class + <style> when
+    // there are per-element styles, and the inline backgroundColor when set, so
+    // the canvas previews the SAME markup the public site emits.
     return (
       <div
         key={id}
@@ -380,6 +409,7 @@ export function renderDocumentSections(
             ? `st-editable-section ${uniqueClass}`
             : "st-editable-section"
         }
+        style={background ? { backgroundColor: background } : undefined}
       >
         {scopedCss ? (
           <style dangerouslySetInnerHTML={{ __html: scopedCss }} />

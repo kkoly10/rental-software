@@ -256,6 +256,9 @@ export function StorefrontEditorRuntime({
 
   const [doc, setDoc] = useState<StorefrontPageDocument>(initialDocument);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Whether the per-section Background swatch popover is open (PR-B). Anchored to
+  // the selection toolbar; closes on outside click / when the selection changes.
+  const [bgPopoverOpen, setBgPopoverOpen] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [stylesOpen, setStylesOpen] = useState(false);
@@ -314,6 +317,9 @@ export function StorefrontEditorRuntime({
   // Whether the canvas inline-text hint has been dismissed (persisted).
   const [inlineHintDismissed, setInlineHintDismissed] = useState(true);
   const helpMenuRef = useRef<HTMLDivElement | null>(null);
+  // The per-section Background swatch popover wrapper (PR-B), for outside-click /
+  // Escape close.
+  const bgWrapRef = useRef<HTMLDivElement | null>(null);
 
   // On-canvas image replace (PR-2b): one upload in flight at a time.
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -1054,6 +1060,31 @@ export function StorefrontEditorRuntime({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Close the per-section background popover whenever the selection changes (so
+  // it never lingers over a different section) or selection is cleared.
+  useEffect(() => {
+    setBgPopoverOpen(false);
+  }, [selectedId]);
+
+  // Close the Background popover on outside click / Escape (mirrors the Help
+  // menu). The selection toolbar carries data-st-editor-chrome, so a click
+  // outside the popover wrapper never reselects — we just dismiss the popover.
+  useEffect(() => {
+    if (!bgPopoverOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (!bgWrapRef.current?.contains(e.target as Node)) setBgPopoverOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setBgPopoverOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [bgPopoverOpen]);
+
   // ── Labels (mirror the old builder's labelForId) ────────────────────────────
   const labelForId = useCallback(
     (id: string): string => {
@@ -1171,6 +1202,34 @@ export function StorefrontEditorRuntime({
     [doc, router, measure]
   );
 
+  // ── Per-section background color (PR-B) ──────────────────────────────────────
+  // Write (or clear) the SELECTED section's background color. An empty string
+  // clears the key (setSectionSetting drops empty values), so the section falls
+  // back to the page background (byte-for-byte). The background changes the
+  // server-rendered wrapper, so persist then router.refresh() to repaint the
+  // canvas — same React-safe path add/move use (no canvas hand-mutation).
+  const onPickSectionBackground = useCallback(
+    async (id: string, hexOrEmpty: string) => {
+      const next = setSectionSetting(doc, id, "background", hexOrEmpty);
+      setBgPopoverOpen(false);
+      if (next === doc) return;
+      setDoc(next);
+      const fd = new FormData();
+      fd.set("document_json", JSON.stringify(next));
+      setAutoSaving(true);
+      try {
+        const r = await saveStorefrontDocumentDraft(initialState, fd);
+        if (r.ok) {
+          router.refresh();
+          requestAnimationFrame(() => requestAnimationFrame(measure));
+        }
+      } finally {
+        setAutoSaving(false);
+      }
+    },
+    [doc, router, measure]
+  );
+
   // ── Content editor drawer ───────────────────────────────────────────────────
   const editingDocAtOpen = useRef<string | null>(null);
   const openEditor = useCallback(
@@ -1208,6 +1267,13 @@ export function StorefrontEditorRuntime({
   const selectedDisabled = selectedId
     ? doc.sections[selectedId]?.disabled === true
     : false;
+  // The SELECTED section's current background hex (for swatch active-state). Only
+  // a stored string is surfaced; absent/non-string → no override (None active).
+  const selectedBackground: string | undefined = (() => {
+    if (!selectedId) return undefined;
+    const bg = doc.sections[selectedId]?.settings?.background;
+    return typeof bg === "string" ? bg : undefined;
+  })();
 
   const hoverFrame = hoverId ? frames[hoverId] : undefined;
   const selFrame = selectedId ? frames[selectedId] : undefined;
@@ -1559,6 +1625,91 @@ export function StorefrontEditorRuntime({
                 </button>
               </EditorTooltip>
             )}
+            <span className="st-editor-toolbar-sep" />
+            {/* ── Per-section background color (PR-B) ──
+                A swatch button that opens a palette popover (theme colors +
+                curated swatches + a None/Default that clears it). Picking writes
+                the section's `background` setting → save → router.refresh() so the
+                server re-renders the wrapper. The button + popover carry
+                data-st-editor-chrome (via the toolbar) so clicks don't reselect. */}
+            <div className="st-editor-bg-wrap" ref={bgWrapRef}>
+              <EditorTooltip label={m.sectionBackground} side="top">
+                <button
+                  type="button"
+                  className="st-editor-bg-btn"
+                  aria-label={m.sectionBackground}
+                  aria-haspopup="dialog"
+                  aria-expanded={bgPopoverOpen}
+                  onClick={() => setBgPopoverOpen((v) => !v)}
+                >
+                  <span
+                    className={`st-editor-bg-chip${selectedBackground ? "" : " is-none"}`}
+                    style={
+                      selectedBackground
+                        ? { background: selectedBackground }
+                        : undefined
+                    }
+                    aria-hidden="true"
+                  />
+                </button>
+              </EditorTooltip>
+              {bgPopoverOpen && (
+                <div
+                  className="st-editor-bg-popover"
+                  role="dialog"
+                  aria-label={m.sectionBackground}
+                >
+                  <span className="st-editor-bg-popover-title">
+                    {m.sectionBackground}
+                  </span>
+                  <div className="st-editor-bg-swatches">
+                    <button
+                      type="button"
+                      className={`st-style-tb-swatch is-default${selectedBackground === undefined ? " is-active" : ""}`}
+                      aria-pressed={selectedBackground === undefined}
+                      aria-label={m.sectionBackgroundNone}
+                      title={m.sectionBackgroundNone}
+                      onClick={() => {
+                        void onPickSectionBackground(selectedId, "");
+                      }}
+                    />
+                    {themeSwatches.map((s) => (
+                      <button
+                        key={`bg-theme-${s.key}`}
+                        type="button"
+                        className={`st-style-tb-swatch${selectedBackground?.toLowerCase() === s.value.toLowerCase() ? " is-active" : ""}`}
+                        aria-pressed={
+                          selectedBackground?.toLowerCase() ===
+                          s.value.toLowerCase()
+                        }
+                        aria-label={m[s.key as "background"]}
+                        title={m[s.key as "background"]}
+                        style={{ background: s.value }}
+                        onClick={() => {
+                          void onPickSectionBackground(selectedId, s.value);
+                        }}
+                      />
+                    ))}
+                    {CURATED_COLOR_SWATCHES.map((c) => (
+                      <button
+                        key={`bg-curated-${c}`}
+                        type="button"
+                        className={`st-style-tb-swatch${selectedBackground?.toLowerCase() === c.toLowerCase() ? " is-active" : ""}`}
+                        aria-pressed={
+                          selectedBackground?.toLowerCase() === c.toLowerCase()
+                        }
+                        aria-label={c}
+                        title={c}
+                        style={{ background: c }}
+                        onClick={() => {
+                          void onPickSectionBackground(selectedId, c);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <span className="st-editor-toolbar-sep" />
             <EditorTooltip label={m.editContentTitle} side="top">
               <button
