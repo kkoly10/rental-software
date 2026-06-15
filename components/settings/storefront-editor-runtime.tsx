@@ -333,13 +333,14 @@ export function StorefrontEditorRuntime({
         el.dataset.stInlineField = field;
         el.dataset.stInlineSection = sectionId;
         el.classList.add("st-inline-editable");
-        // plaintext-only avoids pasted HTML landing in the contentEditable;
-        // fall back to "true" where the browser doesn't support it.
-        el.contentEditable = "plaintext-only";
-        if (el.contentEditable !== "plaintext-only") {
-          el.contentEditable = "true";
-        }
-        el.spellcheck = true;
+        // INTERIM (crash hotfix): on-canvas contentEditable is intentionally
+        // NOT set. Letting the browser rewrite React-hydrated nodes (e.g.
+        // select-all + retype collapsing the hero's text + <em>) desynced
+        // React's virtual DOM and crashed the editor ("removeChild"). Until the
+        // React-safe type-on-page rewrite lands, text is edited via the Edit
+        // drawer (double-click a section, or the toolbar's Edit). The
+        // focus/keydown/blur listeners below stay wired but never fire (the
+        // element isn't editable/focusable without contentEditable).
 
         el.addEventListener("focus", () => {
           setSelectedId(sectionId);
@@ -467,10 +468,6 @@ export function StorefrontEditorRuntime({
       const target = e.target as HTMLElement | null;
       // Ignore clicks inside the editor chrome (top bar, frames, drawers).
       if (target?.closest("[data-st-editor-chrome]")) return;
-      // Ignore clicks inside an inline contentEditable field: let native caret
-      // placement happen (no preventDefault, no reselect). The field's `focus`
-      // handler performs the selection.
-      if (target?.closest("[data-st-inline-field]")) return;
       const section = target?.closest<HTMLElement>("[data-st-section-id]");
       if (!section) return;
       // Don't hijack navigation/interactions inside a section unless it's a
@@ -482,8 +479,6 @@ export function StorefrontEditorRuntime({
     const onDouble = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-st-editor-chrome]")) return;
-      // Inside an inline field, double-click is word-select — don't open the drawer.
-      if (target?.closest("[data-st-inline-field]")) return;
       const section = target?.closest<HTMLElement>("[data-st-section-id]");
       const id = section?.dataset.stSectionId;
       if (id) openEditor(id);
@@ -523,25 +518,29 @@ export function StorefrontEditorRuntime({
 
   // ── Structural ops ──────────────────────────────────────────────────────────
   const onMove = useCallback(
-    (id: string, dir: -1 | 1) => {
+    async (id: string, dir: -1 | 1) => {
       const nextOrder = moveSection(doc, id, dir);
       if (nextOrder === doc.order) return;
-      // Optimistic DOM reorder for instant feedback.
-      const node = sectionNode(id);
-      const parent = node?.parentElement;
-      if (node && parent) {
-        const swapId = nextOrder[nextOrder.indexOf(id) + (dir === -1 ? 1 : -1)];
-        const swapNode = swapId ? sectionNode(swapId) : null;
-        if (swapNode) {
-          if (dir === -1) parent.insertBefore(node, swapNode);
-          else parent.insertBefore(swapNode, node);
+      const next = { ...doc, order: nextOrder };
+      setDoc(next);
+      // INTERIM (crash hotfix): re-render the canvas from the document instead of
+      // moving React-owned nodes by hand. The old optimistic insertBefore
+      // desynced React's tree and could crash on the next reconcile. Persist
+      // first so the server re-render reflects the new order.
+      const fd = new FormData();
+      fd.set("document_json", JSON.stringify(next));
+      setAutoSaving(true);
+      try {
+        const r = await saveStorefrontDocumentDraft(initialState, fd);
+        if (r.ok) {
+          router.refresh();
+          requestAnimationFrame(() => requestAnimationFrame(measure));
         }
+      } finally {
+        setAutoSaving(false);
       }
-      setDoc({ ...doc, order: nextOrder });
-      requestAnimationFrame(measure);
-      scheduleSave();
     },
-    [doc, measure, scheduleSave]
+    [doc, router, measure]
   );
 
   const onToggle = useCallback(
