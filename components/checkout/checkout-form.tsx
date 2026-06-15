@@ -37,6 +37,7 @@ export function CheckoutForm({
   damageWaiver,
   cartJson,
   cartItemNames,
+  isGeneral,
 }: {
   productSlug?: string;
   initialDate?: string;
@@ -81,9 +82,17 @@ export function CheckoutForm({
      *  the server recomputes from the product row at submit time. */
     previewAmountCents: number;
   } | null;
+  /** True for the general ("other") vertical — swaps event-framed labels
+   *  (e.g. "Event date" → "Rental date"). Event verticals leave it unset. */
+  isGeneral?: boolean;
 }) {
   const { messages: m } = useI18n();
   const { clear: clearCart } = useCart();
+  // General ("other") operators say "Rental date", not "Event date".
+  const dateLabel = isGeneral ? m.checkout.form.eventDateGeneral : m.checkout.form.eventDate;
+  const reviewDateLabel = isGeneral
+    ? m.checkout.review.eventDateGeneral
+    : m.checkout.review.eventDate;
   const isMultiItem = !!cartJson;
   const [state, formAction, pending] = useActionState(
     createCheckoutOrder,
@@ -231,7 +240,7 @@ export function CheckoutForm({
             )}
             {s.eventDate && (
               <div className="order-row">
-                <span className="muted">{m.checkout.review.eventDate}</span>
+                <span className="muted">{reviewDateLabel}</span>
                 <span>{s.eventDate}</span>
               </div>
             )}
@@ -516,7 +525,7 @@ export function CheckoutForm({
       </label>
 
       <label className="order-card">
-        <strong>{m.checkout.form.eventDate}</strong>
+        <strong>{dateLabel}</strong>
         <input
           name="event_date"
           type="date"

@@ -1684,6 +1684,7 @@ export const es: Messages = {
     kicker: "Pago",
     title: "Completa tu solicitud de reserva",
     description: "Introduce los datos de tu evento y entrega para reservar tu alquiler. Confirmaremos disponibilidad, montaje y condiciones tras el envío.",
+    descriptionGeneral: "Introduce los datos de tu reserva y entrega para reservar tu alquiler. Confirmaremos disponibilidad y condiciones tras el envío.",
     pillRental: "Alquiler: {value}",
     pillDate: "Fecha: {value}",
     pillZip: "CP: {value}",
@@ -1692,6 +1693,7 @@ export const es: Messages = {
       item: "Artículo",
       items: "Artículos",
       eventDate: "Fecha del evento",
+      eventDateGeneral: "Fecha del alquiler",
       deliveryTo: "Entrega a",
       subtotal: "Subtotal",
       wetUpcharge: "Recargo por modo mojado",
@@ -1721,6 +1723,7 @@ export const es: Messages = {
       damageWaiverBody:
         "Limita tu responsabilidad por daños accidentales a los artículos alquilados al {rate}% del subtotal (+${amount}).",
       eventDate: "Fecha del evento",
+      eventDateGeneral: "Fecha del alquiler",
       startTime: "Hora de inicio",
       endTime: "Hora de fin",
       deliveryAddress: "Dirección de entrega",

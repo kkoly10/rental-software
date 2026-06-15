@@ -1690,6 +1690,7 @@ const enValues = {
     kicker: "Checkout",
     title: "Complete your booking request",
     description: "Enter your event and delivery details to reserve your rental. We will confirm availability, setup timing, and agreement details after submission.",
+    descriptionGeneral: "Enter your booking and delivery details to reserve your rental. We will confirm availability and agreement details after submission.",
     pillRental: "Rental: {value}",
     pillDate: "Date: {value}",
     pillZip: "ZIP: {value}",
@@ -1698,6 +1699,7 @@ const enValues = {
       item: "Item",
       items: "Items",
       eventDate: "Event date",
+      eventDateGeneral: "Rental date",
       deliveryTo: "Delivery to",
       subtotal: "Subtotal",
       wetUpcharge: "Wet mode upcharge",
@@ -1727,6 +1729,7 @@ const enValues = {
       damageWaiverBody:
         "Caps your liability for accidental damage to the rented goods at {rate}% of the rental subtotal (+${amount}).",
       eventDate: "Event date",
+      eventDateGeneral: "Rental date",
       startTime: "Start time",
       endTime: "End time",
       deliveryAddress: "Delivery address",

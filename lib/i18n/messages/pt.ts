@@ -1684,6 +1684,7 @@ export const pt: Messages = {
     kicker: "Pagamento",
     title: "Conclua o seu pedido de reserva",
     description: "Introduza os detalhes do seu evento e entrega para reservar o aluguer. Confirmaremos disponibilidade, montagem e condições após o envio.",
+    descriptionGeneral: "Introduza os detalhes da sua reserva e entrega para reservar o aluguer. Confirmaremos disponibilidade e condições após o envio.",
     pillRental: "Aluguer: {value}",
     pillDate: "Data: {value}",
     pillZip: "Código postal: {value}",
@@ -1692,6 +1693,7 @@ export const pt: Messages = {
       item: "Artigo",
       items: "Artigos",
       eventDate: "Data do evento",
+      eventDateGeneral: "Data do aluguer",
       deliveryTo: "Entrega para",
       subtotal: "Subtotal",
       wetUpcharge: "Acréscimo modo molhado",
@@ -1721,6 +1723,7 @@ export const pt: Messages = {
       damageWaiverBody:
         "Limita a sua responsabilidade por danos acidentais nos artigos alugados a {rate}% do subtotal (+${amount}).",
       eventDate: "Data do evento",
+      eventDateGeneral: "Data do aluguer",
       startTime: "Hora de início",
       endTime: "Hora de fim",
       deliveryAddress: "Morada de entrega",

@@ -1684,6 +1684,7 @@ export const fr: Messages = {
     kicker: "Paiement",
     title: "Finalisez votre demande de réservation",
     description: "Saisissez les détails de votre événement et de la livraison pour réserver votre location. Nous confirmerons la disponibilité, l’installation et les conditions après envoi.",
+    descriptionGeneral: "Saisissez les détails de votre réservation et de la livraison pour réserver votre location. Nous confirmerons la disponibilité et les conditions après envoi.",
     pillRental: "Location : {value}",
     pillDate: "Date : {value}",
     pillZip: "Code postal : {value}",
@@ -1692,6 +1693,7 @@ export const fr: Messages = {
       item: "Article",
       items: "Articles",
       eventDate: "Date de l’événement",
+      eventDateGeneral: "Date de location",
       deliveryTo: "Livraison à",
       subtotal: "Sous-total",
       wetUpcharge: "Supplément mode mouillé",
@@ -1721,6 +1723,7 @@ export const fr: Messages = {
       damageWaiverBody:
         "Plafonne votre responsabilité en cas de dommages accidentels aux articles loués à {rate}% du sous-total (+{amount}$).",
       eventDate: "Date de l’événement",
+      eventDateGeneral: "Date de location",
       startTime: "Heure de début",
       endTime: "Heure de fin",
       deliveryAddress: "Adresse de livraison",
