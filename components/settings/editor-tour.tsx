@@ -68,6 +68,13 @@ export function EditorTour({
   const [index, setIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
   const primaryBtnRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  // Computed, viewport-clamped popover position. Starts off-screen so the first
+  // paint can't flash in the wrong spot before the layout effect measures it.
+  const [pos, setPos] = useState<{ top: number; left: number }>({
+    top: -9999,
+    left: -9999,
+  });
   const titleId = "editor-tour-title";
 
   const total = steps.length;
@@ -162,31 +169,39 @@ export function EditorTour({
     return () => cancelAnimationFrame(raf);
   }, [open, index]);
 
-  // Position of the popover relative to the (optional) spotlight.
-  const popoverStyle = useMemo<React.CSSProperties>(() => {
+  // Position the popover FULLY within the viewport. Measure its real size so the
+  // clamp is exact: prefer below the target, else above, else pin to the bottom
+  // edge — then clamp both axes with padding so the box can never render
+  // off-screen (which previously clipped the title/body, leaving only the action
+  // row visible). Runs in a layout effect (before paint) so there's no flash,
+  // and re-runs when the step (content height) or target rect changes.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const el = popoverRef.current;
+    if (!el || typeof window === "undefined") return;
+    const pad = 16;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pw = el.offsetWidth;
+    const ph = el.offsetHeight;
+
+    let top: number;
+    let left: number;
     if (!targetRect) {
-      return {
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-      };
+      left = (vw - pw) / 2;
+      top = (vh - ph) / 2;
+    } else {
+      left = targetRect.left + targetRect.width / 2 - pw / 2;
+      const below = targetRect.top + targetRect.height + POPOVER_GAP;
+      const above = targetRect.top - POPOVER_GAP - ph;
+      if (below + ph <= vh - pad) top = below;
+      else if (above >= pad) top = above;
+      else top = vh - ph - pad;
     }
-    const vh = typeof window !== "undefined" ? window.innerHeight : 768;
-    const below = targetRect.top + targetRect.height + POPOVER_GAP;
-    const placeBelow = below < vh - 220;
-    const top = placeBelow
-      ? targetRect.top + targetRect.height + POPOVER_GAP
-      : Math.max(72, targetRect.top - POPOVER_GAP);
-    const left = Math.min(
-      Math.max(16, targetRect.left + targetRect.width / 2),
-      (typeof window !== "undefined" ? window.innerWidth : 1024) - 16
-    );
-    return {
-      top,
-      left,
-      transform: placeBelow ? "translateX(-50%)" : "translate(-50%, -100%)",
-    };
-  }, [targetRect]);
+    left = Math.min(Math.max(pad, left), vw - pw - pad);
+    top = Math.min(Math.max(pad, top), vh - ph - pad);
+    setPos({ top, left });
+  }, [open, index, targetRect]);
 
   const spotlightStyle = useMemo<React.CSSProperties | null>(() => {
     if (!targetRect) return null;
@@ -210,11 +225,12 @@ export function EditorTour({
       )}
 
       <div
+        ref={popoverRef}
         className="st-tour-popover"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        style={popoverStyle}
+        style={{ top: pos.top, left: pos.left }}
       >
         <p className="st-tour-step-count">
           {labels.stepOf
