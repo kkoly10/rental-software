@@ -28,6 +28,14 @@ export type StorefrontPageDocument = {
   order: string[];
   sections: Record<string, SectionRecord>;
   theme?: unknown;
+  /**
+   * Optional per-tenant top-nav LABEL overrides (PR-2e): a map of nav key →
+   * custom label string. Keys are the stable nav identities the header tags
+   * with `data-st-nav-key` (catalog, how_it_works, service_area, order_status,
+   * contact, book_now). Absent / empty entries fall back to the default label,
+   * so an existing document with no `nav` renders byte-for-byte as before.
+   */
+  nav?: Record<string, string>;
 };
 
 const sectionRecordSchema = z.object({
@@ -47,6 +55,10 @@ export const storefrontPageDocumentSchema = z.object({
   order: z.array(z.string()),
   sections: z.record(sectionRecordSchema),
   theme: z.unknown().optional(),
+  // Optional nav label overrides (key → custom label). Kept loose here (a plain
+  // string map); parseBuilderDocument trims/caps values and drops unknown keys
+  // defensively on the publish path. Optional so existing docs stay valid.
+  nav: z.record(z.string()).optional(),
 });
 
 export type SynthesizeDefaultOrderInput = {

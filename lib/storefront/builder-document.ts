@@ -43,6 +43,28 @@ export const SCHEMA_VERSION = 1;
 export const SECTION_COUNT_MAX = 20;
 
 /**
+ * The stable nav keys whose labels are inline-editable in the builder (PR-2e).
+ * These mirror the `data-st-nav-key` attributes the header tags onto each
+ * editable nav element. Any key outside this set is dropped defensively on the
+ * publish path so a hand-edited document can't smuggle in junk keys.
+ */
+export const NAV_LABEL_KEYS = [
+  "catalog",
+  "how_it_works",
+  "service_area",
+  "order_status",
+  "contact",
+  "book_now",
+] as const;
+
+export type NavLabelKey = (typeof NAV_LABEL_KEYS)[number];
+
+/** Max length of a nav label override (mirrors the publish-path cap). */
+export const NAV_LABEL_MAX = 28;
+
+const NAV_LABEL_KEY_SET: ReadonlySet<string> = new Set(NAV_LABEL_KEYS);
+
+/**
  * Build a fresh page document from the synthesized default sections (§7) plus
  * the resolved theme tokens. Used to seed the builder the first time an org
  * opens it (no persisted document yet). NOT auto-persisted — only Save/Publish
@@ -276,6 +298,42 @@ export function setSectionSettingValue(
   };
 }
 
+/**
+ * Set (or clear) a top-nav LABEL override (PR-2e). Immutably writes
+ * `doc.nav[key] = value`. Mirrors setSectionSetting's empty-clears behavior: a
+ * `value` of undefined or "" (after trim) REMOVES the key so the label falls
+ * back to the rendered default (byte-for-byte safety — an empty nav editor =
+ * "use the default", not "store an empty label"). When clearing the last entry
+ * the whole `nav` map is dropped so the document is indistinguishable from one
+ * that never had overrides. Returns the SAME reference when nothing changes so
+ * callers can skip a state update.
+ */
+export function setNavLabel(
+  doc: StorefrontPageDocument,
+  key: string,
+  value: string | undefined
+): StorefrontPageDocument {
+  const trimmed = value === undefined ? "" : value.trim();
+  const current = doc.nav ?? {};
+  const existing = current[key];
+
+  if (trimmed === "") {
+    // Clear: no-op if it wasn't set.
+    if (existing === undefined) return doc;
+    const nextNav = { ...current };
+    delete nextNav[key];
+    if (Object.keys(nextNav).length === 0) {
+      const { nav: _omit, ...rest } = doc;
+      void _omit;
+      return rest;
+    }
+    return { ...doc, nav: nextNav };
+  }
+
+  if (existing === trimmed) return doc;
+  return { ...doc, nav: { ...current, [key]: trimmed } };
+}
+
 export type ParsedBuilderDocument = {
   document: StorefrontPageDocument;
   theme: ThemeTokens;
@@ -357,10 +415,36 @@ export function parseBuilderDocument(
     };
   }
 
+  // Normalize the optional nav label overrides DEFENSIVELY (spec §2): keep only
+  // known keys, trim values, drop empty/overlong ones (cap NAV_LABEL_MAX), and
+  // drop the whole map if nothing survives so the published doc stays clean.
+  let normalizedNav: Record<string, string> | undefined;
+  if (doc.nav !== undefined) {
+    const acc: Record<string, string> = {};
+    for (const [key, raw] of Object.entries(doc.nav)) {
+      if (!NAV_LABEL_KEY_SET.has(key)) continue;
+      if (typeof raw !== "string") continue;
+      const value = raw.trim();
+      if (value === "" || value.length > NAV_LABEL_MAX) continue;
+      acc[key] = value;
+    }
+    if (Object.keys(acc).length > 0) normalizedNav = acc;
+  }
+
+  const baseDoc: StorefrontPageDocument = {
+    ...doc,
+    sections: normalizedSections,
+    theme: parsedTheme.data,
+  };
+  // Only carry `nav` when there's something to store (mirrors setNavLabel's
+  // drop-empty-map behavior so an all-defaults doc has no `nav` key at all).
+  if (normalizedNav) baseDoc.nav = normalizedNav;
+  else delete baseDoc.nav;
+
   return {
     ok: true,
     value: {
-      document: { ...doc, sections: normalizedSections, theme: parsedTheme.data },
+      document: baseDoc,
       theme: parsedTheme.data,
     },
   };

@@ -80,7 +80,8 @@ export default async function StorefrontBuilderPreviewPage() {
     // public page's document path.
     return (
       <StorefrontShell>
-        <PartyClassicHeader />
+        {/* DRAFT nav label overrides → preview shows unpublished renames. */}
+        <PartyClassicHeader navOverrides={doc.nav} />
         <JsonLdScript
           data={organizationJsonLd(
             { ...settings, websiteMessage: settings.websiteMessage || undefined },

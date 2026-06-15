@@ -22,6 +22,8 @@ import {
   parseBuilderDocument,
   addSection,
   removeSection,
+  setNavLabel,
+  NAV_LABEL_MAX,
   SECTION_COUNT_MAX,
 } from "../lib/storefront/builder-document.ts";
 import { synthesizeDefaultOrder } from "../lib/storefront/page-document-schema.ts";
@@ -278,4 +280,70 @@ test("parseBuilderDocument accepts a document AT the section count cap", () => {
   assert.equal(doc.order.length, SECTION_COUNT_MAX);
   const result = parseBuilderDocument(JSON.parse(JSON.stringify(doc)));
   assert.equal(result.ok, true);
+});
+
+// ---------------------------------------------------------------------------
+// setNavLabel (top-nav label overrides) + nav validation on publish
+// ---------------------------------------------------------------------------
+
+test("setNavLabel sets a trimmed override under doc.nav", () => {
+  const doc = seedDoc();
+  const next = setNavLabel(doc, "catalog", "  Inventory  ");
+  assert.notEqual(next, doc);
+  assert.deepEqual(next.nav, { catalog: "Inventory" });
+  // Original document is untouched (immutability).
+  assert.equal(doc.nav, undefined);
+});
+
+test("setNavLabel returns the same ref when the value is unchanged", () => {
+  const doc = setNavLabel(seedDoc(), "catalog", "Inventory");
+  const again = setNavLabel(doc, "catalog", "Inventory");
+  assert.equal(again, doc);
+});
+
+test("setNavLabel with empty/whitespace clears the key (falls back to default)", () => {
+  const doc = setNavLabel(seedDoc(), "catalog", "Inventory");
+  const cleared = setNavLabel(doc, "catalog", "   ");
+  // Last entry removed → whole nav map dropped so the doc looks override-free.
+  assert.equal(cleared.nav, undefined);
+});
+
+test("setNavLabel clearing an unset key is a no-op (same ref)", () => {
+  const doc = seedDoc();
+  const next = setNavLabel(doc, "contact", "");
+  assert.equal(next, doc);
+});
+
+test("setNavLabel keeps other overrides when clearing one of several", () => {
+  let doc = setNavLabel(seedDoc(), "catalog", "Inventory");
+  doc = setNavLabel(doc, "book_now", "Reserve Now");
+  const next = setNavLabel(doc, "catalog", "");
+  assert.deepEqual(next.nav, { book_now: "Reserve Now" });
+});
+
+test("parseBuilderDocument keeps valid nav overrides and drops junk", () => {
+  const doc = seedDoc();
+  const raw = JSON.parse(JSON.stringify(doc));
+  raw.nav = {
+    catalog: "  Inventory  ", // trimmed
+    bogus_key: "Nope", // unknown key dropped
+    contact: "x".repeat(NAV_LABEL_MAX + 5), // overlong dropped
+    book_now: "", // empty dropped
+  };
+  const result = parseBuilderDocument(raw);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.deepEqual(result.value.document.nav, { catalog: "Inventory" });
+  }
+});
+
+test("parseBuilderDocument omits nav entirely when nothing survives", () => {
+  const doc = seedDoc();
+  const raw = JSON.parse(JSON.stringify(doc));
+  raw.nav = { bogus: "x", contact: "" };
+  const result = parseBuilderDocument(raw);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal("nav" in result.value.document, false);
+  }
 });
