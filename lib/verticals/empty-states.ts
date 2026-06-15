@@ -145,6 +145,28 @@ const COPY: Record<string, Record<EmptyStateSurface, EmptyStateCopy>> = {
       actionLabel: "Add customer",
     },
   },
+  // Setup-only general vertical — neutral copy that reads for any rental
+  // business (tools, AV, furniture, equipment, party, and beyond).
+  other: {
+    products: {
+      title: "No products yet",
+      description:
+        "Add your first item so customers can see what you rent and book it online from your storefront.",
+      actionLabel: "Add product",
+    },
+    orders: {
+      title: "No bookings yet",
+      description:
+        "Share your storefront link or enter a booking by hand to get your first rental on the board.",
+      actionLabel: "Create booking",
+    },
+    customers: {
+      title: "No customers yet",
+      description:
+        "Customers appear here after their first booking. Add a returning customer manually to get a head start.",
+      actionLabel: "Add customer",
+    },
+  },
 };
 
 export function getEmptyStateCopy(
@@ -209,6 +231,14 @@ const STARTERS: Record<string, StarterExample> = {
     price: "$175 (1hr attendant included)",
     description:
       "16oz commercial popper, serves ~200 guests. Kernels + bags + butter included. Standard 110V power.",
+  },
+  // Neutral example for a generalist — a real item with a clear daily
+  // rate and the spec/condition details a renter looks for.
+  other: {
+    name: "Cordless Drill Kit",
+    price: "$35 / day",
+    description:
+      "18V brushless drill/driver with two batteries, charger, and bit set in a hard case. Tested before every rental.",
   },
 };
 

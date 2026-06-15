@@ -27,6 +27,9 @@ import type { VerticalConfig } from "./types.ts";
 export const otherVertical: VerticalConfig = {
   slug: "other",
   setupOnly: true,
+  // Neutral middle-of-the-road money defaults — a generalist tunes these
+  // in Settings. 30% deposit, $100 order minimum, $50 round-trip delivery.
+  operatorDefaults: { depositPercentage: 30, orderMinimum: 100, deliveryFee: 50 },
   label: {
     en: "Other / general rentals",
     es: "Otro / alquileres generales",
@@ -76,19 +79,19 @@ export const otherVertical: VerticalConfig = {
   },
   storefrontDefaults: {
     heroImagePath: "/storefront-defaults/hero/tables-and-chairs.jpg",
-    headlineLead: "Rentals for your next",
-    headlineItalic: "event or project.",
-    lede: "Delivered, set up, and picked up across {area}. Reserve online in a few minutes.",
+    headlineLead: "Rent what you need,",
+    headlineItalic: "when you need it.",
+    lede: "Browse the catalog and reserve online across {area} — pickup or delivery, your choice.",
     taglineLabel: "Rentals",
     trustBadges: [
-      { kicker: "Reliable", statement: "On-time delivery and pickup, every booking across {area}." },
+      { kicker: "Reliable", statement: "Clean, ready-to-use items and on-time pickup or delivery across {area}." },
       { kicker: "Clear pricing", statement: "What you see is what you pay — no surprise fees at checkout." },
       { kicker: "Easy booking", statement: "Reserve online and pay your deposit in a few minutes." },
     ],
     vibeTiles: [
-      { kicker: "For the celebration", label: "Parties & events", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory" },
-      { kicker: "For the project", label: "Equipment", imagePath: "/storefront-defaults/hero/concessions.jpg", href: "/inventory" },
-      { kicker: "Everything else", label: "Browse all", imagePath: "/storefront-defaults/hero/inflatable.jpg", href: "/inventory" },
+      { kicker: "Most booked", label: "Featured", imagePath: "/storefront-defaults/hero/tables-and-chairs.jpg", href: "/inventory" },
+      { kicker: "For the job", label: "Equipment", imagePath: "/storefront-defaults/hero/concessions.jpg", href: "/inventory" },
+      { kicker: "See it all", label: "Browse all", imagePath: "/storefront-defaults/hero/inflatable.jpg", href: "/inventory" },
     ],
   },
 };

@@ -31,6 +31,22 @@ test("attended verticals get on-topic agreement terms", () => {
   assert.match(getTerms("rental_agreement", "concessions").join(" "), /power|consumable/i);
 });
 
+test("the 'other' general vertical gets neutral terms, not event boilerplate", () => {
+  // A true general vertical (tools/AV/furniture) must not inherit
+  // venue/weather/setup-crew language that reads wrong off-event.
+  for (const type of ["rental_agreement", "safety_waiver"] as const) {
+    const terms = getTerms(type, "other").join(" ");
+    assert.doesNotMatch(terms, /\bvenue\b|\bweather\b|setup area|installation/i,
+      `other/${type} still carries event-rental language`);
+  }
+  // And it should NOT silently fall through to the generic event block.
+  assert.notDeepEqual(
+    getTerms("rental_agreement", "other"),
+    getTerms("rental_agreement", "totally-unknown"),
+    "other should resolve dedicated general terms, not the event fallback",
+  );
+});
+
 test("an unknown vertical still falls back to non-empty generic terms", () => {
   assert.ok(getTerms("rental_agreement", "totally-unknown").length > 0);
   assert.ok(getTerms("safety_waiver", "totally-unknown").length > 0);

@@ -84,7 +84,34 @@ const CONCESSION_WAIVER_TERMS: string[] = [
   "6. ACKNOWLEDGMENT: I have read this waiver, understand its terms, and sign it voluntarily. I am at least 18 years of age and have authority to sign on behalf of all participants.",
 ];
 
+// General rentals ("other" vertical) — a true catch-all for operators who
+// don't fit a marketed vertical (tools, AV, furniture, party, equipment,
+// and beyond). Deliberately neutral: no venue/weather/setup-crew language
+// (which reads wrong for, say, a pickup-only tool rental) and none of the
+// OSHA/heavy-equipment specifics in the legacy `equipment` block. Operators
+// can replace this with their own clauses via the clause editor.
+const GENERAL_RENTAL_TERMS: string[] = [
+  "1. RENTAL PERIOD & RETURN: The item is rented for the agreed period and must be returned by the agreed date and time. Late returns are subject to additional charges. The customer is responsible for the item from pickup or delivery until it is returned.",
+  "2. DAMAGE, LOSS & LIABILITY: The customer accepts full responsibility for damage, loss, or theft of the item during the rental period, including damage caused by misuse or negligence. Normal wear is excluded.",
+  "3. PAYMENT & DEPOSIT: The balance is due as stated on the order. Any deposit is handled according to the cancellation policy disclosed at booking.",
+  "4. INSPECTION ON RECEIPT: The customer agrees to inspect the item on receipt and report any pre-existing damage before use. The item must be returned in the same condition, ordinary wear excepted.",
+  "5. PROPER & LAWFUL USE: The customer agrees to use the item only for its intended purpose, following any instructions provided, and to ensure safe and lawful use throughout the rental period.",
+  "6. PROHIBITED USE: The item may not be modified, sublet, or used outside the purpose for which it was designed. Misuse voids all protections and may result in additional charges.",
+  "7. COMPLIANCE: The customer agrees to comply with all applicable local, state, and federal laws and regulations governing use of the rented item.",
+  "8. INDEMNIFICATION: The customer agrees to indemnify and hold harmless the rental company, its owners and employees from any claims, damages, or injuries arising from use of the rented item.",
+];
+
+const GENERAL_WAIVER_TERMS: string[] = [
+  "1. ASSUMPTION OF RISK: I understand that the use of rented items can involve inherent risks. I voluntarily assume all risks associated with my use of the rented item.",
+  "2. RELEASE OF LIABILITY: In consideration for the use of this item, I, on behalf of myself and anyone I allow to use it, release and discharge the rental company from any and all claims arising from its use or misuse, to the extent permitted by law.",
+  "3. PROPER USE & SUPERVISION: I agree to use the item only as intended, to follow any instructions provided, and to ensure responsible supervision where appropriate.",
+  "4. CONDITION ACKNOWLEDGMENT: I have inspected the item and agree to report any defects or unsafe conditions before use; damage not noted at pickup is my responsibility.",
+  "5. COMPLIANCE: I agree to follow all applicable laws, manufacturer guidelines, and safety instructions while using the item.",
+  "6. ACKNOWLEDGMENT: I have read this waiver, understand its terms, and sign it voluntarily. I am at least 18 years of age and have the authority to sign on behalf of all users.",
+];
+
 const RENTAL_AGREEMENT_TERMS: Record<string, string[]> = {
+  other: GENERAL_RENTAL_TERMS,
   tents: EVENT_RENTAL_TERMS,
   "tables-and-chairs": EVENT_RENTAL_TERMS,
   "dance-floors": EVENT_RENTAL_TERMS,
@@ -123,6 +150,7 @@ const RENTAL_AGREEMENT_TERMS: Record<string, string[]> = {
 };
 
 const SAFETY_WAIVER_TERMS: Record<string, string[]> = {
+  other: GENERAL_WAIVER_TERMS,
   tents: EVENT_SAFETY_WAIVER_TERMS,
   "tables-and-chairs": EVENT_SAFETY_WAIVER_TERMS,
   "dance-floors": EVENT_SAFETY_WAIVER_TERMS,
