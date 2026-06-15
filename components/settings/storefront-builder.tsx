@@ -15,6 +15,9 @@ import {
   moveSection,
   toggleSectionDisabled,
   setDocumentTheme,
+  addSection,
+  removeSection,
+  SECTION_COUNT_MAX,
 } from "@/lib/storefront/builder-document";
 import { isContentEditableSectionType } from "@/lib/storefront/sections/content-schemas";
 import { StorefrontSectionEditor } from "@/components/settings/storefront-section-editor";
@@ -83,6 +86,34 @@ export function StorefrontBuilder({
   const onToggle = (id: string) => setDoc(toggleSectionDisabled(doc, id));
   const onThemeChange = (theme: ThemeTokens) =>
     setDoc(setDocumentTheme(doc, theme));
+
+  // The operator-addable custom types (registry `addable: true`), in registry
+  // order, surfaced in the Add-section picker.
+  const addableTypes = (
+    Object.keys(SECTION_REGISTRY) as SectionType[]
+  ).filter((t) => SECTION_REGISTRY[t].addable === true);
+
+  const atSectionLimit = doc.order.length >= SECTION_COUNT_MAX;
+
+  const onAdd = (type: SectionType) => {
+    const next = addSection(doc, type);
+    if (next === doc) return; // unknown type or at the cap → no-op
+    setDoc(next);
+    // addSection appends the new section to the end of `order`; select it.
+    const newId = next.order[next.order.length - 1];
+    setSelectedId(newId);
+    setTab("sections");
+  };
+
+  const onRemove = (id: string) => {
+    const next = removeSection(doc, id);
+    if (next === doc) return; // alwaysPresent or unknown id → no-op
+    setDoc(next);
+    // If the removed section was selected, fall back to a remaining one.
+    if (selectedId === id) {
+      setSelectedId(next.order[0] ?? "");
+    }
+  };
 
   const selectedTheme = doc.theme as ThemeTokens | undefined;
 
@@ -257,11 +288,72 @@ export function StorefrontBuilder({
                     >
                       {disabled ? m.show : m.hide}
                     </button>
+                    {/* alwaysPresent sections (hero/closing) can't be removed —
+                        hide the control entirely for them. */}
+                    {!pinned && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(id)}
+                        aria-label={m.removeSection}
+                        title={m.removeSection}
+                        className="icon-btn"
+                        style={iconBtnStyle(false)}
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </li>
               );
             })}
           </ul>
+
+          {/* Add-section picker — lists the addable custom types by label.
+              Disabled at the section cap. */}
+          <div style={{ marginTop: 16 }}>
+            <label
+              style={{ display: "grid", gap: 6, fontWeight: 600, fontSize: 13 }}
+            >
+              <span>{m.addSection}</span>
+              <select
+                value=""
+                disabled={atSectionLimit}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value) onAdd(value as SectionType);
+                  // Reset back to the placeholder so the same type can be
+                  // re-added without first picking another option.
+                  e.target.value = "";
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                  background: "var(--surface, #fff)",
+                  color: "var(--text, #1A1A1A)",
+                  opacity: atSectionLimit ? 0.5 : 1,
+                }}
+              >
+                <option value="">{m.addSectionPlaceholder}</option>
+                {addableTypes.map((t) => (
+                  <option key={t} value={t}>
+                    {SECTION_REGISTRY[t].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {atSectionLimit && (
+              <p
+                className="muted"
+                style={{ fontSize: 12, margin: "6px 0 0", lineHeight: 1.5 }}
+              >
+                {m.sectionLimitReached}
+              </p>
+            )}
+          </div>
         </aside>
 
         {/* Right = tabs (Sections / Styles). */}
@@ -282,6 +374,9 @@ export function StorefrontBuilder({
               </h2>
               {selectedType && isContentEditableSectionType(selectedType) ? (
                 <StorefrontSectionEditor
+                  // Remount on section switch so per-section local form state
+                  // (e.g. the gallery's working rows) starts fresh.
+                  key={selectedId}
                   type={selectedType}
                   sectionId={selectedId}
                   doc={doc}

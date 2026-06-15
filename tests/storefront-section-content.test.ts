@@ -16,11 +16,17 @@ import {
   trustSettingsSchema,
   testimonialsSettingsSchema,
   faqSettingsSchema,
+  customRichSettingsSchema,
+  customImageSettingsSchema,
+  customGallerySettingsSchema,
   parseHeroSettings,
   parseAboutSettings,
   parseTrustSettings,
   parseTestimonialsSettings,
   parseFaqSettings,
+  parseCustomRichSettings,
+  parseCustomImageSettings,
+  parseCustomGallerySettings,
   isContentEditableSectionType,
   HERO_HEADLINE_MAX,
   HERO_MESSAGE_MAX,
@@ -31,6 +37,12 @@ import {
   TESTIMONIALS_MAX,
   FAQ_QUESTION_MAX,
   FAQ_ITEMS_MAX,
+  CUSTOM_RICH_HEADING_MAX,
+  CUSTOM_RICH_BODY_MAX,
+  CUSTOM_IMAGE_ALT_MAX,
+  CUSTOM_IMAGE_CAPTION_MAX,
+  CUSTOM_GALLERY_ALT_MAX,
+  CUSTOM_GALLERY_IMAGES_MAX,
 } from "../lib/storefront/sections/content-schemas.ts";
 import {
   buildDocumentFromSynthesized,
@@ -104,15 +116,131 @@ test("aboutSettingsSchema bounds the body length", () => {
   );
 });
 
-test("isContentEditableSectionType covers the PR-1c/1d editable types", () => {
+test("isContentEditableSectionType covers the PR-1c/1d/1e editable types", () => {
   assert.equal(isContentEditableSectionType("hero"), true);
   assert.equal(isContentEditableSectionType("about"), true);
   assert.equal(isContentEditableSectionType("trust"), true);
   assert.equal(isContentEditableSectionType("testimonials"), true);
   assert.equal(isContentEditableSectionType("faq"), true);
+  assert.equal(isContentEditableSectionType("custom-rich"), true);
+  assert.equal(isContentEditableSectionType("custom-image"), true);
+  assert.equal(isContentEditableSectionType("custom-gallery"), true);
   // Types with no content form remain non-editable.
   assert.equal(isContentEditableSectionType("press"), false);
   assert.equal(isContentEditableSectionType("closing"), false);
+});
+
+// ---------------------------------------------------------------------------
+// PR-1e schemas: custom-rich / custom-image / custom-gallery
+// ---------------------------------------------------------------------------
+
+test("customRichSettingsSchema accepts empty / valid; bounds heading + body", () => {
+  assert.equal(customRichSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    customRichSettingsSchema.safeParse({ heading: "Our story", body: "Line 1\nLine 2" }).success,
+    true
+  );
+  assert.equal(
+    customRichSettingsSchema.safeParse({ heading: "x".repeat(CUSTOM_RICH_HEADING_MAX + 1) }).success,
+    false
+  );
+  assert.equal(
+    customRichSettingsSchema.safeParse({ body: "x".repeat(CUSTOM_RICH_BODY_MAX + 1) }).success,
+    false
+  );
+});
+
+test("customImageSettingsSchema accepts empty / valid; rejects bad URLs + over-cap text", () => {
+  assert.equal(customImageSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    customImageSettingsSchema.safeParse({
+      imageUrl: "https://cdn.example.com/a.jpg",
+      alt: "A tent",
+      caption: "Set up at dusk",
+    }).success,
+    true
+  );
+  assert.equal(
+    customImageSettingsSchema.safeParse({ imageUrl: "javascript:alert(1)" }).success,
+    false
+  );
+  assert.equal(
+    customImageSettingsSchema.safeParse({
+      imageUrl: "https://cdn.example.com/a.jpg",
+      alt: "x".repeat(CUSTOM_IMAGE_ALT_MAX + 1),
+    }).success,
+    false
+  );
+  assert.equal(
+    customImageSettingsSchema.safeParse({
+      imageUrl: "https://cdn.example.com/a.jpg",
+      caption: "x".repeat(CUSTOM_IMAGE_CAPTION_MAX + 1),
+    }).success,
+    false
+  );
+});
+
+test("customGallerySettingsSchema bounds count, requires imageUrl, bounds alt", () => {
+  assert.equal(customGallerySettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    customGallerySettingsSchema.safeParse({
+      images: [{ imageUrl: "https://cdn.example.com/a.jpg", alt: "A" }],
+    }).success,
+    true
+  );
+  // Item without a (valid) imageUrl is rejected.
+  assert.equal(
+    customGallerySettingsSchema.safeParse({ images: [{ alt: "no url" }] }).success,
+    false
+  );
+  assert.equal(
+    customGallerySettingsSchema.safeParse({ images: [{ imageUrl: "not-a-url" }] }).success,
+    false
+  );
+  // Over the per-item alt cap.
+  assert.equal(
+    customGallerySettingsSchema.safeParse({
+      images: [{ imageUrl: "https://cdn.example.com/a.jpg", alt: "x".repeat(CUSTOM_GALLERY_ALT_MAX + 1) }],
+    }).success,
+    false
+  );
+  // Over the image count cap.
+  assert.equal(
+    customGallerySettingsSchema.safeParse({
+      images: Array.from({ length: CUSTOM_GALLERY_IMAGES_MAX + 1 }, () => ({
+        imageUrl: "https://cdn.example.com/a.jpg",
+      })),
+    }).success,
+    false
+  );
+});
+
+test("parseCustomRichSettings returns {} for absent/malformed", () => {
+  assert.deepEqual(parseCustomRichSettings(undefined), {});
+  assert.deepEqual(parseCustomRichSettings(null), {});
+  assert.deepEqual(parseCustomRichSettings({ heading: "x".repeat(999) }), {});
+  assert.deepEqual(parseCustomRichSettings({ heading: "Hi", body: "There" }), {
+    heading: "Hi",
+    body: "There",
+  });
+});
+
+test("parseCustomImageSettings returns {} for absent/malformed", () => {
+  assert.deepEqual(parseCustomImageSettings(undefined), {});
+  assert.deepEqual(parseCustomImageSettings({ imageUrl: "javascript:alert(1)" }), {});
+  assert.deepEqual(
+    parseCustomImageSettings({ imageUrl: "https://cdn.example.com/a.jpg", caption: "Hi" }),
+    { imageUrl: "https://cdn.example.com/a.jpg", caption: "Hi" }
+  );
+});
+
+test("parseCustomGallerySettings returns {} for absent/malformed", () => {
+  assert.deepEqual(parseCustomGallerySettings(undefined), {});
+  assert.deepEqual(parseCustomGallerySettings({ images: [{ alt: "no url" }] }), {});
+  assert.deepEqual(
+    parseCustomGallerySettings({ images: [{ imageUrl: "https://cdn.example.com/a.jpg" }] }),
+    { images: [{ imageUrl: "https://cdn.example.com/a.jpg" }] }
+  );
 });
 
 // ---------------------------------------------------------------------------

@@ -23,6 +23,12 @@ import {
   FAQ_QUESTION_MAX,
   FAQ_ANSWER_MAX,
   FAQ_ITEMS_MAX,
+  CUSTOM_RICH_HEADING_MAX,
+  CUSTOM_RICH_BODY_MAX,
+  CUSTOM_IMAGE_ALT_MAX,
+  CUSTOM_IMAGE_CAPTION_MAX,
+  CUSTOM_GALLERY_ALT_MAX,
+  CUSTOM_GALLERY_IMAGES_MAX,
   type ContentEditableSectionType,
 } from "@/lib/storefront/sections/content-schemas";
 
@@ -153,6 +159,69 @@ export function StorefrontSectionEditor({
           onChange={(next) => setList("items", next)}
         />
       )}
+
+      {type === "custom-rich" && (
+        <>
+          <Field label={m.customRichHeadingLabel}>
+            <input
+              type="text"
+              value={get("heading")}
+              maxLength={CUSTOM_RICH_HEADING_MAX}
+              placeholder={m.customRichHeadingPlaceholder}
+              onChange={(e) => set("heading", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.customRichBodyLabel}>
+            <textarea
+              value={get("body")}
+              maxLength={CUSTOM_RICH_BODY_MAX}
+              rows={8}
+              placeholder={m.customRichBodyPlaceholder}
+              onChange={(e) => set("body", e.target.value)}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </Field>
+        </>
+      )}
+
+      {type === "custom-image" && (
+        <>
+          <Field label={m.customImageLabel}>
+            <SectionImageField
+              currentUrl={get("imageUrl")}
+              onUrlChange={(url) => set("imageUrl", url)}
+            />
+          </Field>
+          <Field label={m.customImageAltLabel}>
+            <input
+              type="text"
+              value={get("alt")}
+              maxLength={CUSTOM_IMAGE_ALT_MAX}
+              placeholder={m.customImageAltPlaceholder}
+              onChange={(e) => set("alt", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label={m.customImageCaptionLabel}>
+            <input
+              type="text"
+              value={get("caption")}
+              maxLength={CUSTOM_IMAGE_CAPTION_MAX}
+              placeholder={m.customImageCaptionPlaceholder}
+              onChange={(e) => set("caption", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+        </>
+      )}
+
+      {type === "custom-gallery" && (
+        <GalleryForm
+          images={getList<GalleryImageValue>("images")}
+          onChange={(next) => setList("images", next)}
+        />
+      )}
     </div>
   );
 }
@@ -169,6 +238,7 @@ export function StorefrontSectionEditor({
 type TrustBadgeValue = { title: string; description: string };
 type TestimonialValue = { name: string; text: string; rating?: number };
 type FaqValue = { question: string; answer: string };
+type GalleryImageValue = { imageUrl: string; alt?: string };
 
 function TrustBadgesForm({
   badges,
@@ -339,6 +409,70 @@ function FaqForm({
       ))}
       {items.length < FAQ_ITEMS_MAX && (
         <AddButton label={m.faqAdd} onClick={add} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * custom-gallery editor: a list (max 12) of {imageUrl, alt?} rows. Each row
+ * reuses SectionImageField for the upload (sniffed + EXIF-stripped pipeline) +
+ * an alt input. Rows are written straight back to the document; the publish
+ * schema drops a row lacking a valid imageUrl, and an empty list removes the key
+ * so the section falls back to rendering null.
+ */
+function GalleryForm({
+  images,
+  onChange,
+}: {
+  images: GalleryImageValue[];
+  onChange: (next: GalleryImageValue[]) => void;
+}) {
+  const { messages } = useI18n();
+  const m = messages.dashboard.website.builder.sectionEditor;
+
+  // Local working rows so an operator can add an empty row and fill it in
+  // (upload an image / type alt) before it's valid. Only rows with a non-empty
+  // imageUrl are written back to the document — the publish schema requires an
+  // imageUrl per item, so empty rows are dropped before save.
+  const [rows, setRows] = useState<GalleryImageValue[]>(images);
+
+  const commit = (next: GalleryImageValue[]) => {
+    setRows(next);
+    onChange(next.filter((r) => r.imageUrl.trim()));
+  };
+
+  const update = (i: number, patch: Partial<GalleryImageValue>) =>
+    commit(rows.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  const remove = (i: number) => commit(rows.filter((_, idx) => idx !== i));
+  const add = () => {
+    if (rows.length >= CUSTOM_GALLERY_IMAGES_MAX) return;
+    setRows([...rows, { imageUrl: "" }]);
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      {rows.map((img, i) => (
+        <div key={i} style={rowStyle}>
+          <RowHeader title={`${i + 1}`} onRemove={() => remove(i)} removeLabel={m.removeRow} />
+          <SectionImageField
+            currentUrl={img.imageUrl}
+            onUrlChange={(url) => update(i, { imageUrl: url })}
+          />
+          <Field label={m.customGalleryAltLabel}>
+            <input
+              type="text"
+              value={img.alt ?? ""}
+              maxLength={CUSTOM_GALLERY_ALT_MAX}
+              placeholder={m.customGalleryAltPlaceholder}
+              onChange={(e) => update(i, { alt: e.target.value })}
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+      ))}
+      {rows.length < CUSTOM_GALLERY_IMAGES_MAX && (
+        <AddButton label={m.customGalleryAdd} onClick={add} />
       )}
     </div>
   );

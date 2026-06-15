@@ -20,6 +20,9 @@ import {
   toggleSectionDisabled,
   setDocumentTheme,
   parseBuilderDocument,
+  addSection,
+  removeSection,
+  SECTION_COUNT_MAX,
 } from "../lib/storefront/builder-document.ts";
 import { synthesizeDefaultOrder } from "../lib/storefront/page-document-schema.ts";
 import { DEFAULT_THEME_TOKENS } from "../lib/data/storefront-token-defaults.ts";
@@ -184,4 +187,95 @@ test("parseBuilderDocument rejects a missing/invalid theme", () => {
     theme: { colors: { background: "not-a-hex" } },
   });
   assert.equal(result.ok, false);
+});
+
+// ---------------------------------------------------------------------------
+// PR-1e: addSection / removeSection + the section-count cap
+// ---------------------------------------------------------------------------
+
+test("addSection appends a new custom section with an empty settings object", () => {
+  const doc = seedDoc();
+  const before = doc.order.length;
+  const next = addSection(doc, "custom-rich");
+  assert.notEqual(next, doc);
+  assert.equal(next.order.length, before + 1);
+  const id = next.order[next.order.length - 1];
+  assert.ok(id.startsWith("sec_"), "new id uses the sec_ scheme");
+  assert.equal(next.sections[id].type, "custom-rich");
+  assert.deepEqual(next.sections[id].settings, {});
+  // Original untouched.
+  assert.equal(doc.order.length, before);
+  assert.equal(doc.sections[id], undefined);
+});
+
+test("addSection generates unique ids across repeated adds", () => {
+  let doc = seedDoc();
+  doc = addSection(doc, "custom-image");
+  doc = addSection(doc, "custom-image");
+  const ids = doc.order;
+  assert.equal(new Set(ids).size, ids.length, "no duplicate ids");
+});
+
+test("addSection is a no-op (same ref) for an unknown type", () => {
+  const doc = seedDoc();
+  assert.equal(addSection(doc, "not-a-real-type"), doc);
+});
+
+test("addSection is a no-op (same ref) at the section count cap", () => {
+  let doc = seedDoc();
+  // Fill up to the cap.
+  while (doc.order.length < SECTION_COUNT_MAX) {
+    doc = addSection(doc, "custom-rich");
+  }
+  assert.equal(doc.order.length, SECTION_COUNT_MAX);
+  const capped = addSection(doc, "custom-rich");
+  assert.equal(capped, doc, "no-op once at the cap");
+});
+
+test("removeSection deletes from order + sections", () => {
+  let doc = seedDoc();
+  doc = addSection(doc, "custom-gallery");
+  const id = doc.order[doc.order.length - 1];
+  const next = removeSection(doc, id);
+  assert.notEqual(next, doc);
+  assert.equal(next.order.includes(id), false);
+  assert.equal(next.sections[id], undefined);
+});
+
+test("removeSection refuses to remove an alwaysPresent section (same ref)", () => {
+  const doc = seedDoc();
+  assert.equal(removeSection(doc, "sec_hero"), doc);
+  assert.equal(removeSection(doc, "sec_closing"), doc);
+});
+
+test("removeSection is a no-op (same ref) for an unknown id", () => {
+  const doc = seedDoc();
+  assert.equal(removeSection(doc, "sec_ghost"), doc);
+});
+
+test("parseBuilderDocument rejects a document over the section count cap", () => {
+  let doc = seedDoc();
+  while (doc.order.length <= SECTION_COUNT_MAX) {
+    // Push directly past the cap (bypass addSection's no-op guard) to exercise
+    // the publish-path cap.
+    const id = `sec_over_${doc.order.length}`;
+    doc = {
+      ...doc,
+      order: [...doc.order, id],
+      sections: { ...doc.sections, [id]: { type: "custom-rich", settings: {} } },
+    };
+  }
+  assert.ok(doc.order.length > SECTION_COUNT_MAX);
+  const result = parseBuilderDocument(JSON.parse(JSON.stringify(doc)));
+  assert.equal(result.ok, false);
+});
+
+test("parseBuilderDocument accepts a document AT the section count cap", () => {
+  let doc = seedDoc();
+  while (doc.order.length < SECTION_COUNT_MAX) {
+    doc = addSection(doc, "custom-rich");
+  }
+  assert.equal(doc.order.length, SECTION_COUNT_MAX);
+  const result = parseBuilderDocument(JSON.parse(JSON.stringify(doc)));
+  assert.equal(result.ok, true);
 });
