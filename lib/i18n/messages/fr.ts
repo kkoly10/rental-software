@@ -1568,6 +1568,7 @@ export const fr: Messages = {
     depositTag: "Acompte de {percent} %",
     depositTagNone: "Aucun acompte",
     depositBalanceNote: "Solde dû avant votre événement",
+    depositBalanceNoteGeneral: "Solde dû avant le retrait",
     depositMinimumNote: "Acompte minimum de {amount}",
     deliveryToArea: "Livraison à {zip} : {fee}",
     deliveryFreeToArea: "Livraison gratuite à {zip}",
@@ -1589,6 +1590,25 @@ export const fr: Messages = {
         "Journées école ou paroissiales",
         "Fêtes de quartier le week-end",
         "Options et forfaits supplémentaires disponibles",
+      ],
+    },
+    whatToExpectGeneral: {
+      kicker: "À quoi s’attendre",
+      title: "Des locations fiables, bien gérées",
+      items: [
+        { title: "Prêt à l’emploi", body: "Chaque article est nettoyé, testé et vérifié avant le départ." },
+        { title: "Exigences claires", body: "Consultez votre confirmation de commande pour les besoins d’espace, d’alimentation ou d’accès." },
+        { title: "Remise simple", body: "Le retrait ou la livraison est planifié à l’avance, pour une prise et un retour faciles." },
+      ],
+    },
+    bestFitGeneral: {
+      kicker: "Bon à savoir",
+      title: "Des locations flexibles pour tous les besoins",
+      items: [
+        "Options de retrait ou de livraison",
+        "Locations à la journée, sur plusieurs jours et le week-end",
+        "Options et forfaits disponibles",
+        "Des questions ? Nous sommes là pour aider",
       ],
     },
   },

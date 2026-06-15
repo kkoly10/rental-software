@@ -1568,6 +1568,7 @@ export const es: Messages = {
     depositTag: "{percent}% de depósito",
     depositTagNone: "Sin depósito",
     depositBalanceNote: "Saldo a pagar antes de tu evento",
+    depositBalanceNoteGeneral: "Saldo a pagar antes de la recogida",
     depositMinimumNote: "Depósito mínimo de {amount}",
     deliveryToArea: "Entrega en {zip}: {fee}",
     deliveryFreeToArea: "Entrega gratis en {zip}",
@@ -1589,6 +1590,25 @@ export const es: Messages = {
         "Días familiares de escuela o iglesia",
         "Celebraciones de barrio el fin de semana",
         "Complementos y paquetes disponibles",
+      ],
+    },
+    whatToExpectGeneral: {
+      kicker: "Qué esperar",
+      title: "Alquileres fiables, bien gestionados",
+      items: [
+        { title: "Listo para usar", body: "Cada artículo se limpia, se prueba y se revisa antes de salir." },
+        { title: "Requisitos claros", body: "Consulta tu confirmación de pedido para conocer las necesidades de espacio, energía o acceso." },
+        { title: "Entrega sencilla", body: "La recogida o entrega se programa por adelantado, así recibirlo y devolverlo es fácil." },
+      ],
+    },
+    bestFitGeneral: {
+      kicker: "Bueno saber",
+      title: "Alquileres flexibles para cualquier necesidad",
+      items: [
+        "Opciones de recogida o entrega",
+        "Alquileres por día, varios días y fin de semana",
+        "Complementos y paquetes disponibles",
+        "¿Preguntas? Con gusto te ayudamos",
       ],
     },
   },

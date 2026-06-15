@@ -1573,6 +1573,7 @@ const enValues = {
     depositTag: "{percent}% deposit",
     depositTagNone: "No deposit",
     depositBalanceNote: "Balance due before your event",
+    depositBalanceNoteGeneral: "Balance due before pickup",
     depositMinimumNote: "{amount} minimum deposit",
     deliveryToArea: "Delivery to {zip}: {fee}",
     deliveryFreeToArea: "Free delivery to {zip}",
@@ -1594,6 +1595,26 @@ const enValues = {
         "School or church family days",
         "Weekend neighborhood celebrations",
         "Add-ons and package bundles available",
+      ],
+    },
+    // Neutral variants for the general ("other") vertical.
+    whatToExpectGeneral: {
+      kicker: "What to expect",
+      title: "Reliable rentals, handled right",
+      items: [
+        { title: "Ready to use", body: "Every item is cleaned, tested, and checked before it goes out." },
+        { title: "Clear requirements", body: "Check your order confirmation for any space, power, or access needs." },
+        { title: "Simple handoff", body: "Pickup or delivery is scheduled up front, so getting it and returning it is easy." },
+      ],
+    },
+    bestFitGeneral: {
+      kicker: "Good to know",
+      title: "Flexible rentals for any need",
+      items: [
+        "Pickup or delivery options",
+        "Daily, multi-day, and weekend rentals",
+        "Add-ons and bundles available",
+        "Questions? We're happy to help",
       ],
     },
   },
