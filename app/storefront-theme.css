@@ -2836,6 +2836,87 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   display: inline-block;
 }
 
+/* ── Friendlier Styles panel (PR-2c): preset swatches/buttons + custom expander */
+.st-style-swatch-preview {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  display: inline-block;
+}
+.st-style-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.st-style-preset-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.st-style-preset-swatch.is-active {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+.st-style-preset-swatch:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+.st-style-preset-btn {
+  appearance: none;
+  cursor: pointer;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text, #1a1a1a);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 999px;
+}
+.st-style-preset-btn:hover {
+  border-color: var(--primary, #3f4a33);
+}
+.st-style-preset-btn.is-active {
+  background: var(--primary, #3f4a33);
+  color: #fff;
+  border-color: var(--primary, #3f4a33);
+}
+.st-style-preset-btn:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+.st-style-custom-toggle {
+  appearance: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-muted, #5c5651);
+  background: transparent;
+  border: 1px dashed var(--border, #e6e1d8);
+  border-radius: 999px;
+}
+.st-style-custom-toggle.is-active {
+  border-style: solid;
+  color: var(--text, #1a1a1a);
+}
+.st-style-custom-toggle:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+.st-style-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    Editor guidance (PR-2d) — tooltips, first-run tour, help launcher, hints, icons
    UI/UX-only editor chrome. Nothing here affects the public storefront render.
@@ -3201,6 +3282,107 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   border-color: var(--primary, #3f4a33);
 }
 .st-editor-nav-suggestion:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+
+/* ── Per-element text styling toolbar (PR-A) ──────────────────────────────── */
+.st-editor-style-toolbar {
+  position: absolute;
+  z-index: 1004;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 16px);
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  flex-wrap: wrap;
+}
+.st-style-tb-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.st-style-tb-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: rgba(0, 0, 0, 0.1);
+}
+.st-style-tb-btn {
+  appearance: none;
+  cursor: pointer;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 1;
+  color: #1f2937;
+  background: #f3f4f6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+}
+.st-style-tb-btn:hover {
+  background: #e5e7eb;
+}
+.st-style-tb-btn.is-active {
+  background: var(--primary, #3f4a33);
+  color: #fff;
+  border-color: var(--primary, #3f4a33);
+}
+.st-style-tb-btn:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+.st-style-tb-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: 200px;
+}
+.st-style-tb-swatch {
+  appearance: none;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+}
+.st-style-tb-swatch.is-active {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 1px;
+}
+.st-style-tb-swatch:focus-visible {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 1px;
+}
+/* The "default / clear color" swatch — a diagonal slash on a light field. */
+.st-style-tb-swatch.is-default {
+  background: linear-gradient(
+    135deg,
+    #fff 0 43%,
+    #c0392b 43% 57%,
+    #fff 57% 100%
+  );
+}
+.st-style-tb-select {
+  appearance: auto;
+  cursor: pointer;
+  height: 28px;
+  max-width: 130px;
+  padding: 0 4px;
+  font-size: 12px;
+  color: #1f2937;
+  background: #f3f4f6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+}
+.st-style-tb-select:focus-visible {
   outline: 2px solid var(--primary, #3f4a33);
   outline-offset: 2px;
 }

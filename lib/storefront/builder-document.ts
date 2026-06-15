@@ -15,6 +15,7 @@ import {
 import {
   SECTION_CONTENT_SCHEMAS,
   isContentEditableSectionType,
+  parseFieldStyles,
 } from "./sections/content-schemas.ts";
 import {
   themeTokensSchema,
@@ -393,8 +394,21 @@ export function parseBuilderDocument(
     }
 
     if (record.settings !== undefined && isContentEditableSectionType(record.type)) {
+      // Per-element style overrides (PR-A) are validated DEFENSIVELY: drop any
+      // individual field whose override is malformed (size out of range, bad hex,
+      // unknown font) instead of rejecting the whole publish, so a hand-edited
+      // document can't inject raw CSS and can't get "stuck" un-publishable. We
+      // pre-normalize `fieldStyles` here, then validate the rest of the settings
+      // against the content schema (which re-validates the surviving styles).
+      const preCleaned = { ...record.settings } as Record<string, unknown>;
+      if ("fieldStyles" in preCleaned) {
+        const cleaned = parseFieldStyles(record.settings);
+        if (Object.keys(cleaned).length > 0) preCleaned.fieldStyles = cleaned;
+        else delete preCleaned.fieldStyles;
+      }
+
       const schema = SECTION_CONTENT_SCHEMAS[record.type];
-      const parsedSettings = schema.safeParse(record.settings);
+      const parsedSettings = schema.safeParse(preCleaned);
       if (!parsedSettings.success) {
         return {
           ok: false,
