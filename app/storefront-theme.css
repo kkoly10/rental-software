@@ -2636,3 +2636,51 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   cursor: pointer;
 }
 .st-editor-addmenu button:hover { background: var(--surface-muted, #f4f2ef); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Storefront on-canvas editor (PR-2b): type-on-the-page inline text editing +
+ * on-canvas image Replace. Outlines (never borders) so editing never shifts the
+ * page layout — the public render must stay byte-for-byte identical.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* Inline-editable text nodes (bound at runtime, selector-driven). */
+.st-inline-editable {
+  cursor: text;
+  outline: none;
+}
+.st-inline-editable:hover {
+  outline: 1px dashed var(--primary, #3f4a33);
+  outline-offset: 2px;
+}
+.st-inline-editable:focus {
+  outline: 2px solid var(--primary, #3f4a33);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* On-canvas "Replace image" overlay button, positioned over an image region. */
+.st-editor-replace-image {
+  position: absolute;
+  z-index: 1001;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1c1c;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.st-editor-replace-image:hover:not(:disabled) {
+  background: #ffffff;
+}
+.st-editor-replace-image:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type ChangeEvent,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,8 +25,10 @@ import {
   setDocumentTheme,
   addSection,
   removeSection,
+  setSectionSetting,
   SECTION_COUNT_MAX,
 } from "@/lib/storefront/builder-document";
+import { uploadSectionImage } from "@/lib/settings/brand-upload-actions";
 import {
   isContentEditableSectionType,
   type ContentEditableSectionType,
@@ -42,6 +45,48 @@ const initialState: StorefrontPageActionState = { ok: false, message: "" };
 
 /** Document-space rectangle of a section, used to position overlay frames. */
 type Frame = { top: number; left: number; width: number; height: number };
+
+/**
+ * Section-type → inline-editable text field map (PR-2b). Drives type-on-the-page
+ * editing entirely from the runtime: for each `[data-st-section-id]` wrapper we
+ * read its `data-st-section-type`, look up the field list here, and bind the
+ * matching server-rendered DOM node (found by `selector`, scoped to that
+ * wrapper) as a contentEditable surface. The selectors mirror the shared section
+ * components' static class names — those components are NOT touched (HARD
+ * CONSTRAINT) so the public render stays byte-for-byte identical.
+ */
+const INLINE_TEXT_FIELDS: Record<
+  string,
+  { field: string; selector: string; multiline: boolean; max: number }[]
+> = {
+  hero: [
+    { field: "headline", selector: ".st-h1", multiline: false, max: 120 },
+    { field: "message", selector: ".st-lede", multiline: true, max: 300 },
+  ],
+  about: [
+    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
+    { field: "body", selector: ".st-about-body", multiline: true, max: 4000 },
+  ],
+  "custom-rich": [
+    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
+    { field: "body", selector: ".st-section-sub", multiline: true, max: 4000 },
+  ],
+};
+
+/**
+ * Section-type → on-canvas image-replace target (PR-2b). For a SELECTED section
+ * of one of these types, the runtime renders a "Replace image" overlay button
+ * positioned over the image region (located via `selector`, scoped to the
+ * section wrapper). The picked file is uploaded via uploadSectionImage and the
+ * resulting URL written to `sections[id].settings.imageUrl`.
+ */
+const INLINE_IMAGE_FIELDS: Record<
+  string,
+  { field: string; selector: string }
+> = {
+  hero: { field: "imageUrl", selector: ".st-hero-photo" },
+  "custom-image": { field: "imageUrl", selector: "figure" },
+};
 
 /**
  * On-canvas editor runtime (PR-2a). The storefront itself is server-rendered as
@@ -74,6 +119,15 @@ export function StorefrontEditorRuntime({
   const [stylesOpen, setStylesOpen] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+
+  // True while an inline contentEditable field has focus — suppresses the hover
+  // frame so the dashed/solid outlines don't fight the caret.
+  const [inlineEditing, setInlineEditing] = useState(false);
+
+  // On-canvas image replace (PR-2b): one upload in flight at a time.
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Frames are stored in document coordinates (scrollY + getBoundingClientRect)
   // so they stay glued to a section while the page scrolls.
@@ -185,6 +239,145 @@ export function StorefrontEditorRuntime({
     // doc.order length / membership changes can add/remove section nodes.
   }, [measure, doc.order]);
 
+  // ── Inline (type-on-the-page) text editing (PR-2b) ──────────────────────────
+  // Bind each section's editable text node (resolved from INLINE_TEXT_FIELDS,
+  // scoped to its [data-st-section-id] wrapper) as a contentEditable surface.
+  // These are server-rendered STATIC nodes (no React ownership on this page), so
+  // mutating them directly is safe. Binding is idempotent (skips nodes already
+  // carrying data-st-inline-field) so it can re-run after every canvas refresh.
+  const bindInlineFields = useCallback(() => {
+    const wrappers = document.querySelectorAll<HTMLElement>(
+      "[data-st-section-id]"
+    );
+    wrappers.forEach((wrapper) => {
+      const sectionId = wrapper.dataset.stSectionId;
+      const type = wrapper.dataset.stSectionType;
+      if (!sectionId || !type) return;
+      const fields = INLINE_TEXT_FIELDS[type];
+      if (!fields) return;
+
+      for (const { field, selector, multiline, max } of fields) {
+        const el = wrapper.querySelector<HTMLElement>(selector);
+        if (!el) continue;
+        if (el.dataset.stInlineField) continue; // already bound
+
+        el.dataset.stInlineField = field;
+        el.dataset.stInlineSection = sectionId;
+        el.classList.add("st-inline-editable");
+        // plaintext-only avoids pasted HTML landing in the contentEditable;
+        // fall back to "true" where the browser doesn't support it.
+        el.contentEditable = "plaintext-only";
+        if (el.contentEditable !== "plaintext-only") {
+          el.contentEditable = "true";
+        }
+        el.spellcheck = true;
+
+        el.addEventListener("focus", () => {
+          setSelectedId(sectionId);
+          setInlineEditing(true);
+        });
+
+        el.addEventListener("keydown", (e: KeyboardEvent) => {
+          if (!multiline && e.key === "Enter") {
+            // Single-line field: Enter commits (blur), never inserts a newline.
+            e.preventDefault();
+            el.blur();
+          }
+        });
+
+        el.addEventListener("blur", () => {
+          setInlineEditing(false);
+          // Normalize: collapse NBSPs, trim, clamp to the schema max. Stored as
+          // PLAIN text (innerText) so no markup can ride into the document.
+          let value = el.innerText.replace(/ /g, " ").trim();
+          if (value.length > max) value = value.slice(0, max);
+          // setSectionSetting REMOVES the key when value is "" → falls back to
+          // the component default. The debounced save fires from the doc effect.
+          setDoc((prev) => setSectionSetting(prev, sectionId, field, value));
+        });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    bindInlineFields();
+
+    // Re-bind + re-measure whenever the canvas DOM is replaced (router.refresh
+    // from add-section / image replace / content-drawer close swaps the
+    // server-rendered subtree). rAF-debounced so a burst of childList mutations
+    // triggers a single pass.
+    const root =
+      document.querySelector<HTMLElement>(".st-editor-canvas") ??
+      document.getElementById("main");
+    if (!root) return;
+
+    let raf = 0;
+    const observer = new MutationObserver(() => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        bindInlineFields();
+        measure();
+      });
+    });
+    observer.observe(root, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [bindInlineFields, measure]);
+
+  // ── On-canvas image replace (PR-2b) ─────────────────────────────────────────
+  // Trigger a hidden file input scoped to the selected section's image field.
+  const pendingImageSectionRef = useRef<string | null>(null);
+  const onReplaceImageClick = useCallback((sectionId: string) => {
+    if (uploadingImage) return;
+    pendingImageSectionRef.current = sectionId;
+    fileInputRef.current?.click();
+  }, [uploadingImage]);
+
+  const onImageFilePicked = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const input = e.currentTarget;
+      const file = input.files?.[0];
+      const sectionId = pendingImageSectionRef.current;
+      // Reset the input so picking the same file again still fires change.
+      input.value = "";
+      pendingImageSectionRef.current = null;
+      if (!file || !sectionId || uploadingImage) return;
+
+      setUploadingImage(true);
+      setImageUploadError(null);
+      try {
+        const formData = new FormData();
+        formData.set("section_image_file", file);
+        const result = await uploadSectionImage(initialState, formData);
+        if (!result.ok || !result.url) {
+          setImageUploadError(result.message || m.imageUploadFailed);
+          return;
+        }
+        const url = result.url;
+        // Write into the draft document; refresh so the server re-renders the
+        // image (next/image srcset makes an optimistic DOM swap unreliable).
+        setDoc((prev) => setSectionSetting(prev, sectionId, "imageUrl", url));
+        const fd = new FormData();
+        fd.set(
+          "document_json",
+          JSON.stringify(setSectionSetting(doc, sectionId, "imageUrl", url))
+        );
+        await saveStorefrontDocumentDraft(initialState, fd);
+        router.refresh();
+        requestAnimationFrame(() => requestAnimationFrame(measure));
+      } catch {
+        setImageUploadError(m.imageUploadFailed);
+      } finally {
+        setUploadingImage(false);
+      }
+    },
+    [uploadingImage, doc, router, measure, m.imageUploadFailed]
+  );
+
   // ── Hover tracking ──────────────────────────────────────────────────────────
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -203,6 +396,10 @@ export function StorefrontEditorRuntime({
       const target = e.target as HTMLElement | null;
       // Ignore clicks inside the editor chrome (top bar, frames, drawers).
       if (target?.closest("[data-st-editor-chrome]")) return;
+      // Ignore clicks inside an inline contentEditable field: let native caret
+      // placement happen (no preventDefault, no reselect). The field's `focus`
+      // handler performs the selection.
+      if (target?.closest("[data-st-inline-field]")) return;
       const section = target?.closest<HTMLElement>("[data-st-section-id]");
       if (!section) return;
       // Don't hijack navigation/interactions inside a section unless it's a
@@ -214,6 +411,8 @@ export function StorefrontEditorRuntime({
     const onDouble = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-st-editor-chrome]")) return;
+      // Inside an inline field, double-click is word-select — don't open the drawer.
+      if (target?.closest("[data-st-inline-field]")) return;
       const section = target?.closest<HTMLElement>("[data-st-section-id]");
       const id = section?.dataset.stSectionId;
       if (id) openEditor(id);
@@ -382,6 +581,29 @@ export function StorefrontEditorRuntime({
   const hoverFrame = hoverId ? frames[hoverId] : undefined;
   const selFrame = selectedId ? frames[selectedId] : undefined;
 
+  // On-canvas image replace (PR-2b): does the selected section have a replaceable
+  // image? If so, position a "Replace image" overlay over its image region. We
+  // locate the image element by its INLINE_IMAGE_FIELDS selector (scoped to the
+  // section wrapper) and convert its rect into the same document-space coords as
+  // the frames so it stays glued through scroll.
+  const selectedImageFrame: Frame | undefined = (() => {
+    if (!selectedId || !selFrame) return undefined;
+    const type = selectedType;
+    if (!type || !INLINE_IMAGE_FIELDS[type]) return undefined;
+    const wrapper = sectionNode(selectedId);
+    const imgEl = wrapper?.querySelector<HTMLElement>(
+      INLINE_IMAGE_FIELDS[type].selector
+    );
+    if (!imgEl) return selFrame; // fall back to the section frame
+    const rect = imgEl.getBoundingClientRect();
+    return {
+      top: rect.top + window.scrollY,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+      height: rect.height,
+    };
+  })();
+
   const theme = doc.theme as ThemeTokens | undefined;
 
   return (
@@ -432,8 +654,16 @@ export function StorefrontEditorRuntime({
 
         <span className="st-editor-spacer" />
 
-        {autoSaving && <span className="st-editor-badge">{m.savingDraft}</span>}
-        {!autoSaving && status.message && (
+        {uploadingImage && (
+          <span className="st-editor-badge">{m.uploadingImage}</span>
+        )}
+        {!uploadingImage && imageUploadError && (
+          <span className="st-editor-badge is-error">{imageUploadError}</span>
+        )}
+        {!uploadingImage && !imageUploadError && autoSaving && (
+          <span className="st-editor-badge">{m.savingDraft}</span>
+        )}
+        {!uploadingImage && !imageUploadError && !autoSaving && status.message && (
           <span
             className={`st-editor-badge ${status.ok ? "is-success" : "is-error"}`}
           >
@@ -467,7 +697,7 @@ export function StorefrontEditorRuntime({
       </header>
 
       {/* ── Hover frame (hidden while a drawer is open or over the selection) ── */}
-      {hoverFrame && hoverId !== selectedId && !editingId && !stylesOpen && (
+      {hoverFrame && hoverId !== selectedId && !editingId && !stylesOpen && !inlineEditing && (
         <div
           className="st-editor-hoverframe"
           data-st-editor-chrome
@@ -554,8 +784,39 @@ export function StorefrontEditorRuntime({
               &#9998; {m.editContent}
             </button>
           </div>
+
+          {/* ── On-canvas "Replace image" overlay (PR-2b) ── */}
+          {selectedImageFrame && selectedType && INLINE_IMAGE_FIELDS[selectedType] && (
+            <button
+              type="button"
+              className="st-editor-replace-image"
+              data-st-editor-chrome
+              disabled={uploadingImage}
+              onClick={() => onReplaceImageClick(selectedId)}
+              style={{
+                top: selectedImageFrame.top + 8,
+                left: selectedImageFrame.left + 8,
+              }}
+            >
+              {uploadingImage
+                ? `… ${m.uploadingImage}`
+                : `\u{1F5BC} ${m.replaceImage}`}
+            </button>
+          )}
         </>
       )}
+
+      {/* Hidden file input shared by all section image-replace buttons. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        data-st-editor-chrome
+        style={{ display: "none" }}
+        onChange={(e) => {
+          void onImageFilePicked(e);
+        }}
+      />
 
       {/* ── Content editor drawer ── */}
       {editingId && (

@@ -1165,6 +1165,10 @@ export const pt: Messages = {
         noEditableContent: "Esta secção ainda não tem conteúdo editável.",
         autosaveRefreshNote: "As alterações são guardadas automaticamente. Feche este painel para atualizar a tela.",
         selectSectionHint: "Clique numa secção para a editar.",
+        replaceImage: "Substituir imagem",
+        uploadingImage: "A carregar imagem…",
+        imageUploadFailed: "Não foi possível carregar a imagem. Tente novamente.",
+        inlineEditHint: "Clique em qualquer texto para o editar diretamente na página.",
         sectionEditor: {
           heroHeadlineLabel: "Título",
           heroHeadlinePlaceholder: "Deixe em branco para usar o título predefinido",

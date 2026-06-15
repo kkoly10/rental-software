@@ -1165,6 +1165,10 @@ export const fr: Messages = {
         noEditableContent: "Cette section n'a pas encore de contenu modifiable.",
         autosaveRefreshNote: "Les modifications sont enregistrées automatiquement. Fermez ce panneau pour actualiser le canevas.",
         selectSectionHint: "Cliquez sur une section pour la modifier.",
+        replaceImage: "Remplacer l'image",
+        uploadingImage: "Téléversement de l'image…",
+        imageUploadFailed: "Impossible de téléverser l'image. Veuillez réessayer.",
+        inlineEditHint: "Cliquez sur n'importe quel texte pour le modifier directement sur la page.",
         sectionEditor: {
           heroHeadlineLabel: "Titre",
           heroHeadlinePlaceholder: "Laissez vide pour utiliser le titre par défaut",
