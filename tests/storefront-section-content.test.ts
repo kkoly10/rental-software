@@ -19,6 +19,10 @@ import {
   customRichSettingsSchema,
   customImageSettingsSchema,
   customGallerySettingsSchema,
+  closingSettingsSchema,
+  howItWorksSettingsSchema,
+  serviceAreaSettingsSchema,
+  featuredSettingsSchema,
   parseHeroSettings,
   parseAboutSettings,
   parseTrustSettings,
@@ -43,6 +47,18 @@ import {
   CUSTOM_IMAGE_CAPTION_MAX,
   CUSTOM_GALLERY_ALT_MAX,
   CUSTOM_GALLERY_IMAGES_MAX,
+  CLOSING_HEADING_MAX,
+  CLOSING_BODY_MAX,
+  CLOSING_BUTTON_LABEL_MAX,
+  HOW_IT_WORKS_HEADING_MAX,
+  HOW_IT_WORKS_INTRO_MAX,
+  HOW_IT_WORKS_STEPS_MAX,
+  HOW_IT_WORKS_STEP_TITLE_MAX,
+  SERVICE_AREA_HEADING_MAX,
+  SERVICE_AREA_INTRO_MAX,
+  FEATURED_KICKER_MAX,
+  FEATURED_TITLE_MAX,
+  FEATURED_DESCRIPTION_MAX,
 } from "../lib/storefront/sections/content-schemas.ts";
 import {
   buildDocumentFromSynthesized,
@@ -116,7 +132,7 @@ test("aboutSettingsSchema bounds the body length", () => {
   );
 });
 
-test("isContentEditableSectionType covers the PR-1c/1d/1e editable types", () => {
+test("isContentEditableSectionType covers the PR-1c/1d/1e/1f editable types", () => {
   assert.equal(isContentEditableSectionType("hero"), true);
   assert.equal(isContentEditableSectionType("about"), true);
   assert.equal(isContentEditableSectionType("trust"), true);
@@ -125,9 +141,124 @@ test("isContentEditableSectionType covers the PR-1c/1d/1e editable types", () =>
   assert.equal(isContentEditableSectionType("custom-rich"), true);
   assert.equal(isContentEditableSectionType("custom-image"), true);
   assert.equal(isContentEditableSectionType("custom-gallery"), true);
-  // Types with no content form remain non-editable.
+  // PR-1f: previously non-editable TEXT sections are now editable.
+  assert.equal(isContentEditableSectionType("closing"), true);
+  assert.equal(isContentEditableSectionType("how-it-works"), true);
+  assert.equal(isContentEditableSectionType("service-area"), true);
+  assert.equal(isContentEditableSectionType("featured"), true);
+  // Types with no editable text remain non-editable.
   assert.equal(isContentEditableSectionType("press"), false);
-  assert.equal(isContentEditableSectionType("closing"), false);
+  assert.equal(isContentEditableSectionType("category-grid"), false);
+});
+
+// ---------------------------------------------------------------------------
+// PR-1f schemas: closing / how-it-works / service-area / featured
+// ---------------------------------------------------------------------------
+
+test("closingSettingsSchema accepts empty / valid; bounds all fields", () => {
+  assert.equal(closingSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    closingSettingsSchema.safeParse({
+      heading: "Ready?",
+      body: "Book today.",
+      buttonLabel: "Check availability",
+    }).success,
+    true
+  );
+  assert.equal(
+    closingSettingsSchema.safeParse({ heading: "x".repeat(CLOSING_HEADING_MAX + 1) }).success,
+    false
+  );
+  assert.equal(
+    closingSettingsSchema.safeParse({ body: "x".repeat(CLOSING_BODY_MAX + 1) }).success,
+    false
+  );
+  assert.equal(
+    closingSettingsSchema.safeParse({ buttonLabel: "x".repeat(CLOSING_BUTTON_LABEL_MAX + 1) })
+      .success,
+    false
+  );
+});
+
+test("howItWorksSettingsSchema accepts empty / valid; bounds heading/intro + steps", () => {
+  assert.equal(howItWorksSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    howItWorksSettingsSchema.safeParse({
+      heading: "How it works",
+      intro: "Three simple steps",
+      steps: [{ title: "Browse", description: "Pick your gear" }],
+    }).success,
+    true
+  );
+  assert.equal(
+    howItWorksSettingsSchema.safeParse({ heading: "x".repeat(HOW_IT_WORKS_HEADING_MAX + 1) })
+      .success,
+    false
+  );
+  assert.equal(
+    howItWorksSettingsSchema.safeParse({ intro: "x".repeat(HOW_IT_WORKS_INTRO_MAX + 1) }).success,
+    false
+  );
+  // Over the step cap is rejected.
+  assert.equal(
+    howItWorksSettingsSchema.safeParse({
+      steps: Array.from({ length: HOW_IT_WORKS_STEPS_MAX + 1 }, () => ({
+        title: "t",
+        description: "d",
+      })),
+    }).success,
+    false
+  );
+  // A step with an over-cap title is rejected.
+  assert.equal(
+    howItWorksSettingsSchema.safeParse({
+      steps: [{ title: "x".repeat(HOW_IT_WORKS_STEP_TITLE_MAX + 1), description: "d" }],
+    }).success,
+    false
+  );
+});
+
+test("serviceAreaSettingsSchema accepts empty / valid; bounds heading + intro", () => {
+  assert.equal(serviceAreaSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    serviceAreaSettingsSchema.safeParse({ heading: "Where we serve", intro: "Across the metro" })
+      .success,
+    true
+  );
+  assert.equal(
+    serviceAreaSettingsSchema.safeParse({ heading: "x".repeat(SERVICE_AREA_HEADING_MAX + 1) })
+      .success,
+    false
+  );
+  assert.equal(
+    serviceAreaSettingsSchema.safeParse({ intro: "x".repeat(SERVICE_AREA_INTRO_MAX + 1) }).success,
+    false
+  );
+});
+
+test("featuredSettingsSchema accepts empty / valid; bounds kicker/title/description", () => {
+  assert.equal(featuredSettingsSchema.safeParse({}).success, true);
+  assert.equal(
+    featuredSettingsSchema.safeParse({
+      kicker: "Popular",
+      title: "Top picks",
+      description: "Our most-booked items",
+    }).success,
+    true
+  );
+  assert.equal(
+    featuredSettingsSchema.safeParse({ kicker: "x".repeat(FEATURED_KICKER_MAX + 1) }).success,
+    false
+  );
+  assert.equal(
+    featuredSettingsSchema.safeParse({ title: "x".repeat(FEATURED_TITLE_MAX + 1) }).success,
+    false
+  );
+  assert.equal(
+    featuredSettingsSchema.safeParse({ description: "x".repeat(FEATURED_DESCRIPTION_MAX + 1) })
+      .success,
+    false
+  );
 });
 
 // ---------------------------------------------------------------------------

@@ -125,6 +125,22 @@ const INLINE_TEXT_FIELDS: Record<
     { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
     { field: "body", selector: ".st-section-sub", multiline: true, max: 4000 },
   ],
+  // PR-1f: simple single-text fields editable on the canvas. Structured lists
+  // (how-it-works steps) remain drawer-only. Selectors mirror the shared
+  // components' static class names (SectionHead → .st-section-title; the closing
+  // CTA → .st-display), scoped to the section wrapper.
+  closing: [
+    { field: "heading", selector: ".st-display", multiline: false, max: 120 },
+  ],
+  "service-area": [
+    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
+  ],
+  featured: [
+    { field: "title", selector: ".st-section-title", multiline: false, max: 120 },
+  ],
+  "how-it-works": [
+    { field: "heading", selector: ".st-section-title", multiline: false, max: 120 },
+  ],
 };
 
 /**

@@ -14,7 +14,13 @@ import { ServiceAreaMap } from "@/components/maps/service-area-map";
  * restores the real Leaflet map per operator service-area geocoding
  * while keeping the editorial composition.
  */
-export async function PartyClassicServiceArea() {
+export async function PartyClassicServiceArea({
+  heading,
+  intro,
+}: {
+  heading?: string;
+  intro?: string;
+} = {}) {
   const [areas, { messages: m }] = await Promise.all([
     getServiceAreasGeo(),
     getTranslator(),
@@ -32,8 +38,8 @@ export async function PartyClassicServiceArea() {
         <div className="st-coverage-text">
           <SectionHead
             kicker={m.storefront.serviceArea.kicker}
-            title={m.storefront.serviceArea.title}
-            sub={m.storefront.serviceArea.description}
+            title={heading || m.storefront.serviceArea.title}
+            sub={intro || m.storefront.serviceArea.description}
           />
           <div className="st-zip-list">
             {displayed.map((a) => (
