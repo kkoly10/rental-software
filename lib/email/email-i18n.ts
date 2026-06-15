@@ -128,6 +128,12 @@ type EmailCopyBundle = {
     button: string;
     preheader: (depositDue: string, orderNumber: string) => string;
   };
+  balanceReminder: {
+    heading: string;
+    intro: (firstName: string, balance: string, date: string) => string;
+    button: string;
+    preheader: (balance: string, orderNumber: string) => string;
+  };
   /** Localized customer-facing email subject lines. */
   subjects: {
     orderConfirmation: (orderNumber: string, businessName: string) => string;
@@ -137,6 +143,7 @@ type EmailCopyBundle = {
     documentsReady: (orderNumber: string, businessName: string) => string;
     quoteSent: (orderNumber: string, businessName: string) => string;
     depositReminder: (orderNumber: string, businessName: string) => string;
+    balanceReminder: (orderNumber: string, businessName: string) => string;
     eventReminder: (businessName: string) => string;
     postEventFollowUp: (businessName: string) => string;
   };
@@ -269,6 +276,14 @@ const en: EmailCopyBundle = {
     preheader: (depositDue, orderNumber) =>
       `Pay your ${depositDue} deposit to confirm order #${orderNumber}.`,
   },
+  balanceReminder: {
+    heading: "Your balance is due",
+    intro: (firstName, balance, date) =>
+      `Hi ${firstName}, the remaining balance of ${balance} for your rental on ${date} is now due. You can pay securely online in a few minutes.`,
+    button: "Pay Balance",
+    preheader: (balance, orderNumber) =>
+      `Pay your ${balance} balance for order #${orderNumber}.`,
+  },
   subjects: {
     orderConfirmation: (orderNumber, businessName) => `Booking #${orderNumber} received — ${businessName}`,
     paymentReceived: (orderNumber, businessName) => `Payment received for order #${orderNumber} — ${businessName}`,
@@ -277,6 +292,7 @@ const en: EmailCopyBundle = {
     documentsReady: (orderNumber, businessName) => `Documents ready for order #${orderNumber} — ${businessName}`,
     quoteSent: (orderNumber, businessName) => `Your quote for order #${orderNumber} — ${businessName}`,
     depositReminder: (orderNumber, businessName) => `Deposit reminder — order #${orderNumber} — ${businessName}`,
+    balanceReminder: (orderNumber, businessName) => `Balance due — order #${orderNumber} — ${businessName}`,
     eventReminder: (businessName) => `Reminder: your rental from ${businessName} is tomorrow!`,
     postEventFollowUp: (businessName) => `How was your event? — ${businessName}`,
   },
@@ -416,6 +432,14 @@ const fr: EmailCopyBundle = {
     preheader: (depositDue, orderNumber) =>
       `Versez votre acompte de ${depositDue} pour confirmer la commande n° ${orderNumber}.`,
   },
+  balanceReminder: {
+    heading: "Votre solde est dû",
+    intro: (firstName, balance, date) =>
+      `Bonjour ${firstName}, le solde restant de ${balance} pour votre location du ${date} est maintenant dû. Vous pouvez payer en ligne en quelques minutes.`,
+    button: "Payer le solde",
+    preheader: (balance, orderNumber) =>
+      `Payez votre solde de ${balance} pour la commande n° ${orderNumber}.`,
+  },
   subjects: {
     orderConfirmation: (orderNumber, businessName) => `Réservation n° ${orderNumber} reçue — ${businessName}`,
     paymentReceived: (orderNumber, businessName) => `Paiement reçu pour la commande n° ${orderNumber} — ${businessName}`,
@@ -424,6 +448,7 @@ const fr: EmailCopyBundle = {
     documentsReady: (orderNumber, businessName) => `Documents prêts pour la commande n° ${orderNumber} — ${businessName}`,
     quoteSent: (orderNumber, businessName) => `Votre devis pour la commande n° ${orderNumber} — ${businessName}`,
     depositReminder: (orderNumber, businessName) => `Rappel d’acompte — commande n° ${orderNumber} — ${businessName}`,
+    balanceReminder: (orderNumber, businessName) => `Solde dû — commande n° ${orderNumber} — ${businessName}`,
     eventReminder: (businessName) => `Rappel : votre location chez ${businessName} a lieu demain !`,
     postEventFollowUp: (businessName) => `Comment s’est passé votre événement ? — ${businessName}`,
   },
@@ -562,6 +587,14 @@ const es: EmailCopyBundle = {
     preheader: (depositDue, orderNumber) =>
       `Paga tu depósito de ${depositDue} para confirmar el pedido n.º ${orderNumber}.`,
   },
+  balanceReminder: {
+    heading: "Tu saldo está pendiente",
+    intro: (firstName, balance, date) =>
+      `Hola ${firstName}, el saldo restante de ${balance} de tu alquiler del ${date} está pendiente. Puedes pagar de forma segura en línea en unos minutos.`,
+    button: "Pagar saldo",
+    preheader: (balance, orderNumber) =>
+      `Paga tu saldo de ${balance} del pedido n.º ${orderNumber}.`,
+  },
   subjects: {
     orderConfirmation: (orderNumber, businessName) => `Reserva n.º ${orderNumber} recibida — ${businessName}`,
     paymentReceived: (orderNumber, businessName) => `Pago recibido del pedido n.º ${orderNumber} — ${businessName}`,
@@ -570,6 +603,7 @@ const es: EmailCopyBundle = {
     documentsReady: (orderNumber, businessName) => `Documentos listos para el pedido n.º ${orderNumber} — ${businessName}`,
     quoteSent: (orderNumber, businessName) => `Tu presupuesto del pedido n.º ${orderNumber} — ${businessName}`,
     depositReminder: (orderNumber, businessName) => `Recordatorio de depósito — pedido n.º ${orderNumber} — ${businessName}`,
+    balanceReminder: (orderNumber, businessName) => `Saldo pendiente — pedido n.º ${orderNumber} — ${businessName}`,
     eventReminder: (businessName) => `Recordatorio: ¡tu alquiler con ${businessName} es mañana!`,
     postEventFollowUp: (businessName) => `¿Qué tal tu evento? — ${businessName}`,
   },
@@ -708,6 +742,14 @@ const pt: EmailCopyBundle = {
     preheader: (depositDue, orderNumber) =>
       `Pague o seu sinal de ${depositDue} para confirmar o pedido n.º ${orderNumber}.`,
   },
+  balanceReminder: {
+    heading: "O seu saldo está em dívida",
+    intro: (firstName, balance, date) =>
+      `Olá ${firstName}, o saldo restante de ${balance} do seu aluguer em ${date} está agora em dívida. Pode pagar online em segurança em poucos minutos.`,
+    button: "Pagar saldo",
+    preheader: (balance, orderNumber) =>
+      `Pague o seu saldo de ${balance} do pedido n.º ${orderNumber}.`,
+  },
   subjects: {
     orderConfirmation: (orderNumber, businessName) => `Reserva n.º ${orderNumber} recebida — ${businessName}`,
     paymentReceived: (orderNumber, businessName) => `Pagamento recebido do pedido n.º ${orderNumber} — ${businessName}`,
@@ -716,6 +758,7 @@ const pt: EmailCopyBundle = {
     documentsReady: (orderNumber, businessName) => `Documentos prontos para o pedido n.º ${orderNumber} — ${businessName}`,
     quoteSent: (orderNumber, businessName) => `Seu orçamento do pedido n.º ${orderNumber} — ${businessName}`,
     depositReminder: (orderNumber, businessName) => `Lembrete de sinal — pedido n.º ${orderNumber} — ${businessName}`,
+    balanceReminder: (orderNumber, businessName) => `Saldo em dívida — pedido n.º ${orderNumber} — ${businessName}`,
     eventReminder: (businessName) => `Lembrete: sua locação com a ${businessName} é amanhã!`,
     postEventFollowUp: (businessName) => `Como foi o seu evento? — ${businessName}`,
   },
