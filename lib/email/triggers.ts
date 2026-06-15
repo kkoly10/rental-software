@@ -8,6 +8,7 @@ import {
   documentsReadyEmail,
   quoteSentEmail,
   depositReminderEmail,
+  balanceDueReminderEmail,
   operatorActivityAlertEmail,
   type OperatorActivityEvent,
 } from "./templates";
@@ -795,6 +796,68 @@ export async function triggerDepositReminderEmail(params: {
     headers: customerHeaders(branding.supportEmail),
     preheader: `Pay your deposit to confirm order #${params.orderNumber} for ${fmt.date(params.eventDate)}.`,
     idempotencyKey: `deposit_reminder:${params.orderId}`,
+    organizationId: params.organizationId,
+    orderId: params.orderId,
+  });
+}
+
+/**
+ * Customer balance-due reminder: confirmed order, deposit paid, remaining
+ * balance still owed as the rental date approaches. Drives the customer to
+ * the portal (where PayBalanceButton opens a Stripe checkout for the
+ * balance). Idempotent per order via the email idempotency key; the cron
+ * additionally guards on orders.balance_reminder_sent_at.
+ */
+export async function triggerBalanceDueReminderEmail(params: {
+  organizationId: string;
+  customerFirstName: string;
+  customerEmail: string;
+  orderId: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  balanceDue: number;
+}): Promise<boolean> {
+  if (!params.customerEmail) return false;
+
+  const branding = await getOrgBranding(params.organizationId);
+
+  const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseServerClient();
+  const customerLocale = await resolveCustomerLocaleByEmail(
+    supabase as unknown as SupabaseLike,
+    params.organizationId,
+    params.customerEmail
+  );
+  const fmt = makeFormatters(branding.currency, customerLocale);
+
+  const portalToken = await issuePortalAccessToken({ supabase, orderId: params.orderId }).catch(
+    () => null
+  );
+  const portalUrl = portalToken
+    ? `${branding.siteUrl}/order-status?token=${encodeURIComponent(portalToken)}`
+    : `${branding.siteUrl}/order-status`;
+
+  return sendEmail({
+    to: params.customerEmail,
+    from: branding.fromAddress,
+    subject: sanitizeHeaderValue(emailCopy(customerLocale).subjects.balanceReminder(params.orderNumber, branding.businessName)),
+    html: balanceDueReminderEmail({
+      businessName: branding.businessName,
+      brandColor: branding.brandColor,
+      customerFirstName: params.customerFirstName,
+      orderNumber: params.orderNumber,
+      productName: params.productName,
+      eventDate: fmt.date(params.eventDate),
+      balanceDue: fmt.money(params.balanceDue),
+      portalUrl,
+      supportEmail: branding.supportEmail,
+      locale: customerLocale,
+    }),
+    replyTo: branding.supportEmail ?? undefined,
+    headers: customerHeaders(branding.supportEmail),
+    preheader: `Pay your ${fmt.money(params.balanceDue)} balance for order #${params.orderNumber}.`,
+    idempotencyKey: `balance_reminder:${params.orderId}`,
     organizationId: params.organizationId,
     orderId: params.orderId,
   });

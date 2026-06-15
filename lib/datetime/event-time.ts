@@ -98,3 +98,10 @@ export function tomorrowUtc(): string {
 export function daysAgoUtc(days: number): string {
   return dateOnlyUtc(addDaysUtc(new Date(), -Math.abs(days)));
 }
+
+/**
+ * N days from now as a UTC date string. DST-safe.
+ */
+export function daysFromNowUtc(days: number): string {
+  return dateOnlyUtc(addDaysUtc(new Date(), Math.abs(days)));
+}

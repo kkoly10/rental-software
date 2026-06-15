@@ -818,3 +818,47 @@ export function depositReminderEmail(data: DepositReminderData): string {
     emailAccent(data.brandColor)
   );
 }
+
+export type BalanceReminderData = {
+  businessName: string;
+  customerFirstName: string;
+  orderNumber: string;
+  productName: string;
+  eventDate: string;
+  balanceDue: string;
+  portalUrl: string;
+  supportEmail: string | null;
+  locale: EmailLocale;
+  brandColor?: string | null;
+};
+
+export function balanceDueReminderEmail(data: BalanceReminderData): string {
+  const t = emailCopy(data.locale);
+  const c = t.balanceReminder;
+  return layout(
+    data.businessName,
+    `
+    ${heading(c.heading)}
+    ${lead(c.intro(data.customerFirstName, data.balanceDue, data.eventDate))}
+
+    ${detailTable([
+      [t.labels.order, `#${data.orderNumber}`],
+      [t.labels.item, data.productName],
+      [t.labels.eventDate, data.eventDate],
+      [t.labels.balanceRemaining, data.balanceDue],
+    ])}
+
+    ${button(c.button, data.portalUrl)}
+
+    ${data.supportEmail
+      ? `<p style="font-size:14px;color:${MUTED};">
+          ${esc(t.questions.contactAt(data.supportEmail))}
+        </p>`
+      : ""}
+    `,
+    undefined,
+    c.preheader(data.balanceDue, data.orderNumber),
+    data.locale,
+    emailAccent(data.brandColor)
+  );
+}

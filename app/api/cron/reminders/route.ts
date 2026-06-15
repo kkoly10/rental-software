@@ -18,6 +18,7 @@ import {
   todayUtc,
   tomorrowUtc,
   daysAgoUtc,
+  daysFromNowUtc,
   formatTimeInTimeZone,
   formatDateInTimeZone,
 } from "@/lib/datetime/event-time";
@@ -598,11 +599,12 @@ export async function GET(request: NextRequest) {
     return { sent: 0, errors: 1, smsErrors: 0 };
   };
 
-  const [dayBefore, morningDigest, followUp, deposit] = await Promise.all([
+  const [dayBefore, morningDigest, followUp, deposit, balance] = await Promise.all([
     sendDayBeforeReminders(supabase).catch(cronCatch("dayBefore")),
     sendMorningDigests(supabase).catch(cronCatch("morningDigest")),
     sendPostEventFollowUps(supabase).catch(cronCatch("followUp")),
     sendDepositReminders(supabase).catch(cronCatch("depositReminder")),
+    sendBalanceDueReminders(supabase).catch(cronCatch("balanceReminder")),
   ]);
 
   return NextResponse.json({
@@ -612,7 +614,99 @@ export async function GET(request: NextRequest) {
     morningDigest,
     followUp,
     deposit,
+    balance,
   });
+}
+
+// ─── Balance-due reminder (customer-facing) ───────────────────────────────
+
+/**
+ * For each confirmed order whose rental date is within the next 3 days and
+ * still carries a remaining balance (deposit paid, balance not), email the
+ * customer a pay-your-balance reminder that links to the portal (where the
+ * PayBalanceButton opens a Stripe checkout for the balance). Idempotent via
+ * orders.balance_reminder_sent_at; capped at 100 orders per run. Balance is
+ * computed from the payments ledger, never the stale balance_due_amount.
+ */
+async function sendBalanceDueReminders(
+  supabase: ReturnType<typeof createSupabaseAdminClient>
+): Promise<{ sent: number; errors: number }> {
+  let sent = 0;
+  let errors = 0;
+
+  const { data: orders } = await supabase
+    .from("orders")
+    .select(
+      "id, organization_id, order_number, event_date, total_amount, customer_id, customers(first_name, email), order_items(item_name_snapshot)"
+    )
+    .in("order_status", ["confirmed", "scheduled", "out_for_delivery"])
+    .is("deleted_at", null)
+    .is("balance_reminder_sent_at", null)
+    .gte("event_date", todayUtc())
+    .lte("event_date", daysFromNowUtc(3))
+    .limit(100);
+
+  if (!orders || orders.length === 0) return { sent, errors };
+
+  const { getOrderFinancialsAdmin } = await import("@/lib/payments/financials");
+  const { triggerBalanceDueReminderEmail } = await import("@/lib/email/triggers");
+
+  for (const order of orders) {
+    const customer = order.customers as unknown as {
+      first_name: string | null;
+      email: string | null;
+    } | null;
+    if (!customer?.email) continue;
+
+    // Ledger-true remaining balance; skip fully-paid orders.
+    const financials = await getOrderFinancialsAdmin(supabase, order.id);
+    const balanceDue = financials?.remainingBalance ?? Number(order.total_amount ?? 0);
+    if (balanceDue <= 0) continue;
+
+    const items = order.order_items as unknown as { item_name_snapshot: string }[] | null;
+    const productName = items?.[0]?.item_name_snapshot ?? "Rental booking";
+
+    try {
+      // Claim before sending so concurrent runs can't double-send.
+      const { data: claimed } = await supabase
+        .from("orders")
+        .update({ balance_reminder_sent_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("balance_reminder_sent_at", null)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
+      const ok = await triggerBalanceDueReminderEmail({
+        organizationId: order.organization_id,
+        customerFirstName: customer.first_name ?? "there",
+        customerEmail: customer.email,
+        orderId: order.id,
+        orderNumber: order.order_number,
+        productName,
+        eventDate: order.event_date ?? "",
+        balanceDue,
+      });
+
+      if (!ok) {
+        if (hasResendEnv()) {
+          await supabase
+            .from("orders")
+            .update({ balance_reminder_sent_at: null })
+            .eq("id", order.id);
+        }
+        errors++;
+        continue;
+      }
+
+      sent++;
+    } catch (err) {
+      errors++;
+      console.error("[cron.balanceReminder]", order.order_number, err instanceof Error ? err.message : err);
+    }
+  }
+
+  return { sent, errors };
 }
 
 // ─── Deposit reminder (customer-facing) ───────────────────────────────────
