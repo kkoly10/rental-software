@@ -27,17 +27,26 @@ export const TESTIMONIALS_MAX = 12;
 export const FAQ_QUESTION_MAX = 200;
 export const FAQ_ANSWER_MAX = 1000;
 export const FAQ_ITEMS_MAX = 20;
+// PR-1e: custom (operator-added) section bounds.
+export const CUSTOM_RICH_HEADING_MAX = 120;
+export const CUSTOM_RICH_BODY_MAX = 4000;
+export const CUSTOM_IMAGE_ALT_MAX = 200;
+export const CUSTOM_IMAGE_CAPTION_MAX = 300;
+export const CUSTOM_GALLERY_ALT_MAX = 200;
+export const CUSTOM_GALLERY_IMAGES_MAX = 12;
 
-/** Optional, bounded image URL. Must be an absolute http(s) URL when present. */
-const imageUrlSchema = z
+/** Bounded image URL — an absolute http(s) URL. Required form. */
+const requiredImageUrlSchema = z
   .string()
   .trim()
   .max(2048)
   .url()
   .refine((u) => u.startsWith("http://") || u.startsWith("https://"), {
     message: "Image URL must be an http(s) link.",
-  })
-  .optional();
+  });
+
+/** Optional, bounded image URL. Must be an absolute http(s) URL when present. */
+const imageUrlSchema = requiredImageUrlSchema.optional();
 
 /**
  * hero settings: headline + message text + a swapped hero image URL. All
@@ -111,11 +120,52 @@ export const faqSettingsSchema = z.object({
     .optional(),
 });
 
+/**
+ * custom-rich settings: an operator-authored PLAIN-text block (heading + body).
+ * NO HTML/markdown — the component renders it as plain text with preserved line
+ * breaks. Both optional; the component renders null when neither is present.
+ */
+export const customRichSettingsSchema = z.object({
+  heading: z.string().trim().max(CUSTOM_RICH_HEADING_MAX).optional(),
+  body: z.string().trim().max(CUSTOM_RICH_BODY_MAX).optional(),
+});
+
+/**
+ * custom-image settings: a single operator-uploaded image with optional alt +
+ * caption. `imageUrl` is optional (an added-but-not-yet-filled section); the
+ * component renders null when no imageUrl is present.
+ */
+export const customImageSettingsSchema = z.object({
+  imageUrl: imageUrlSchema,
+  alt: z.string().trim().max(CUSTOM_IMAGE_ALT_MAX).optional(),
+  caption: z.string().trim().max(CUSTOM_IMAGE_CAPTION_MAX).optional(),
+});
+
+/**
+ * custom-gallery settings: a bounded list (max 12) of {imageUrl, alt?}. Each
+ * item REQUIRES a valid imageUrl (an item without one is dropped by the editor
+ * before save). Absent/empty `images` → the component renders null.
+ */
+export const customGallerySettingsSchema = z.object({
+  images: z
+    .array(
+      z.object({
+        imageUrl: requiredImageUrlSchema,
+        alt: z.string().trim().max(CUSTOM_GALLERY_ALT_MAX).optional(),
+      })
+    )
+    .max(CUSTOM_GALLERY_IMAGES_MAX)
+    .optional(),
+});
+
 export type HeroSettings = z.infer<typeof heroSettingsSchema>;
 export type AboutSettings = z.infer<typeof aboutSettingsSchema>;
 export type TrustSettings = z.infer<typeof trustSettingsSchema>;
 export type TestimonialsSettings = z.infer<typeof testimonialsSettingsSchema>;
 export type FaqSettings = z.infer<typeof faqSettingsSchema>;
+export type CustomRichSettings = z.infer<typeof customRichSettingsSchema>;
+export type CustomImageSettings = z.infer<typeof customImageSettingsSchema>;
+export type CustomGallerySettings = z.infer<typeof customGallerySettingsSchema>;
 
 /**
  * Map of section type → the Zod schema validating that type's `settings`. Only
@@ -128,6 +178,9 @@ export const SECTION_CONTENT_SCHEMAS = {
   trust: trustSettingsSchema,
   testimonials: testimonialsSettingsSchema,
   faq: faqSettingsSchema,
+  "custom-rich": customRichSettingsSchema,
+  "custom-image": customImageSettingsSchema,
+  "custom-gallery": customGallerySettingsSchema,
 } as const;
 
 export type ContentEditableSectionType = keyof typeof SECTION_CONTENT_SCHEMAS;
@@ -172,5 +225,27 @@ export function parseTestimonialsSettings(
 /** Defensive parse against the faq schema ({} on absent/malformed). */
 export function parseFaqSettings(settings: unknown): FaqSettings {
   const parsed = faqSettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the custom-rich schema ({} on absent/malformed). */
+export function parseCustomRichSettings(settings: unknown): CustomRichSettings {
+  const parsed = customRichSettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the custom-image schema ({} on absent/malformed). */
+export function parseCustomImageSettings(
+  settings: unknown
+): CustomImageSettings {
+  const parsed = customImageSettingsSchema.safeParse(settings ?? {});
+  return parsed.success ? parsed.data : {};
+}
+
+/** Defensive parse against the custom-gallery schema ({} on absent/malformed). */
+export function parseCustomGallerySettings(
+  settings: unknown
+): CustomGallerySettings {
+  const parsed = customGallerySettingsSchema.safeParse(settings ?? {});
   return parsed.success ? parsed.data : {};
 }

@@ -36,6 +36,13 @@ import {
 export const SCHEMA_VERSION = 1;
 
 /**
+ * Upper bound on the number of sections in a document (PR-1e). Bounds the stored
+ * JSON and the rendered page length; enforced by addSection (no-op past the cap)
+ * and by parseBuilderDocument on publish.
+ */
+export const SECTION_COUNT_MAX = 20;
+
+/**
  * Build a fresh page document from the synthesized default sections (§7) plus
  * the resolved theme tokens. Used to seed the builder the first time an org
  * opens it (no persisted document yet). NOT auto-persisted — only Save/Publish
@@ -131,6 +138,67 @@ export function toggleSectionDisabled(
       ...doc.sections,
       [id]: { ...current, disabled: !current.disabled },
     },
+  };
+}
+
+/**
+ * ADD a new section of `type` to the document (PR-1e). Generates a unique opaque
+ * id (`sec_<12-hex>`), appends it to `order`, and seeds an empty
+ * `sections[id] = { type, settings: {} }`. Returns the document UNCHANGED (same
+ * reference) when:
+ *  - `type` is not a known/renderable section type, or
+ *  - the document is already at SECTION_COUNT_MAX (bounded page length).
+ *
+ * Only `addable` custom types are surfaced by the picker, but this helper accepts
+ * any known type; the cap + known-type guards keep a bad call from corrupting the
+ * document. New sections start enabled (no `disabled` flag) and empty (the
+ * component renders null until the operator fills it in).
+ */
+export function addSection(
+  doc: StorefrontPageDocument,
+  type: string
+): StorefrontPageDocument {
+  if (!isKnownSectionType(type)) return doc;
+  if (doc.order.length >= SECTION_COUNT_MAX) return doc;
+
+  // Opaque, collision-resistant id. Loop on the (astronomically unlikely)
+  // chance of a clash with an existing id so we never overwrite a section.
+  let id = `sec_${crypto.randomUUID().slice(0, 12)}`;
+  while (doc.sections[id]) {
+    id = `sec_${crypto.randomUUID().slice(0, 12)}`;
+  }
+
+  return {
+    ...doc,
+    order: [...doc.order, id],
+    sections: {
+      ...doc.sections,
+      [id]: { type, settings: {} },
+    },
+  };
+}
+
+/**
+ * REMOVE a section from the document (PR-1e). Deletes the id from both `order`
+ * and `sections`. Returns the document UNCHANGED (same reference) when:
+ *  - the id isn't present, or
+ *  - it resolves to an `alwaysPresent` registry type (hero/closing can't be
+ *    removed — same structural guard moveSection/toggleSectionDisabled enforce).
+ */
+export function removeSection(
+  doc: StorefrontPageDocument,
+  id: string
+): StorefrontPageDocument {
+  if (!doc.sections[id]) return doc;
+  if (isAlwaysPresentSection(doc, id)) return doc;
+
+  const nextSections = { ...doc.sections };
+  delete nextSections[id];
+
+  return {
+    ...doc,
+    order: doc.order.filter((entry) => entry !== id),
+    sections: nextSections,
   };
 }
 
@@ -240,6 +308,12 @@ export function parseBuilderDocument(
 
   if (doc.order.length === 0) {
     return { ok: false, message: "Storefront layout has no sections." };
+  }
+
+  // Bound the section count on the publish path (PR-1e) — mirrors addSection's
+  // cap so a hand-edited / oversized document can't be published.
+  if (doc.order.length > SECTION_COUNT_MAX) {
+    return { ok: false, message: "Storefront layout has too many sections." };
   }
 
   // order ↔ sections must be consistent, and every type must be renderable.

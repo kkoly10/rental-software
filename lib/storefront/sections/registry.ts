@@ -27,7 +27,14 @@ export type SectionType =
   | "service-area"
   | "about"
   | "faq"
-  | "closing";
+  | "closing"
+  // PR-1e: operator-addable CUSTOM section types. Unlike the day-one types these
+  // are never seeded by the synthesizer — they only ever exist because an
+  // operator ADDED them to a document. They carry their own content settings
+  // (see content-schemas.ts) and render via dedicated party-classic components.
+  | "custom-rich"
+  | "custom-image"
+  | "custom-gallery";
 
 export type SectionDef = {
   /** Stable type key — maps to a render branch and (later) a settings schema. */
@@ -99,6 +106,16 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDef> = {
   },
   faq: { type: "faq", label: "FAQ", visibilityKey: "faq_section" },
   closing: { type: "closing", label: "Closing", alwaysPresent: true },
+  // PR-1e custom types — addable via the section picker. No tier field: the
+  // whole builder is already Pro-gated (checkFeatureAccess("storefront_builder")),
+  // so every builder user can add these.
+  "custom-rich": { type: "custom-rich", label: "Text block", addable: true },
+  "custom-image": { type: "custom-image", label: "Image", addable: true },
+  "custom-gallery": {
+    type: "custom-gallery",
+    label: "Image gallery",
+    addable: true,
+  },
 };
 
 /**

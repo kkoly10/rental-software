@@ -14,6 +14,9 @@ import { PartyClassicPressRow } from "@/components/public/themes/party-classic/p
 import { PartyClassicReviewsCards } from "@/components/public/themes/party-classic/reviews-cards";
 import { PartyClassicServiceArea } from "@/components/public/themes/party-classic/service-area-zip-map";
 import { PartyClassicClosing } from "@/components/public/themes/party-classic/closing";
+import { PartyClassicCustomRich } from "@/components/public/themes/party-classic/custom-rich";
+import { PartyClassicCustomImage } from "@/components/public/themes/party-classic/custom-image";
+import { PartyClassicCustomGallery } from "@/components/public/themes/party-classic/custom-gallery";
 import { SectionHead } from "@/components/public/themes/party-classic/section-head";
 import { SaasLanding } from "@/components/marketing/saas-landing";
 import { DemoBanner } from "@/components/demo/demo-banner";
@@ -35,6 +38,9 @@ import {
   parseTrustSettings,
   parseTestimonialsSettings,
   parseFaqSettings,
+  parseCustomRichSettings,
+  parseCustomImageSettings,
+  parseCustomGallerySettings,
 } from "@/lib/storefront/sections/content-schemas";
 import { Fragment, type ReactNode } from "react";
 
@@ -205,6 +211,26 @@ export default async function HomePage() {
       }
       case "closing":
         return <PartyClassicClosing />;
+      case "custom-rich": {
+        // PR-1e operator-added section. Parse defensively → the component
+        // returns null when neither heading nor body is present (empty section).
+        const rich = parseCustomRichSettings(settings);
+        return <PartyClassicCustomRich heading={rich.heading} body={rich.body} />;
+      }
+      case "custom-image": {
+        const image = parseCustomImageSettings(settings);
+        return (
+          <PartyClassicCustomImage
+            imageUrl={image.imageUrl}
+            alt={image.alt}
+            caption={image.caption}
+          />
+        );
+      }
+      case "custom-gallery": {
+        const gallery = parseCustomGallerySettings(settings);
+        return <PartyClassicCustomGallery images={gallery.images} />;
+      }
       default:
         return null;
     }
