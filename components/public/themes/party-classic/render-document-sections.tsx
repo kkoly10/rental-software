@@ -259,22 +259,27 @@ const CONTENTS_STYLE = { display: "contents" } as const;
  * declaration block.
  */
 function fieldStyleDeclarations(style: FieldStyle): string {
+  // Each declaration is marked !important: these are DELIBERATE per-element
+  // overrides the operator chose for one element, so they must win over the
+  // theme's base typographic rules (e.g. the hero heading's weight), which can
+  // otherwise out-specify the scoped `.st-fs-<id> <selector>` rule. Scope is a
+  // single section's single field, so it can't bleed elsewhere.
   const decls: string[] = [];
   if (typeof style.sizePx === "number") {
-    decls.push(`font-size:${style.sizePx}px`);
+    decls.push(`font-size:${style.sizePx}px !important`);
   }
   if (typeof style.color === "string") {
-    decls.push(`color:${style.color}`);
+    decls.push(`color:${style.color} !important`);
   }
   if (style.bold === true) {
-    decls.push("font-weight:700");
+    decls.push("font-weight:700 !important");
   }
   if (style.italic === true) {
-    decls.push("font-style:italic");
+    decls.push("font-style:italic !important");
   }
   if (style.font) {
     const stack = FONT_STACKS[style.font];
-    if (stack) decls.push(`font-family:${stack}`);
+    if (stack) decls.push(`font-family:${stack} !important`);
   }
   return decls.join(";");
 }
