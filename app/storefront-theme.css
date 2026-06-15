@@ -2835,3 +2835,300 @@ body:has(.st-header):not(:has(.sidebar-layout)) h3 {
   background: var(--primary, #3f4a33);
   display: inline-block;
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Editor guidance (PR-2d) — tooltips, first-run tour, help launcher, hints, icons
+   UI/UX-only editor chrome. Nothing here affects the public storefront render.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Accessible tooltip (EditorTooltip) ────────────────────────────────────── */
+.st-editor-tip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.st-editor-tip {
+  position: absolute;
+  z-index: 1200;
+  pointer-events: none; /* never blocks clicks */
+  white-space: nowrap;
+  max-width: 240px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #1f2430;
+  color: #ffffff; /* dark bubble / white text → high contrast */
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.st-editor-tip[data-open="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.st-editor-tip-bottom {
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, 2px);
+}
+.st-editor-tip-bottom[data-open="true"] { transform: translate(-50%, 0); }
+.st-editor-tip-top {
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, -2px);
+}
+.st-editor-tip-top[data-open="true"] { transform: translate(-50%, 0); }
+.st-editor-tip-left {
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translate(-2px, -50%);
+}
+.st-editor-tip-left[data-open="true"] { transform: translate(0, -50%); }
+.st-editor-tip-right {
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translate(2px, -50%);
+}
+.st-editor-tip-right[data-open="true"] { transform: translate(0, -50%); }
+
+/* Toolbar buttons now hold inline SVGs; keep them crisp + centered. */
+.st-editor-toolbar svg,
+.st-editor-help-btn svg,
+.st-editor-replace-image svg {
+  display: block;
+  flex: none;
+}
+
+/* ── Help launcher (?) ─────────────────────────────────────────────────────── */
+.st-editor-help-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.st-editor-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #e6e1d8);
+  background: #ffffff;
+  color: var(--text, #1a1a1a);
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+.st-editor-help-btn:hover,
+.st-editor-help-btn[aria-expanded="true"] {
+  background: var(--surface-muted, #f4f2ef);
+  border-color: var(--primary, #3f4a33);
+}
+.st-editor-help-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1100;
+  width: 280px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  text-align: left;
+}
+.st-editor-help-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #1a1a1a);
+}
+.st-editor-help-replay {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  background: var(--surface-muted, #f4f2ef);
+  color: var(--text, #1a1a1a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.st-editor-help-replay:hover {
+  border-color: var(--primary, #3f4a33);
+}
+.st-editor-help-tips-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #6b6557);
+}
+.st-editor-help-tips {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text, #1a1a1a);
+}
+
+/* ── Replace-image wrapper now hosts the tooltip ───────────────────────────── */
+.st-editor-replace-image-wrap {
+  position: absolute;
+  z-index: 951;
+  pointer-events: auto;
+}
+.st-editor-replace-image svg { display: inline-block; vertical-align: -2px; }
+
+/* ── Canvas hint bar ───────────────────────────────────────────────────────── */
+.st-editor-hintbar {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 960;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 92vw;
+  padding: 9px 10px 9px 16px;
+  background: #1f2430;
+  color: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 13px;
+  pointer-events: none; /* non-blocking; only the close button is clickable */
+}
+.st-editor-hintbar-text { pointer-events: none; }
+.st-editor-hintbar-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  cursor: pointer;
+  pointer-events: auto;
+  flex: none;
+}
+.st-editor-hintbar-close:hover { background: rgba(255, 255, 255, 0.26); }
+
+/* ── Empty-section hint (near selection frame) ─────────────────────────────── */
+.st-editor-empty-hint {
+  position: absolute;
+  z-index: 952;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: #1f2430;
+  color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 500;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Guided tour (coach marks) ─────────────────────────────────────────────── */
+.st-tour-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+.st-tour-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 18, 24, 0.55);
+  cursor: pointer;
+}
+.st-tour-spotlight {
+  position: absolute;
+  border-radius: 12px;
+  /* The huge box-shadow paints the dim everywhere EXCEPT this cutout. */
+  box-shadow: 0 0 0 9999px rgba(15, 18, 24, 0.55);
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  transition: top 160ms ease, left 160ms ease, width 160ms ease, height 160ms ease;
+}
+.st-tour-popover {
+  position: absolute;
+  z-index: 2001;
+  width: 320px;
+  max-width: 92vw;
+  padding: 18px 18px 16px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.32);
+  text-align: left;
+}
+.st-tour-step-count {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #6b6557);
+}
+.st-tour-title {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text, #1a1a1a);
+}
+.st-tour-body {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text, #1a1a1a);
+}
+.st-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.st-tour-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.st-tour-skip,
+.st-tour-back {
+  padding: 7px 12px;
+  border: 1px solid var(--border, #e6e1d8);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text, #1a1a1a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.st-tour-skip { border-color: transparent; color: var(--text-muted, #6b6557); }
+.st-tour-skip:hover,
+.st-tour-back:hover { background: var(--surface-muted, #f4f2ef); }
+.st-tour-next {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary, #3f4a33);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.st-tour-next:hover { filter: brightness(1.06); }

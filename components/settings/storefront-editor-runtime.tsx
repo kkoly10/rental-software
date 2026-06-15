@@ -35,6 +35,19 @@ import {
 } from "@/lib/storefront/sections/content-schemas";
 import { StorefrontSectionEditor } from "@/components/settings/storefront-section-editor";
 import { StorefrontTokenEditor } from "@/components/settings/storefront-token-editor";
+import { EditorTooltip } from "@/components/settings/editor-tooltip";
+import { EditorTour, hasSeenTour, type TourStep } from "@/components/settings/editor-tour";
+import {
+  IconArrowUp,
+  IconArrowDown,
+  IconEye,
+  IconEyeOff,
+  IconTrash,
+  IconPencil,
+  IconHelp,
+  IconImage,
+  IconClose,
+} from "@/components/settings/editor-icons";
 import {
   saveStorefrontDocumentDraft,
   publishStorefrontDocument,
@@ -110,6 +123,7 @@ export function StorefrontEditorRuntime({
 }) {
   const { messages } = useI18n();
   const m = messages.dashboard.website.builder;
+  const tips = m.tips;
   const router = useRouter();
 
   const [doc, setDoc] = useState<StorefrontPageDocument>(initialDocument);
@@ -123,6 +137,16 @@ export function StorefrontEditorRuntime({
   // True while an inline contentEditable field has focus — suppresses the hover
   // frame so the dashed/solid outlines don't fight the caret.
   const [inlineEditing, setInlineEditing] = useState(false);
+
+  // ── Editor guidance (PR-2d) ─────────────────────────────────────────────────
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  // Becomes true once the operator has inline-edited at least once; used to
+  // auto-hide the canvas hint bar.
+  const [hasInlineEdited, setHasInlineEdited] = useState(false);
+  // Whether the canvas inline-text hint has been dismissed (persisted).
+  const [inlineHintDismissed, setInlineHintDismissed] = useState(true);
+  const helpMenuRef = useRef<HTMLDivElement | null>(null);
 
   // On-canvas image replace (PR-2b): one upload in flight at a time.
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -187,6 +211,51 @@ export function StorefrontEditorRuntime({
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, []);
+
+  // ── Editor guidance: first-run tour + persisted hint state (PR-2d) ───────────
+  const INLINE_HINT_KEY = "korent.builder.hint.inlineText.v1";
+  useEffect(() => {
+    // Auto-open the guided tour the first time the editor is opened.
+    if (!hasSeenTour()) setTourOpen(true);
+    // Restore canvas hint-bar dismissal.
+    if (typeof window !== "undefined") {
+      try {
+        setInlineHintDismissed(
+          window.localStorage.getItem(INLINE_HINT_KEY) === "1"
+        );
+      } catch {
+        setInlineHintDismissed(true);
+      }
+    }
+  }, []);
+
+  const dismissInlineHint = useCallback(() => {
+    setInlineHintDismissed(true);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(INLINE_HINT_KEY, "1");
+      } catch {
+        /* best-effort */
+      }
+    }
+  }, []);
+
+  // Close the Help menu on outside click / Escape.
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (!helpMenuRef.current?.contains(e.target as Node)) setHelpOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHelpOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [helpOpen]);
 
   // ── Section measurement (frames) ────────────────────────────────────────────
   const measure = useCallback(() => {
@@ -275,6 +344,8 @@ export function StorefrontEditorRuntime({
         el.addEventListener("focus", () => {
           setSelectedId(sectionId);
           setInlineEditing(true);
+          // Inline editing was discovered → retire the canvas hint bar.
+          setHasInlineEdited(true);
         });
 
         el.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -606,35 +677,86 @@ export function StorefrontEditorRuntime({
 
   const theme = doc.theme as ThemeTokens | undefined;
 
+  // ── Guided tour steps (PR-2d) ───────────────────────────────────────────────
+  // Targets are resolved against the live DOM at runtime; missing targets fall
+  // back to a centered popover (EditorTour handles that).
+  const tourSteps: TourStep[] = [
+    { title: tips.tour.welcomeTitle, body: tips.tour.welcomeBody },
+    {
+      title: tips.tour.selectTitle,
+      body: tips.tour.selectBody,
+      target: "[data-st-section-id]",
+    },
+    { title: tips.tour.inlineTitle, body: tips.tour.inlineBody },
+    {
+      title: tips.tour.toolbarTitle,
+      body: tips.tour.toolbarBody,
+      target: '[data-tour="add-section"]',
+    },
+    {
+      title: tips.tour.stylesTitle,
+      body: tips.tour.stylesBody,
+      target: '[data-tour="styles"]',
+    },
+    {
+      title: tips.tour.saveTitle,
+      body: tips.tour.saveBody,
+      target: '[data-tour="publish"]',
+    },
+  ];
+
+  // Empty-section hint: a SELECTED content-editable section whose settings are
+  // empty (best-effort) gets a small "click Edit to add content" note.
+  const selectedIsEmpty: boolean = (() => {
+    if (!selectedId || !selectedType) return false;
+    if (!isContentEditableSectionType(selectedType)) return false;
+    const settings = doc.sections[selectedId]?.settings;
+    if (!settings) return true;
+    return Object.values(settings).every((v) => {
+      if (v == null) return true;
+      if (typeof v === "string") return v.trim() === "";
+      if (Array.isArray(v)) return v.length === 0;
+      return false;
+    });
+  })();
+
   return (
     <>
       {/* ── Fixed top bar ── */}
       <header className="st-editor-topbar" data-st-editor-chrome>
-        <Link href="/dashboard/website" className="secondary-btn">
-          &larr; {m.backToDashboard}
-        </Link>
+        <EditorTooltip label={tips.tooltipBack} side="bottom">
+          <Link href="/dashboard/website" className="secondary-btn">
+            &larr; {m.backToDashboard}
+          </Link>
+        </EditorTooltip>
         <span className="st-editor-title">{m.title}</span>
 
-        <button
-          type="button"
-          className="secondary-btn"
-          onClick={() => {
-            setStylesOpen((v) => !v);
-            setEditingId(null);
-          }}
-        >
-          {m.styles}
-        </button>
-
-        <div className="st-editor-addmenu-wrap">
+        <EditorTooltip label={tips.tooltipStyles} side="bottom">
           <button
             type="button"
             className="secondary-btn"
-            disabled={atSectionLimit}
-            onClick={() => setAddMenuOpen((v) => !v)}
+            data-tour="styles"
+            onClick={() => {
+              setStylesOpen((v) => !v);
+              setEditingId(null);
+            }}
           >
-            + {m.addSection}
+            {m.styles}
           </button>
+        </EditorTooltip>
+
+        <div className="st-editor-addmenu-wrap">
+          <EditorTooltip label={tips.tooltipAddSection} side="bottom">
+            <button
+              type="button"
+              className="secondary-btn"
+              data-tour="add-section"
+              disabled={atSectionLimit}
+              onClick={() => setAddMenuOpen((v) => !v)}
+            >
+              + {m.addSection}
+            </button>
+          </EditorTooltip>
           {addMenuOpen && !atSectionLimit && (
             <div className="st-editor-addmenu">
               {addableTypes.map((t) => (
@@ -684,16 +806,65 @@ export function StorefrontEditorRuntime({
 
         <form action={draftAction}>
           <input type="hidden" name="document_json" value={documentJson} />
-          <button type="submit" className="secondary-btn" disabled={draftPending}>
-            {draftPending ? m.savingDraft : m.saveDraft}
-          </button>
+          <EditorTooltip label={tips.tooltipSaveDraft} side="bottom">
+            <button type="submit" className="secondary-btn" disabled={draftPending}>
+              {draftPending ? m.savingDraft : m.saveDraft}
+            </button>
+          </EditorTooltip>
         </form>
         <form action={publishAction}>
           <input type="hidden" name="document_json" value={documentJson} />
-          <button type="submit" className="primary-btn" disabled={publishPending}>
-            {publishPending ? m.publishing : m.publish}
-          </button>
+          <EditorTooltip label={tips.tooltipPublish} side="bottom">
+            <button
+              type="submit"
+              className="primary-btn"
+              data-tour="publish"
+              disabled={publishPending}
+            >
+              {publishPending ? m.publishing : m.publish}
+            </button>
+          </EditorTooltip>
         </form>
+
+        {/* ── Help launcher (?) ── */}
+        <div className="st-editor-help-wrap" ref={helpMenuRef}>
+          <EditorTooltip label={tips.tooltipHelp} side="bottom">
+            <button
+              type="button"
+              className="st-editor-help-btn"
+              aria-label={tips.tooltipHelp}
+              aria-haspopup="menu"
+              aria-expanded={helpOpen}
+              onClick={() => setHelpOpen((v) => !v)}
+            >
+              <IconHelp />
+            </button>
+          </EditorTooltip>
+          {helpOpen && (
+            <div className="st-editor-help-menu" role="menu">
+              <p className="st-editor-help-title">{tips.helpTitle}</p>
+              <button
+                type="button"
+                role="menuitem"
+                className="st-editor-help-replay"
+                onClick={() => {
+                  setHelpOpen(false);
+                  setTourOpen(true);
+                }}
+              >
+                {tips.helpReplayTour}
+              </button>
+              <p className="st-editor-help-tips-title">{tips.helpTipsTitle}</p>
+              <ul className="st-editor-help-tips">
+                <li>{tips.helpTip1}</li>
+                <li>{tips.helpTip2}</li>
+                <li>{tips.helpTip3}</li>
+                <li>{tips.helpTip4}</li>
+                <li>{tips.helpTip5}</li>
+              </ul>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* ── Hover frame (hidden while a drawer is open or over the selection) ── */}
@@ -737,71 +908,103 @@ export function StorefrontEditorRuntime({
               left: Math.max(8, selFrame.left + selFrame.width - 220),
             }}
           >
-            <button
-              type="button"
-              title={m.moveUp}
-              aria-label={m.moveUp}
-              disabled={selectedPinned || selectedIdx <= 0}
-              onClick={() => onMove(selectedId, -1)}
-            >
-              &uarr;
-            </button>
-            <button
-              type="button"
-              title={m.moveDown}
-              aria-label={m.moveDown}
-              disabled={selectedPinned || selectedIdx >= doc.order.length - 1}
-              onClick={() => onMove(selectedId, 1)}
-            >
-              &darr;
-            </button>
-            <button
-              type="button"
-              title={selectedDisabled ? m.show : m.hide}
-              aria-label={selectedDisabled ? m.show : m.hide}
-              aria-pressed={!selectedDisabled}
-              disabled={selectedPinned}
-              onClick={() => onToggle(selectedId)}
-            >
-              {selectedDisabled ? "\u{1F441}‍\u{1F5E8}" : "\u{1F441}"}
-            </button>
-            {!selectedPinned && (
+            <EditorTooltip label={m.moveUp} side="top">
               <button
                 type="button"
-                title={m.removeSection}
-                aria-label={m.removeSection}
-                onClick={() => onRemove(selectedId)}
+                aria-label={m.moveUp}
+                disabled={selectedPinned || selectedIdx <= 0}
+                onClick={() => onMove(selectedId, -1)}
               >
-                &#10005;
+                <IconArrowUp />
               </button>
+            </EditorTooltip>
+            <EditorTooltip label={m.moveDown} side="top">
+              <button
+                type="button"
+                aria-label={m.moveDown}
+                disabled={selectedPinned || selectedIdx >= doc.order.length - 1}
+                onClick={() => onMove(selectedId, 1)}
+              >
+                <IconArrowDown />
+              </button>
+            </EditorTooltip>
+            <EditorTooltip label={selectedDisabled ? m.show : m.hide} side="top">
+              <button
+                type="button"
+                aria-label={selectedDisabled ? m.show : m.hide}
+                aria-pressed={!selectedDisabled}
+                disabled={selectedPinned}
+                onClick={() => onToggle(selectedId)}
+              >
+                {selectedDisabled ? <IconEyeOff /> : <IconEye />}
+              </button>
+            </EditorTooltip>
+            {!selectedPinned && (
+              <EditorTooltip label={m.removeSection} side="top">
+                <button
+                  type="button"
+                  aria-label={m.removeSection}
+                  onClick={() => onRemove(selectedId)}
+                >
+                  <IconTrash />
+                </button>
+              </EditorTooltip>
             )}
             <span className="st-editor-toolbar-sep" />
-            <button
-              type="button"
-              className="st-editor-toolbar-edit"
-              onClick={() => openEditor(selectedId)}
-            >
-              &#9998; {m.editContent}
-            </button>
+            <EditorTooltip label={m.editContentTitle} side="top">
+              <button
+                type="button"
+                className="st-editor-toolbar-edit"
+                onClick={() => openEditor(selectedId)}
+              >
+                <IconPencil /> {m.editContent}
+              </button>
+            </EditorTooltip>
           </div>
+
+          {/* ── Empty-section hint (PR-2d) ── */}
+          {selectedIsEmpty && (
+            <div
+              className="st-editor-empty-hint"
+              data-st-editor-chrome
+              role="note"
+              style={{
+                top: selFrame.top + selFrame.height / 2 - 14,
+                left: selFrame.left + selFrame.width / 2,
+              }}
+            >
+              {tips.emptySectionHint}
+            </div>
+          )}
 
           {/* ── On-canvas "Replace image" overlay (PR-2b) ── */}
           {selectedImageFrame && selectedType && INLINE_IMAGE_FIELDS[selectedType] && (
-            <button
-              type="button"
-              className="st-editor-replace-image"
+            <div
+              className="st-editor-replace-image-wrap"
               data-st-editor-chrome
-              disabled={uploadingImage}
-              onClick={() => onReplaceImageClick(selectedId)}
               style={{
                 top: selectedImageFrame.top + 8,
                 left: selectedImageFrame.left + 8,
               }}
             >
-              {uploadingImage
-                ? `… ${m.uploadingImage}`
-                : `\u{1F5BC} ${m.replaceImage}`}
-            </button>
+              <EditorTooltip label={m.replaceImage} side="bottom">
+                <button
+                  type="button"
+                  className="st-editor-replace-image"
+                  aria-label={m.replaceImage}
+                  disabled={uploadingImage}
+                  onClick={() => onReplaceImageClick(selectedId)}
+                >
+                  {uploadingImage ? (
+                    `… ${m.uploadingImage}`
+                  ) : (
+                    <>
+                      <IconImage /> {m.replaceImage}
+                    </>
+                  )}
+                </button>
+              </EditorTooltip>
+            </div>
           )}
         </>
       )}
@@ -875,6 +1078,29 @@ export function StorefrontEditorRuntime({
           </div>
         </aside>
       )}
+
+      {/* ── Canvas hint bar (PR-2d): shown until first inline edit or dismissal ── */}
+      {!inlineHintDismissed && !hasInlineEdited && (
+        <div className="st-editor-hintbar" data-st-editor-chrome role="note">
+          <span className="st-editor-hintbar-text">{tips.inlineHintText}</span>
+          <button
+            type="button"
+            className="st-editor-hintbar-close"
+            aria-label={tips.inlineHintDismiss}
+            onClick={dismissInlineHint}
+          >
+            <IconClose size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ── First-run / replayable guided tour (PR-2d) ── */}
+      <EditorTour
+        open={tourOpen}
+        steps={tourSteps}
+        labels={tips.tour}
+        onClose={() => setTourOpen(false)}
+      />
     </>
   );
 }
