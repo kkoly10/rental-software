@@ -1186,6 +1186,8 @@ export const pt: Messages = {
         styleAlignRight: "Alinhar à direita",
         styleColor: "Cor",
         styleColorDefault: "Cor padrão",
+        sectionBackground: "Fundo da secção",
+        sectionBackgroundNone: "Sem fundo",
         styleFont: "Fonte",
         styleFontDefault: "Fonte do tema",
         stylePresetSmall: "Pequeno",

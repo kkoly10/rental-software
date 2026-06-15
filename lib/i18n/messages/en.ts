@@ -1187,6 +1187,8 @@ const enValues = {
         styleAlignRight: "Align right",
         styleColor: "Color",
         styleColorDefault: "Default color",
+        sectionBackground: "Section background",
+        sectionBackgroundNone: "No background",
         styleFont: "Font",
         styleFontDefault: "Theme font",
         stylePresetSmall: "Small",

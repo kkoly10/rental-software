@@ -105,8 +105,39 @@ export type FieldStyle = z.infer<typeof fieldStyleSchema>;
  */
 export const fieldStylesSchema = z.record(fieldStyleSchema).optional();
 
-/** The settings shape contributed by the shared fieldStyles sub-schema. */
-const withFieldStyles = { fieldStyles: fieldStylesSchema } as const;
+// ── Per-section background color (PR-B) ─────────────────────────────────────
+// An OPTIONAL section-level background color the operator picks from a friendly
+// swatch palette on the canvas. Same hex shape as the per-field color / theme
+// tokens, so a stored value can only ever be a safe hex literal — never a CSS
+// expression. Absent = no override = the section renders on the page background
+// (byte-for-byte safety). The renderer only ever uses this as an inline
+// `backgroundColor` CSS value.
+export const sectionBackgroundSchema = fieldStyleHex.optional();
+
+/**
+ * The settings shape contributed by the shared sub-schemas merged into every
+ * editable section: per-element `fieldStyles` (PR-A) and a section-level
+ * `background` color (PR-B). Both optional → an absent key = no override =
+ * byte-for-byte.
+ */
+const withFieldStyles = {
+  fieldStyles: fieldStylesSchema,
+  background: sectionBackgroundSchema,
+} as const;
+
+/**
+ * Defensively extract a section's stored background color from its `settings`.
+ * Returns the validated hex string only when present AND a safe hex literal;
+ * returns undefined otherwise (absent / malformed / non-string), so the render
+ * path can never emit a non-hex CSS value. Used by the shared renderer to decide
+ * whether to wrap the section in a background-carrying block.
+ */
+export function parseSectionBackground(settings: unknown): string | undefined {
+  if (settings == null || typeof settings !== "object") return undefined;
+  const raw = (settings as { background?: unknown }).background;
+  const parsed = sectionBackgroundSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
+}
 
 /**
  * Curated font → CSS font-family stack. Mirrors the FONT_STACKS in the token
@@ -274,6 +305,8 @@ export const faqSettingsSchema = z.object({
     )
     .max(FAQ_ITEMS_MAX)
     .optional(),
+  // Section-level background (PR-B). No per-element fieldStyles on faq.
+  background: sectionBackgroundSchema,
 });
 
 /**
@@ -296,6 +329,8 @@ export const customImageSettingsSchema = z.object({
   imageUrl: imageUrlSchema,
   alt: z.string().trim().max(CUSTOM_IMAGE_ALT_MAX).optional(),
   caption: z.string().trim().max(CUSTOM_IMAGE_CAPTION_MAX).optional(),
+  // Section-level background (PR-B). No per-element fieldStyles on custom-image.
+  background: sectionBackgroundSchema,
 });
 
 /**
@@ -313,6 +348,8 @@ export const customGallerySettingsSchema = z.object({
     )
     .max(CUSTOM_GALLERY_IMAGES_MAX)
     .optional(),
+  // Section-level background (PR-B). No per-element fieldStyles on custom-gallery.
+  background: sectionBackgroundSchema,
 });
 
 /**
