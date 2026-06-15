@@ -740,6 +740,8 @@ export const pt: Messages = {
       newOrder: "Nova encomenda",
       missingEventDateBadge: "Sem data de evento",
       missingEventDateBanner: "Esta encomenda não tem data de evento — não aparecerá no calendário nem no quadro de rotas enquanto não a adicionar.",
+      missingEventDateBadgeGeneral: "Sem data de aluguer",
+      missingEventDateBannerGeneral: "Esta encomenda não tem data de aluguer — não aparecerá no calendário nem no quadro de rotas enquanto não a adicionar.",
       newOrderTitle: "Criar encomenda",
       newOrderDescription: "Crie uma nova reserva manual, orçamento ou reserva interna.",
       newOrderKicker: "Criação de reserva",
@@ -758,6 +760,7 @@ export const pt: Messages = {
         labels: {
           customer: "Cliente",
           eventDate: "Data do evento",
+          eventDateGeneral: "Data de aluguer",
           rentalItems: "Artigos alugados",
           deliveryAddress: "Morada de entrega",
           documents: "Documentos",

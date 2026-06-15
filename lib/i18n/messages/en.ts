@@ -741,6 +741,8 @@ const enValues = {
       newOrder: "New order",
       missingEventDateBadge: "No event date",
       missingEventDateBanner: "This order has no event date — it won't appear on the calendar or route board until you add one.",
+      missingEventDateBadgeGeneral: "No rental date",
+      missingEventDateBannerGeneral: "This order has no rental date — it won't appear on the calendar or route board until you add one.",
       newOrderTitle: "Create Order",
       newOrderDescription: "Create a new manual booking, quote, or internal reservation.",
       newOrderKicker: "Booking creation",
@@ -759,6 +761,7 @@ const enValues = {
         labels: {
           customer: "Customer",
           eventDate: "Event date",
+          eventDateGeneral: "Rental date",
           rentalItems: "Rental items",
           deliveryAddress: "Delivery address",
           documents: "Documents",

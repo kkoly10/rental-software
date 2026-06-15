@@ -30,6 +30,8 @@ import { getOrderConditionRows } from "@/lib/data/equipment-condition";
 import { AssignToRouteCard } from "@/components/orders/assign-to-route-card";
 import { getOrderRoutingState } from "@/lib/data/order-routing";
 import { getMessages } from "@/lib/i18n/server";
+import { getPrimaryVerticalSlug } from "@/lib/verticals/org-verticals";
+import { isGeneralVertical } from "@/lib/verticals/customer-language";
 
 function extractZip(address: string): string | undefined {
   const match = address.match(/\b(\d{5})\b/);
@@ -61,6 +63,15 @@ export default async function OrderDetailPage({
     getMessages(),
     getOrgContext(),
   ]);
+  // General ("other") operators manage rentals, not "events" — relabel the
+  // missing-date banner + the date field. Event verticals are unchanged.
+  const general = isGeneralVertical(await getPrimaryVerticalSlug());
+  const missingDateBanner = general
+    ? m.dashboard.orders.missingEventDateBannerGeneral
+    : m.dashboard.orders.missingEventDateBanner;
+  const dateLabel = general
+    ? m.dashboard.orders.detail.labels.eventDateGeneral
+    : m.dashboard.orders.detail.labels.eventDate;
   const savedPaymentMethods = ctx
     ? await getCustomerPaymentMethods(ctx.organizationId, order.customerId)
     : [];
@@ -92,7 +103,7 @@ export default async function OrderDetailPage({
             fontSize: 14,
           }}
         >
-          {m.dashboard.orders.missingEventDateBanner}
+          {missingDateBanner}
         </div>
       )}
       <div className="dashboard-grid">
@@ -114,7 +125,7 @@ export default async function OrderDetailPage({
             </div>
 
             <div className="order-card">
-              <strong>{m.dashboard.orders.detail.labels.eventDate}</strong>
+              <strong>{dateLabel}</strong>
               <div className="muted">
                 {order.eventDate}
                 {order.eventStartTime && order.eventEndTime && (
